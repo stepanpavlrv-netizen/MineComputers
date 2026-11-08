@@ -11,6 +11,7 @@
   "tooltip.minepc.floppy_hint": "Insert into a disk drive next to a computer case",
   "tooltip.minepc.flash_hint": "Insert into a USB port of a computer case",
   "tooltip.minepc.game_ops": "In game: %s",
+  "tooltip.minepc.screen": "Screen: %s characters",
   "tooltip.minepc.game_memory": "Memory for programs: %s",
   "tooltip.minepc.game_storage": "File space in game: %s",
   "unit.minepc.kcmds": "%sK instructions/s",

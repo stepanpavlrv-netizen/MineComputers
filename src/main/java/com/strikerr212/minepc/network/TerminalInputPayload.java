@@ -13,12 +13,12 @@ import net.minecraft.resources.ResourceLocation;
  *
  * @param kind  {@link #CHAR} — набранный текст, {@link #KEY} — нажатая клавиша (имя: "enter", "up", "s"...),
  *              {@link #KEY_UP} — отпущенная клавиша, {@link #PASTE} — вставка, {@link #TERMINATE} — Ctrl+T,
- *              {@link #POWER} — кнопка питания
+ *              {@link #POWER} — кнопка питания, {@link #REFRESH} — прислать экран целиком
  * @param flags 1 — зажат Ctrl, 2 — зажат Shift
  */
 public record TerminalInputPayload(BlockPos casePos, int kind, String text, int flags) implements CustomPacketPayload {
 
-    public static final int CHAR = 0, KEY = 1, KEY_UP = 2, PASTE = 3, TERMINATE = 4, POWER = 5;
+    public static final int CHAR = 0, KEY = 1, KEY_UP = 2, PASTE = 3, TERMINATE = 4, POWER = 5, REFRESH = 6;
     public static final int MAX_TEXT = 4096;
 
     public static final Type<TerminalInputPayload> TYPE =

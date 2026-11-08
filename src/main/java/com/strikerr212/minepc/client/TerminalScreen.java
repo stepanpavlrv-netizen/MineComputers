@@ -32,6 +32,7 @@ public class TerminalScreen extends Screen {
 
     @Override
     protected void init() {
+        ClientTerminals.requestFull(casePos);
         powerButton = addRenderableWidget(Button.builder(Component.translatable("gui.minepc.power"),
                 b -> send(TerminalInputPayload.POWER, "", 0)).bounds(width - 66, 6, 60, 16).build());
     }
@@ -52,9 +53,10 @@ public class TerminalScreen extends Screen {
         super.render(g, mouseX, mouseY, partialTick);   // фон и кнопка питания
         ClientTerminals.Snapshot s = ClientTerminals.get(casePos);
         int tw = (s != null ? s.width() : 50) * CELL_W, th = (s != null ? s.height() : 16) * CELL_H;
-        // Масштаб: экран занимает как можно больше места, но не больше двукратного
-        scale = Math.min(2f, Math.min((width - 40f) / tw, (height - 60f) / th));
-        scale = Math.max(0.5f, scale);
+        // Масштаб: экран занимает как можно больше места (большие экраны — почти во всё окно)
+        scale = Math.min(2f, Math.min((width - 12f) / tw, (height - 56f) / th));
+        if (scale > 1) scale = (float) Math.floor(scale * 2) / 2;   // целые и половинные — чётче
+        scale = Math.max(0.25f, scale);
         int sw = Math.round(tw * scale), sh = Math.round(th * scale);
         termX = (width - sw) / 2;
         termY = (height - sh) / 2 + 6;
@@ -83,6 +85,11 @@ public class TerminalScreen extends Screen {
 
     /** Нарисовать сетку символов (общая для окна и, в упрощённом виде, для монитора в мире). */
     private void drawTerminal(GuiGraphics g, ClientTerminals.Snapshot s) {
+        // Всё рисуется одной пачкой: на экране 160×50 это 8000 символов за кадр
+        g.drawManaged(() -> drawCells(g, s));
+    }
+
+    private void drawCells(GuiGraphics g, ClientTerminals.Snapshot s) {
         int w = s.width(), h = s.height();
         for (int y = 0; y < h; y++) {
             // Фон: подряд идущие клетки одного цвета — одним прямоугольником
@@ -96,9 +103,8 @@ public class TerminalScreen extends Screen {
                 int p = y * w + x;
                 byte ch = s.chars()[p];
                 if (ch == ' ' || ch == 0) continue;
-                String str = Cp1251.decode(new byte[]{ch});
-                int cx = x * CELL_W + (CELL_W - font.width(str)) / 2;
-                g.drawString(font, str, cx, y * CELL_H + 1, 0xFF000000 | Terminal.PALETTE[s.fg()[p] & 15], false);
+                int cx = x * CELL_W + (CELL_W - Glyphs.width(font, ch)) / 2;
+                g.drawString(font, Glyphs.text(ch), cx, y * CELL_H + 1, 0xFF000000 | Terminal.PALETTE[s.fg()[p] & 15], false);
             }
         }
         // Мигающий курсор

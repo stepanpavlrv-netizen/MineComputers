@@ -5,7 +5,6 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
 import com.strikerr212.minepc.block.DeviceBlock;
 import com.strikerr212.minepc.block.MonitorBlockEntity;
-import com.strikerr212.minepc.computer.Cp1251;
 import com.strikerr212.minepc.computer.Terminal;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.renderer.LightTexture;
@@ -70,6 +69,14 @@ public class MonitorRenderer implements BlockEntityRenderer<MonitorBlockEntity> 
             }
         }
 
+        // Издалека мелкий текст большого экрана не разглядеть — рисуем только цветной фон
+        var cam = net.minecraft.client.Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
+        double dist = cam.distanceToSqr(be.getBlockPos().getCenter());
+        if (s.width() * s.height() > 2000 && dist > 8 * 8) {
+            pose.popPose();
+            return;
+        }
+
         // Символы: каждый в своей клетке, чуть ближе к игроку, чем фон
         pose.translate(0, 0, 0.01f);
         float glyphScale = Math.min(cellW / GLYPH_W, cellH / GLYPH_H);
@@ -78,9 +85,9 @@ public class MonitorRenderer implements BlockEntityRenderer<MonitorBlockEntity> 
                 int p = y * s.width() + x;
                 byte ch = s.chars()[p];
                 if (ch == ' ' || ch == 0) continue;
-                String str = Cp1251.decode(new byte[]{ch});
+                String str = Glyphs.text(ch);
                 pose.pushPose();
-                pose.translate(x * cellW + (cellW - font.width(str) * glyphScale) / 2, y * cellH + cellH * 0.08f, 0);
+                pose.translate(x * cellW + (cellW - Glyphs.width(font, ch) * glyphScale) / 2, y * cellH + cellH * 0.08f, 0);
                 pose.scale(glyphScale, glyphScale, 1);
                 font.drawInBatch(str, 0, 0, 0xFF000000 | Terminal.PALETTE[s.fg()[p] & 15], false,
                         pose.last().pose(), buffers, Font.DisplayMode.POLYGON_OFFSET, 0, full);

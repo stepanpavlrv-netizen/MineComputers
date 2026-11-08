@@ -36,6 +36,10 @@ public class ModNetwork {
                     BlockPos pos = payload.casePos();
                     if (player.distanceToSqr(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5) > 12 * 12) return;
                     if (!(player.level().getBlockEntity(pos) instanceof PcCaseBlockEntity pc)) return;
+                    if (payload.kind() == TerminalInputPayload.REFRESH) {
+                        pc.requestFullFrame();
+                        return;
+                    }
                     if (payload.kind() == TerminalInputPayload.POWER) {
                         var msg = pc.togglePower();
                         if (msg != null) player.displayClientMessage(msg, true);

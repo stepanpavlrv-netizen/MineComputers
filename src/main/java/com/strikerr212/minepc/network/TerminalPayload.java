@@ -12,7 +12,7 @@ import net.minecraft.resources.ResourceLocation;
  * Снимок экрана компьютера (сервер → игроки рядом). Пустые данные — компьютер выключен.
  *
  * @param casePos  системный блок, чей это экран
- * @param data     снимок из {@link com.strikerr212.minepc.computer.Terminal#snapshot()}
+ * @param data     сжатый кадр или изменения ({@link com.strikerr212.minepc.computer.TerminalCodec})
  * @param keyboard подключена ли клавиатура (можно ли печатать)
  */
 public record TerminalPayload(BlockPos casePos, byte[] data, boolean keyboard) implements CustomPacketPayload {
@@ -22,7 +22,7 @@ public record TerminalPayload(BlockPos casePos, byte[] data, boolean keyboard) i
 
     public static final StreamCodec<ByteBuf, TerminalPayload> STREAM_CODEC = StreamCodec.composite(
             BlockPos.STREAM_CODEC, TerminalPayload::casePos,
-            ByteBufCodecs.byteArray(16384), TerminalPayload::data,
+            ByteBufCodecs.byteArray(1 << 18), TerminalPayload::data,
             ByteBufCodecs.BOOL, TerminalPayload::keyboard,
             TerminalPayload::new);
 

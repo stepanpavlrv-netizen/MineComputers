@@ -237,6 +237,11 @@ public class PcCaseBlockEntity extends BlockEntity implements MenuProvider {
         pc.input(kind, text, ctrl, shift);
     }
 
+    /** Игрок открыл экран компьютера: отправить ему кадр целиком. */
+    public void requestFullFrame() {
+        pc.requestFullFrame();
+    }
+
     void stateChanged() {
         markUpdated();
     }

@@ -140,21 +140,24 @@ public final class Terminal {
     }
 
     /**
-     * Снимок экрана для отправки игрокам:
-     * ширина, высота, курсор X, курсор Y, мигание, затем символы, цвета текста и цвета фона.
+     * Снимок экрана («кадр») для отправки игрокам, формат см. {@link TerminalCodec}:
+     * ширина, высота, курсор X и Y (по 2 байта), мигание, цвет текста, затем символы
+     * и цвета клеток (старшие 4 бита — цвет текста, младшие — фон).
      */
     public synchronized byte[] snapshot() {
         int n = width * height;
-        byte[] out = new byte[6 + n * 3];
+        byte[] out = new byte[TerminalCodec.HEADER + n * 2];
         out[0] = (byte) width;
         out[1] = (byte) height;
-        out[2] = (byte) Math.max(-1, Math.min(127, cursorX));
-        out[3] = (byte) Math.max(-1, Math.min(127, cursorY));
-        out[4] = (byte) (cursorBlink ? 1 : 0);
-        out[5] = (byte) textColor;
-        System.arraycopy(chars, 0, out, 6, n);
-        System.arraycopy(fg, 0, out, 6 + n, n);
-        System.arraycopy(bg, 0, out, 6 + 2 * n, n);
+        int cx = Math.max(-1, Math.min(32000, cursorX)), cy = Math.max(-1, Math.min(32000, cursorY));
+        out[2] = (byte) cx;
+        out[3] = (byte) (cx >> 8);
+        out[4] = (byte) cy;
+        out[5] = (byte) (cy >> 8);
+        out[6] = (byte) (cursorBlink ? 1 : 0);
+        out[7] = (byte) textColor;
+        System.arraycopy(chars, 0, out, TerminalCodec.HEADER, n);
+        for (int i = 0; i < n; i++) out[TerminalCodec.HEADER + n + i] = (byte) ((fg[i] & 15) << 4 | (bg[i] & 15));
         return out;
     }
 }

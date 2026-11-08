@@ -11,6 +11,7 @@
   "tooltip.minepc.floppy_hint": "Вставьте в дисковод рядом с системным блоком",
   "tooltip.minepc.flash_hint": "Вставьте в USB-порт системного блока",
   "tooltip.minepc.game_ops": "В игре: %s",
+  "tooltip.minepc.screen": "Экран: %s символов",
   "tooltip.minepc.game_memory": "Память для программ: %s",
   "tooltip.minepc.game_storage": "Место для файлов в игре: %s",
   "unit.minepc.kcmds": "%s тыс. команд/с",

@@ -173,6 +173,20 @@ public final class Perf {
         return (int) Math.min(50_000_000, Math.round(200_000 * Math.pow(gips / STOCK_CPU_GIPS[0], 0.69)));
     }
 
+    /**
+     * Размер текстового экрана (символов в строке, строк) по уровню видеокарты; 0 — без видеокарты
+     * (чёрно-белый текст). Больше видеокарта — больше символов помещается на экран.
+     */
+    public static int[] screenSize(int gpuTier) {
+        return switch (gpuTier) {
+            case 0 -> new int[]{40, 12};
+            case 1, 2 -> new int[]{50, 16};
+            case 3 -> new int[]{80, 25};
+            case 4 -> new int[]{120, 40};
+            default -> new int[]{160, 50};
+        };
+    }
+
     /** Сколько байт файлов помещается на накопитель в игре: «гигабайт» детали = мегабайт в игре. */
     public static long gameStorageBytes(int capacityMb) {
         return capacityMb * 1024L;

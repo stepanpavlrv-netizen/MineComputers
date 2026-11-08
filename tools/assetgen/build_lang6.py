@@ -115,6 +115,7 @@ COMMON = {
     "tooltip.minepc.floppy_hint": ("Вставьте в дисковод рядом с системным блоком", "Insert into a disk drive next to a computer case"),
     "tooltip.minepc.flash_hint": ("Вставьте в USB-порт системного блока", "Insert into a USB port of a computer case"),
     "tooltip.minepc.game_ops": ("В игре: %s", "In game: %s"),
+    "tooltip.minepc.screen": ("Экран: %s символов", "Screen: %s characters"),
     "tooltip.minepc.game_memory": ("Память для программ: %s", "Memory for programs: %s"),
     "tooltip.minepc.game_storage": ("Место для файлов в игре: %s", "File space in game: %s"),
     "unit.minepc.kcmds": ("%s тыс. команд/с", "%sK instructions/s"),

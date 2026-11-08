@@ -144,6 +144,23 @@ public class HeadlessTest {
         show("переполнение диска");
         expect("ошибка о нехватке места", screen().contains("Недостаточно места"));
 
+        // Передача экрана: изменения строк и сжатие
+        Terminal big = new Terminal(160, 50);
+        byte[] f1 = big.snapshot();
+        byte[] p1 = TerminalCodec.encode(null, f1);
+        byte[] client = TerminalCodec.apply(null, p1);
+        big.setCursor(3, 7);
+        big.setTextColor(4);
+        big.write(Cp1251.encode("Привет, большой экран!"));
+        byte[] f2 = big.snapshot();
+        byte[] p2 = TerminalCodec.encode(f1, f2);
+        client = TerminalCodec.apply(client, p2);
+        System.out.printf("  экран 160×50: кадр %d Б, весь кадр в пакете %d Б, изменение одной строки %d Б%n",
+                f2.length, p1.length, p2.length);
+        expect("кадр после изменений совпадает", java.util.Arrays.equals(client, f2));
+        expect("изменения без основы не применяются", TerminalCodec.apply(null, p2) == null);
+        expect("пакет изменений маленький", p2.length < 400);
+
         command("shutdown");
         ticks(30);
         expect("компьютер выключился", pc.state() == Computer.State.OFF);

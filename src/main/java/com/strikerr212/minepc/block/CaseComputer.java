@@ -2,6 +2,7 @@ package com.strikerr212.minepc.block;
 
 import com.strikerr212.minepc.computer.Computer;
 import com.strikerr212.minepc.computer.ComputerRom;
+import com.strikerr212.minepc.computer.TerminalCodec;
 import com.strikerr212.minepc.computer.fs.Mount;
 import com.strikerr212.minepc.hardware.CpuData;
 import com.strikerr212.minepc.hardware.GpuData;
@@ -50,6 +51,9 @@ final class CaseComputer implements Computer.Host {
     /** Съёмные накопители, подключённые сейчас: путь в компьютере → номер накопителя. */
     private final Map<String, String> removable = new LinkedHashMap<>();
     private int lastVersion = -1;
+    /** Последний отправленный кадр: следующий пакет содержит только отличия от него. */
+    private byte[] lastFrame;
+    private boolean forceFull;
     private Computer.State lastState = Computer.State.OFF;
     private long lastSent = -1000;
     private long age;
@@ -147,12 +151,8 @@ final class CaseComputer implements Computer.Host {
 
         // Экран: без видеокарты — 40×12 монохромный текст, дальше больше и в цвете
         GpuData gpu = in.gpu();
-        int w = 40, h = 12;
-        if (gpu != null) {
-            if (gpu.tier() <= 2) { w = 50; h = 16; }
-            else if (gpu.tier() == 3) { w = 60; h = 20; }
-            else { w = 80; h = 25; }
-        }
+        int[] size = Perf.screenSize(gpu == null ? 0 : gpu.tier());
+        int w = size[0], h = size[1];
         computer.terminal().resize(w, h);
         computer.terminal().setColorSupported(gpu != null);
 
@@ -281,17 +281,33 @@ final class CaseComputer implements Computer.Host {
 
     // ======================= Экран для игроков =======================
 
+    /** Игрок открыл экран — пусть получит весь кадр, а не только изменения. */
+    void requestFullFrame() {
+        forceFull = true;
+    }
+
     private void syncScreen(ServerLevel level, BlockPos pos) {
         long now = level.getGameTime();
         boolean on = computer != null && computer.state() != Computer.State.OFF;
         int version = on ? computer.terminal().version() : -1;
         boolean changed = version != lastVersion;
-        if ((changed && now - lastSent >= SEND_INTERVAL) || now - lastSent >= KEEPALIVE) {
-            byte[] data = on ? computer.terminal().snapshot() : new byte[0];
+        boolean keepalive = now - lastSent >= KEEPALIVE;
+        if ((changed && now - lastSent >= SEND_INTERVAL) || keepalive || forceFull) {
+            byte[] data;
+            if (on) {
+                byte[] frame = computer.terminal().snapshot();
+                // Раз в 5 секунд — весь кадр (для игроков, которые только подошли), иначе только изменения
+                data = TerminalCodec.encode(keepalive || forceFull ? null : lastFrame, frame);
+                lastFrame = frame;
+            } else {
+                data = new byte[0];
+                lastFrame = null;
+            }
             PacketDistributor.sendToPlayersTrackingChunk(level, new ChunkPos(pos),
                     new TerminalPayload(pos, data, hasKeyboard));
             lastSent = now;
             lastVersion = version;
+            forceFull = false;
         }
     }
 
