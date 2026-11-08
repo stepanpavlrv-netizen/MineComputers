@@ -213,7 +213,7 @@ save_json(os.path.join(D, "recipe/keyboard.json"), shaped("minepc:keyboard", ["B
 save_json(os.path.join(D, "recipe/disk_drive.json"), shaped("minepc:disk_drive", ["III", "R  ", "III"],
           {"I": "minecraft:iron_ingot", "R": "minecraft:redstone"}))
 save_json(os.path.join(D, "recipe/floppy_disk.json"), shaped("minepc:floppy_disk", ["P", "R"],
-          {"P": "minecraft:paper", "R": "minecraft:redstone"}, 2))
+          {"P": "minecraft:paper", "R": "minecraft:redstone"}))
 save_json(os.path.join(D, "recipe/flash_drive.json"), shaped("minepc:flash_drive", [" I ", "GRG", " G "],
           {"I": "minecraft:iron_ingot", "G": "minecraft:gold_nugget", "R": "minecraft:redstone"}))
 
