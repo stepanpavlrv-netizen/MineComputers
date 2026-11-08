@@ -26,7 +26,7 @@
   "message.minepc.drive.busy": "В дисководе уже есть дискета",
   "gui.minepc.terminal": "Компьютер",
   "gui.minepc.terminal.off": "Компьютер выключен",
-  "gui.minepc.terminal.hint2": "Esc — закрыть · Ctrl+T — прервать · Ctrl+V — вставить · мышь работает · перетащите файл в окно, чтобы загрузить",
+  "gui.minepc.terminal.hint2": "Ctrl+T — прервать · Ctrl+V — вставить · перетащите сюда файл",
   "message.minepc.upload.off": "Компьютер выключен: файл не загружен",
   "message.minepc.upload.failed": "Не удалось загрузить %s: %s",
   "message.minepc.upload.done": "Файл загружен: %s (%s)",

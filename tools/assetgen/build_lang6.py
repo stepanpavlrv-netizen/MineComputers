@@ -130,7 +130,7 @@ COMMON = {
     "message.minepc.drive.busy": ("В дисководе уже есть дискета", "There is already a disk in the drive"),
     "gui.minepc.terminal": ("Компьютер", "Computer"),
     "gui.minepc.terminal.off": ("Компьютер выключен", "The computer is off"),
-    "gui.minepc.terminal.hint2": ("Esc — закрыть · Ctrl+T — прервать · Ctrl+V — вставить · мышь работает · перетащите файл в окно, чтобы загрузить", "Esc — close · Ctrl+T — terminate · Ctrl+V — paste · mouse works · drop a file on the window to upload it"),
+    "gui.minepc.terminal.hint2": ("Ctrl+T — прервать · Ctrl+V — вставить · перетащите сюда файл", "Ctrl+T — terminate · Ctrl+V — paste · drop a file here"),
     "message.minepc.upload.off": ("Компьютер выключен: файл не загружен", "The computer is off: file not uploaded"),
     "message.minepc.upload.failed": ("Не удалось загрузить %s: %s", "Could not upload %s: %s"),
     "message.minepc.upload.done": ("Файл загружен: %s (%s)", "File uploaded: %s (%s)"),

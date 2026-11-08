@@ -12,6 +12,7 @@ local topics = {
   { "info", "железо компьютера и скорость" },
   { "label [имя]", "имя компьютера" },
   { "clear", "очистить экран" },
+  { "sh", "новая командная строка (exit — назад)" },
   { "reboot / shutdown", "перезагрузить / выключить" },
 }
 local w = term.getSize()
@@ -21,5 +22,5 @@ for _, t in ipairs(topics) do
   term.setTextColor(colors.white)
   print(" — " .. t[2])
 end
-print("Программа запускается по имени файла: hello.lua -> hello")
-print("Ctrl+T — прервать программу, Ctrl+V — вставить текст")
+print("Запуск программы: hello.lua -> hello")
+print("Ctrl+T — прервать, Ctrl+V — вставить")

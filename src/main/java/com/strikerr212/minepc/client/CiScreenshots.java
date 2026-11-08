@@ -126,7 +126,8 @@ public class CiScreenshots {
         // Монитор из 3×2 блоков: картинка растягивается на всю стену
         for (int dx = 0; dx < 3; dx++) {
             for (int dy = 0; dy < 2; dy++) {
-                level.setBlockAndUpdate(base.east(dx).above(dy), ModBlocks.MONITOR.get().defaultBlockState().setValue(DeviceBlock.FACING, Direction.SOUTH));
+                level.setBlockAndUpdate(base.east(dx).above(dy), ModBlocks.MONITOR.get().defaultBlockState()
+                        .setValue(DeviceBlock.FACING, Direction.SOUTH).setValue(com.strikerr212.minepc.block.MonitorBlock.STAND, dy == 0));
             }
         }
         level.setBlockAndUpdate(casePos.above(), ModBlocks.DISK_DRIVE.get().defaultBlockState().setValue(DeviceBlock.FACING, Direction.SOUTH));

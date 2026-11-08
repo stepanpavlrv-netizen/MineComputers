@@ -26,7 +26,7 @@
   "message.minepc.drive.busy": "There is already a disk in the drive",
   "gui.minepc.terminal": "Computer",
   "gui.minepc.terminal.off": "The computer is off",
-  "gui.minepc.terminal.hint2": "Esc — close · Ctrl+T — terminate · Ctrl+V — paste · mouse works · drop a file on the window to upload it",
+  "gui.minepc.terminal.hint2": "Ctrl+T — terminate · Ctrl+V — paste · drop a file here",
   "message.minepc.upload.off": "The computer is off: file not uploaded",
   "message.minepc.upload.failed": "Could not upload %s: %s",
   "message.minepc.upload.done": "File uploaded: %s (%s)",
