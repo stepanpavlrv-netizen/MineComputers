@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "minepc:block/monitor"
+    },
+    "facing=east": {
+      "model": "minepc:block/monitor",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "minepc:block/monitor",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "minepc:block/monitor",
+      "y": 270
+    }
+  }
+}

@@ -1,1 +1,9 @@
-{"values":["minepc:pc_case","minepc:assembly_table"]}
+{
+  "values": [
+    "minepc:pc_case",
+    "minepc:assembly_table",
+    "minepc:monitor",
+    "minepc:keyboard",
+    "minepc:disk_drive"
+  ]
+}

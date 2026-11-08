@@ -4,6 +4,7 @@ import com.strikerr212.minepc.MineComputers;
 import com.strikerr212.minepc.hardware.HardwareType;
 import com.strikerr212.minepc.item.CoolerItem;
 import com.strikerr212.minepc.item.CpuItem;
+import com.strikerr212.minepc.item.DriveItem;
 import com.strikerr212.minepc.item.GpuItem;
 import com.strikerr212.minepc.item.HardwareItem;
 import com.strikerr212.minepc.item.HddItem;
@@ -51,6 +52,19 @@ public class ModItems {
             ITEMS.registerSimpleBlockItem("pc_case", ModBlocks.PC_CASE);
     public static final DeferredItem<BlockItem> ASSEMBLY_TABLE =
             ITEMS.registerSimpleBlockItem("assembly_table", ModBlocks.ASSEMBLY_TABLE);
+
+    public static final DeferredItem<BlockItem> MONITOR =
+            ITEMS.registerSimpleBlockItem("monitor", ModBlocks.MONITOR);
+    public static final DeferredItem<BlockItem> KEYBOARD =
+            ITEMS.registerSimpleBlockItem("keyboard", ModBlocks.KEYBOARD);
+    public static final DeferredItem<BlockItem> DISK_DRIVE =
+            ITEMS.registerSimpleBlockItem("disk_drive", ModBlocks.DISK_DRIVE);
+
+    // Съёмные накопители: файлы хранятся в папке мира, в предмете — только номер
+    public static final DeferredItem<DriveItem> FLOPPY_DISK =
+            ITEMS.register("floppy_disk", () -> new DriveItem(DriveItem.Kind.FLOPPY, 512 * 1024, new Item.Properties()));
+    public static final DeferredItem<DriveItem> FLASH_DRIVE =
+            ITEMS.register("flash_drive", () -> new DriveItem(DriveItem.Kind.FLASH, 4 * 1024 * 1024, new Item.Properties()));
 
     /** Все комплектующие одним списком — удобно перебирать в цикле. */
     public static final List<DeferredItem<? extends HardwareItem>> HARDWARE =

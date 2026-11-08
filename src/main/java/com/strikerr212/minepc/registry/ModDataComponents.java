@@ -1,5 +1,7 @@
 package com.strikerr212.minepc.registry;
 
+import com.mojang.serialization.Codec;
+import net.minecraft.network.codec.ByteBufCodecs;
 import com.strikerr212.minepc.MineComputers;
 import com.strikerr212.minepc.hardware.spec.PartDesign;
 import net.minecraft.core.component.DataComponentType;
@@ -21,6 +23,13 @@ public class ModDataComponents {
             COMPONENTS.register("design", () -> DataComponentType.<PartDesign>builder()
                     .persistent(PartDesign.CODEC)                 // сохранять в мир
                     .networkSynchronized(PartDesign.STREAM_CODEC)  // передавать игрокам
+                    .build());
+
+    /** Номер накопителя (диска, дискеты, флешки): по нему находится папка с его файлами в мире. */
+    public static final DeferredHolder<DataComponentType<?>, DataComponentType<String>> DRIVE_ID =
+            COMPONENTS.register("drive_id", () -> DataComponentType.<String>builder()
+                    .persistent(Codec.STRING)
+                    .networkSynchronized(ByteBufCodecs.STRING_UTF8)
                     .build());
 
     public static void register(IEventBus eventBus) {

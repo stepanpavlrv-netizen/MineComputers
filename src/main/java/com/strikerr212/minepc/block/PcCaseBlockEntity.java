@@ -5,6 +5,7 @@ import com.strikerr212.minepc.hardware.GpuData;
 import com.strikerr212.minepc.hardware.HardwareType;
 import com.strikerr212.minepc.hardware.HddData;
 import com.strikerr212.minepc.hardware.MotherboardData;
+import com.strikerr212.minepc.hardware.Perf;
 import com.strikerr212.minepc.hardware.RamData;
 import com.strikerr212.minepc.hardware.SsdData;
 import com.strikerr212.minepc.hardware.SystemModel;
@@ -35,16 +36,24 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.neoforged.neoforge.items.IItemHandler;
 import net.neoforged.neoforge.items.ItemStackHandler;
+import com.strikerr212.minepc.item.DriveItem;
+import com.strikerr212.minepc.menu.PcCaseMenu;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.MenuProvider;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.inventory.AbstractContainerMenu;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
 /**
- * "Мозг" системного блока: хранит установленные детали и проверяет совместимость.
+ * "Мозг" системного блока: хранит установленные детали, проверяет совместимость
+ * и управляет компьютером (см. {@link CaseComputer}).
  */
-public class PcCaseBlockEntity extends BlockEntity {
+public class PcCaseBlockEntity extends BlockEntity implements MenuProvider {
 
     // ----- Раскладка слотов -----
     public static final int SLOT_MOTHERBOARD = 0;
@@ -60,14 +69,16 @@ public class PcCaseBlockEntity extends BlockEntity {
     public static final int SATA_SSD_SLOTS = 2;
     public static final int SLOT_M2 = 13;          // 13..14 — слоты M.2 на плате
     public static final int M2_SLOTS = 2;
-    public static final int SLOT_COUNT = 15;
+    public static final int SLOT_USB = 15;         // 15..16 — USB-порты на передней панели
+    public static final int USB_SLOTS = 2;
+    public static final int SLOT_COUNT = 17;
 
     /** Версия раскладки: если сохранение старое, детали раскладываются заново. */
-    private static final int LAYOUT_VERSION = 2;
+    private static final int LAYOUT_VERSION = 3;
 
     /** Порядок снятия: как в жизни, плата и блок питания — последними. */
     private static final int[] REMOVE_ORDER = {
-            SLOT_GPU, 14, 13, 12, 11, 10, 9, 6, 5, 4, 3, SLOT_COOLER, SLOT_CPU, SLOT_PSU, SLOT_MOTHERBOARD};
+            16, 15, SLOT_GPU, 14, 13, 12, 11, 10, 9, 6, 5, 4, 3, SLOT_COOLER, SLOT_CPU, SLOT_PSU, SLOT_MOTHERBOARD};
 
     /** Инвентарь корпуса: по одной детали в слоте. */
     private static class CaseInventory extends ItemStackHandler {
@@ -81,11 +92,24 @@ public class PcCaseBlockEntity extends BlockEntity {
         @Override
         protected void onContentsChanged(int slot) {
             owner.markUpdated();
+            owner.slotChanged(slot);
         }
 
         @Override
         public int getSlotLimit(int slot) {
             return 1;
+        }
+
+        @Override
+        public boolean isItemValid(int slot, ItemStack stack) {
+            return owner.canPlace(slot, stack);
+        }
+
+        /** Деталь нельзя вынуть, если на ней что-то держится (плата под процессором, процессор под кулером). */
+        @Override
+        public ItemStack extractItem(int slot, int amount, boolean simulate) {
+            if (!owner.canTake(slot)) return ItemStack.EMPTY;
+            return super.extractItem(slot, amount, simulate);
         }
 
         /** Положить предмет без оповещений (используется при загрузке). */
@@ -95,6 +119,7 @@ public class PcCaseBlockEntity extends BlockEntity {
     }
 
     private final CaseInventory inventory = new CaseInventory(this);
+    private final CaseComputer pc = new CaseComputer(this);
 
     public PcCaseBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.PC_CASE.get(), pos, state);
@@ -104,15 +129,152 @@ public class PcCaseBlockEntity extends BlockEntity {
         return inventory.getStackInSlot(slot);
     }
 
+    public IItemHandler inventory() {
+        return inventory;
+    }
+
     /** Данные установленной платы или null, если её нет. */
-    private MotherboardData motherboard() {
+    public MotherboardData motherboard() {
         ItemStack board = getStack(SLOT_MOTHERBOARD);
         return board.getItem() instanceof MotherboardItem ? MotherboardItem.data(board) : null;
+    }
+
+    // ======================= Правила слотов (для окна корпуса) =======================
+
+    private boolean anyIn(int first, int count, int except) {
+        for (int i = first; i < first + count; i++) if (i != except && !getStack(i).isEmpty()) return true;
+        return false;
+    }
+
+    /** Можно ли положить предмет в этот слот: подходит ли вид детали и совместимость. */
+    public boolean canPlace(int slot, ItemStack stack) {
+        if (stack.isEmpty()) return false;
+        if (slot >= SLOT_USB && slot < SLOT_USB + USB_SLOTS) {
+            return stack.getItem() instanceof DriveItem d && d.kind() == DriveItem.Kind.FLASH;
+        }
+        if (!(stack.getItem() instanceof HardwareItem hw)) return false;
+        HardwareType type = hw.getHardwareType();
+        if (slot == SLOT_PSU) return type == HardwareType.PSU;
+        if (slot == SLOT_MOTHERBOARD) return type == HardwareType.MOTHERBOARD;
+        MotherboardData board = motherboard();
+        if (board == null) return false;
+        if (slot == SLOT_CPU) {
+            if (type != HardwareType.CPU) return false;
+            CpuData cpu = CpuItem.data(stack);
+            return cpu.socket() == board.socket() && cpu.tier() <= board.maxCpuTier();
+        }
+        if (slot == SLOT_COOLER) return type == HardwareType.COOLER && !getStack(SLOT_CPU).isEmpty();
+        if (slot >= SLOT_RAM && slot < SLOT_RAM + RAM_SLOTS) return type == HardwareType.RAM && slot - SLOT_RAM < board.ramSlots();
+        if (slot == SLOT_GPU) return type == HardwareType.GPU;
+        if (slot >= SLOT_HDD && slot < SLOT_HDD + HDD_SLOTS) return type == HardwareType.HDD && sataFreeFor(board, slot);
+        if (slot >= SLOT_SATA_SSD && slot < SLOT_SATA_SSD + SATA_SSD_SLOTS) {
+            return type == HardwareType.SSD && !SsdItem.data(stack).isNvme() && sataFreeFor(board, slot);
+        }
+        if (slot >= SLOT_M2 && slot < SLOT_M2 + M2_SLOTS) {
+            return type == HardwareType.SSD && SsdItem.data(stack).isNvme() && slot - SLOT_M2 < board.m2Slots();
+        }
+        return false;
+    }
+
+    /** Свободен ли порт SATA для устройства в слоте slot (сам слот не считаем). */
+    private boolean sataFreeFor(MotherboardData board, int slot) {
+        int used = 0;
+        for (int i = 0; i < HDD_SLOTS; i++) if (SLOT_HDD + i != slot && !getStack(SLOT_HDD + i).isEmpty()) used++;
+        for (int i = 0; i < SATA_SSD_SLOTS; i++) if (SLOT_SATA_SSD + i != slot && !getStack(SLOT_SATA_SSD + i).isEmpty()) used++;
+        return used < board.sataPorts();
+    }
+
+    /** Можно ли вынуть деталь: плату — только когда на ней ничего нет, процессор — без кулера. */
+    public boolean canTake(int slot) {
+        if (slot == SLOT_MOTHERBOARD) {
+            return getStack(SLOT_CPU).isEmpty() && getStack(SLOT_GPU).isEmpty() && !anyIn(SLOT_RAM, RAM_SLOTS, -1)
+                    && !anyIn(SLOT_HDD, HDD_SLOTS + SATA_SSD_SLOTS + M2_SLOTS, -1);
+        }
+        if (slot == SLOT_CPU) return getStack(SLOT_COOLER).isEmpty();
+        return true;
+    }
+
+    // ======================= Компьютер =======================
+
+    public static void serverTick(Level level, BlockPos pos, BlockState state, PcCaseBlockEntity be) {
+        if (level instanceof ServerLevel server) be.pc.tick(server, pos);
+    }
+
+    /** Кнопка питания. Возвращает сообщение для игрока или null. */
+    public Component togglePower() {
+        if (!(level instanceof ServerLevel server)) return null;
+        if (pc.stateCode() == 1) {
+            pc.powerOff();
+            return Component.translatable("message.minepc.power_off").withStyle(ChatFormatting.GRAY);
+        }
+        List<SystemModel.Note> reasons = pc.powerOn(server);
+        if (reasons == null) return Component.translatable("message.minepc.power_on").withStyle(ChatFormatting.GREEN);
+        MutableComponent msg = Component.translatable("message.minepc.status.no_boot").withStyle(ChatFormatting.RED);
+        for (SystemModel.Note n : reasons) msg.append(" ").append(noteText(n));
+        return msg;
+    }
+
+    /** 0 — выключен, 1 — работает, 2 — ошибка. */
+    public int computerState() {
+        return pc.stateCode();
+    }
+
+    public boolean hasKeyboard() {
+        return pc.hasKeyboard();
+    }
+
+    /** Ввод с клавиатуры от игрока (проверка расстояния и клавиатуры — в обработчике пакета). */
+    public void input(int kind, String text, boolean ctrl, boolean shift) {
+        pc.input(kind, text, ctrl, shift);
+    }
+
+    void stateChanged() {
+        markUpdated();
+    }
+
+    private void slotChanged(int slot) {
+        if (level == null || level.isClientSide) return;
+        if (slot >= SLOT_USB) {
+            if (level instanceof ServerLevel server) pc.updateRemovable(server, true);
+        } else {
+            pc.partsChanged();
+        }
+    }
+
+    @Override
+    public void setRemoved() {
+        super.setRemoved();
+        pc.unload();
+    }
+
+    @Override
+    public void onChunkUnloaded() {
+        super.onChunkUnloaded();
+        pc.unload();
+    }
+
+    // ----- Окно корпуса -----
+
+    @Override
+    public Component getDisplayName() {
+        return Component.translatable("block.minepc.pc_case");
+    }
+
+    @Override
+    public AbstractContainerMenu createMenu(int id, Inventory playerInventory, Player player) {
+        return new PcCaseMenu(id, playerInventory, this);
     }
 
     // ======================= Установка и снятие =======================
 
     public Component tryInstall(ItemStack held, Player player) {
+        if (held.getItem() instanceof DriveItem drive && drive.kind() == DriveItem.Kind.FLASH) {
+            int usb = freeSlot(SLOT_USB, USB_SLOTS);
+            if (usb < 0) return error("message.minepc.no_slot");
+            inventory.setStackInSlot(usb, held.copyWithCount(1));
+            if (!player.getAbilities().instabuild) held.shrink(1);
+            return Component.translatable("message.minepc.installed", getStack(usb).getHoverName()).withStyle(ChatFormatting.GREEN);
+        }
         if (!(held.getItem() instanceof HardwareItem hardware)) {
             return error("message.minepc.not_hardware");
         }
@@ -211,7 +373,7 @@ public class PcCaseBlockEntity extends BlockEntity {
     // ======================= Отчёт о сборке =======================
 
     /** Собрать паспорта установленных деталей для расчёта производительности. */
-    private SystemModel.Input collectInput() {
+    SystemModel.Input collectInput() {
         int power = 0;
         List<RamData> ram = new ArrayList<>();
         List<HddData> hdds = new ArrayList<>();
@@ -235,32 +397,39 @@ public class PcCaseBlockEntity extends BlockEntity {
     }
 
     public void sendStatus(Player player) {
-        player.sendSystemMessage(Component.translatable("message.minepc.status.header").withStyle(ChatFormatting.AQUA));
+        for (Component line : statusLines(true)) out.add(line);
+    }
+
+    /** Отчёт о сборке: производительность, питание, охлаждение, узкие места (и в чате, и в окне корпуса). */
+    public List<Component> statusLines(boolean withParts) {
+        List<Component> out = new ArrayList<>();
+        if (withParts) out.add(Component.translatable("message.minepc.status.header").withStyle(ChatFormatting.AQUA));
 
         boolean any = false;
         for (int slot = 0; slot < SLOT_COUNT; slot++) {
             ItemStack stack = getStack(slot);
             if (stack.isEmpty() || !(stack.getItem() instanceof HardwareItem)) continue;
             any = true;
-            player.sendSystemMessage(Component.literal(" • ").withStyle(ChatFormatting.DARK_GRAY)
+            if (withParts) out.add(Component.literal(" • ").withStyle(ChatFormatting.DARK_GRAY)
                     .append(stack.getHoverName()));
         }
         if (!any) {
-            player.sendSystemMessage(Component.translatable("message.minepc.empty").withStyle(ChatFormatting.GRAY));
-            return;
+            out.add(Component.translatable("message.minepc.empty").withStyle(ChatFormatting.GRAY));
+            return out;
         }
 
         SystemModel.Input in = collectInput();
         SystemModel.Report r = SystemModel.evaluate(in);
 
         // ----- Что реально выдаёт каждая часть -----
-        player.sendSystemMessage(Component.translatable("message.minepc.status.perf").withStyle(ChatFormatting.AQUA));
+        if (withParts) out.add(Component.translatable("message.minepc.status.perf").withStyle(ChatFormatting.AQUA));
         if (in.cpu() != null) {
             boolean reduced = r.cpuThrottle() < 1 || r.cpuMemory() < 0.85;
-            player.sendSystemMessage(perf("message.minepc.status.cpu", reduced, Units.ops(r.cpuGips()), Units.level(r.cpuLevel())));
+            out.add(perf("message.minepc.status.cpu", reduced, Units.ops(r.cpuGips()), Units.level(r.cpuLevel())));
+            out.add(perf("message.minepc.status.game_ops", reduced, Units.gameOps(Perf.gameOpsPerSecond(r.cpuGips()))));
         }
         if (in.gpu() != null) {
-            player.sendSystemMessage(perf("message.minepc.status.gpu", r.gpuThrottle() < 1,
+            out.add(perf("message.minepc.status.gpu", r.gpuThrottle() < 1,
                     Units.tflops(r.gpuTflops()), Units.level(r.gpuLevel())));
         }
         if (r.ramMb() > 0) {
@@ -269,43 +438,44 @@ public class PcCaseBlockEntity extends BlockEntity {
             if (hasNote(r, SystemModel.Issue.RAM_LIMITED)) {
                 line.append(Component.translatable("message.minepc.status.ram_limited").withStyle(ChatFormatting.GOLD));
             }
-            player.sendSystemMessage(line);
+            out.add(line);
         }
         if (r.bootSeconds() > 0) {
-            player.sendSystemMessage(perf("message.minepc.status.boot", r.bootSeconds() > 20, Units.seconds(r.bootSeconds()),
+            out.add(perf("message.minepc.status.boot", r.bootSeconds() > 20, Units.seconds(r.bootSeconds()),
                     Component.translatable(r.bootFromSsd() ? "message.minepc.status.boot_ssd" : "message.minepc.status.boot_hdd")));
         }
 
         // ----- Питание и охлаждение -----
-        player.sendSystemMessage(powerStatus(in.powerDraw()));
+        out.add(powerStatus(in.powerDraw()));
         if (r.wallWatts() > 0) {
-            player.sendSystemMessage(Component.translatable("message.minepc.power.wall",
+            out.add(Component.translatable("message.minepc.power.wall",
                     Units.watts(r.wallWatts()), Units.watts(r.wallWatts() - in.powerDraw())).withStyle(ChatFormatting.DARK_GRAY));
         }
-        player.sendSystemMessage(coolingStatus(r));
+        out.add(coolingStatus(r));
         Component gpu = gpuCoolingStatus(r);
-        if (gpu != null) player.sendSystemMessage(gpu);
+        if (gpu != null) out.add(gpu);
 
         // ----- Итог -----
         if (r.bootable()) {
-            player.sendSystemMessage(Component.translatable("message.minepc.status.score",
+            out.add(Component.translatable("message.minepc.status.score",
                     Component.literal(String.valueOf(r.score())).withStyle(ChatFormatting.YELLOW, ChatFormatting.BOLD))
                     .withStyle(ChatFormatting.AQUA));
         } else {
-            player.sendSystemMessage(Component.translatable("message.minepc.status.no_boot").withStyle(ChatFormatting.RED));
+            out.add(Component.translatable("message.minepc.status.no_boot").withStyle(ChatFormatting.RED));
         }
         boolean warned = false;
         for (SystemModel.Note n : r.notes()) {
             // Эти замечания уже видны в строках выше
             if (n.issue() == SystemModel.Issue.RAM_LIMITED || n.issue() == SystemModel.Issue.PSU_HIGH) continue;
             if (!n.issue().critical && !r.bootable()) continue;   // сначала пусть запустится
-            player.sendSystemMessage(Component.literal(" ! ").append(noteText(n))
+            out.add(Component.literal(" ! ").append(noteText(n))
                     .withStyle(n.issue().critical ? ChatFormatting.RED : ChatFormatting.GOLD));
             warned = true;
         }
         if (!warned && r.bootable()) {
-            player.sendSystemMessage(Component.translatable("message.minepc.status.balanced").withStyle(ChatFormatting.GREEN));
+            out.add(Component.translatable("message.minepc.status.balanced").withStyle(ChatFormatting.GREEN));
         }
+        return out;
     }
 
     private static boolean hasNote(SystemModel.Report r, SystemModel.Issue issue) {
@@ -422,6 +592,9 @@ public class PcCaseBlockEntity extends BlockEntity {
         super.saveAdditional(tag, registries);
         tag.put("inventory", inventory.serializeNBT(registries));
         tag.putInt("layout", LAYOUT_VERSION);
+        tag.putBoolean("on", pc.wantOn());
+        if (!pc.label().isEmpty()) tag.putString("label", pc.label());
+        tag.putInt("state", pc.stateCode());
     }
 
     @Override
@@ -429,12 +602,19 @@ public class PcCaseBlockEntity extends BlockEntity {
         super.loadAdditional(tag, registries);
         ItemStackHandler saved = new ItemStackHandler();
         saved.deserializeNBT(registries, tag.getCompound("inventory"));
-        boolean sameLayout = tag.getInt("layout") == LAYOUT_VERSION && saved.getSlots() == SLOT_COUNT;
+        int layout = tag.getInt("layout");
+        boolean sameLayout = layout == LAYOUT_VERSION && saved.getSlots() == SLOT_COUNT;
+        // Версия 2 отличалась только отсутствием USB-портов в конце
+        boolean prefix = layout == 2 && saved.getSlots() == 15;
 
         for (int slot = 0; slot < SLOT_COUNT; slot++) {
-            inventory.setDirect(slot, sameLayout ? saved.getStackInSlot(slot) : ItemStack.EMPTY);
+            boolean keep = sameLayout || (prefix && slot < saved.getSlots());
+            inventory.setDirect(slot, keep ? saved.getStackInSlot(slot) : ItemStack.EMPTY);
         }
-        if (!sameLayout) {
+        pc.setWantOn(tag.getBoolean("on"));
+        pc.setLabel(tag.getString("label"));
+        clientState = tag.getInt("state");
+        if (!sameLayout && !prefix) {
             // Сохранение из старой версии мода: раскладываем детали по новым слотам
             for (int i = 0; i < saved.getSlots(); i++) {
                 ItemStack stack = saved.getStackInSlot(i);
@@ -446,6 +626,13 @@ public class PcCaseBlockEntity extends BlockEntity {
                 }
             }
         }
+    }
+
+    /** Состояние компьютера, как его видит игрок (на клиенте приходит с сервера). */
+    private int clientState;
+
+    public int displayState() {
+        return level != null && level.isClientSide ? clientState : pc.stateCode();
     }
 
     private int legacySlot(HardwareType type, ItemStack stack) {

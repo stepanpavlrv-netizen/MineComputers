@@ -82,6 +82,7 @@ public class CpuSpec extends PartSpec {
         lines.add(perfLine("tooltip.minepc.perf_speed", Units.ops(gips), Units.level(Perf.level(gips, Perf.STOCK_CPU_GIPS))));
         if (d.cores() > 1) lines.add(perfLine("tooltip.minepc.perf_core", Units.ops(Perf.cpuSingleGips(d))));
         lines.add(perfLine("tooltip.minepc.perf_mem_need", Units.bandwidth(Perf.cpuMemoryDemand(d))));
+        lines.add(perfLine("tooltip.minepc.game_ops", Units.gameOps(Perf.gameOpsPerSecond(gips))));
     }
 
     @Override

@@ -64,10 +64,12 @@ public class ClientEvents {
     @SubscribeEvent
     public static void registerRenderers(EntityRenderersEvent.RegisterRenderers event) {
         event.registerBlockEntityRenderer(ModBlockEntities.PC_CASE.get(), PcCaseRenderer::new);
+        event.registerBlockEntityRenderer(ModBlockEntities.MONITOR.get(), MonitorRenderer::new);
     }
 
     @SubscribeEvent
     public static void registerScreens(RegisterMenuScreensEvent event) {
         event.register(ModMenus.ASSEMBLY.get(), AssemblyScreen::new);
+        event.register(ModMenus.PC_CASE.get(), PcCaseScreen::new);
     }
 }

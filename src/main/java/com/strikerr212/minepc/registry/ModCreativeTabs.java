@@ -22,6 +22,11 @@ public class ModCreativeTabs {
                     .displayItems((parameters, output) -> {
                         output.accept(ModItems.ASSEMBLY_TABLE.get());
                         output.accept(ModItems.PC_CASE.get());
+                        output.accept(ModItems.MONITOR.get());
+                        output.accept(ModItems.KEYBOARD.get());
+                        output.accept(ModItems.DISK_DRIVE.get());
+                        output.accept(ModItems.FLOPPY_DISK.get());
+                        output.accept(ModItems.FLASH_DRIVE.get());
                         // стоковые детали: 5 уровней каждого вида
                         for (int tier = 1; tier <= HardwarePresets.MAX_TIER; tier++) output.accept(HardwarePresets.motherboard(tier));
                         for (int tier = 1; tier <= HardwarePresets.MAX_TIER; tier++) output.accept(HardwarePresets.cpu(tier));

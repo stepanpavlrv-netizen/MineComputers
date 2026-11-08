@@ -83,4 +83,17 @@ public final class Units {
     public static Component level(double lv) {
         return Component.translatable("unit.minepc.level", String.format(Locale.ROOT, "%.1f", lv));
     }
+
+    /** Команд в секунду в игре: тыс. или млн. */
+    public static Component gameOps(int ops) {
+        if (ops >= 1_000_000) return Component.translatable("unit.minepc.mcmds", num(ops / 1e6));
+        return Component.translatable("unit.minepc.kcmds", Math.round(ops / 1000.0));
+    }
+
+    /** Размер в байтах: Б, КБ или МБ. */
+    public static Component bytes(long b) {
+        if (b >= 1024 * 1024) return Component.translatable("unit.minepc.mb", num(b / 1048576.0));
+        if (b >= 1024) return Component.translatable("unit.minepc.kb", num(b / 1024.0));
+        return Component.translatable("unit.minepc.bytes", b);
+    }
 }

@@ -1,7 +1,11 @@
 package com.strikerr212.minepc.block;
 
 import com.mojang.serialization.MapCodec;
+import com.strikerr212.minepc.item.DriveItem;
 import com.strikerr212.minepc.item.HardwareItem;
+import com.strikerr212.minepc.registry.ModBlockEntities;
+import net.minecraft.world.level.block.entity.BlockEntityTicker;
+import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.InteractionHand;
@@ -29,10 +33,9 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 /**
  * Системный блок.
  *
- * Управление (пока нет интерфейса):
- *   ПКМ деталью              — установить её в свободный слот
- *   ПКМ пустой рукой         — показать состав и проверку охлаждения
- *   Shift + ПКМ пустой рукой — вынуть последнюю деталь
+ *   ПКМ пустой рукой — окно корпуса: слоты деталей, кнопка питания, характеристики
+ *   ПКМ деталью      — быстро установить её в подходящий свободный слот
+ *   Shift + ПКМ      — показать отчёт о сборке в чате
  */
 public class PcCaseBlock extends BaseEntityBlock {
 
@@ -92,11 +95,17 @@ public class PcCaseBlock extends BaseEntityBlock {
         return new PcCaseBlockEntity(pos, state);
     }
 
+    @Override
+    public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> type) {
+        return level.isClientSide ? null : createTickerHelper(type, ModBlockEntities.PC_CASE.get(), PcCaseBlockEntity::serverTick);
+    }
+
     /** ПКМ предметом в руке. */
     @Override
     protected ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos,
                                               Player player, InteractionHand hand, BlockHitResult hit) {
-        if (!(stack.getItem() instanceof HardwareItem)) {
+        boolean flash = stack.getItem() instanceof DriveItem d && d.kind() == DriveItem.Kind.FLASH;
+        if (!(stack.getItem() instanceof HardwareItem) && !flash || player.isShiftKeyDown()) {
             return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
         }
         if (!level.isClientSide && level.getBlockEntity(pos) instanceof PcCaseBlockEntity pc) {
@@ -111,9 +120,9 @@ public class PcCaseBlock extends BaseEntityBlock {
                                                Player player, BlockHitResult hit) {
         if (!level.isClientSide && level.getBlockEntity(pos) instanceof PcCaseBlockEntity pc) {
             if (player.isShiftKeyDown()) {
-                player.displayClientMessage(pc.removeLast(player), true);
-            } else {
                 pc.sendStatus(player);
+            } else {
+                player.openMenu(pc, buf -> buf.writeBlockPos(pos));
             }
         }
         return InteractionResult.sidedSuccess(level.isClientSide);

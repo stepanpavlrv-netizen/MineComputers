@@ -2,6 +2,8 @@ package com.strikerr212.minepc.registry;
 
 import com.strikerr212.minepc.MineComputers;
 import com.strikerr212.minepc.menu.AssemblyMenu;
+import com.strikerr212.minepc.menu.PcCaseMenu;
+import net.neoforged.neoforge.common.extensions.IMenuTypeExtension;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.flag.FeatureFlags;
 import net.minecraft.world.inventory.MenuType;
@@ -16,6 +18,9 @@ public class ModMenus {
 
     public static final DeferredHolder<MenuType<?>, MenuType<AssemblyMenu>> ASSEMBLY =
             MENUS.register("assembly", () -> new MenuType<>(AssemblyMenu::new, FeatureFlags.DEFAULT_FLAGS));
+
+    public static final DeferredHolder<MenuType<?>, MenuType<PcCaseMenu>> PC_CASE =
+            MENUS.register("pc_case", () -> IMenuTypeExtension.create(PcCaseMenu::new));
 
     public static void register(IEventBus eventBus) {
         MENUS.register(eventBus);

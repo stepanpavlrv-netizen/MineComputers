@@ -53,6 +53,7 @@ public class HddSpec extends PartSpec {
         lines.add(line("tooltip.minepc.speed", Units.speed(d.speedMbs())));
         lines.add(perfLine("tooltip.minepc.perf_random", Units.iops(d.iops())));
         lines.add(perfLine("tooltip.minepc.perf_boot", Units.seconds(Perf.bootSeconds(d))));
+        lines.add(perfLine("tooltip.minepc.game_storage", Units.bytes(Perf.gameStorageBytes(d.capacityMb()))));
     }
 
     @Override

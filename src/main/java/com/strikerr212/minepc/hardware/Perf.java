@@ -161,6 +161,28 @@ public final class Perf {
         return Math.round(loadW * 100f / Math.max(1, efficiencyPercent));
     }
 
+    // ===================== Лимиты в игре =====================
+
+    /**
+     * Сколько команд Lua в секунду компьютер реально получает в игре. Программы выполняет процессор
+     * сервера, поэтому шкала сжата: ур. 1 ≈ 200 тыс., ур. 3 ≈ 4 млн, ур. 5 ≈ 20 млн команд/с
+     * (вместо разницы в сотни раз между настоящими процессорами).
+     */
+    public static int gameOpsPerSecond(double gips) {
+        if (gips <= 0) return 0;
+        return (int) Math.min(50_000_000, Math.round(200_000 * Math.pow(gips / STOCK_CPU_GIPS[0], 0.69)));
+    }
+
+    /** Сколько байт файлов помещается на накопитель в игре: «гигабайт» детали = мегабайт в игре. */
+    public static long gameStorageBytes(int capacityMb) {
+        return capacityMb * 1024L;
+    }
+
+    /** Память для программ в игре: «гигабайт» планки = мегабайт в игре. */
+    public static int gameMemoryKb(int capacityMb) {
+        return capacityMb;
+    }
+
     // ===================== Сравнение с заводскими уровнями =====================
 
     /** Скорость заводских процессоров ур. 1–5, млрд оп/с (проверяется тестом). */

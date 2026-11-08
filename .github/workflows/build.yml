@@ -23,3 +23,15 @@ jobs:
 
       - name: Build with Gradle
         run: ./gradlew build
+      - name: Test specs and computers without Minecraft
+        run: |
+          python3 tools/spectest/run.py
+          COBALT=$(find ~/.gradle/caches -name "cobalt-*.jar" ! -name "*sources*" | head -1)
+          echo "Cobalt: $COBALT"
+          python3 tools/computer/run_test.py "$COBALT"
+
+      - name: Upload mod jar
+        uses: actions/upload-artifact@v4
+        with:
+          name: minecomputers-jar
+          path: build/libs/*.jar

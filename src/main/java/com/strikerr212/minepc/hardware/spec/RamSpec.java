@@ -69,6 +69,7 @@ public class RamSpec extends PartSpec {
                 Component.translatable("tooltip.minepc.chips_value", d.chips(), Units.size(d.chipMb()))));
         lines.add(line("tooltip.minepc.clock", Units.frequency(d.speedMhz())));
         lines.add(perfLine("tooltip.minepc.perf_ram_channel", Units.bandwidth(Perf.ramChannelGbs(d.speedMhz()))));
+        lines.add(perfLine("tooltip.minepc.game_memory", Units.bytes(Perf.gameMemoryKb(d.capacityMb()) * 1024L)));
     }
 
     @Override

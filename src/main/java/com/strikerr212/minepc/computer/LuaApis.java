@@ -1,0 +1,330 @@
+package com.strikerr212.minepc.computer;
+
+import com.strikerr212.minepc.computer.fs.FileSystem;
+import com.strikerr212.minepc.computer.fs.FsException;
+import com.strikerr212.minepc.computer.fs.Mount;
+import org.squiddev.cobalt.*;
+import org.squiddev.cobalt.function.RegisteredFunction;
+
+import java.io.ByteArrayOutputStream;
+import java.util.List;
+import java.util.Map;
+
+import static org.squiddev.cobalt.ValueFactory.valueOf;
+import static org.squiddev.cobalt.ValueFactory.varargsOf;
+
+/**
+ * Функции, которые компьютер даёт программам на Lua: term (экран), fs (файлы), os (время, события),
+ * computer (сведения о железе). Остальное (print, read, shell...) написано на Lua в BIOS и ПЗУ.
+ */
+final class LuaApis {
+
+    private LuaApis() {
+    }
+
+    // ======================= Преобразования =======================
+
+    static LuaString str(String s) {
+        return LuaString.valueOf(Cp1251.encode(s));
+    }
+
+    static byte[] bytes(LuaValue v) {
+        if (v.isString()) {
+            LuaString s = (LuaString) v.toLuaString();
+            byte[] b = new byte[s.length()];
+            s.copyTo(0, b, 0, b.length);
+            return b;
+        }
+        return Cp1251.encode(v.toString());
+    }
+
+    static String text(LuaValue v) {
+        return Cp1251.decode(bytes(v));
+    }
+
+    static LuaError error(String message) {
+        return new LuaError(str(message));
+    }
+
+    static String errorText(LuaError e) {
+        LuaValue v = e.getValue();
+        String msg = v != null && v.isString() ? text(v) : e.getMessage();
+        return msg == null ? "неизвестная ошибка" : msg;
+    }
+
+    static LuaValue toLua(Object o) {
+        if (o == null) return Constants.NIL;
+        if (o instanceof String s) return str(s);
+        if (o instanceof Integer i) return valueOf(i);
+        if (o instanceof Long l) return valueOf((double) l);
+        if (o instanceof Number n) return valueOf(n.doubleValue());
+        if (o instanceof Boolean b) return valueOf(b);
+        if (o instanceof byte[] b) return LuaString.valueOf(b);
+        return str(o.toString());
+    }
+
+    static Varargs toVarargs(Object[] values) {
+        LuaValue[] v = new LuaValue[values.length];
+        for (int i = 0; i < values.length; i++) v[i] = toLua(values[i]);
+        return varargsOf(v);
+    }
+
+    private static Object fromLua(LuaValue v) {
+        if (v.isNil()) return null;
+        if (v instanceof LuaBoolean) return v.toBoolean();
+        if (v.isNumber()) return v.toDouble();
+        if (v.isString()) return text(v);
+        return null;   // таблицы и функции в события не передаём
+    }
+
+    // ======================= Установка =======================
+
+    static void install(LuaState state, LuaTable g, Computer c) {
+        g.rawset("term", term(c));
+        g.rawset("fs", fs(c));
+        g.rawset("os", os(c));
+        g.rawset("computer", computer(c));
+        g.rawset("_HOST", str("MineComputers 0.9 (Lua 5.2 / Cobalt)"));
+    }
+
+    // ======================= term =======================
+
+    private static LuaTable term(Computer c) {
+        Terminal t = c.terminal();
+        LuaTable table = new LuaTable();
+        RegisteredFunction.bind(table, new RegisteredFunction[]{
+                RegisteredFunction.ofV("write", (s, a) -> { t.write(bytes(a.arg(1))); return Constants.NONE; }),
+                RegisteredFunction.ofV("clear", (s, a) -> { t.clear(); return Constants.NONE; }),
+                RegisteredFunction.ofV("clearLine", (s, a) -> { t.clearLine(); return Constants.NONE; }),
+                RegisteredFunction.ofV("getCursorPos", (s, a) -> varargsOf(valueOf(t.cursorX() + 1), valueOf(t.cursorY() + 1))),
+                RegisteredFunction.ofV("setCursorPos", (s, a) -> {
+                    t.setCursor(a.arg(1).checkInteger() - 1, a.arg(2).checkInteger() - 1);
+                    return Constants.NONE;
+                }),
+                RegisteredFunction.ofV("setCursorBlink", (s, a) -> { t.setCursorBlink(a.arg(1).toBoolean()); return Constants.NONE; }),
+                RegisteredFunction.ofV("getSize", (s, a) -> varargsOf(valueOf(t.width()), valueOf(t.height()))),
+                RegisteredFunction.ofV("scroll", (s, a) -> { t.scroll(a.arg(1).checkInteger()); return Constants.NONE; }),
+                RegisteredFunction.ofV("setTextColor", (s, a) -> { t.setTextColor(a.arg(1).checkInteger()); return Constants.NONE; }),
+                RegisteredFunction.ofV("setBackgroundColor", (s, a) -> { t.setBackColor(a.arg(1).checkInteger()); return Constants.NONE; }),
+                RegisteredFunction.ofV("getTextColor", (s, a) -> valueOf(t.textColor())),
+                RegisteredFunction.ofV("getBackgroundColor", (s, a) -> valueOf(t.backColor())),
+                RegisteredFunction.ofV("isColor", (s, a) -> valueOf(t.isColor())),
+        });
+        return table;
+    }
+
+    // ======================= fs =======================
+
+    private static String path(Varargs a, int i) throws LuaError {
+        return FileSystem.normalize(text(a.arg(i).checkLuaString()));
+    }
+
+    private interface FsCall {
+        Varargs call(FileSystem fs, Varargs a) throws FsException, LuaError;
+    }
+
+    private static RegisteredFunction fsFn(String name, Computer c, FsCall fn) {
+        return RegisteredFunction.ofV(name, (s, a) -> {
+            try {
+                return fn.call(c.fileSystem(), a);
+            } catch (FsException e) {
+                throw error(e.getMessage());
+            }
+        });
+    }
+
+    private static LuaTable fs(Computer c) {
+        LuaTable table = new LuaTable();
+        RegisteredFunction.bind(table, new RegisteredFunction[]{
+                fsFn("list", c, (fs, a) -> {
+                    List<String> names = fs.list(path(a, 1));
+                    LuaTable out = new LuaTable();
+                    for (int i = 0; i < names.size(); i++) out.rawset(i + 1, str(names.get(i)));
+                    return out;
+                }),
+                fsFn("exists", c, (fs, a) -> valueOf(fs.exists(path(a, 1)))),
+                fsFn("isDir", c, (fs, a) -> valueOf(fs.isDirectory(path(a, 1)))),
+                fsFn("isReadOnly", c, (fs, a) -> valueOf(fs.isReadOnly(path(a, 1)))),
+                fsFn("getSize", c, (fs, a) -> valueOf((double) fs.size(path(a, 1)))),
+                fsFn("getFreeSpace", c, (fs, a) -> valueOf((double) fs.freeSpace(path(a, 1)))),
+                fsFn("getCapacity", c, (fs, a) -> valueOf((double) fs.capacity(path(a, 1)))),
+                fsFn("getDrive", c, (fs, a) -> {
+                    String d = fs.drive(path(a, 1));
+                    return d == null ? Constants.NIL : str("/" + d);
+                }),
+                fsFn("getLabel", c, (fs, a) -> str(fs.driveLabel(path(a, 1)))),
+                fsFn("makeDir", c, (fs, a) -> { fs.makeDirectory(path(a, 1)); return Constants.NONE; }),
+                fsFn("delete", c, (fs, a) -> { fs.delete(path(a, 1)); return Constants.NONE; }),
+                fsFn("move", c, (fs, a) -> { fs.move(path(a, 1), path(a, 2)); return Constants.NONE; }),
+                fsFn("copy", c, (fs, a) -> { fs.copy(path(a, 1), path(a, 2)); return Constants.NONE; }),
+                fsFn("mounts", c, (fs, a) -> {
+                    LuaTable out = new LuaTable();
+                    int i = 1;
+                    for (Map.Entry<String, Mount> e : fs.mounts().entrySet()) {
+                        LuaTable m = new LuaTable();
+                        m.rawset("path", str("/" + e.getKey()));
+                        m.rawset("label", str(e.getValue().label()));
+                        m.rawset("capacity", valueOf((double) e.getValue().capacity()));
+                        m.rawset("used", valueOf((double) e.getValue().used()));
+                        m.rawset("readOnly", valueOf(e.getValue().isReadOnly()));
+                        out.rawset(i++, m);
+                    }
+                    return out;
+                }),
+                RegisteredFunction.ofV("open", (s, a) -> open(c, a)),
+        });
+        return table;
+    }
+
+    /** fs.open(путь, режим): "r" — чтение, "w" — запись, "a" — дописывание; "b" в режиме ничего не меняет. */
+    private static Varargs open(Computer c, Varargs a) throws LuaError {
+        String path = path(a, 1);
+        String mode = a.arg(2).optString("r").replace("b", "");
+        FileSystem fs = c.fileSystem();
+        try {
+            return switch (mode) {
+                case "r" -> readHandle(fs.read(path));
+                case "w", "a" -> {
+                    if (fs.isDirectory(path)) throw new FsException("Это папка");
+                    if (fs.isReadOnly(path)) throw new FsException("Только для чтения");
+                    yield writeHandle(fs, path, mode.equals("a"));
+                }
+                default -> throw error("Неизвестный режим: " + mode);
+            };
+        } catch (FsException e) {
+            return varargsOf(Constants.NIL, str(e.getMessage()));
+        }
+    }
+
+    private static LuaTable readHandle(byte[] data) {
+        int[] pos = {0};
+        boolean[] closed = {false};
+        LuaTable h = new LuaTable();
+        RegisteredFunction.bind(h, new RegisteredFunction[]{
+                RegisteredFunction.ofV("readLine", (s, a) -> {
+                    if (closed[0]) throw error("Файл закрыт");
+                    if (pos[0] >= data.length) return Constants.NIL;
+                    int start = pos[0], end = start;
+                    while (end < data.length && data[end] != '\n') end++;
+                    pos[0] = Math.min(data.length, end + 1);
+                    int len = end - start;
+                    if (len > 0 && data[start + len - 1] == '\r') len--;
+                    return LuaString.valueOf(data, start, len);
+                }),
+                RegisteredFunction.ofV("readAll", (s, a) -> {
+                    if (closed[0]) throw error("Файл закрыт");
+                    int start = pos[0];
+                    pos[0] = data.length;
+                    return LuaString.valueOf(data, start, data.length - start);
+                }),
+                RegisteredFunction.ofV("read", (s, a) -> {
+                    if (closed[0]) throw error("Файл закрыт");
+                    if (pos[0] >= data.length) return Constants.NIL;
+                    int n = a.arg(1).optInteger(1);
+                    int start = pos[0];
+                    pos[0] = Math.min(data.length, start + Math.max(0, n));
+                    return LuaString.valueOf(data, start, pos[0] - start);
+                }),
+                RegisteredFunction.ofV("close", (s, a) -> { closed[0] = true; return Constants.NONE; }),
+        });
+        return h;
+    }
+
+    private static LuaTable writeHandle(FileSystem fs, String path, boolean append) throws FsException {
+        // Файл создаётся сразу (как в обычных системах), содержимое пишется при flush/close
+        if (!append) fs.write(path, new byte[0], false);
+        ByteArrayOutputStream buf = new ByteArrayOutputStream();
+        boolean[] closed = {false};
+        LuaTable h = new LuaTable();
+        RegisteredFunction.bind(h, new RegisteredFunction[]{
+                RegisteredFunction.ofV("write", (s, a) -> {
+                    if (closed[0]) throw error("Файл закрыт");
+                    byte[] b = bytes(a.arg(1));
+                    buf.write(b, 0, b.length);
+                    return Constants.NONE;
+                }),
+                RegisteredFunction.ofV("writeLine", (s, a) -> {
+                    if (closed[0]) throw error("Файл закрыт");
+                    byte[] b = bytes(a.arg(1));
+                    buf.write(b, 0, b.length);
+                    buf.write('\n');
+                    return Constants.NONE;
+                }),
+                RegisteredFunction.ofV("flush", (s, a) -> { flush(fs, path, buf); return Constants.NONE; }),
+                RegisteredFunction.ofV("close", (s, a) -> {
+                    if (closed[0]) return Constants.NONE;
+                    closed[0] = true;
+                    flush(fs, path, buf);
+                    return Constants.NONE;
+                }),
+        });
+        return h;
+    }
+
+    private static void flush(FileSystem fs, String path, ByteArrayOutputStream buf) throws LuaError {
+        if (buf.size() == 0) return;
+        try {
+            fs.write(path, buf.toByteArray(), true);
+            buf.reset();
+        } catch (FsException e) {
+            throw error(e.getMessage());
+        }
+    }
+
+    // ======================= os =======================
+
+    private static LuaTable os(Computer c) {
+        LuaTable table = new LuaTable();
+        RegisteredFunction.bind(table, new RegisteredFunction[]{
+                RegisteredFunction.ofV("startTimer", (s, a) -> valueOf(c.startTimer(a.arg(1).checkNumber().toDouble()))),
+                RegisteredFunction.ofV("cancelTimer", (s, a) -> { c.cancelTimer(a.arg(1).checkInteger()); return Constants.NONE; }),
+                RegisteredFunction.ofV("clock", (s, a) -> valueOf(c.uptimeSeconds())),
+                RegisteredFunction.ofV("time", (s, a) -> valueOf(c.host().timeOfDay())),
+                RegisteredFunction.ofV("day", (s, a) -> valueOf(c.host().day())),
+                RegisteredFunction.ofV("epoch", (s, a) -> valueOf((double) System.currentTimeMillis())),
+                RegisteredFunction.ofV("queueEvent", (s, a) -> {
+                    String name = text(a.arg(1).checkLuaString());
+                    Object[] rest = new Object[Math.max(0, a.count() - 1)];
+                    for (int i = 0; i < rest.length; i++) rest[i] = fromLua(a.arg(i + 2));
+                    c.queueEvent(name, rest);
+                    return Constants.NONE;
+                }),
+                RegisteredFunction.ofV("shutdown", (s, a) -> { c.requestShutdown(); return Constants.NONE; }),
+                RegisteredFunction.ofV("reboot", (s, a) -> { c.requestReboot(); return Constants.NONE; }),
+                RegisteredFunction.ofV("getComputerLabel", (s, a) -> c.label().isEmpty() ? Constants.NIL : str(c.label())),
+                RegisteredFunction.ofV("setComputerLabel", (s, a) -> {
+                    String label = a.arg(1).isNil() ? "" : text(a.arg(1).checkLuaString());
+                    if (label.length() > 32) label = label.substring(0, 32);
+                    c.setLabel(label);
+                    c.host().onLabelChanged(label);
+                    return Constants.NONE;
+                }),
+        });
+        return table;
+    }
+
+    // ======================= computer =======================
+
+    private static LuaTable computer(Computer c) {
+        LuaTable table = new LuaTable();
+        RegisteredFunction.bind(table, new RegisteredFunction[]{
+                RegisteredFunction.ofV("info", (s, a) -> {
+                    Computer.Info i = c.info();
+                    LuaTable t = new LuaTable();
+                    t.rawset("cpu", str(i.cpu()));
+                    t.rawset("cores", valueOf(i.cores()));
+                    t.rawset("clock", valueOf(i.clockMhz()));
+                    t.rawset("architecture", str(i.architecture()));
+                    t.rawset("ram", valueOf(i.ramKb()));
+                    t.rawset("opsPerSecond", valueOf(i.opsPerSecond()));
+                    t.rawset("gpu", str(i.gpu()));
+                    t.rawset("score", valueOf(i.score()));
+                    return t;
+                }),
+                RegisteredFunction.ofV("uptime", (s, a) -> valueOf(c.uptimeSeconds())),
+                RegisteredFunction.ofV("opsUsed", (s, a) -> valueOf((double) c.opsLastSecond())),
+                RegisteredFunction.ofV("opsLimit", (s, a) -> valueOf((double) c.opsPerTick() * Computer.TICKS_PER_SECOND)),
+        });
+        return table;
+    }
+}
