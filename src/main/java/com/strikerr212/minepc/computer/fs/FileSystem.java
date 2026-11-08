@@ -112,6 +112,15 @@ public final class FileSystem {
         return r.mount.size(r.local);
     }
 
+    public long lastModified(String path) {
+        try {
+            Resolved r = resolve(path);
+            return r.mount.lastModified(r.local);
+        } catch (FsException e) {
+            return 0;
+        }
+    }
+
     public byte[] read(String path) throws FsException {
         Resolved r = resolve(path);
         return r.mount.read(r.local);

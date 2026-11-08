@@ -91,6 +91,15 @@ public class DirMount implements Mount {
     }
 
     @Override
+    public long lastModified(String path) {
+        try {
+            return Files.getLastModifiedTime(resolve(path)).toMillis();
+        } catch (IOException | FsException e) {
+            return 0;
+        }
+    }
+
+    @Override
     public synchronized long used() {
         if (used < 0) {
             used = 0;

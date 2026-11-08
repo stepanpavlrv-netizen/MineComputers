@@ -187,6 +187,11 @@ public final class Perf {
         };
     }
 
+    /** Глубина цвета по уровню видеокарты: без неё 1 бит (ч/б), ур. 1–2 — 16 цветов, ур. 3–4 — 256, ур. 5 — любые. */
+    public static int colorDepth(int gpuTier) {
+        return gpuTier <= 0 ? 1 : gpuTier <= 2 ? 4 : gpuTier <= 4 ? 8 : 24;
+    }
+
     /** Сколько байт файлов помещается на накопитель в игре: «гигабайт» детали = мегабайт в игре. */
     public static long gameStorageBytes(int capacityMb) {
         return capacityMb * 1024L;

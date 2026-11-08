@@ -34,7 +34,7 @@ public class ModNetwork {
                 context.enqueueWork(() -> {
                     Player player = context.player();
                     BlockPos pos = payload.casePos();
-                    if (player.distanceToSqr(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5) > 12 * 12) return;
+                    if (player.distanceToSqr(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5) > 24 * 24) return;
                     if (!(player.level().getBlockEntity(pos) instanceof PcCaseBlockEntity pc)) return;
                     if (payload.kind() == TerminalInputPayload.REFRESH) {
                         pc.requestFullFrame();
@@ -45,8 +45,23 @@ public class ModNetwork {
                         if (msg != null) player.displayClientMessage(msg, true);
                         return;
                     }
+                    if (payload.kind() >= TerminalInputPayload.MOUSE_DOWN && payload.kind() <= TerminalInputPayload.MOUSE_SCROLL) {
+                        pc.mouse(payload.kind(), payload.flags(), payload.x(), payload.y());   // мышь работает и без клавиатуры
+                        return;
+                    }
                     if (!pc.hasKeyboard()) return;
                     pc.input(payload.kind(), payload.text(), (payload.flags() & 1) != 0, (payload.flags() & 2) != 0);
+                }));
+
+        // Файл с компьютера игрока, перетащенный в окно экрана
+        registrar.playToServer(FileUploadPayload.TYPE, FileUploadPayload.STREAM_CODEC, (payload, context) ->
+                context.enqueueWork(() -> {
+                    Player player = context.player();
+                    BlockPos pos = payload.casePos();
+                    if (player.distanceToSqr(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5) > 24 * 24) return;
+                    if (!(player.level().getBlockEntity(pos) instanceof PcCaseBlockEntity pc)) return;
+                    var msg = pc.upload(payload.name(), payload.offset(), payload.total(), payload.data());
+                    if (msg != null) player.displayClientMessage(msg, false);
                 }));
     }
 }

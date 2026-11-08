@@ -1,5 +1,6 @@
 -- Оболочка: командная строка компьютера.
-local dir = ""
+local parent = _NATIVE_SHELL     -- оболочка, запущенная из другой (команда sh)
+local dir = parent and fs.combine(parent.dir(), "") or ""
 local history = {}
 local running = true
 
@@ -12,6 +13,7 @@ function shell.resolve(path)
   return fs.combine(dir, path)
 end
 function shell.exit() running = false end
+_G._NATIVE_SHELL = shell     -- чтобы библиотека shell из OpenOS видела ту же текущую папку
 
 --- Найти программу по имени: в текущей папке, затем в /rom/programs и /programs.
 function shell.resolveProgram(name)
@@ -23,6 +25,8 @@ function shell.resolveProgram(name)
     candidates = {
       fs.combine(dir, name), fs.combine(dir, name .. ".lua"),
       "programs/" .. name .. ".lua", "rom/programs/" .. name .. ".lua",
+      -- Программы, установленные в стиле OpenOS
+      "usr/bin/" .. name .. ".lua", "bin/" .. name .. ".lua", "home/bin/" .. name .. ".lua",
     }
   end
   for _, p in ipairs(candidates) do
@@ -87,8 +91,18 @@ local function complete(text)
 end
 
 if term.isColor() then term.setTextColor(colors.lightGray) end
-print("Введите help, чтобы увидеть список команд.")
+print(parent and "Введите exit, чтобы вернуться." or "Введите help, чтобы увидеть список команд.")
 term.setTextColor(colors.white)
+
+-- Автозапуск, как в OpenOS: команды из /home/.shrc выполняются при старте
+if not parent and fs.exists("/home/.shrc") then
+  local f = fs.open("/home/.shrc", "r")
+  local text = f.readAll() or ""
+  f.close()
+  for line in text:gmatch("[^\r\n]+") do
+    if line:match("%S") and not line:match("^%s*#") then shell.run(line) end
+  end
+end
 
 while running do
   if term.isColor() then term.setTextColor(colors.yellow) end
@@ -101,4 +115,10 @@ while running do
     if #history > 50 then table.remove(history, 1) end
     shell.run(line)
   end
+end
+
+-- Вернуть текущую папку и оболочку той программе, что запустила нас
+if parent then
+  parent.setDir(dir)
+  _G._NATIVE_SHELL = parent
 end

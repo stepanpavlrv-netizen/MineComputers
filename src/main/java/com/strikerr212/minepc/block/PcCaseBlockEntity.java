@@ -237,6 +237,16 @@ public class PcCaseBlockEntity extends BlockEntity implements MenuProvider {
         pc.input(kind, text, ctrl, shift);
     }
 
+    /** Мышь в окне экрана: нажатие, перетаскивание, отпускание, прокрутка. */
+    public void mouse(int kind, int button, int x, int y) {
+        pc.mouse(kind, button, x, y);
+    }
+
+    /** Кусок файла, перетащенного игроком в окно экрана. Возвращает сообщение, когда файл загружен целиком. */
+    public Component upload(String name, int offset, int total, byte[] data) {
+        return pc.upload(name, offset, total, data);
+    }
+
     /** Игрок открыл экран компьютера: отправить ему кадр целиком. */
     public void requestFullFrame() {
         pc.requestFullFrame();
@@ -608,6 +618,7 @@ public class PcCaseBlockEntity extends BlockEntity implements MenuProvider {
         tag.putInt("layout", LAYOUT_VERSION);
         tag.putBoolean("on", pc.wantOn());
         if (!pc.label().isEmpty()) tag.putString("label", pc.label());
+        tag.putString("address", pc.getAddress());
         tag.putInt("state", pc.stateCode());
     }
 
@@ -627,6 +638,7 @@ public class PcCaseBlockEntity extends BlockEntity implements MenuProvider {
         }
         pc.setWantOn(tag.getBoolean("on"));
         pc.setLabel(tag.getString("label"));
+        pc.setAddress(tag.getString("address"));
         clientState = tag.getInt("state");
         if (!sameLayout && !prefix) {
             // Сохранение из старой версии мода: раскладываем детали по новым слотам

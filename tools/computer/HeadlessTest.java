@@ -95,7 +95,7 @@ public class HeadlessTest {
         command("hello");
         show("запуск hello");
         expect("программа напечатала кириллицу", screen().contains("Привет, 3"));
-        expect("end после блока сдвинут влево", Files.readString(dir.resolve("code/hello.lua"), Cp1251.CHARSET).endsWith("\nend"));
+        expect("end после блока сдвинут влево", Files.readString(dir.resolve("code/hello.lua"), java.nio.charset.StandardCharsets.UTF_8).endsWith("\nend"));
 
         command("ls");
         expect("ls видит файл", screen().contains("hello.lua"));
@@ -144,14 +144,46 @@ public class HeadlessTest {
         show("переполнение диска");
         expect("ошибка о нехватке места", screen().contains("Недостаточно места"));
 
+        // Программа для OpenComputers (OpenOS): библиотеки, видеокарта, события
+        command("clear");
+        Files.writeString(dir.resolve("oc.lua"), String.join("\n",
+                "local component = require('component')",
+                "local event = require('event')",
+                "local fs = require('filesystem')",
+                "local ser = require('serialization')",
+                "local term = require('term')",
+                "local gpu = component.gpu",
+                "gpu.setForeground(0xFF8800)",
+                "gpu.set(1, 10, 'ГПУ:' .. gpu.getDepth())",
+                "local t = ser.unserialize(ser.serialize({a = 1, b = 'ж'}))",
+                "local id = event.timer(0.05, function() end)",
+                "event.push('my_signal', 42)",
+                "local _, v = event.pull(1, 'my_signal')",
+                "fs.makeDirectory('/oc_dir')",
+                "local f = io.open('/oc_dir/x.txt', 'w'); f:write('строка\\n'); f:close()",
+                "local line = io.lines('/oc_dir/x.txt')()",
+                "print('OC:', t.b, v, line, unicode.len('Ёжик'), fs.exists('/oc_dir/x.txt'))",
+                ""), java.nio.charset.StandardCharsets.UTF_8);
+        command("oc");
+        ticks(20);
+        show("программа OpenOS");
+        expect("OpenOS-программа отработала", screen().contains("OC:\tж\t42\tстрока\t4\ttrue") || screen().contains("OC: ж 42 строка 4 true")
+                || screen().replaceAll("\\s+", " ").contains("OC: ж 42 строка 4 true"));
+        expect("gpu.set нарисовал текст", screen().contains("ГПУ:"));
+        command("sh");
+        expect("вложенная оболочка запустилась", screen().contains("exit, чтобы вернуться"));
+        command("exit");
+        ticks(10);
+        expect("exit во вложенной оболочке не выключает компьютер", pc.state() == Computer.State.RUNNING);
+
         // Передача экрана: изменения строк и сжатие
         Terminal big = new Terminal(160, 50);
         byte[] f1 = big.snapshot();
         byte[] p1 = TerminalCodec.encode(null, f1);
         byte[] client = TerminalCodec.apply(null, p1);
         big.setCursor(3, 7);
-        big.setTextColor(4);
-        big.write(Cp1251.encode("Привет, большой экран!"));
+        big.setTextIndex(4);
+        big.write("Привет, большой экран!");
         byte[] f2 = big.snapshot();
         byte[] p2 = TerminalCodec.encode(f1, f2);
         client = TerminalCodec.apply(client, p2);

@@ -53,8 +53,16 @@ final class LuaMachine {
                 })
                 .build();
         try {
-            CoreLibraries.standardGlobals(state);
+            CoreLibraries.debugGlobals(state);
             LuaTable g = state.globals();
+            org.squiddev.cobalt.lib.Bit32Lib.add(state, g);   // bit32 есть в Lua 5.2 и OpenComputers
+            // Из отладочной библиотеки оставляем только безопасное: трассировку ошибок и сведения о функции
+            // (debug.sethook сломал бы счётчик команд)
+            LuaTable fullDebug = (LuaTable) g.rawget("debug");
+            LuaTable debug = new LuaTable();
+            debug.rawset("traceback", fullDebug.rawget("traceback"));
+            debug.rawset("getinfo", fullDebug.rawget("getinfo"));
+            g.rawset("debug", debug);
             // Убираем то, что даёт доступ к файлам сервера или ломает песочницу
             g.rawset("collectgarbage", Constants.NIL);
             g.rawset("dofile", Constants.NIL);

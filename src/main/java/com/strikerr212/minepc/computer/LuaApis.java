@@ -25,7 +25,7 @@ final class LuaApis {
     // ======================= Преобразования =======================
 
     static LuaString str(String s) {
-        return LuaString.valueOf(Cp1251.encode(s));
+        return LuaString.valueOf(Text.encode(s));
     }
 
     static byte[] bytes(LuaValue v) {
@@ -35,11 +35,11 @@ final class LuaApis {
             s.copyTo(0, b, 0, b.length);
             return b;
         }
-        return Cp1251.encode(v.toString());
+        return Text.encode(v.toString());
     }
 
     static String text(LuaValue v) {
-        return Cp1251.decode(bytes(v));
+        return Text.decode(bytes(v));
     }
 
     static LuaError error(String message) {
@@ -84,6 +84,7 @@ final class LuaApis {
         g.rawset("fs", fs(c));
         g.rawset("os", os(c));
         g.rawset("computer", computer(c));
+        g.rawset("unicode", OcApis.unicode());
         g.rawset("_HOST", str("MineComputers 0.9 (Lua 5.2 / Cobalt)"));
     }
 
@@ -93,7 +94,7 @@ final class LuaApis {
         Terminal t = c.terminal();
         LuaTable table = new LuaTable();
         RegisteredFunction.bind(table, new RegisteredFunction[]{
-                RegisteredFunction.ofV("write", (s, a) -> { t.write(bytes(a.arg(1))); return Constants.NONE; }),
+                RegisteredFunction.ofV("write", (s, a) -> { t.write(Text.bmp(text(a.arg(1)))); return Constants.NONE; }),
                 RegisteredFunction.ofV("clear", (s, a) -> { t.clear(); return Constants.NONE; }),
                 RegisteredFunction.ofV("clearLine", (s, a) -> { t.clearLine(); return Constants.NONE; }),
                 RegisteredFunction.ofV("getCursorPos", (s, a) -> varargsOf(valueOf(t.cursorX() + 1), valueOf(t.cursorY() + 1))),
@@ -104,10 +105,21 @@ final class LuaApis {
                 RegisteredFunction.ofV("setCursorBlink", (s, a) -> { t.setCursorBlink(a.arg(1).toBoolean()); return Constants.NONE; }),
                 RegisteredFunction.ofV("getSize", (s, a) -> varargsOf(valueOf(t.width()), valueOf(t.height()))),
                 RegisteredFunction.ofV("scroll", (s, a) -> { t.scroll(a.arg(1).checkInteger()); return Constants.NONE; }),
-                RegisteredFunction.ofV("setTextColor", (s, a) -> { t.setTextColor(a.arg(1).checkInteger()); return Constants.NONE; }),
-                RegisteredFunction.ofV("setBackgroundColor", (s, a) -> { t.setBackColor(a.arg(1).checkInteger()); return Constants.NONE; }),
-                RegisteredFunction.ofV("getTextColor", (s, a) -> valueOf(t.textColor())),
-                RegisteredFunction.ofV("getBackgroundColor", (s, a) -> valueOf(t.backColor())),
+                RegisteredFunction.ofV("setTextColor", (s, a) -> { t.setTextIndex(a.arg(1).checkInteger()); return Constants.NONE; }),
+                RegisteredFunction.ofV("setBackgroundColor", (s, a) -> { t.setBackIndex(a.arg(1).checkInteger()); return Constants.NONE; }),
+                RegisteredFunction.ofV("getTextColor", (s, a) -> t.textIndex() < 0 ? Constants.NIL : valueOf(t.textIndex())),
+                RegisteredFunction.ofV("getBackgroundColor", (s, a) -> t.backIndex() < 0 ? Constants.NIL : valueOf(t.backIndex())),
+                // Любой цвет числом 0xRRGGBB (сколько оттенков видно — зависит от видеокарты)
+                RegisteredFunction.ofV("setTextColorRGB", (s, a) -> { t.setTextRgb(a.arg(1).checkInteger()); return Constants.NONE; }),
+                RegisteredFunction.ofV("setBackgroundColorRGB", (s, a) -> { t.setBackRgb(a.arg(1).checkInteger()); return Constants.NONE; }),
+                RegisteredFunction.ofV("getTextColorRGB", (s, a) -> valueOf(t.textRgb())),
+                RegisteredFunction.ofV("getBackgroundColorRGB", (s, a) -> valueOf(t.backRgb())),
+                RegisteredFunction.ofV("setPaletteColor", (s, a) -> {
+                    t.setPaletteColor(a.arg(1).checkInteger(), a.arg(2).checkInteger());
+                    return Constants.NONE;
+                }),
+                RegisteredFunction.ofV("getPaletteColor", (s, a) -> valueOf(t.paletteColor(a.arg(1).checkInteger()))),
+                RegisteredFunction.ofV("getDepth", (s, a) -> valueOf(t.depth())),
                 RegisteredFunction.ofV("isColor", (s, a) -> valueOf(t.isColor())),
         });
         return table;
@@ -153,6 +165,7 @@ final class LuaApis {
                     return d == null ? Constants.NIL : str("/" + d);
                 }),
                 fsFn("getLabel", c, (fs, a) -> str(fs.driveLabel(path(a, 1)))),
+                fsFn("lastModified", c, (fs, a) -> valueOf((double) fs.lastModified(path(a, 1)))),
                 fsFn("makeDir", c, (fs, a) -> { fs.makeDirectory(path(a, 1)); return Constants.NONE; }),
                 fsFn("delete", c, (fs, a) -> { fs.delete(path(a, 1)); return Constants.NONE; }),
                 fsFn("move", c, (fs, a) -> { fs.move(path(a, 1), path(a, 2)); return Constants.NONE; }),
@@ -279,7 +292,9 @@ final class LuaApis {
                 RegisteredFunction.ofV("startTimer", (s, a) -> valueOf(c.startTimer(a.arg(1).checkNumber().toDouble()))),
                 RegisteredFunction.ofV("cancelTimer", (s, a) -> { c.cancelTimer(a.arg(1).checkInteger()); return Constants.NONE; }),
                 RegisteredFunction.ofV("clock", (s, a) -> valueOf(c.uptimeSeconds())),
-                RegisteredFunction.ofV("time", (s, a) -> valueOf(c.host().timeOfDay())),
+                RegisteredFunction.ofV("time", (s, a) -> OcApis.time(a)),
+                RegisteredFunction.ofV("date", (s, a) -> OcApis.date(a)),
+                RegisteredFunction.ofV("gameTime", (s, a) -> valueOf(c.host().timeOfDay())),
                 RegisteredFunction.ofV("day", (s, a) -> valueOf(c.host().day())),
                 RegisteredFunction.ofV("epoch", (s, a) -> valueOf((double) System.currentTimeMillis())),
                 RegisteredFunction.ofV("queueEvent", (s, a) -> {
@@ -322,6 +337,37 @@ final class LuaApis {
                     return t;
                 }),
                 RegisteredFunction.ofV("uptime", (s, a) -> valueOf(c.uptimeSeconds())),
+                // ----- Как в OpenComputers -----
+                RegisteredFunction.ofV("address", (s, a) -> str(c.address())),
+                RegisteredFunction.ofV("componentAddress", (s, a) -> str(OcApis.address(c, text(a.arg(1).checkLuaString())))),
+                RegisteredFunction.ofV("gpu", (s, a) -> OcApis.gpu(c, OcApis.address(c, "gpu"), OcApis.address(c, "screen"))),
+                RegisteredFunction.ofV("totalMemory", (s, a) -> valueOf((double) c.info().ramKb() * 1024)),
+                // Сколько памяти занимают программы, движок Lua не считает — показываем оценку
+                RegisteredFunction.ofV("freeMemory", (s, a) -> valueOf((double) c.info().ramKb() * 1024 * 0.8)),
+                RegisteredFunction.ofV("energy", (s, a) -> valueOf(10000)),
+                RegisteredFunction.ofV("maxEnergy", (s, a) -> valueOf(10000)),
+                RegisteredFunction.ofV("getArchitecture", (s, a) -> str("Lua 5.2")),
+                RegisteredFunction.ofV("getArchitectures", (s, a) -> {
+                    LuaTable t = new LuaTable();
+                    t.rawset(1, str("Lua 5.2"));
+                    return t;
+                }),
+                RegisteredFunction.ofV("isRobot", (s, a) -> Constants.FALSE),
+                RegisteredFunction.ofV("beep", (s, a) -> Constants.NONE),
+                RegisteredFunction.ofV("users", (s, a) -> Constants.NONE),
+                RegisteredFunction.ofV("tmpAddress", (s, a) -> Constants.NIL),
+                RegisteredFunction.ofV("pushSignal", (s, a) -> {
+                    String name = text(a.arg(1).checkLuaString());
+                    Object[] rest = new Object[Math.max(0, a.count() - 1)];
+                    for (int i = 0; i < rest.length; i++) rest[i] = fromLua(a.arg(i + 2));
+                    c.queueEvent(name, rest);
+                    return Constants.TRUE;
+                }),
+                RegisteredFunction.ofV("shutdown", (s, a) -> {
+                    if (a.arg(1).toBoolean()) c.requestReboot();
+                    else c.requestShutdown();
+                    return Constants.NONE;
+                }),
                 RegisteredFunction.ofV("opsUsed", (s, a) -> valueOf((double) c.opsLastSecond())),
                 RegisteredFunction.ofV("opsLimit", (s, a) -> valueOf((double) c.opsPerTick() * Computer.TICKS_PER_SECOND)),
         });

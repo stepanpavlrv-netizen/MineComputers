@@ -9,11 +9,11 @@ local w = term.getSize()
 local function columns(list, color)
   if #list == 0 then return end
   local width = 0
-  for _, f in ipairs(list) do width = math.max(width, #f + 2) end
+  for _, f in ipairs(list) do width = math.max(width, unicode.len(f) + 2) end
   local perLine = math.max(1, math.floor(w / width))
   if term.isColor() then term.setTextColor(color) end
   for i, f in ipairs(list) do
-    write(f .. string.rep(" ", width - #f))
+    write(f .. string.rep(" ", width - unicode.len(f)))
     if i % perLine == 0 or i == #list then print() end
   end
   term.setTextColor(colors.white)

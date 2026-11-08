@@ -10,14 +10,16 @@ import java.util.zip.Inflater;
  * поэтому сервер отправляет только изменившиеся строки и сжимает их (как zip).
  *
  * Кадр (снимок {@link Terminal#snapshot()}): 8 байт заголовка (ширина, высота, курсор X и Y по 2 байта,
- * мигание, цвет текста), затем ширина×высота символов и столько же байтов цвета.
+ * мигание, глубина цвета), затем для всех клеток: символы (2 байта), цвета текста (3 байта), цвета фона (3 байта).
  *
  * Пакет (до сжатия): тип (0 — весь кадр, 1 — изменения), 8 байт заголовка, затем
- * весь кадр целиком или число строк (2 байта) и для каждой: номер строки, символы, цвета.
+ * весь кадр целиком или число строк (2 байта) и для каждой: номер строки, символы, цвета текста, цвета фона.
  */
 public final class TerminalCodec {
 
     public static final int HEADER = 8;
+    /** Байтов на клетку: символ 2 + цвет текста 3 + цвет фона 3. */
+    public static final int CELL = 8;
     private static final int FULL = 0, DIFF = 1;
 
     private TerminalCodec() {
@@ -42,20 +44,21 @@ public final class TerminalCodec {
     /** Закодировать кадр: целиком (prev == null или другой размер) или только изменившиеся строки. */
     public static byte[] encode(byte[] prev, byte[] cur) {
         int w = width(cur), h = height(cur), n = w * h;
-        ByteArrayOutputStream out = new ByteArrayOutputStream(64 + n / 4);
+        ByteArrayOutputStream out = new ByteArrayOutputStream(64 + n);
         boolean full = prev == null || prev.length != cur.length || width(prev) != w || height(prev) != h;
         out.write(full ? FULL : DIFF);
         out.write(cur, 0, HEADER);
         if (full) {
-            out.write(cur, HEADER, n * 2);
+            out.write(cur, HEADER, n * CELL);
         } else {
             ByteArrayOutputStream rows = new ByteArrayOutputStream();
             int count = 0;
             for (int y = 0; y < h; y++) {
                 if (rowChanged(prev, cur, w, h, y)) {
                     rows.write(y);
-                    rows.write(cur, HEADER + y * w, w);
-                    rows.write(cur, HEADER + n + y * w, w);
+                    rows.write(cur, HEADER + 2 * y * w, 2 * w);
+                    rows.write(cur, HEADER + 2 * n + 3 * y * w, 3 * w);
+                    rows.write(cur, HEADER + 5 * n + 3 * y * w, 3 * w);
                     count++;
                 }
             }
@@ -69,11 +72,11 @@ public final class TerminalCodec {
 
     private static boolean rowChanged(byte[] a, byte[] b, int w, int h, int y) {
         int n = w * h;
-        for (int x = 0; x < w; x++) {
-            int c = HEADER + y * w + x;
-            if (a[c] != b[c] || a[c + n] != b[c + n]) return true;
-        }
-        return false;
+        return !java.util.Arrays.equals(a, HEADER + 2 * y * w, HEADER + 2 * (y + 1) * w, b, HEADER + 2 * y * w, HEADER + 2 * (y + 1) * w)
+                || !java.util.Arrays.equals(a, HEADER + 2 * n + 3 * y * w, HEADER + 2 * n + 3 * (y + 1) * w,
+                b, HEADER + 2 * n + 3 * y * w, HEADER + 2 * n + 3 * (y + 1) * w)
+                || !java.util.Arrays.equals(a, HEADER + 5 * n + 3 * y * w, HEADER + 5 * n + 3 * (y + 1) * w,
+                b, HEADER + 5 * n + 3 * y * w, HEADER + 5 * n + 3 * (y + 1) * w);
     }
 
     /** Есть ли в кадре изменения по сравнению с предыдущим (включая курсор). */
@@ -90,25 +93,27 @@ public final class TerminalCodec {
         if (d == null || d.length < 1 + HEADER) return null;
         int w = d[1] & 0xFF, h = d[2] & 0xFF, n = w * h;
         if (d[0] == FULL) {
-            if (d.length < 1 + HEADER + 2 * n) return null;
-            byte[] frame = new byte[HEADER + 2 * n];
+            if (d.length < 1 + HEADER + CELL * n) return null;
+            byte[] frame = new byte[HEADER + CELL * n];
             System.arraycopy(d, 1, frame, 0, frame.length);
             return frame;
         }
-        if (base == null || base.length != HEADER + 2 * n || width(base) != w || height(base) != h) return null;
+        if (base == null || base.length != HEADER + CELL * n || width(base) != w || height(base) != h) return null;
         byte[] frame = base.clone();
         System.arraycopy(d, 1, frame, 0, HEADER);
         int p = 1 + HEADER;
         int count = (d[p] & 0xFF) | (d[p + 1] & 0xFF) << 8;
         p += 2;
         for (int i = 0; i < count; i++) {
-            if (p + 1 + 2 * w > d.length) return null;
+            if (p + 1 + CELL * w > d.length) return null;
             int y = d[p++] & 0xFF;
             if (y >= h) return null;
-            System.arraycopy(d, p, frame, HEADER + y * w, w);
-            p += w;
-            System.arraycopy(d, p, frame, HEADER + n + y * w, w);
-            p += w;
+            System.arraycopy(d, p, frame, HEADER + 2 * y * w, 2 * w);
+            p += 2 * w;
+            System.arraycopy(d, p, frame, HEADER + 2 * n + 3 * y * w, 3 * w);
+            p += 3 * w;
+            System.arraycopy(d, p, frame, HEADER + 5 * n + 3 * y * w, 3 * w);
+            p += 3 * w;
         }
         return frame;
     }
@@ -134,7 +139,7 @@ public final class TerminalCodec {
                 int k = inflater.inflate(buf);
                 if (k == 0 && (inflater.needsInput() || inflater.needsDictionary())) break;
                 out.write(buf, 0, k);
-                if (out.size() > 1 << 20) return null;   // защита от «zip-бомбы»
+                if (out.size() > 1 << 21) return null;   // защита от «zip-бомбы»
             }
             return out.toByteArray();
         } catch (DataFormatException e) {

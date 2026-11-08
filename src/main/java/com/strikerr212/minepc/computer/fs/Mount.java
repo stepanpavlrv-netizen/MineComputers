@@ -34,6 +34,11 @@ public interface Mount {
         throw new FsException("Только для чтения");
     }
 
+    /** Время последнего изменения (мс с 1970 года), 0 — неизвестно. */
+    default long lastModified(String path) {
+        return 0;
+    }
+
     /** Объём в байтах (0 — неизвестно / только чтение). */
     default long capacity() {
         return 0;

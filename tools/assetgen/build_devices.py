@@ -152,6 +152,14 @@ monitor = {
 }
 save_json(os.path.join(A, "models/block/monitor.json"), monitor)
 
+# Верхние ряды большого монитора: панель во всю высоту, без подставки
+monitor_top = {
+    "parent": "block/block",
+    "textures": monitor["textures"],
+    "elements": [box([0, 0, 11], [16, 16, 14], all_faces("#back", "#front", [0, 1, 16, 15]))],
+}
+save_json(os.path.join(A, "models/block/monitor_top.json"), monitor_top)
+
 keyboard = {
     "parent": "block/block",
     "textures": {"particle": "minepc:block/keyboard_side", "top": "minepc:block/keyboard_top",
@@ -186,8 +194,9 @@ def variant(model, f):
     return v
 
 
-save_json(os.path.join(A, "blockstates/monitor.json"),
-          {"variants": {f"facing={f}": variant("minepc:block/monitor", f) for f in ROT}})
+save_json(os.path.join(A, "blockstates/monitor.json"), {"variants": {
+    f"facing={f},stand={st}": variant("minepc:block/monitor" + ("" if st == "true" else "_top"), f)
+    for f in ROT for st in ("true", "false")}})
 save_json(os.path.join(A, "blockstates/keyboard.json"),
           {"variants": {f"facing={f}": variant("minepc:block/keyboard", f) for f in ROT}})
 save_json(os.path.join(A, "blockstates/disk_drive.json"), {"variants": {

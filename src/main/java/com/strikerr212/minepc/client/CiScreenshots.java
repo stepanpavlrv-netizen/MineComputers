@@ -89,7 +89,27 @@ public class CiScreenshots {
                 });
             }
             case 430 -> shot(mc, "case_gui");
-            case 450 -> mc.stop();
+            case 440 -> {
+                mc.setScreen(null);
+                server.execute(() -> {
+                    PcCaseBlockEntity be = be();
+                    if (be != null) {
+                        byte[] src = COLORS_DEMO.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+                        be.upload("colors.lua", 0, src.length, src);
+                    }
+                });
+                type("colors");
+            }
+            case 520 -> {
+                mc.options.hideGui = true;
+                shot(mc, "world_colors");
+            }
+            case 530 -> {
+                mc.options.hideGui = false;
+                mc.setScreen(new TerminalScreen(casePos));
+            }
+            case 560 -> shot(mc, "terminal_colors");
+            case 580 -> mc.stop();
             default -> {
             }
         }
@@ -103,9 +123,14 @@ public class CiScreenshots {
         BlockPos base = p.blockPosition().north(3);
         casePos = base.west();
         level.setBlockAndUpdate(casePos, ModBlocks.PC_CASE.get().defaultBlockState().setValue(PcCaseBlock.FACING, Direction.SOUTH));
-        level.setBlockAndUpdate(base, ModBlocks.MONITOR.get().defaultBlockState().setValue(DeviceBlock.FACING, Direction.SOUTH));
-        level.setBlockAndUpdate(base.east(), ModBlocks.DISK_DRIVE.get().defaultBlockState().setValue(DeviceBlock.FACING, Direction.SOUTH));
-        level.setBlockAndUpdate(base.south(), ModBlocks.KEYBOARD.get().defaultBlockState().setValue(DeviceBlock.FACING, Direction.SOUTH));
+        // Монитор из 3×2 блоков: картинка растягивается на всю стену
+        for (int dx = 0; dx < 3; dx++) {
+            for (int dy = 0; dy < 2; dy++) {
+                level.setBlockAndUpdate(base.east(dx).above(dy), ModBlocks.MONITOR.get().defaultBlockState().setValue(DeviceBlock.FACING, Direction.SOUTH));
+            }
+        }
+        level.setBlockAndUpdate(casePos.above(), ModBlocks.DISK_DRIVE.get().defaultBlockState().setValue(DeviceBlock.FACING, Direction.SOUTH));
+        level.setBlockAndUpdate(base.east().south(), ModBlocks.KEYBOARD.get().defaultBlockState().setValue(DeviceBlock.FACING, Direction.SOUTH));
         if (level.getBlockEntity(casePos) instanceof PcCaseBlockEntity be) {
             var inv = (IItemHandlerModifiable) be.inventory();
             inv.setStackInSlot(PcCaseBlockEntity.SLOT_MOTHERBOARD, HardwarePresets.motherboard(5));
@@ -119,8 +144,36 @@ public class CiScreenshots {
             be.togglePower();
         }
         // Встать перед монитором и смотреть на него
-        p.teleportTo(level, base.getX() + 0.5, base.getY(), base.getZ() + 2.6, 180f, 12f);
+        p.teleportTo(level, base.getX() + 1.5, base.getY(), base.getZ() + 4.2, 180f, -4f);
     }
+
+    /** Демо: плавный RGB-градиент, псевдографика и Unicode. */
+    private static final String COLORS_DEMO = String.join("\n",
+            "local w, h = term.getSize()",
+            "for y = 1, h do",
+            "  for x = 1, w do",
+            "    local r, g = math.floor((x - 1) / (w - 1) * 255), math.floor((y - 1) / (h - 1) * 255)",
+            "    term.setBackgroundColorRGB(r * 65536 + g * 256 + 160)",
+            "    term.setCursorPos(x, y)",
+            "    term.write(\" \")",
+            "  end",
+            "end",
+            "term.setBackgroundColorRGB(0x202020)",
+            "term.setTextColorRGB(0xFFD700)",
+            "local function row(t) return \"║  \" .. t .. string.rep(\" \", 30 - unicode.len(t)) .. \"║\" end",
+            "local box = {",
+            "  \"╔\" .. string.rep(\"═\", 32) .. \"╗\",",
+            "  row(\"Привет! Unicode: ✓ ★ ♥ ☺ ♪ ∞\"),",
+            "  row(\"Ελληνικά · ▁▂▃▄▅▆▇█ · ░▒▓\"),",
+            "  row(\"Глубина цвета: \" .. term.getDepth() .. \" бит\"),",
+            "  \"╚\" .. string.rep(\"═\", 32) .. \"╝\",",
+            "}",
+            "for i, line in ipairs(box) do term.setCursorPos(4, 2 + i) term.write(line) end",
+            "term.setBackgroundColorRGB(0x000000)",
+            "term.setTextColorRGB(0xFFFFFF)",
+            "term.setCursorPos(1, h)",
+            "os.pullEvent(\"key\")",
+            "");
 
     private static PcCaseBlockEntity be() {
         var server = Minecraft.getInstance().getSingleplayerServer();

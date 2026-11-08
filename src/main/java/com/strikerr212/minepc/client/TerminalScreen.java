@@ -1,7 +1,9 @@
 package com.strikerr212.minepc.client;
 
-import com.strikerr212.minepc.computer.Cp1251;
-import com.strikerr212.minepc.computer.Terminal;
+import com.mojang.blaze3d.vertex.VertexConsumer;
+import com.strikerr212.minepc.computer.Text;
+import net.minecraft.client.renderer.RenderType;
+import org.joml.Matrix4f;
 import com.strikerr212.minepc.network.TerminalInputPayload;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
@@ -38,7 +40,7 @@ public class TerminalScreen extends Screen {
     }
 
     private void send(int kind, String text, int flags) {
-        PacketDistributor.sendToServer(new TerminalInputPayload(casePos, kind, text, flags));
+        PacketDistributor.sendToServer(new TerminalInputPayload(casePos, kind, text, flags, 0, 0));
     }
 
     @Override
@@ -77,7 +79,7 @@ public class TerminalScreen extends Screen {
         }
 
         boolean keyboard = ClientTerminals.keyboard(casePos);
-        Component hint = keyboard ? Component.translatable("gui.minepc.terminal.hint")
+        Component hint = keyboard ? Component.translatable("gui.minepc.terminal.hint2")
                 : Component.translatable("gui.minepc.terminal.no_keyboard");
         g.drawCenteredString(font, hint, width / 2, termY + sh + 14, keyboard ? TEXT_DIM : 0xFFE0A040);
         g.drawString(font, title, 8, 10, 0xFFE6E8EB, false);
@@ -91,27 +93,147 @@ public class TerminalScreen extends Screen {
 
     private void drawCells(GuiGraphics g, ClientTerminals.Snapshot s) {
         int w = s.width(), h = s.height();
+        Matrix4f m = g.pose().last().pose();
+        VertexConsumer vc = g.bufferSource().getBuffer(RenderType.gui());
         for (int y = 0; y < h; y++) {
             // Фон: подряд идущие клетки одного цвета — одним прямоугольником
             int x = 0;
             while (x < w) {
-                int color = s.bg()[y * w + x] & 15, start = x;
-                while (x < w && (s.bg()[y * w + x] & 15) == color) x++;
-                g.fill(start * CELL_W, y * CELL_H, x * CELL_W, (y + 1) * CELL_H, 0xFF000000 | Terminal.PALETTE[color]);
+                int color = s.bg()[y * w + x], start = x;
+                while (x < w && s.bg()[y * w + x] == color) x++;
+                rect(vc, m, start * CELL_W, y * CELL_H, x * CELL_W, (y + 1) * CELL_H, color);
             }
+            // Псевдографика — прямоугольниками, без щелей
             for (x = 0; x < w; x++) {
                 int p = y * w + x;
-                byte ch = s.chars()[p];
-                if (ch == ' ' || ch == 0) continue;
+                final int cx = x * CELL_W, cy = y * CELL_H;
+                CellArt.draw(s.chars()[p], s.fg()[p], s.bg()[p],
+                        (x0, y0, x1, y1, rgb) -> rect(vc, m, cx + x0 * CELL_W, cy + y0 * CELL_H, cx + x1 * CELL_W, cy + y1 * CELL_H, rgb));
+            }
+        }
+        // Буквы
+        for (int y = 0; y < h; y++) {
+            for (int x = 0; x < w; x++) {
+                int p = y * w + x;
+                char ch = s.chars()[p];
+                if (ch <= ' ' || (ch >= 0x2500 && ch <= 0x259F && isArt(ch))) continue;
                 int cx = x * CELL_W + (CELL_W - Glyphs.width(font, ch)) / 2;
-                g.drawString(font, Glyphs.text(ch), cx, y * CELL_H + 1, 0xFF000000 | Terminal.PALETTE[s.fg()[p] & 15], false);
+                g.drawString(font, Glyphs.text(ch), cx, y * CELL_H + 1, 0xFF000000 | s.fg()[p], false);
             }
         }
         // Мигающий курсор
         if (s.blink() && s.cursorX() >= 0 && s.cursorX() < w && s.cursorY() >= 0 && s.cursorY() < h
                 && (System.currentTimeMillis() / 400) % 2 == 0) {
             int cx = s.cursorX() * CELL_W, cy = s.cursorY() * CELL_H;
-            g.fill(cx, cy + CELL_H - 2, cx + CELL_W, cy + CELL_H - 1, 0xFFFFFFFF);
+            int color = s.fg()[s.cursorY() * w + s.cursorX()];
+            rect(g.bufferSource().getBuffer(RenderType.gui()), m, cx, cy + CELL_H - 2, cx + CELL_W, cy + CELL_H - 1, color);
+        }
+    }
+
+    private static final java.util.BitSet ART = new java.util.BitSet(0x100);
+
+    static {
+        for (char c = 0x2500; c <= 0x259F; c++) {
+            if (CellArt.draw(c, 0, 0, (a, b, cc, d, e) -> { })) ART.set(c - 0x2500);
+        }
+    }
+
+    static boolean isArt(char c) {
+        return c >= 0x2500 && c <= 0x259F && ART.get(c - 0x2500);
+    }
+
+    private static void rect(VertexConsumer vc, Matrix4f m, float x0, float y0, float x1, float y1, int rgb) {
+        int argb = 0xFF000000 | rgb;
+        vc.addVertex(m, x0, y0, 0).setColor(argb);
+        vc.addVertex(m, x0, y1, 0).setColor(argb);
+        vc.addVertex(m, x1, y1, 0).setColor(argb);
+        vc.addVertex(m, x1, y0, 0).setColor(argb);
+    }
+
+    // ======================= Мышь и файлы =======================
+
+    private int lastCellX = -1, lastCellY = -1, pressedButton;
+
+    /** Клетка экрана под мышью (с 1) или null, если мышь вне экрана. */
+    private int[] cellAt(double mx, double my) {
+        ClientTerminals.Snapshot s = ClientTerminals.get(casePos);
+        if (s == null) return null;
+        int x = (int) Math.floor((mx - termX) / (CELL_W * scale)), y = (int) Math.floor((my - termY) / (CELL_H * scale));
+        if (x < 0 || y < 0 || x >= s.width() || y >= s.height()) return null;
+        return new int[]{x + 1, y + 1};
+    }
+
+    private void sendMouse(int kind, int flags, int[] cell) {
+        PacketDistributor.sendToServer(new TerminalInputPayload(casePos, kind, "", flags, cell[0], cell[1]));
+    }
+
+    @Override
+    public boolean mouseClicked(double mx, double my, int button) {
+        int[] cell = cellAt(mx, my);
+        if (cell == null) return super.mouseClicked(mx, my, button);
+        pressedButton = button + 1;
+        lastCellX = cell[0];
+        lastCellY = cell[1];
+        sendMouse(TerminalInputPayload.MOUSE_DOWN, pressedButton, cell);
+        return true;
+    }
+
+    @Override
+    public boolean mouseDragged(double mx, double my, int button, double dx, double dy) {
+        int[] cell = cellAt(mx, my);
+        if (cell == null || pressedButton == 0) return super.mouseDragged(mx, my, button, dx, dy);
+        if (cell[0] != lastCellX || cell[1] != lastCellY) {   // только когда мышь перешла в другую клетку
+            lastCellX = cell[0];
+            lastCellY = cell[1];
+            sendMouse(TerminalInputPayload.MOUSE_DRAG, pressedButton, cell);
+        }
+        return true;
+    }
+
+    @Override
+    public boolean mouseReleased(double mx, double my, int button) {
+        if (pressedButton != 0) {
+            int[] cell = cellAt(mx, my);
+            if (cell == null) cell = new int[]{Math.max(1, lastCellX), Math.max(1, lastCellY)};
+            sendMouse(TerminalInputPayload.MOUSE_UP, pressedButton, cell);
+            pressedButton = 0;
+            return true;
+        }
+        return super.mouseReleased(mx, my, button);
+    }
+
+    @Override
+    public boolean mouseScrolled(double mx, double my, double scrollX, double scrollY) {
+        int[] cell = cellAt(mx, my);
+        if (cell == null || scrollY == 0) return super.mouseScrolled(mx, my, scrollX, scrollY);
+        sendMouse(TerminalInputPayload.MOUSE_SCROLL, scrollY > 0 ? -1 : 1, cell);
+        return true;
+    }
+
+    /** Файлы, перетащенные с компьютера игрока в окно, загружаются на системный диск. */
+    @Override
+    public void onFilesDrop(java.util.List<java.nio.file.Path> files) {
+        for (java.nio.file.Path file : files) {
+            try {
+                long size = java.nio.file.Files.size(file);
+                if (java.nio.file.Files.isDirectory(file) || size > com.strikerr212.minepc.network.FileUploadPayload.MAX_FILE) {
+                    if (minecraft != null && minecraft.player != null) {
+                        minecraft.player.displayClientMessage(Component.translatable("message.minepc.upload.too_big",
+                                file.getFileName().toString()), false);
+                    }
+                    continue;
+                }
+                byte[] data = java.nio.file.Files.readAllBytes(file);
+                String name = file.getFileName().toString();
+                int chunk = com.strikerr212.minepc.network.FileUploadPayload.CHUNK;
+                for (int off = 0; off < data.length || off == 0; off += chunk) {
+                    byte[] part = java.util.Arrays.copyOfRange(data, off, Math.min(data.length, off + chunk));
+                    PacketDistributor.sendToServer(new com.strikerr212.minepc.network.FileUploadPayload(casePos, name, off, data.length, part));
+                    if (data.length == 0) break;
+                }
+            } catch (java.io.IOException e) {
+                // нечитаемый файл просто пропускаем
+            }
         }
     }
 
@@ -184,7 +306,7 @@ public class TerminalScreen extends Screen {
     public boolean charTyped(char codePoint, int modifiers) {
         if (!ClientTerminals.keyboard(casePos)) return false;
         if ((modifiers & GLFW.GLFW_MOD_CONTROL) != 0) return true;   // Ctrl+буква — это команда, а не текст
-        if (Cp1251.supports(codePoint)) send(TerminalInputPayload.CHAR, String.valueOf(codePoint), 0);
+        if (Text.supports(codePoint)) send(TerminalInputPayload.CHAR, String.valueOf(codePoint), 0);
         return true;
     }
 }

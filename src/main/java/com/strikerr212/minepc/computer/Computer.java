@@ -31,6 +31,9 @@ public final class Computer {
         default int day() { return 1; }
 
         default void onLabelChanged(String label) { }
+
+        /** Постоянный адрес компьютера (UUID, как в OpenComputers). */
+        default String address() { return "00000000-0000-4000-8000-000000000000"; }
     }
 
     /** Сведения о железе для программ (computer.info()). */
@@ -92,6 +95,7 @@ public final class Computer {
     public long opsLastSecond() { return opsLastSecond; }
     public int opsPerTick() { return opsPerTick; }
     public String label() { return label; }
+    public String address() { return host.address(); }
 
     public void setInfo(Info info) { this.info = info; }
 
@@ -123,8 +127,9 @@ public final class Computer {
             }
             stopRequested = rebootRequested = false;
             crashMessage = "";
-            terminal.setTextColor(Terminal.WHITE);
-            terminal.setBackColor(Terminal.BLACK);
+            for (int i = 0; i < 16; i++) terminal.setPaletteColor(i, Terminal.DEFAULT_PALETTE[i]);
+            terminal.setTextIndex(Terminal.WHITE);
+            terminal.setBackIndex(Terminal.BLACK);
             terminal.clear();
             terminal.setCursor(0, 0);
             budget = opsPerTick;
@@ -298,8 +303,8 @@ public final class Computer {
         closeMachine();
         crashMessage = message;
         state = State.CRASHED;
-        terminal.setBackColor(Terminal.BLACK);
-        terminal.setTextColor(14);
+        terminal.setBackIndex(Terminal.BLACK);
+        terminal.setTextIndex(14);
         int y = Math.min(terminal.height() - 1, Math.max(0, terminal.cursorY() + 1));
         if (terminal.cursorX() == 0) y = Math.max(0, terminal.cursorY());
         for (String part : wrap("Ошибка: " + message, terminal.width())) {
@@ -308,9 +313,9 @@ public final class Computer {
                 y = terminal.height() - 1;
             }
             terminal.setCursor(0, y++);
-            terminal.write(Cp1251.encode(part));
+            terminal.write(part);
         }
-        terminal.setTextColor(Terminal.WHITE);
+        terminal.setTextIndex(Terminal.WHITE);
         terminal.setCursorBlink(false);
     }
 

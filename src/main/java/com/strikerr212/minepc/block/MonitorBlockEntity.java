@@ -24,6 +24,19 @@ public class MonitorBlockEntity extends BlockEntity {
         return casePos;
     }
 
+    private MonitorGroup group;
+    private long groupTime = Long.MIN_VALUE;
+
+    /** Большой монитор, в который входит этот блок (пересчитывается раз в полсекунды). */
+    public MonitorGroup group() {
+        long now = level == null ? 0 : level.getGameTime();
+        if (group == null || now - groupTime >= 10 || now < groupTime) {
+            group = level == null ? MonitorGroup.single(worldPosition) : MonitorGroup.of(level, worldPosition);
+            groupTime = now;
+        }
+        return group;
+    }
+
     /** Вызывает системный блок, когда находит монитор рядом с собой (или теряет его). */
     public void link(BlockPos pos) {
         if (pos == null ? casePos == null : pos.equals(casePos)) return;

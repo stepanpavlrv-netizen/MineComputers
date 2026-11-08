@@ -1,18 +1,33 @@
 {
   "variants": {
-    "facing=north": {
+    "facing=north,stand=true": {
       "model": "minepc:block/monitor"
     },
-    "facing=east": {
+    "facing=north,stand=false": {
+      "model": "minepc:block/monitor_top"
+    },
+    "facing=east,stand=true": {
       "model": "minepc:block/monitor",
       "y": 90
     },
-    "facing=south": {
+    "facing=east,stand=false": {
+      "model": "minepc:block/monitor_top",
+      "y": 90
+    },
+    "facing=south,stand=true": {
       "model": "minepc:block/monitor",
       "y": 180
     },
-    "facing=west": {
+    "facing=south,stand=false": {
+      "model": "minepc:block/monitor_top",
+      "y": 180
+    },
+    "facing=west,stand=true": {
       "model": "minepc:block/monitor",
+      "y": 270
+    },
+    "facing=west,stand=false": {
+      "model": "minepc:block/monitor_top",
       "y": 270
     }
   }

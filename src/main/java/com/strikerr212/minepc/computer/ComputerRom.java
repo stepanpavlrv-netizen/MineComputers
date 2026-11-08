@@ -28,17 +28,17 @@ public final class ComputerRom {
         }
     }
 
-    /** Исходники лежат в UTF-8 (так их удобно править), а компьютер работает в Windows-1251. */
-    private static byte[] toCp1251(byte[] utf8) {
-        return Cp1251.encode(new String(utf8, StandardCharsets.UTF_8));
+    /** Исходники и компьютер — в UTF-8, перекодировать ничего не нужно. */
+    private static byte[] raw(byte[] utf8) {
+        return utf8;
     }
 
     public static synchronized byte[] bios() {
         if (bios == null) {
             try {
-                bios = toCp1251(load("bios.lua"));
+                bios = raw(load("bios.lua"));
             } catch (IOException e) {
-                bios = Cp1251.encode("error('Нет BIOS: " + e.getMessage() + "')");
+                bios = Text.encode("error('Нет BIOS: " + e.getMessage() + "')");
             }
         }
         return bios;
@@ -53,10 +53,10 @@ public final class ComputerRom {
                     String f = line.trim();
                     if (f.isEmpty() || f.startsWith("#")) continue;
                     byte[] data = load("rom/" + f);
-                    rom.put(f, f.endsWith(".lua") || f.endsWith(".txt") || !f.contains(".") ? toCp1251(data) : data);
+                    rom.put(f, f.endsWith(".lua") || f.endsWith(".txt") || !f.contains(".") ? raw(data) : data);
                 }
             } catch (IOException e) {
-                rom.put("ERROR.txt", Cp1251.encode("ПЗУ не загрузилось: " + e.getMessage()));
+                rom.put("ERROR.txt", Text.encode("ПЗУ не загрузилось: " + e.getMessage()));
             }
         }
         return new RomMount(rom);

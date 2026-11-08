@@ -98,6 +98,20 @@ final class CaseComputer implements Computer.Host {
         return be.getLevel() == null ? 1 : (int) (be.getLevel().getDayTime() / 24000) + 1;
     }
 
+    /** Постоянный адрес компьютера (сохраняется в блоке). */
+    private String address = java.util.UUID.randomUUID().toString();
+
+    @Override
+    public String address() {
+        return address;
+    }
+
+    String getAddress() { return address; }
+
+    void setAddress(String a) {
+        if (a != null && !a.isEmpty()) address = a;
+    }
+
     @Override
     public void onLabelChanged(String l) {
         label = l;
@@ -153,8 +167,8 @@ final class CaseComputer implements Computer.Host {
         GpuData gpu = in.gpu();
         int[] size = Perf.screenSize(gpu == null ? 0 : gpu.tier());
         int w = size[0], h = size[1];
-        computer.terminal().resize(w, h);
-        computer.terminal().setColorSupported(gpu != null);
+        computer.terminal().setMaxSize(w, h);
+        computer.terminal().setMaxDepth(Perf.colorDepth(gpu == null ? 0 : gpu.tier()));
 
         CpuData cpu = in.cpu();
         ItemStack cpuStack = be.getStack(PcCaseBlockEntity.SLOT_CPU);
@@ -227,12 +241,20 @@ final class CaseComputer implements Computer.Host {
     }
 
     private void scanDevices(ServerLevel level, BlockPos pos) {
-        List<BlockPos> found = new ArrayList<>();
+        // Монитор рядом с корпусом — и все блоки большого монитора, в который он входит
+        java.util.Set<BlockPos> found = new java.util.HashSet<>();
         for (Direction d : Direction.values()) {
             BlockPos n = pos.relative(d);
-            if (level.getBlockEntity(n) instanceof MonitorBlockEntity monitor) {
-                monitor.link(pos);
-                found.add(n);
+            if (level.getBlockEntity(n) instanceof MonitorBlockEntity) found.addAll(MonitorGroup.of(level, n).blocks());
+        }
+        for (BlockPos p : found) {
+            if (level.getBlockEntity(p) instanceof MonitorBlockEntity monitor) monitor.link(pos);
+        }
+        // Блоки, которые отсоединили от монитора, перестают показывать экран
+        for (BlockPos old : monitors) {
+            if (!found.contains(old) && level.isLoaded(old) && level.getBlockEntity(old) instanceof MonitorBlockEntity m
+                    && pos.equals(m.casePos())) {
+                m.link(null);
             }
         }
         monitors.clear();
@@ -311,6 +333,41 @@ final class CaseComputer implements Computer.Host {
         }
     }
 
+    void mouse(int kind, int button, int x, int y) {
+        if (computer == null || !computer.isOn()) return;
+        switch (kind) {
+            case TerminalInputPayload.MOUSE_DOWN -> computer.queueEvent("mouse_click", button, x, y);
+            case TerminalInputPayload.MOUSE_DRAG -> computer.queueEvent("mouse_drag", button, x, y);
+            case TerminalInputPayload.MOUSE_UP -> computer.queueEvent("mouse_up", button, x, y);
+            case TerminalInputPayload.MOUSE_SCROLL -> computer.queueEvent("mouse_scroll", button, x, y);
+            default -> {
+            }
+        }
+    }
+
+    /** Загрузка файла с компьютера игрока на системный диск (в корень, под тем же именем). */
+    net.minecraft.network.chat.Component upload(String rawName, int offset, int total, byte[] data) {
+        if (computer == null || !computer.isOn()) {
+            return offset == 0 ? net.minecraft.network.chat.Component.translatable("message.minepc.upload.off") : null;
+        }
+        String name = com.strikerr212.minepc.computer.fs.FileSystem.name(rawName).replaceAll("[\\\\:*?\"<>|]", "_");
+        if (name.isEmpty() || total > com.strikerr212.minepc.network.FileUploadPayload.MAX_FILE) return null;
+        var fs = computer.fileSystem();
+        try {
+            if (offset == 0) fs.write(name, new byte[0], false);
+            fs.write(name, data, true);
+        } catch (com.strikerr212.minepc.computer.fs.FsException e) {
+            return net.minecraft.network.chat.Component.translatable("message.minepc.upload.failed", name, e.getMessage())
+                    .withStyle(net.minecraft.ChatFormatting.RED);
+        }
+        if (offset + data.length >= total) {
+            computer.queueEvent("file_upload", "/" + name, total);
+            return net.minecraft.network.chat.Component.translatable("message.minepc.upload.done", "/" + name,
+                    com.strikerr212.minepc.hardware.Units.bytes(total)).withStyle(net.minecraft.ChatFormatting.GREEN);
+        }
+        return null;
+    }
+
     /** Ввод от игрока (уже проверенный): символы, клавиши, вставка текста, Ctrl+T. */
     void input(int kind, String text, boolean ctrl, boolean shift) {
         if (computer == null || !computer.isOn()) return;
@@ -318,7 +375,7 @@ final class CaseComputer implements Computer.Host {
             case TerminalInputPayload.CHAR -> {
                 for (int i = 0; i < text.length() && i < 32; i++) {
                     char c = text.charAt(i);
-                    if (com.strikerr212.minepc.computer.Cp1251.supports(c)) computer.queueEvent("char", String.valueOf(c));
+                    if (com.strikerr212.minepc.computer.Text.supports(c)) computer.queueEvent("char", String.valueOf(c));
                 }
             }
             case TerminalInputPayload.KEY -> computer.queueEvent("key", text, ctrl, shift);
@@ -326,7 +383,7 @@ final class CaseComputer implements Computer.Host {
             case TerminalInputPayload.PASTE -> {
                 StringBuilder clean = new StringBuilder();
                 for (char c : text.toCharArray()) {
-                    if (c == '\n' || c == '\t' || com.strikerr212.minepc.computer.Cp1251.supports(c)) clean.append(c);
+                    if (c == '\n' || c == '\t' || com.strikerr212.minepc.computer.Text.supports(c)) clean.append(c);
                 }
                 computer.queueEvent("paste", clean.toString());
             }

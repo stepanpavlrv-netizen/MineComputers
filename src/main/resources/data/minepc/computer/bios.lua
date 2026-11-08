@@ -45,38 +45,42 @@ local function newline()
 end
 
 --- Написать текст с переносом слов и прокруткой. Возвращает число перенесённых строк.
+local ulen, usub = unicode.len, unicode.sub
 function write(text)
   text = tostring(text)
   local w, h = term.getSize()
   local lines = 0
-  local x, y = term.getCursorPos()
   while #text > 0 do
     local ws = text:match("^[ \t]+")
     if ws then
-      term.write(ws)
-      x = x + #ws
+      -- табуляция — пробелы до следующей позиции, кратной 8
+      for ch in ws:gmatch(".") do
+        local x = term.getCursorPos()
+        if ch == "\t" then term.write(string.rep(" ", 8 - (x - 1) % 8)) else term.write(ch) end
+      end
       text = text:sub(#ws + 1)
     end
-    local nl = text:match("^\n")
-    if nl then
+    if text:match("^\n") then
       newline(); lines = lines + 1
       text = text:sub(2)
     else
       local word = text:match("^[^ \t\n]+")
       if word then
         text = text:sub(#word + 1)
-        x = select(1, term.getCursorPos())
-        if #word > w then
+        local x = term.getCursorPos()
+        local n = ulen(word)
+        if n > w then
           -- Слово длиннее строки: режем как есть
-          while #word > 0 do
-            x = select(1, term.getCursorPos())
+          while n > 0 do
+            x = term.getCursorPos()
             local room = w - x + 1
             if room <= 0 then newline(); lines = lines + 1; room = w end
-            term.write(word:sub(1, room))
-            word = word:sub(room + 1)
+            term.write(usub(word, 1, room))
+            word = usub(word, room + 1)
+            n = ulen(word)
           end
         else
-          if x + #word - 1 > w then newline(); lines = lines + 1 end
+          if x + n - 1 > w then newline(); lines = lines + 1 end
           term.write(word)
         end
       end
@@ -98,7 +102,7 @@ function printError(...)
   local old = term.getTextColor()
   if term.isColor() then term.setTextColor(colors.red) end
   print(...)
-  term.setTextColor(old)
+  term.setTextColor(old or colors.white)
 end
 
 -- ===================== Ввод строки =====================
@@ -106,7 +110,7 @@ end
 function read(replace, history, completeFn, default)
   term.setCursorBlink(true)
   local line = default or ""
-  local pos = #line
+  local pos = ulen(line)
   local histPos
   local w = term.getSize()
   local sx, sy = term.getCursorPos()
@@ -114,35 +118,37 @@ function read(replace, history, completeFn, default)
   local function redraw(clear)
     local scroll = math.max(0, sx + pos - w)
     term.setCursorPos(sx, sy)
-    local shown = line:sub(scroll + 1, scroll + w - sx + 1)
-    if replace then shown = string.rep(replace, #shown) end
+    local shown = usub(line, scroll + 1, scroll + w - sx + 1)
+    if replace then shown = string.rep(replace, ulen(shown)) end
     term.write(shown)
-    if clear then term.write(string.rep(" ", w - sx - #shown + 2)) end
+    if clear then term.write(string.rep(" ", math.max(0, w - sx - ulen(shown) + 2))) end
     term.setCursorPos(sx + pos - scroll, sy)
   end
 
+  local function insert(text)
+    line = usub(line, 1, pos) .. text .. usub(line, pos + 1)
+    pos = pos + ulen(text)
+    redraw()
+  end
+
   while true do
-    local ev, a, ctrl = os.pullEvent()
+    local ev, a = os.pullEvent()
     if ev == "char" then
-      line = line:sub(1, pos) .. a .. line:sub(pos + 1)
-      pos = pos + #a
-      redraw()
+      insert(a)
     elseif ev == "paste" then
-      a = a:gsub("[\r\n].*", "")
-      line = line:sub(1, pos) .. a .. line:sub(pos + 1)
-      pos = pos + #a
-      redraw()
+      insert((a:gsub("[\r\n].*", "")))
     elseif ev == "key" then
+      local n = ulen(line)
       if a == "enter" then
         break
       elseif a == "left" and pos > 0 then pos = pos - 1; redraw()
-      elseif a == "right" and pos < #line then pos = pos + 1; redraw()
+      elseif a == "right" and pos < n then pos = pos + 1; redraw()
       elseif a == "home" then pos = 0; redraw()
-      elseif a == "end" then pos = #line; redraw()
+      elseif a == "end" then pos = n; redraw()
       elseif a == "backspace" and pos > 0 then
-        line = line:sub(1, pos - 1) .. line:sub(pos + 1); pos = pos - 1; redraw(true)
-      elseif a == "delete" and pos < #line then
-        line = line:sub(1, pos) .. line:sub(pos + 2); redraw(true)
+        line = usub(line, 1, pos - 1) .. usub(line, pos + 1); pos = pos - 1; redraw(true)
+      elseif a == "delete" and pos < n then
+        line = usub(line, 1, pos) .. usub(line, pos + 2); redraw(true)
       elseif (a == "up" or a == "down") and history and #history > 0 then
         if a == "up" then
           histPos = histPos and math.max(1, histPos - 1) or #history
@@ -151,15 +157,11 @@ function read(replace, history, completeFn, default)
           if histPos and histPos > #history then histPos = nil end
         end
         line = histPos and history[histPos] or ""
-        pos = #line
+        pos = ulen(line)
         redraw(true)
       elseif a == "tab" and completeFn then
-        local options = completeFn(line:sub(1, pos))
-        if options and #options == 1 then
-          line = line:sub(1, pos) .. options[1] .. line:sub(pos + 1)
-          pos = pos + #options[1]
-          redraw()
-        end
+        local options = completeFn(usub(line, 1, pos))
+        if options and #options == 1 then insert(options[1]) end
       end
     end
   end
@@ -193,12 +195,14 @@ function fs.getDir(path)
 end
 
 -- ===================== Загрузка программ =====================
-function loadfile(path, env)
+function loadfile(path, mode, env)
+  if type(mode) == "table" and env == nil then env, mode = mode, nil end
   local f, err = fs.open(path, "r")
   if not f then return nil, err end
-  local src = f.readAll()
+  local src = f.readAll() or ""
   f.close()
-  return load(src, "@" .. fs.getName(path), "t", env or _G)
+  if src:sub(1, 1) == "#" then src = "--" .. src end   -- строка #!/... в начале файла
+  return load(src, "@" .. fs.combine(path, ""), mode or "t", env or _G)
 end
 
 function dofile(path)
@@ -209,7 +213,7 @@ end
 
 --- Запустить файл программы с аргументами. Возвращает true, если всё прошло без ошибок.
 function os.run(env, path, ...)
-  setmetatable(env, { __index = _G })
+  if getmetatable(env) == nil then setmetatable(env, { __index = _G }) end
   local fn, err = loadfile(path, env)
   if not fn then
     printError(err)
@@ -249,6 +253,89 @@ function textutils.formatSize(bytes)
   return bytes .. " Б"
 end
 
+-- ===================== Модули (require) и совместимость с OpenOS =====================
+-- Программы для OpenComputers пишут require("component"), require("event") и т. п. —
+-- такие модули лежат в /rom/openos и ведут себя как в OpenOS.
+package = {
+  loaded = { _G = _G, string = string, table = table, math = math, coroutine = coroutine,
+             bit32 = bit32, utf8 = utf8, debug = debug, unicode = unicode, computer = computer },
+  preload = {},
+  path = "./?.lua;/lib/?.lua;/usr/lib/?.lua;/home/lib/?.lua;/rom/openos/?.lua",
+  config = "/\n;\n?\n!\n-\n",
+}
+
+function package.searchpath(name, path, sep, rep)
+  sep, rep = sep or ".", rep or "/"
+  local fname = name:gsub("%" .. sep, rep)
+  local tried = {}
+  for pattern in path:gmatch("[^;]+") do
+    local p = pattern:gsub("%?", fname)
+    if p:sub(1, 2) == "./" then
+      p = fs.combine(_NATIVE_SHELL and _NATIVE_SHELL.dir() or "", p:sub(3))
+    end
+    if fs.exists(p) and not fs.isDir(p) then return "/" .. fs.combine(p, "") end
+    tried[#tried + 1] = "\n\tno file '" .. p .. "'"
+  end
+  return nil, table.concat(tried)
+end
+
+local loading = {}
+function require(name)
+  if package.loaded[name] ~= nil then return package.loaded[name] end
+  if package.preload[name] then
+    local r = package.preload[name](name)
+    package.loaded[name] = package.loaded[name] or (r == nil and true or r)
+    return package.loaded[name]
+  end
+  local path, err = package.searchpath(name, package.path)
+  if not path then error("module '" .. name .. "' not found:" .. err, 2) end
+  if loading[name] then error("loop or previous error loading module '" .. name .. "'", 2) end
+  loading[name] = true
+  local fn, lerr = loadfile(path)
+  if not fn then loading[name] = nil; error("error loading module '" .. name .. "' from file '" .. path .. "':\n\t" .. lerr, 2) end
+  local ok, r = pcall(fn, name, path)
+  loading[name] = nil
+  if not ok then error(r, 2) end
+  if package.loaded[name] == nil then package.loaded[name] = (r == nil) and true or r end
+  return package.loaded[name]
+end
+
+--- Проверка типа аргумента, как в OpenComputers: checkArg(1, x, "string", "nil")
+function checkArg(n, have, ...)
+  have = type(have)
+  for i = 1, select("#", ...) do
+    if have == select(i, ...) then return end
+  end
+  error(string.format("bad argument #%d (%s expected, got %s)", n, table.concat({ ... }, " or "), have), 3)
+end
+
+-- Дополнения os из OpenOS
+local env = { HOME = "/home", PATH = "/bin:/usr/bin:/home/bin:.", SHELL = "/rom/shell.lua", TMPDIR = "/tmp" }
+function os.getenv(name)
+  if name == nil then return env end
+  if name == "PWD" then return _NATIVE_SHELL and _NATIVE_SHELL.dir() or "/" end
+  return env[name]
+end
+function os.setenv(name, value) env[name] = value; return value end
+function os.remove(path)
+  local ok, err = pcall(fs.delete, path)
+  if not ok then return nil, err end
+  return true
+end
+function os.rename(a, b)
+  local ok, err = pcall(fs.move, a, b)
+  if not ok then return nil, err end
+  return true
+end
+function os.tmpname()
+  pcall(fs.makeDir, "/tmp")
+  return "/tmp/" .. string.format("%08x", math.random(0, 0x7fffffff))
+end
+function os.exit() error("exit", 0) end
+
+io = require("io")
+component = require("component")
+
 -- ===================== Запуск =====================
 term.clear()
 term.setCursorPos(1, 1)
@@ -269,6 +356,7 @@ if fs.exists("/startup.lua") then
 end
 
 while true do
+  _NATIVE_SHELL = nil
   local ok = os.run({}, "/rom/shell.lua")
   if ok then
     os.shutdown()       -- команда exit в оболочке выключает компьютер

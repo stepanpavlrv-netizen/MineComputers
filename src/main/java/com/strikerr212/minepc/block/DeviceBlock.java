@@ -76,8 +76,10 @@ public abstract class DeviceBlock extends BaseEntityBlock {
             BlockState s = level.getBlockState(n);
             if (s.getBlock() instanceof KeyboardBlock) return true;
             if (level.getBlockEntity(n) instanceof MonitorBlockEntity) {
-                for (Direction d2 : Direction.values()) {
-                    if (level.getBlockState(n.relative(d2)).getBlock() instanceof KeyboardBlock) return true;
+                for (BlockPos m : MonitorGroup.of(level, n).blocks()) {
+                    for (Direction d2 : Direction.values()) {
+                        if (level.getBlockState(m.relative(d2)).getBlock() instanceof KeyboardBlock) return true;
+                    }
                 }
             }
         }

@@ -14,12 +14,16 @@ import net.minecraft.resources.ResourceLocation;
  * @param kind  {@link #CHAR} — набранный текст, {@link #KEY} — нажатая клавиша (имя: "enter", "up", "s"...),
  *              {@link #KEY_UP} — отпущенная клавиша, {@link #PASTE} — вставка, {@link #TERMINATE} — Ctrl+T,
  *              {@link #POWER} — кнопка питания, {@link #REFRESH} — прислать экран целиком
- * @param flags 1 — зажат Ctrl, 2 — зажат Shift
+ * @param flags 1 — зажат Ctrl, 2 — зажат Shift; для мыши — номер кнопки (1 левая, 2 правая, 3 средняя)
+ *              или направление прокрутки (-1 вверх, 1 вниз)
+ * @param x     клетка экрана по горизонтали (для мыши, с 1)
+ * @param y     клетка экрана по вертикали (для мыши, с 1)
  */
-public record TerminalInputPayload(BlockPos casePos, int kind, String text, int flags) implements CustomPacketPayload {
+public record TerminalInputPayload(BlockPos casePos, int kind, String text, int flags, int x, int y) implements CustomPacketPayload {
 
-    public static final int CHAR = 0, KEY = 1, KEY_UP = 2, PASTE = 3, TERMINATE = 4, POWER = 5, REFRESH = 6;
-    public static final int MAX_TEXT = 4096;
+    public static final int CHAR = 0, KEY = 1, KEY_UP = 2, PASTE = 3, TERMINATE = 4, POWER = 5, REFRESH = 6,
+            MOUSE_DOWN = 7, MOUSE_DRAG = 8, MOUSE_UP = 9, MOUSE_SCROLL = 10;
+    public static final int MAX_TEXT = 32000;
 
     public static final Type<TerminalInputPayload> TYPE =
             new Type<>(ResourceLocation.fromNamespaceAndPath(MineComputers.MODID, "terminal_input"));
@@ -29,6 +33,8 @@ public record TerminalInputPayload(BlockPos casePos, int kind, String text, int 
             ByteBufCodecs.VAR_INT, TerminalInputPayload::kind,
             ByteBufCodecs.stringUtf8(MAX_TEXT), TerminalInputPayload::text,
             ByteBufCodecs.VAR_INT, TerminalInputPayload::flags,
+            ByteBufCodecs.VAR_INT, TerminalInputPayload::x,
+            ByteBufCodecs.VAR_INT, TerminalInputPayload::y,
             TerminalInputPayload::new);
 
     @Override

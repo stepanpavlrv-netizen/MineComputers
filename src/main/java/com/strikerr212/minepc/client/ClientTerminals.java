@@ -11,21 +11,22 @@ import java.util.Map;
 /** Последние кадры экранов компьютеров, пришедшие с сервера (только у игрока). */
 public final class ClientTerminals {
 
-    /** Разобранный кадр: символы и цвета каждой клетки. */
-    public record Snapshot(int width, int height, int cursorX, int cursorY, boolean blink,
-                           byte[] chars, byte[] fg, byte[] bg) {
+    /** Разобранный кадр: символы и цвета (RGB) каждой клетки. */
+    public record Snapshot(int width, int height, int cursorX, int cursorY, boolean blink, int depth,
+                           char[] chars, int[] fg, int[] bg) {
 
         static Snapshot parse(byte[] f) {
             int w = TerminalCodec.width(f), h = TerminalCodec.height(f), n = w * h;
-            if (w == 0 || h == 0 || f.length < TerminalCodec.HEADER + 2 * n) return null;
-            byte[] c = new byte[n], fg = new byte[n], bg = new byte[n];
-            System.arraycopy(f, TerminalCodec.HEADER, c, 0, n);
+            if (w == 0 || h == 0 || f.length < TerminalCodec.HEADER + TerminalCodec.CELL * n) return null;
+            char[] c = new char[n];
+            int[] fg = new int[n], bg = new int[n];
+            int pc = TerminalCodec.HEADER, pf = pc + 2 * n, pb = pf + 3 * n;
             for (int i = 0; i < n; i++) {
-                int col = f[TerminalCodec.HEADER + n + i];
-                fg[i] = (byte) ((col >> 4) & 15);
-                bg[i] = (byte) (col & 15);
+                c[i] = (char) ((f[pc++] & 0xFF) << 8 | (f[pc++] & 0xFF));
+                fg[i] = (f[pf++] & 0xFF) << 16 | (f[pf++] & 0xFF) << 8 | (f[pf++] & 0xFF);
+                bg[i] = (f[pb++] & 0xFF) << 16 | (f[pb++] & 0xFF) << 8 | (f[pb++] & 0xFF);
             }
-            return new Snapshot(w, h, TerminalCodec.cursorX(f), TerminalCodec.cursorY(f), f[6] != 0, c, fg, bg);
+            return new Snapshot(w, h, TerminalCodec.cursorX(f), TerminalCodec.cursorY(f), f[6] != 0, f[7], c, fg, bg);
         }
     }
 
@@ -62,7 +63,7 @@ public final class ClientTerminals {
         Long last = LAST_REQUEST.get(pos);
         if (last != null && now - last < 1000) return;
         LAST_REQUEST.put(pos, now);
-        PacketDistributor.sendToServer(new TerminalInputPayload(pos, TerminalInputPayload.REFRESH, "", 0));
+        PacketDistributor.sendToServer(new TerminalInputPayload(pos, TerminalInputPayload.REFRESH, "", 0, 0, 0));
     }
 
     /** Экран компьютера или null, если он выключен. */
