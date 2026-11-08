@@ -397,7 +397,7 @@ public class PcCaseBlockEntity extends BlockEntity implements MenuProvider {
     }
 
     public void sendStatus(Player player) {
-        for (Component line : statusLines(true)) out.add(line);
+        for (Component line : statusLines(true)) player.sendSystemMessage(line);
     }
 
     /** Отчёт о сборке: производительность, питание, охлаждение, узкие места (и в чате, и в окне корпуса). */
