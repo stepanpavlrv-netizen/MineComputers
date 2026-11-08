@@ -1,0 +1,1 @@
+{"type":"minecraft:crafting_shaped","category":"misc","pattern":["CCC","ITI","I I"],"key":{"C":{"item":"minecraft:light_blue_carpet"},"I":{"item":"minecraft:iron_ingot"},"T":{"item":"minecraft:crafting_table"}},"result":{"id":"minepc:assembly_table","count":1}}

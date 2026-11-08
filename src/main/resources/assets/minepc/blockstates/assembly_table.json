@@ -1,0 +1,1 @@
+{"variants":{"facing=north":{"model":"minepc:block/assembly_table"},"facing=east":{"model":"minepc:block/assembly_table","y":90},"facing=south":{"model":"minepc:block/assembly_table","y":180},"facing=west":{"model":"minepc:block/assembly_table","y":270}}}

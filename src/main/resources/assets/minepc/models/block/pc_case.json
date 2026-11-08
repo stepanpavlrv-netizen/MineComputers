@@ -1,0 +1,275 @@
+{
+ "parent": "minecraft:block/block",
+ "render_type": "minecraft:translucent",
+ "textures": {
+  "particle": "minepc:block/case_side",
+  "side": "minepc:block/case_side",
+  "edge": "minepc:block/case_edge",
+  "interior": "minepc:block/case_interior",
+  "front": "minepc:block/case_front",
+  "back": "minepc:block/case_back",
+  "top": "minepc:block/case_top",
+  "tray": "minepc:block/case_tray",
+  "glass": "minepc:block/case_glass"
+ },
+ "elements": [
+  {
+   "name": "tray_wall",
+   "from": [
+    3,
+    0,
+    0
+   ],
+   "to": [
+    4,
+    16,
+    16
+   ],
+   "faces": {
+    "west": {
+     "texture": "#side"
+    },
+    "east": {
+     "texture": "#tray"
+    },
+    "north": {
+     "texture": "#edge"
+    },
+    "south": {
+     "texture": "#edge"
+    },
+    "up": {
+     "texture": "#edge"
+    },
+    "down": {
+     "texture": "#edge"
+    }
+   }
+  },
+  {
+   "name": "top",
+   "from": [
+    4,
+    15,
+    0
+   ],
+   "to": [
+    13,
+    16,
+    16
+   ],
+   "faces": {
+    "up": {
+     "texture": "#top"
+    },
+    "down": {
+     "texture": "#interior"
+    },
+    "north": {
+     "texture": "#edge"
+    },
+    "south": {
+     "texture": "#edge"
+    },
+    "east": {
+     "texture": "#edge"
+    }
+   }
+  },
+  {
+   "name": "bottom",
+   "from": [
+    4,
+    0,
+    0
+   ],
+   "to": [
+    13,
+    1,
+    16
+   ],
+   "faces": {
+    "down": {
+     "texture": "#edge"
+    },
+    "up": {
+     "texture": "#interior"
+    },
+    "north": {
+     "texture": "#edge"
+    },
+    "south": {
+     "texture": "#edge"
+    },
+    "east": {
+     "texture": "#edge"
+    }
+   }
+  },
+  {
+   "name": "front",
+   "from": [
+    4,
+    1,
+    0
+   ],
+   "to": [
+    13,
+    15,
+    1
+   ],
+   "faces": {
+    "north": {
+     "texture": "#front"
+    },
+    "south": {
+     "texture": "#interior"
+    },
+    "east": {
+     "texture": "#edge"
+    }
+   }
+  },
+  {
+   "name": "back",
+   "from": [
+    4,
+    1,
+    15
+   ],
+   "to": [
+    13,
+    15,
+    16
+   ],
+   "faces": {
+    "south": {
+     "texture": "#back"
+    },
+    "north": {
+     "texture": "#interior"
+    },
+    "east": {
+     "texture": "#edge"
+    }
+   }
+  },
+  {
+   "name": "hdd_cage_top",
+   "from": [
+    4,
+    4.3,
+    1
+   ],
+   "to": [
+    8.5,
+    4.45,
+    6.7
+   ],
+   "faces": {
+    "up": {
+     "texture": "#edge"
+    },
+    "down": {
+     "texture": "#interior"
+    },
+    "east": {
+     "texture": "#edge"
+    },
+    "south": {
+     "texture": "#edge"
+    }
+   }
+  },
+  {
+   "name": "hdd_cage_back",
+   "from": [
+    4,
+    1,
+    6.6
+   ],
+   "to": [
+    8.5,
+    4.3,
+    6.7
+   ],
+   "faces": {
+    "south": {
+     "texture": "#interior"
+    },
+    "north": {
+     "texture": "#interior"
+    },
+    "east": {
+     "texture": "#edge"
+    }
+   }
+  },
+  {
+   "name": "hdd_rail_1",
+   "from": [
+    8.15,
+    1.25,
+    1
+   ],
+   "to": [
+    8.5,
+    1.4,
+    6.6
+   ],
+   "faces": {
+    "up": {
+     "texture": "#edge"
+    },
+    "east": {
+     "texture": "#edge"
+    },
+    "down": {
+     "texture": "#edge"
+    }
+   }
+  },
+  {
+   "name": "hdd_rail_2",
+   "from": [
+    8.15,
+    2.75,
+    1
+   ],
+   "to": [
+    8.5,
+    2.9,
+    6.6
+   ],
+   "faces": {
+    "up": {
+     "texture": "#edge"
+    },
+    "east": {
+     "texture": "#edge"
+    },
+    "down": {
+     "texture": "#edge"
+    }
+   }
+  },
+  {
+   "name": "glass",
+   "from": [
+    12.75,
+    1,
+    1
+   ],
+   "to": [
+    13,
+    15,
+    15
+   ],
+   "faces": {
+    "east": {
+     "texture": "#glass"
+    }
+   }
+  }
+ ]
+}
