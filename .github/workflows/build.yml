@@ -33,6 +33,11 @@ jobs:
           echo "Cobalt: $COBALT"
           python3 tools/computer/run_test.py "$COBALT"
 
+      - name: Smoke test of the built jar on a real NeoForge server
+        run: |
+          unzip -l build/libs/*.jar | grep -i "jarjar" || true
+          bash tools/ci/server_smoke.sh
+
       - name: Upload mod jar
         uses: actions/upload-artifact@v4
         with:

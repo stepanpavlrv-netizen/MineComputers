@@ -1,6 +1,7 @@
 package com.strikerr212.minepc;
 
 import com.mojang.logging.LogUtils;
+import com.strikerr212.minepc.computer.LuaSelfTest;
 import com.strikerr212.minepc.registry.ModBlockEntities;
 import com.strikerr212.minepc.registry.ModBlocks;
 import com.strikerr212.minepc.registry.ModCreativeTabs;
@@ -31,6 +32,6 @@ public class MineComputers {
         ModMenus.register(modEventBus);           // окна с интерфейсом (сборочный стол)
         ModCreativeTabs.register(modEventBus);    // вкладка в творческом режиме
 
-        LOGGER.info("MineComputers is loading!");
+        LOGGER.info("MineComputers is loading! " + LuaSelfTest.run());
     }
 }
