@@ -60,6 +60,11 @@ neoForge {
             client()
             // Comma-separated list of namespaces to load gametests from. Empty = all namespaces.
             systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+            // Только для проверки на GitHub: ./gradlew runClient -PciShots — игра сама делает скриншоты
+            if (project.hasProperty('ciShots')) {
+                systemProperty 'minepc.ciShots', 'true'
+                programArguments.addAll '--quickPlaySingleplayer', 'ci'
+            }
         }
 
         server {
