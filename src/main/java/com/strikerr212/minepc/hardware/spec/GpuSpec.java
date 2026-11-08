@@ -2,6 +2,7 @@ package com.strikerr212.minepc.hardware.spec;
 
 import com.strikerr212.minepc.hardware.GpuData;
 import com.strikerr212.minepc.hardware.HardwareType;
+import com.strikerr212.minepc.hardware.Perf;
 import com.strikerr212.minepc.hardware.Units;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.Items;
@@ -53,7 +54,7 @@ public class GpuSpec extends PartSpec {
         int cooler = idx(v, COOLER);
         int cooling = COOLER_W[cooler];
         if (cooler >= COOLER_DUAL) cooling = cooling * THICKNESS_PERCENT[idx(v, THICKNESS)] / 100;
-        return new GpuData(tier(v), SHADERS[chip], clock, val(v, VRAM_CHIPS) * val(v, VRAM_CHIP_MB),
+        return new GpuData(tier(v), SHADERS[chip], clock, val(v, VRAM_CHIPS), val(v, VRAM_CHIPS) * val(v, VRAM_CHIP_MB),
                 idx(v, VRAM_TYPE), tdp, cooling);
     }
 
@@ -107,6 +108,13 @@ public class GpuSpec extends PartSpec {
         if (d.hasCooler()) {
             lines.add(line("tooltip.minepc.cooling", Units.watts(d.coolingW())));
         }
+        double tflops = Perf.gpuTflops(d);
+        lines.add(perfLine("tooltip.minepc.perf_gpu", Units.tflops(tflops), Units.level(Perf.level(tflops, Perf.STOCK_GPU_TFLOPS))));
+        lines.add(perfLine("tooltip.minepc.perf_bus", Units.bits(Perf.gpuBusBits(d)), Units.bandwidth(Perf.gpuMemoryGbs(d))));
+        double throttle = Perf.throttle(d.tdp(), d.hasCooler() ? d.coolingW() : Perf.PASSIVE_COOLING);
+        if (throttle < 1) lines.add(perfLine("tooltip.minepc.perf_throttle", Units.percent(throttle)));
+        double memory = Perf.gpuMemoryFactor(d);
+        if (memory < 0.85) lines.add(perfLine("tooltip.minepc.perf_vram_bound", Math.round((1 - memory) * 100)));
     }
 
     @Override

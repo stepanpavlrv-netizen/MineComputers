@@ -50,7 +50,7 @@ def make_test(presets_src):
             first = False
     for typ, label, vals in customs:
         j.append(f'  report(o, Specs.{typ}, "{typ}*", 0, L({vals}), true);')
-    j.append('  o.append("]}"); System.out.println(o); }')
+    j.append('  o.append("]}"); System.out.println(o); PerfReport.run(); }')
     j.append('''  static void report(StringBuilder o, PartSpec s, String name, int want, List<Integer> v, boolean comma) {
     if (comma) o.append(",");
     if (v.size() != s.params().size()) throw new RuntimeException(name + " T" + want + ": " + v.size() + " values, spec has " + s.params().size());
@@ -64,6 +64,16 @@ def make_test(presets_src):
     return "\n".join(j)
 
 
+def make_tables(presets_src):
+    """Таблицы заводских деталей для PerfReport (в HardwarePresets они приватные)."""
+    j = ["package com.strikerr212.minepc.hardware.spec;", "public class StockTables {"]
+    for name, body in re.findall(r"private static final int\[\]\[\] (\w+) = \{(.*?)\n    \};", presets_src, re.S):
+        rows = re.findall(r"\{([\d, ]+)\}", body)
+        j.append(f"  public static final int[][] {name} = {{" + ", ".join("{" + r + "}" for r in rows) + "};")
+    j.append("}")
+    return "\n".join(j)
+
+
 def main():
     work = tempfile.mkdtemp(prefix="spectest_")
     try:
@@ -71,15 +81,22 @@ def main():
         shutil.copytree(os.path.join(HW, "spec"), os.path.join(src, "spec"))
         os.remove(os.path.join(src, "spec", "PartDesign.java"))      # зависит от кодеков Minecraft
         for f in os.listdir(HW):
-            if f.endswith("Data.java") or f in ("HardwareType.java", "Units.java"):
+            if f.endswith("Data.java") or f in ("HardwareType.java", "Units.java", "Perf.java", "SystemModel.java"):
                 shutil.copy(os.path.join(HW, f), src)
+        presets = open(os.path.join(HW, "HardwarePresets.java"), encoding="utf-8").read()
         with open(os.path.join(src, "spec", "SpecTest.java"), "w", encoding="utf-8") as f:
-            f.write(make_test(open(os.path.join(HW, "HardwarePresets.java"), encoding="utf-8").read()))
+            f.write(make_test(presets))
+        with open(os.path.join(src, "spec", "StockTables.java"), "w", encoding="utf-8") as f:
+            f.write(make_tables(presets))
+        shutil.copy(os.path.join(os.path.dirname(__file__), "PerfReport.java"), os.path.join(src, "spec"))
         files = [os.path.join(dp, n) for base in (src, STUBS) for dp, _, fs in os.walk(base) for n in fs if n.endswith(".java")]
         out = os.path.join(work, "out")
         subprocess.run(["javac", "-encoding", "UTF-8", "-d", out] + files, check=True)
         res = subprocess.run(["java", "-cp", out, "com.strikerr212.minepc.hardware.spec.SpecTest"],
-                             check=True, capture_output=True, text=True)
+                             capture_output=True, text=True, encoding="utf-8")
+        print(res.stderr)
+        if res.returncode != 0:
+            sys.exit("Тест упал (см. выше)")
         dump = json.loads(res.stdout)
         with open(OUT_JSON, "w", encoding="utf-8") as f:
             json.dump(dump, f)

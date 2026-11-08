@@ -3,12 +3,17 @@ package com.strikerr212.minepc.block;
 import com.strikerr212.minepc.hardware.CpuData;
 import com.strikerr212.minepc.hardware.GpuData;
 import com.strikerr212.minepc.hardware.HardwareType;
+import com.strikerr212.minepc.hardware.HddData;
 import com.strikerr212.minepc.hardware.MotherboardData;
+import com.strikerr212.minepc.hardware.RamData;
+import com.strikerr212.minepc.hardware.SsdData;
+import com.strikerr212.minepc.hardware.SystemModel;
 import com.strikerr212.minepc.hardware.Units;
 import com.strikerr212.minepc.item.CoolerItem;
 import com.strikerr212.minepc.item.CpuItem;
 import com.strikerr212.minepc.item.GpuItem;
 import com.strikerr212.minepc.item.HardwareItem;
+import com.strikerr212.minepc.item.HddItem;
 import com.strikerr212.minepc.item.MotherboardItem;
 import com.strikerr212.minepc.item.PsuItem;
 import com.strikerr212.minepc.item.RamItem;
@@ -31,6 +36,10 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.neoforge.items.ItemStackHandler;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
 
 /**
  * "Мозг" системного блока: хранит установленные детали и проверяет совместимость.
@@ -201,26 +210,38 @@ public class PcCaseBlockEntity extends BlockEntity {
 
     // ======================= Отчёт о сборке =======================
 
+    /** Собрать паспорта установленных деталей для расчёта производительности. */
+    private SystemModel.Input collectInput() {
+        int power = 0;
+        List<RamData> ram = new ArrayList<>();
+        List<HddData> hdds = new ArrayList<>();
+        List<SsdData> ssds = new ArrayList<>();
+        for (int slot = 0; slot < SLOT_COUNT; slot++) {
+            ItemStack stack = getStack(slot);
+            if (!(stack.getItem() instanceof HardwareItem hardware)) continue;
+            power += hardware.getPowerDraw(stack);
+            if (stack.getItem() instanceof RamItem) ram.add(RamItem.data(stack));
+            if (stack.getItem() instanceof HddItem) hdds.add(HddItem.data(stack));
+            if (stack.getItem() instanceof SsdItem) ssds.add(SsdItem.data(stack));
+        }
+        ItemStack cpu = getStack(SLOT_CPU), cooler = getStack(SLOT_COOLER), gpu = getStack(SLOT_GPU), psu = getStack(SLOT_PSU);
+        return new SystemModel.Input(motherboard(),
+                cpu.getItem() instanceof CpuItem ? CpuItem.data(cpu) : null,
+                cooler.getItem() instanceof CoolerItem ? CoolerItem.data(cooler) : null,
+                ram,
+                gpu.getItem() instanceof GpuItem ? GpuItem.data(gpu) : null,
+                psu.getItem() instanceof PsuItem ? PsuItem.data(psu) : null,
+                hdds, ssds, power);
+    }
+
     public void sendStatus(Player player) {
         player.sendSystemMessage(Component.translatable("message.minepc.status.header").withStyle(ChatFormatting.AQUA));
 
-        int power = 0;
-        int ramMb = 0;
-        int ramMhz = Integer.MAX_VALUE;
-        int ramSticks = 0;
         boolean any = false;
         for (int slot = 0; slot < SLOT_COUNT; slot++) {
             ItemStack stack = getStack(slot);
-            if (stack.isEmpty() || !(stack.getItem() instanceof HardwareItem hardware)) {
-                continue;
-            }
+            if (stack.isEmpty() || !(stack.getItem() instanceof HardwareItem)) continue;
             any = true;
-            power += hardware.getPowerDraw(stack);
-            if (stack.getItem() instanceof RamItem) {
-                ramMb += RamItem.data(stack).capacityMb();
-                ramMhz = Math.min(ramMhz, RamItem.data(stack).speedMhz());
-                ramSticks++;
-            }
             player.sendSystemMessage(Component.literal(" • ").withStyle(ChatFormatting.DARK_GRAY)
                     .append(stack.getHoverName()));
         }
@@ -229,28 +250,85 @@ public class PcCaseBlockEntity extends BlockEntity {
             return;
         }
 
-        MotherboardData board = motherboard();
-        if (ramMb > 0) {
-            int effective = board != null ? Math.min(ramMhz, board.maxRamMhz()) : ramMhz;
-            MutableComponent line = Component.translatable("message.minepc.status.ram",
-                    Units.size(ramMb), Units.frequency(effective)).withStyle(ChatFormatting.GRAY);
-            if (board != null && board.maxRamMhz() < ramMhz) {
+        SystemModel.Input in = collectInput();
+        SystemModel.Report r = SystemModel.evaluate(in);
+
+        // ----- Что реально выдаёт каждая часть -----
+        player.sendSystemMessage(Component.translatable("message.minepc.status.perf").withStyle(ChatFormatting.AQUA));
+        if (in.cpu() != null) {
+            boolean reduced = r.cpuThrottle() < 1 || r.cpuMemory() < 0.85;
+            player.sendSystemMessage(perf("message.minepc.status.cpu", reduced, Units.ops(r.cpuGips()), Units.level(r.cpuLevel())));
+        }
+        if (in.gpu() != null) {
+            player.sendSystemMessage(perf("message.minepc.status.gpu", r.gpuThrottle() < 1,
+                    Units.tflops(r.gpuTflops()), Units.level(r.gpuLevel())));
+        }
+        if (r.ramMb() > 0) {
+            MutableComponent line = perf("message.minepc.status.ram", r.channels() < (in.board() != null ? in.board().channels() : 1),
+                    Units.size(r.ramMb()), Units.frequency(r.ramMts()), r.channels(), Units.bandwidth(r.ramGbs()));
+            if (hasNote(r, SystemModel.Issue.RAM_LIMITED)) {
                 line.append(Component.translatable("message.minepc.status.ram_limited").withStyle(ChatFormatting.GOLD));
             }
             player.sendSystemMessage(line);
-            if (board != null) {
-                // Режим каналов: сколько каналов реально задействовано установленными планками
-                int mode = Math.min(board.channels(), ramSticks);
-                player.sendSystemMessage(Component.translatable("message.minepc.status.channels", mode)
-                        .withStyle(mode >= board.channels() ? ChatFormatting.GRAY : ChatFormatting.GOLD));
-            }
         }
-        player.sendSystemMessage(powerStatus(power));
-        player.sendSystemMessage(coolingStatus());
-        Component gpu = gpuCoolingStatus();
-        if (gpu != null) {
-            player.sendSystemMessage(gpu);
+        if (r.bootSeconds() > 0) {
+            player.sendSystemMessage(perf("message.minepc.status.boot", r.bootSeconds() > 20, Units.seconds(r.bootSeconds()),
+                    Component.translatable(r.bootFromSsd() ? "message.minepc.status.boot_ssd" : "message.minepc.status.boot_hdd")));
         }
+
+        // ----- Питание и охлаждение -----
+        player.sendSystemMessage(powerStatus(in.powerDraw()));
+        if (r.wallWatts() > 0) {
+            player.sendSystemMessage(Component.translatable("message.minepc.power.wall",
+                    Units.watts(r.wallWatts()), Units.watts(r.wallWatts() - in.powerDraw())).withStyle(ChatFormatting.DARK_GRAY));
+        }
+        player.sendSystemMessage(coolingStatus(r));
+        Component gpu = gpuCoolingStatus(r);
+        if (gpu != null) player.sendSystemMessage(gpu);
+
+        // ----- Итог -----
+        if (r.bootable()) {
+            player.sendSystemMessage(Component.translatable("message.minepc.status.score",
+                    Component.literal(String.valueOf(r.score())).withStyle(ChatFormatting.YELLOW, ChatFormatting.BOLD))
+                    .withStyle(ChatFormatting.AQUA));
+        } else {
+            player.sendSystemMessage(Component.translatable("message.minepc.status.no_boot").withStyle(ChatFormatting.RED));
+        }
+        boolean warned = false;
+        for (SystemModel.Note n : r.notes()) {
+            // Эти замечания уже видны в строках выше
+            if (n.issue() == SystemModel.Issue.RAM_LIMITED || n.issue() == SystemModel.Issue.PSU_HIGH) continue;
+            if (!n.issue().critical && !r.bootable()) continue;   // сначала пусть запустится
+            player.sendSystemMessage(Component.literal(" ! ").append(noteText(n))
+                    .withStyle(n.issue().critical ? ChatFormatting.RED : ChatFormatting.GOLD));
+            warned = true;
+        }
+        if (!warned && r.bootable()) {
+            player.sendSystemMessage(Component.translatable("message.minepc.status.balanced").withStyle(ChatFormatting.GREEN));
+        }
+    }
+
+    private static boolean hasNote(SystemModel.Report r, SystemModel.Issue issue) {
+        return r.notes().stream().anyMatch(n -> n.issue() == issue);
+    }
+
+    private static MutableComponent perf(String key, boolean reduced, Object... args) {
+        return Component.translatable(key, args).withStyle(reduced ? ChatFormatting.GOLD : ChatFormatting.GRAY);
+    }
+
+    private static Component noteText(SystemModel.Note n) {
+        String key = "message.minepc.note." + n.issue().name().toLowerCase(Locale.ROOT);
+        return switch (n.issue()) {
+            case MEMORY_BOUND -> Component.translatable(key, Math.round(n.a()));
+            case CHANNELS -> Component.translatable(key, (int) n.a(), (int) n.b());
+            case MIXED_RAM -> Component.translatable(key, Units.frequency((int) n.a()));
+            case CPU_BOTTLENECK, GPU_BOTTLENECK -> Component.translatable(key,
+                    String.format(Locale.ROOT, "%.1f", n.a()), String.format(Locale.ROOT, "%.1f", n.b()));
+            case PSU_OVERLOAD, PSU_HIGH -> Component.translatable(key, Math.round(n.a()));
+            case RAM_LIMITED -> Component.translatable(key, Units.frequency((int) n.a()));
+            case SLOW_BOOT -> Component.translatable(key, Units.seconds(n.a()));
+            default -> Component.translatable(key);
+        };
     }
 
     /** Хватает ли мощности блока питания. */
@@ -270,8 +348,12 @@ public class PcCaseBlockEntity extends BlockEntity {
         return Component.translatable(key, Units.watts(draw), Units.watts(max), percent).withStyle(color);
     }
 
-    /** Хватает ли кулера на тепло процессора. */
-    private Component coolingStatus() {
+    private static int pct(double fraction) {
+        return (int) Math.round(fraction * 100);
+    }
+
+    /** Хватает ли кулера на тепло процессора и сколько частоты он держит. */
+    private Component coolingStatus(SystemModel.Report r) {
         ItemStack cpu = getStack(SLOT_CPU);
         ItemStack cooler = getStack(SLOT_COOLER);
         if (!(cpu.getItem() instanceof HardwareItem cpuItem)) {
@@ -279,30 +361,38 @@ public class PcCaseBlockEntity extends BlockEntity {
         }
         int heat = cpuItem.getHeat(cpu);
         if (!(cooler.getItem() instanceof CoolerItem)) {
-            return Component.translatable("message.minepc.cooling.none", Units.watts(heat)).withStyle(ChatFormatting.RED);
+            if (r.cpuThrottle() >= 1) {
+                return Component.translatable("message.minepc.cooling.passive", Units.watts(heat)).withStyle(ChatFormatting.GREEN);
+            }
+            return Component.translatable("message.minepc.cooling.none", Units.watts(heat), pct(r.cpuThrottle()))
+                    .withStyle(ChatFormatting.RED);
         }
         int capacity = CoolerItem.data(cooler).coolingW();
         if (heat > capacity) {
-            return Component.translatable("message.minepc.cooling.weak", Units.watts(heat), Units.watts(capacity))
-                    .withStyle(ChatFormatting.GOLD);
+            return Component.translatable("message.minepc.cooling.weak", Units.watts(heat), Units.watts(capacity),
+                    pct(r.cpuThrottle())).withStyle(ChatFormatting.GOLD);
         }
         return Component.translatable("message.minepc.cooling.ok", Units.watts(heat), Units.watts(capacity))
                 .withStyle(ChatFormatting.GREEN);
     }
 
     /** Хватает ли видеокарте её собственного охлаждения. */
-    private Component gpuCoolingStatus() {
+    private Component gpuCoolingStatus(SystemModel.Report r) {
         ItemStack gpu = getStack(SLOT_GPU);
         if (!(gpu.getItem() instanceof GpuItem)) {
             return null;
         }
         GpuData d = GpuItem.data(gpu);
         if (!d.hasCooler()) {
-            return Component.translatable("message.minepc.gpu.none", Units.watts(d.tdp())).withStyle(ChatFormatting.RED);
+            if (r.gpuThrottle() >= 1) {
+                return Component.translatable("message.minepc.gpu.passive", Units.watts(d.tdp())).withStyle(ChatFormatting.GREEN);
+            }
+            return Component.translatable("message.minepc.gpu.none", Units.watts(d.tdp()), pct(r.gpuThrottle()))
+                    .withStyle(ChatFormatting.RED);
         }
         if (d.tdp() > d.coolingW()) {
-            return Component.translatable("message.minepc.gpu.weak", Units.watts(d.tdp()), Units.watts(d.coolingW()))
-                    .withStyle(ChatFormatting.GOLD);
+            return Component.translatable("message.minepc.gpu.weak", Units.watts(d.tdp()), Units.watts(d.coolingW()),
+                    pct(r.gpuThrottle())).withStyle(ChatFormatting.GOLD);
         }
         return Component.translatable("message.minepc.gpu.ok", Units.watts(d.tdp()), Units.watts(d.coolingW()))
                 .withStyle(ChatFormatting.GREEN);

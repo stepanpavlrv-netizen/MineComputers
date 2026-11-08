@@ -1,6 +1,7 @@
 package com.strikerr212.minepc.hardware.spec;
 
 import com.strikerr212.minepc.hardware.HardwareType;
+import com.strikerr212.minepc.hardware.Perf;
 import com.strikerr212.minepc.hardware.PsuData;
 import com.strikerr212.minepc.hardware.Units;
 import net.minecraft.network.chat.Component;
@@ -55,6 +56,8 @@ public class PsuSpec extends PartSpec {
         lines.add(line("tooltip.minepc.certificate", Component.translatable(d.certificateKey())));
         lines.add(line("tooltip.minepc.efficiency", d.efficiencyPercent() + "%"));
         lines.add(paramLine(v, MODULAR));
+        int wall = Perf.wallWatts(d.wattage(), d.efficiencyPercent());
+        lines.add(perfLine("tooltip.minepc.perf_wall", Units.watts(wall), Units.watts(wall - d.wattage())));
     }
 
     @Override

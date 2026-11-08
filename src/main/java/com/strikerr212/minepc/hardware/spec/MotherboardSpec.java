@@ -2,6 +2,7 @@ package com.strikerr212.minepc.hardware.spec;
 
 import com.strikerr212.minepc.hardware.HardwareType;
 import com.strikerr212.minepc.hardware.MotherboardData;
+import com.strikerr212.minepc.hardware.Perf;
 import com.strikerr212.minepc.hardware.Units;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.Items;
@@ -81,6 +82,7 @@ public class MotherboardSpec extends PartSpec {
         lines.add(line("tooltip.minepc.max_ram_speed", Units.frequency(d.maxRamMhz())));
         lines.add(line("tooltip.minepc.m2_slots", d.m2Slots()));
         lines.add(line("tooltip.minepc.sata_ports", d.sataPorts()));
+        lines.add(perfLine("tooltip.minepc.perf_board_bw", Units.bandwidth(Perf.ramChannelGbs(d.maxRamMhz()) * d.channels())));
     }
 
     @Override

@@ -1,6 +1,7 @@
 package com.strikerr212.minepc.hardware.spec;
 
 import com.strikerr212.minepc.hardware.HardwareType;
+import com.strikerr212.minepc.hardware.Perf;
 import com.strikerr212.minepc.hardware.HddData;
 import com.strikerr212.minepc.hardware.Units;
 import net.minecraft.network.chat.Component;
@@ -50,6 +51,8 @@ public class HddSpec extends PartSpec {
         lines.add(line("tooltip.minepc.rpm", Component.translatable("unit.minepc.rpm", d.rpm())));
         lines.add(line("tooltip.minepc.cache", Units.size(d.cacheMb())));
         lines.add(line("tooltip.minepc.speed", Units.speed(d.speedMbs())));
+        lines.add(perfLine("tooltip.minepc.perf_random", Units.iops(d.iops())));
+        lines.add(perfLine("tooltip.minepc.perf_boot", Units.seconds(Perf.bootSeconds(d))));
     }
 
     @Override

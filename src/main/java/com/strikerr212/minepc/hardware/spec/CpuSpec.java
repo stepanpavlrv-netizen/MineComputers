@@ -2,6 +2,7 @@ package com.strikerr212.minepc.hardware.spec;
 
 import com.strikerr212.minepc.hardware.CpuData;
 import com.strikerr212.minepc.hardware.HardwareType;
+import com.strikerr212.minepc.hardware.Perf;
 import com.strikerr212.minepc.hardware.Units;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.Items;
@@ -77,6 +78,10 @@ public class CpuSpec extends PartSpec {
         lines.add(paramLine(v, PROCESS));
         lines.add(paramLine(v, CACHE));
         lines.add(line("tooltip.minepc.heat", Units.watts(d.tdp())));
+        double gips = Perf.cpuGips(d);
+        lines.add(perfLine("tooltip.minepc.perf_speed", Units.ops(gips), Units.level(Perf.level(gips, Perf.STOCK_CPU_GIPS))));
+        if (d.cores() > 1) lines.add(perfLine("tooltip.minepc.perf_core", Units.ops(Perf.cpuSingleGips(d))));
+        lines.add(perfLine("tooltip.minepc.perf_mem_need", Units.bandwidth(Perf.cpuMemoryDemand(d))));
     }
 
     @Override

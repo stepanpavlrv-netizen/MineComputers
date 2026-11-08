@@ -1,6 +1,7 @@
 package com.strikerr212.minepc.hardware.spec;
 
 import com.strikerr212.minepc.hardware.HardwareType;
+import com.strikerr212.minepc.hardware.Perf;
 import com.strikerr212.minepc.hardware.SsdData;
 import com.strikerr212.minepc.hardware.Units;
 import net.minecraft.network.chat.Component;
@@ -17,6 +18,8 @@ public class SsdSpec extends PartSpec {
 
     private static final int[] IFACE_SPEED = {550, 3500, 7000, 12000};
     private static final int[] NAND_PERCENT = {60, 85, 95, 100};   // QLC, TLC, MLC, SLC
+    /** Случайное чтение блоками по 4 КБ: тысяч операций в секунду на лучшей памяти. */
+    private static final int[] IFACE_KIOPS = {95, 450, 1000, 1500};
 
     public SsdSpec() {
         super(HardwareType.SSD, List.of(
@@ -34,7 +37,8 @@ public class SsdSpec extends PartSpec {
     public SsdData derive(List<Integer> v) {
         int iface = idx(v, IFACE);
         int speed = IFACE_SPEED[iface] * NAND_PERCENT[idx(v, NAND)] / 100;
-        return new SsdData(tier(v), iface, val(v, CAPACITY), speed);
+        int iops = IFACE_KIOPS[iface] * NAND_PERCENT[idx(v, NAND)] * 10;
+        return new SsdData(tier(v), iface, val(v, CAPACITY), speed, iops);
     }
 
     @Override
@@ -64,6 +68,8 @@ public class SsdSpec extends PartSpec {
         lines.add(line("tooltip.minepc.capacity", Units.size(d.capacityMb())));
         lines.add(paramLine(v, NAND));
         lines.add(line("tooltip.minepc.speed", Units.speed(d.speedMbs())));
+        lines.add(perfLine("tooltip.minepc.perf_random", Units.iops(d.iops())));
+        lines.add(perfLine("tooltip.minepc.perf_boot", Units.seconds(Perf.bootSeconds(d))));
     }
 
     @Override

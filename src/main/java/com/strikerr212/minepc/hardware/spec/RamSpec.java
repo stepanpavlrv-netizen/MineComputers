@@ -1,6 +1,7 @@
 package com.strikerr212.minepc.hardware.spec;
 
 import com.strikerr212.minepc.hardware.HardwareType;
+import com.strikerr212.minepc.hardware.Perf;
 import com.strikerr212.minepc.hardware.RamData;
 import com.strikerr212.minepc.hardware.Units;
 import net.minecraft.network.chat.Component;
@@ -67,6 +68,7 @@ public class RamSpec extends PartSpec {
         lines.add(line("tooltip.minepc.chips",
                 Component.translatable("tooltip.minepc.chips_value", d.chips(), Units.size(d.chipMb()))));
         lines.add(line("tooltip.minepc.clock", Units.frequency(d.speedMhz())));
+        lines.add(perfLine("tooltip.minepc.perf_ram_channel", Units.bandwidth(Perf.ramChannelGbs(d.speedMhz()))));
     }
 
     @Override

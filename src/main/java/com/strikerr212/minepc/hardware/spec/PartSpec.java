@@ -162,6 +162,17 @@ public abstract class PartSpec {
         return Component.translatable(key, shown).withStyle(ChatFormatting.GRAY);
     }
 
+    /** Строка про производительность: выделена бирюзовым, чтобы её было видно среди параметров. */
+    protected static Component perfLine(String key, Object... values) {
+        Object[] shown = new Object[values.length];
+        for (int i = 0; i < values.length; i++) {
+            shown[i] = values[i] instanceof Component c
+                    ? c.copy().withStyle(ChatFormatting.AQUA)
+                    : Component.literal(String.valueOf(values[i])).withStyle(ChatFormatting.AQUA);
+        }
+        return Component.translatable(key, shown).withStyle(ChatFormatting.DARK_AQUA);
+    }
+
     protected Component paramLine(List<Integer> v, int param) {
         Param p = params.get(param);
         return Component.translatable("tooltip.minepc.param", p.label(), p.display(idx(v, param)).copy()
