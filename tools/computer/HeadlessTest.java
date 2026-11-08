@@ -80,7 +80,7 @@ public class HeadlessTest {
         command("edit hello.lua");
         type("for i = 1, 3 do");
         key("enter", false);
-        type("print(\"Привет, \" .. i)");
+        type("  print(\"Привет, \" .. i)");
         key("enter", false);
         type("end");
         ticks(5);
@@ -95,6 +95,7 @@ public class HeadlessTest {
         command("hello");
         show("запуск hello");
         expect("программа напечатала кириллицу", screen().contains("Привет, 3"));
+        expect("end после блока сдвинут влево", Files.readString(dir.resolve("code/hello.lua"), Cp1251.CHARSET).endsWith("\nend"));
 
         command("ls");
         expect("ls видит файл", screen().contains("hello.lua"));

@@ -28,6 +28,7 @@ for k in ("and break do else elseif end false for function goto if in local nil 
   keywords[k] = true
 end
 local isLua = path:match("%.lua$") ~= nil
+local dedent = { ["end"] = true, ["else"] = true, ["until"] = true }
 
 -- Раскраска одной строки: возвращает список {текст, цвет}
 local function highlight(line)
@@ -159,6 +160,15 @@ while running do
   local before = cy
   if ev == "char" then
     insert(a)
+    -- Набрали end / else / until в начале строки — сдвигаем её на уровень левее предыдущей
+    local indent, word = lines[cy]:match("^(%s*)(%a+)$")
+    if word and dedent[word] and cx == #lines[cy] + 1 and cy > 1 then
+      local prev = lines[cy - 1]:match("^%s*")
+      if #indent >= 2 and #indent >= #prev then
+        lines[cy] = lines[cy]:sub(3)
+        cx = cx - 2
+      end
+    end
   elseif ev == "paste" then
     local first = true
     for piece in (a .. "\n"):gmatch("(.-)\r?\n") do
