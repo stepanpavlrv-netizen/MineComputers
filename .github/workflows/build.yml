@@ -38,6 +38,9 @@ jobs:
           unzip -l build/libs/*.jar | grep -i "jarjar" || true
           bash tools/ci/server_smoke.sh
 
+      - name: Client smoke test (virtual screen)
+        run: bash tools/ci/client_smoke.sh
+
       - name: Upload mod jar
         uses: actions/upload-artifact@v4
         with:
