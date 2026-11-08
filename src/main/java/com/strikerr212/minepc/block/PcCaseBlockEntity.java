@@ -223,6 +223,15 @@ public class PcCaseBlockEntity extends BlockEntity implements MenuProvider {
         return pc.hasKeyboard();
     }
 
+    /** Текст на экране компьютера (для тестов и отладки), "" если выключен. */
+    public String screenText() {
+        var c = pc.computer();
+        if (c == null || c.state() == com.strikerr212.minepc.computer.Computer.State.OFF) return "";
+        StringBuilder b = new StringBuilder();
+        for (int y = 0; y < c.terminal().height(); y++) b.append(c.terminal().line(y).stripTrailing()).append('\n');
+        return b.toString();
+    }
+
     /** Ввод с клавиатуры от игрока (проверка расстояния и клавиатуры — в обработчике пакета). */
     public void input(int kind, String text, boolean ctrl, boolean shift) {
         pc.input(kind, text, ctrl, shift);

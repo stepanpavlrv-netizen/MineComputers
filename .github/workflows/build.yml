@@ -23,6 +23,9 @@ jobs:
 
       - name: Build with Gradle
         run: ./gradlew build
+      - name: Game tests on a real Minecraft server
+        run: ./gradlew runGameTestServer
+
       - name: Test specs and computers without Minecraft
         run: |
           python3 tools/spectest/run.py
