@@ -60,7 +60,69 @@ final class LuaApis {
         if (o instanceof Number n) return valueOf(n.doubleValue());
         if (o instanceof Boolean b) return valueOf(b);
         if (o instanceof byte[] b) return LuaString.valueOf(b);
+        if (o instanceof Key k) return LuaString.valueOf(k.bytes());
+        if (o instanceof Map<?, ?> m) {
+            LuaTable t = new LuaTable();
+            for (Map.Entry<?, ?> e : m.entrySet()) {
+                LuaValue k = toLua(e.getKey());
+                if (!k.isNil()) {
+                    try {
+                        t.rawset(k, toLua(e.getValue()));
+                    } catch (LuaError ignored) {
+                    }
+                }
+            }
+            return t;
+        }
         return str(o.toString());
+    }
+
+    /** Сколько значений и байт можно передать другому процессу одним сообщением. */
+    private static final int COPY_MAX_VALUES = 100_000;
+
+    /**
+     * Скопировать значение для другого процесса (у каждого процесса своя машина Lua, общих таблиц нет):
+     * числа, строки (байт в байт), логические, таблицы (вложенные). Функции и сопрограммы не передаются.
+     */
+    static Object copyOut(LuaValue v) throws LuaError {
+        return copyOut(v, 0, new int[]{0}, new java.util.IdentityHashMap<>());
+    }
+
+    private static Object copyOut(LuaValue v, int depth, int[] count, java.util.IdentityHashMap<LuaValue, Boolean> seen) throws LuaError {
+        if (++count[0] > COPY_MAX_VALUES) throw error("Слишком большое сообщение");
+        if (v.isNil()) return null;
+        if (v instanceof LuaBoolean) return v.toBoolean();
+        if (v.isNumber()) return v.toDouble();
+        if (v.isString()) return bytes(v);
+        if (v instanceof LuaTable t) {
+            if (depth > 32 || seen.put(t, Boolean.TRUE) != null) throw error("Таблица в сообщении ссылается сама на себя");
+            Map<Object, Object> out = new java.util.LinkedHashMap<>();
+            LuaValue k = Constants.NIL;
+            while (true) {
+                Varargs n = t.next(k);
+                k = n.first();
+                if (k.isNil()) break;
+                Object key = copyOut(k, depth + 1, count, seen);
+                if (key instanceof byte[] b) key = new Key(b);
+                if (key != null) out.put(key, copyOut(n.arg(2), depth + 1, count, seen));
+            }
+            seen.remove(t);
+            return out;
+        }
+        return null;
+    }
+
+    /** Строка-ключ таблицы в сообщении (у byte[] нет сравнения по содержимому). */
+    record Key(byte[] bytes) {
+        @Override
+        public boolean equals(Object o) {
+            return o instanceof Key k && java.util.Arrays.equals(bytes, k.bytes);
+        }
+
+        @Override
+        public int hashCode() {
+            return java.util.Arrays.hashCode(bytes);
+        }
     }
 
     static Varargs toVarargs(Object[] values) {
@@ -79,13 +141,14 @@ final class LuaApis {
 
     // ======================= Установка =======================
 
-    static void install(LuaState state, LuaTable g, Computer c) {
+    static void install(LuaState state, LuaTable g, Computer c, LuaMachine m) {
         g.rawset("term", term(c));
-        g.rawset("fs", fs(c));
-        g.rawset("os", os(c));
-        g.rawset("computer", computer(c));
+        g.rawset("fs", fs(c, m));
+        g.rawset("os", os(c, m));
+        g.rawset("computer", computer(c, m));
         g.rawset("unicode", OcApis.unicode());
-        g.rawset("_HOST", str("MineComputers 0.9 (Lua 5.2 / Cobalt)"));
+        g.rawset("data", OcApis.data(m));
+        g.rawset("_HOST", str("MineComputers 0.11 (Lua 5.2 / Cobalt)"));
     }
 
     // ======================= term =======================
@@ -94,9 +157,14 @@ final class LuaApis {
         Terminal t = c.terminal();
         LuaTable table = new LuaTable();
         RegisteredFunction.bind(table, new RegisteredFunction[]{
-                RegisteredFunction.ofV("write", (s, a) -> { t.write(Text.bmp(text(a.arg(1)))); return Constants.NONE; }),
-                RegisteredFunction.ofV("clear", (s, a) -> { t.clear(); return Constants.NONE; }),
-                RegisteredFunction.ofV("clearLine", (s, a) -> { t.clearLine(); return Constants.NONE; }),
+                RegisteredFunction.ofV("write", (s, a) -> {
+                    String text = Text.bmp(text(a.arg(1)));
+                    c.chargeGpu(text.length());
+                    t.write(text);
+                    return Constants.NONE;
+                }),
+                RegisteredFunction.ofV("clear", (s, a) -> { c.chargeGpu(t.cells() / 16); t.clear(); return Constants.NONE; }),
+                RegisteredFunction.ofV("clearLine", (s, a) -> { c.chargeGpu(t.width() / 8); t.clearLine(); return Constants.NONE; }),
                 RegisteredFunction.ofV("getCursorPos", (s, a) -> varargsOf(valueOf(t.cursorX() + 1), valueOf(t.cursorY() + 1))),
                 RegisteredFunction.ofV("setCursorPos", (s, a) -> {
                     t.setCursor(a.arg(1).checkInteger() - 1, a.arg(2).checkInteger() - 1);
@@ -104,7 +172,17 @@ final class LuaApis {
                 }),
                 RegisteredFunction.ofV("setCursorBlink", (s, a) -> { t.setCursorBlink(a.arg(1).toBoolean()); return Constants.NONE; }),
                 RegisteredFunction.ofV("getSize", (s, a) -> varargsOf(valueOf(t.width()), valueOf(t.height()))),
-                RegisteredFunction.ofV("scroll", (s, a) -> { t.scroll(a.arg(1).checkInteger()); return Constants.NONE; }),
+                RegisteredFunction.ofV("scroll", (s, a) -> { c.chargeGpu(t.cells() / 8); t.scroll(a.arg(1).checkInteger()); return Constants.NONE; }),
+                RegisteredFunction.ofV("getResolution", (s, a) -> varargsOf(valueOf(t.width()), valueOf(t.height()))),
+                RegisteredFunction.ofV("maxResolution", (s, a) -> varargsOf(valueOf(t.maxWidth()), valueOf(t.maxHeight()))),
+                RegisteredFunction.ofV("setResolution", (s, a) -> {
+                    int w = a.arg(1).checkInteger(), h = a.arg(2).checkInteger();
+                    if (w < 1 || h < 1 || w > t.maxWidth() || h > t.maxHeight()) throw error("Такое разрешение не поддерживается");
+                    boolean changed = t.resize(w, h);
+                    c.chargeGpu(t.cells() / 16);
+                    if (changed) c.queueEvent("screen_resized", w, h);
+                    return valueOf(changed);
+                }),
                 RegisteredFunction.ofV("setTextColor", (s, a) -> { t.setTextIndex(a.arg(1).checkInteger()); return Constants.NONE; }),
                 RegisteredFunction.ofV("setBackgroundColor", (s, a) -> { t.setBackIndex(a.arg(1).checkInteger()); return Constants.NONE; }),
                 RegisteredFunction.ofV("getTextColor", (s, a) -> t.textIndex() < 0 ? Constants.NIL : valueOf(t.textIndex())),
@@ -145,7 +223,7 @@ final class LuaApis {
         });
     }
 
-    private static LuaTable fs(Computer c) {
+    private static LuaTable fs(Computer c, LuaMachine m) {
         LuaTable table = new LuaTable();
         RegisteredFunction.bind(table, new RegisteredFunction[]{
                 fsFn("list", c, (fs, a) -> {
@@ -174,29 +252,36 @@ final class LuaApis {
                     LuaTable out = new LuaTable();
                     int i = 1;
                     for (Map.Entry<String, Mount> e : fs.mounts().entrySet()) {
-                        LuaTable m = new LuaTable();
-                        m.rawset("path", str("/" + e.getKey()));
-                        m.rawset("label", str(e.getValue().label()));
-                        m.rawset("capacity", valueOf((double) e.getValue().capacity()));
-                        m.rawset("used", valueOf((double) e.getValue().used()));
-                        m.rawset("readOnly", valueOf(e.getValue().isReadOnly()));
-                        out.rawset(i++, m);
+                        LuaTable mt = new LuaTable();
+                        mt.rawset("path", str("/" + e.getKey()));
+                        mt.rawset("label", str(e.getValue().label()));
+                        mt.rawset("capacity", valueOf((double) e.getValue().capacity()));
+                        mt.rawset("used", valueOf((double) e.getValue().used()));
+                        mt.rawset("readOnly", valueOf(e.getValue().isReadOnly()));
+                        mt.rawset("speed", valueOf((double) e.getValue().bytesPerSecond()));
+                        out.rawset(i++, mt);
                     }
                     return out;
                 }),
-                RegisteredFunction.ofV("open", (s, a) -> open(c, a)),
+                RegisteredFunction.ofV("open", (s, a) -> open(c, m, a)),
         });
         return table;
     }
 
     /** fs.open(путь, режим): "r" — чтение, "w" — запись, "a" — дописывание; "b" в режиме ничего не меняет. */
-    private static Varargs open(Computer c, Varargs a) throws LuaError {
+    private static Varargs open(Computer c, LuaMachine m, Varargs a) throws LuaError {
         String path = path(a, 1);
         String mode = a.arg(2).optString("r").replace("b", "");
         FileSystem fs = c.fileSystem();
         try {
             return switch (mode) {
-                case "r" -> readHandle(fs.read(path));
+                case "r" -> {
+                    // Файл читается в память целиком — он должен в неё поместиться
+                    if (fs.exists(path) && !fs.isDirectory(path) && !m.reserve(fs.size(path) * 2)) {
+                        throw new FsException("Недостаточно памяти, чтобы открыть файл");
+                    }
+                    yield readHandle(fs.read(path));
+                }
                 case "w", "a" -> {
                     if (fs.isDirectory(path)) throw new FsException("Это папка");
                     if (fs.isReadOnly(path)) throw new FsException("Только для чтения");
@@ -243,6 +328,9 @@ final class LuaApis {
         return h;
     }
 
+    /** Запись копится в памяти и уходит на диск порциями по 64 КБ (и при flush/close). */
+    private static final int AUTO_FLUSH = 64 * 1024;
+
     private static LuaTable writeHandle(FileSystem fs, String path, boolean append) throws FsException {
         // Файл создаётся сразу (как в обычных системах), содержимое пишется при flush/close
         if (!append) fs.write(path, new byte[0], false);
@@ -254,6 +342,7 @@ final class LuaApis {
                     if (closed[0]) throw error("Файл закрыт");
                     byte[] b = bytes(a.arg(1));
                     buf.write(b, 0, b.length);
+                    if (buf.size() >= AUTO_FLUSH) flush(fs, path, buf);
                     return Constants.NONE;
                 }),
                 RegisteredFunction.ofV("writeLine", (s, a) -> {
@@ -261,6 +350,7 @@ final class LuaApis {
                     byte[] b = bytes(a.arg(1));
                     buf.write(b, 0, b.length);
                     buf.write('\n');
+                    if (buf.size() >= AUTO_FLUSH) flush(fs, path, buf);
                     return Constants.NONE;
                 }),
                 RegisteredFunction.ofV("flush", (s, a) -> { flush(fs, path, buf); return Constants.NONE; }),
@@ -286,10 +376,10 @@ final class LuaApis {
 
     // ======================= os =======================
 
-    private static LuaTable os(Computer c) {
+    private static LuaTable os(Computer c, LuaMachine m) {
         LuaTable table = new LuaTable();
         RegisteredFunction.bind(table, new RegisteredFunction[]{
-                RegisteredFunction.ofV("startTimer", (s, a) -> valueOf(c.startTimer(a.arg(1).checkNumber().toDouble()))),
+                RegisteredFunction.ofV("startTimer", (s, a) -> valueOf(c.startTimer(a.arg(1).checkNumber().toDouble(), m.events))),
                 RegisteredFunction.ofV("cancelTimer", (s, a) -> { c.cancelTimer(a.arg(1).checkInteger()); return Constants.NONE; }),
                 RegisteredFunction.ofV("clock", (s, a) -> valueOf(c.uptimeSeconds())),
                 RegisteredFunction.ofV("time", (s, a) -> OcApis.time(a)),
@@ -301,7 +391,7 @@ final class LuaApis {
                     String name = text(a.arg(1).checkLuaString());
                     Object[] rest = new Object[Math.max(0, a.count() - 1)];
                     for (int i = 0; i < rest.length; i++) rest[i] = fromLua(a.arg(i + 2));
-                    c.queueEvent(name, rest);
+                    m.events.offer(Computer.event(name, rest));
                     return Constants.NONE;
                 }),
                 RegisteredFunction.ofV("shutdown", (s, a) -> { c.requestShutdown(); return Constants.NONE; }),
@@ -320,7 +410,7 @@ final class LuaApis {
 
     // ======================= computer =======================
 
-    private static LuaTable computer(Computer c) {
+    private static LuaTable computer(Computer c, LuaMachine m) {
         LuaTable table = new LuaTable();
         RegisteredFunction.bind(table, new RegisteredFunction[]{
                 RegisteredFunction.ofV("info", (s, a) -> {
@@ -340,10 +430,10 @@ final class LuaApis {
                 // ----- Как в OpenComputers -----
                 RegisteredFunction.ofV("address", (s, a) -> str(c.address())),
                 RegisteredFunction.ofV("componentAddress", (s, a) -> str(OcApis.address(c, text(a.arg(1).checkLuaString())))),
-                RegisteredFunction.ofV("gpu", (s, a) -> OcApis.gpu(c, OcApis.address(c, "gpu"), OcApis.address(c, "screen"))),
-                RegisteredFunction.ofV("totalMemory", (s, a) -> valueOf((double) c.info().ramKb() * 1024)),
-                // Сколько памяти занимают программы, движок Lua не считает — показываем оценку
-                RegisteredFunction.ofV("freeMemory", (s, a) -> valueOf((double) c.info().ramKb() * 1024 * 0.8)),
+                RegisteredFunction.ofV("gpu", (s, a) -> OcApis.gpu(c, m, OcApis.address(c, "gpu"), OcApis.address(c, "screen"))),
+                RegisteredFunction.ofV("totalMemory", (s, a) -> valueOf((double) c.memoryLimit())),
+                // Занятая память — по последнему подсчёту (он происходит сам, когда программа много выделяет)
+                RegisteredFunction.ofV("freeMemory", (s, a) -> valueOf((double) Math.max(0, c.memoryLimit() - c.memoryUsed()))),
                 RegisteredFunction.ofV("energy", (s, a) -> valueOf(10000)),
                 RegisteredFunction.ofV("maxEnergy", (s, a) -> valueOf(10000)),
                 RegisteredFunction.ofV("getArchitecture", (s, a) -> str("Lua 5.2")),
@@ -360,8 +450,73 @@ final class LuaApis {
                     String name = text(a.arg(1).checkLuaString());
                     Object[] rest = new Object[Math.max(0, a.count() - 1)];
                     for (int i = 0; i < rest.length; i++) rest[i] = fromLua(a.arg(i + 2));
-                    c.queueEvent(name, rest);
+                    return valueOf(m.events.offer(Computer.event(name, rest)));
+                }),
+                // ----- Процессы: каждый работает на своём ядре процессора -----
+                RegisteredFunction.ofV("spawn", (s, a) -> {
+                    String path = path(a, 1);
+                    if (!c.fileSystem().exists(path) || c.fileSystem().isDirectory(path)) throw error("Нет такой программы: /" + path);
+                    Object[] args = new Object[Math.max(0, a.count() - 1)];
+                    for (int i = 0; i < args.length; i++) args[i] = copyOut(a.arg(i + 2));
+                    try {
+                        return valueOf(c.spawn(m, "/" + path, args));
+                    } catch (LuaMachine.Crash e) {
+                        throw error(e.getMessage());
+                    }
+                }),
+                RegisteredFunction.ofV("send", (s, a) -> {
+                    LuaMachine target = c.machine(a.arg(1).checkInteger());
+                    if (target == null || target.isFinished()) return Constants.FALSE;
+                    Object[] ev = new Object[a.count() + 1];
+                    ev[0] = "process_message";
+                    ev[1] = m.pid;
+                    for (int i = 2; i <= a.count(); i++) ev[i] = copyOut(a.arg(i));
+                    return valueOf(target.events.offer(ev));
+                }),
+                RegisteredFunction.ofV("kill", (s, a) -> {
+                    int pid = a.arg(1).checkInteger();
+                    LuaMachine target = c.machine(pid);
+                    if (target == null || target.isMain()) return Constants.FALSE;
+                    target.kill();
                     return Constants.TRUE;
+                }),
+                RegisteredFunction.ofV("processes", (s, a) -> {
+                    LuaTable out = new LuaTable();
+                    int i = 1;
+                    for (LuaMachine p : c.machines()) {
+                        LuaTable t = new LuaTable();
+                        t.rawset("pid", valueOf(p.pid));
+                        t.rawset("parent", valueOf(p.parentPid));
+                        t.rawset("path", str(p.isMain() ? "/bios.lua" : p.programPath));
+                        t.rawset("status", str(p.status()));
+                        t.rawset("memory", valueOf((double) p.liveBytes()));
+                        t.rawset("ops", valueOf((double) p.opsTotal()));
+                        out.rawset(i++, t);
+                    }
+                    return out;
+                }),
+                RegisteredFunction.ofV("pid", (s, a) -> valueOf(m.pid)),
+                RegisteredFunction.ofV("parentPid", (s, a) -> valueOf(m.parentPid)),
+                RegisteredFunction.ofV("limits", (s, a) -> {
+                    Computer.Limits l = c.limits();
+                    Terminal t = c.terminal();
+                    LuaTable out = new LuaTable();
+                    out.rawset("opsPerSecond", valueOf((double) l.opsPerTick() * Computer.TICKS_PER_SECOND));
+                    out.rawset("cores", valueOf(l.cores()));
+                    out.rawset("memory", valueOf((double) l.memoryBytes()));
+                    out.rawset("gpuCellsPerSecond", valueOf((double) l.gpuCellsPerTick() * Computer.TICKS_PER_SECOND));
+                    out.rawset("vram", valueOf((double) l.vramCells()));
+                    out.rawset("maxWidth", valueOf(t.maxWidth()));
+                    out.rawset("maxHeight", valueOf(t.maxHeight()));
+                    out.rawset("depth", valueOf(t.maxDepth()));
+                    out.rawset("maxProcesses", valueOf(l.maxProcesses()));
+                    return out;
+                }),
+                // Списать команды за работу встроенных функций (используют обёртки BIOS; отрицательное нельзя)
+                RegisteredFunction.ofV("__charge", (s, a) -> {
+                    double n = a.arg(1).optNumber(valueOf(0)).toDouble();
+                    if (n > 0) m.spend((long) Math.min(n, 1e12));
+                    return Constants.NONE;
                 }),
                 RegisteredFunction.ofV("shutdown", (s, a) -> {
                     if (a.arg(1).toBoolean()) c.requestReboot();

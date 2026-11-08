@@ -150,7 +150,8 @@ public class CiScreenshots {
 
     /** Демо: плавный RGB-градиент, псевдографика и Unicode. */
     private static final String COLORS_DEMO = String.join("\n",
-            "local w, h = term.getSize()",
+            "local w, h = term.maxResolution()",
+            "term.setResolution(w, h)",
             "for y = 1, h do",
             "  for x = 1, w do",
             "    local r, g = math.floor((x - 1) / (w - 1) * 255), math.floor((y - 1) / (h - 1) * 255)",
@@ -166,7 +167,7 @@ public class CiScreenshots {
             "  \"╔\" .. string.rep(\"═\", 32) .. \"╗\",",
             "  row(\"Привет! Unicode: ✓ ★ ♥ ☺ ♪ ∞\"),",
             "  row(\"Ελληνικά · ▁▂▃▄▅▆▇█ · ░▒▓\"),",
-            "  row(\"Глубина цвета: \" .. term.getDepth() .. \" бит\"),",
+            "  row(\"Экран: \" .. w .. \"×\" .. h .. \", цвет: \" .. term.getDepth() .. \" бит\"),",
             "  \"╚\" .. string.rep(\"═\", 32) .. \"╝\",",
             "}",
             "for i, line in ipairs(box) do term.setCursorPos(4, 2 + i) term.write(line) end",

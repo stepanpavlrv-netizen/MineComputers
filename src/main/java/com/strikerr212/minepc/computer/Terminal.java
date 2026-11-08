@@ -40,11 +40,34 @@ public final class Terminal {
 
     // ======================= Размер =======================
 
+    /** Самый большой экран, который умеет передавать {@link TerminalCodec}. */
+    public static final int LIMIT_WIDTH = 320, LIMIT_HEIGHT = 100;
+
     /** Максимальный размер (его даёт видеокарта); текущий размер становится максимальным. */
     public synchronized void setMaxSize(int w, int h) {
-        maxWidth = Math.max(1, Math.min(255, w));
-        maxHeight = Math.max(1, Math.min(255, h));
+        setLimit(w, h);
         resize(maxWidth, maxHeight);
+    }
+
+    /** Размер буфера видеопамяти: он не передаётся игрокам, поэтому может быть больше экрана. */
+    synchronized void setLimitUnchecked(int w, int h) {
+        maxWidth = Math.max(1, w);
+        maxHeight = Math.max(1, h);
+        resize(maxWidth, maxHeight);
+    }
+
+    /**
+     * Сменить максимальный размер, не трогая экран, если он помещается (монитор достроили или разобрали
+     * на работающем компьютере). Возвращает true, если пришлось уменьшить текущий размер.
+     */
+    public synchronized boolean setLimit(int w, int h) {
+        maxWidth = Math.max(1, Math.min(LIMIT_WIDTH, w));
+        maxHeight = Math.max(1, Math.min(LIMIT_HEIGHT, h));
+        if (width > maxWidth || height > maxHeight) {
+            resize(Math.min(width, maxWidth), Math.min(height, maxHeight));
+            return true;
+        }
+        return false;
     }
 
     /** Сменить разрешение (не больше максимального). Экран очищается. */
@@ -287,6 +310,57 @@ public final class Terminal {
         version++;
     }
 
+    /** Вырезать прямоугольник: {символы, цвета текста, цвета фона, ширина, высота} (клетки вне экрана — пробелы). */
+    public synchronized Object[] region(int x, int y, int w, int h) {
+        w = Math.max(0, w);
+        h = Math.max(0, h);
+        char[] c = new char[w * h];
+        int[] f = new int[w * h], b = new int[w * h];
+        for (int yy = 0; yy < h; yy++) {
+            for (int xx = 0; xx < w; xx++) {
+                int sx = x + xx, sy = y + yy, d = yy * w + xx;
+                if (sx < 0 || sy < 0 || sx >= width || sy >= height) {
+                    c[d] = ' ';
+                    f[d] = textColor;
+                    b[d] = backColor;
+                } else {
+                    int p = sy * width + sx;
+                    c[d] = chars[p];
+                    f[d] = fg[p];
+                    b[d] = bg[p];
+                }
+            }
+        }
+        return new Object[]{c, f, b, w, h};
+    }
+
+    /** Вставить прямоугольник, вырезанный {@link #region}, в клетку (x, y). Возвращает число изменённых клеток. */
+    public synchronized int paste(Object[] r, int x, int y) {
+        char[] c = (char[]) r[0];
+        int[] f = (int[]) r[1], b = (int[]) r[2];
+        int w = (int) r[3], h = (int) r[4], n = 0;
+        for (int yy = 0; yy < h; yy++) {
+            int dy = y + yy;
+            if (dy < 0 || dy >= height) continue;
+            for (int xx = 0; xx < w; xx++) {
+                int dx = x + xx;
+                if (dx < 0 || dx >= width) continue;
+                int s = yy * w + xx, p = dy * width + dx;
+                chars[p] = c[s];
+                fg[p] = f[s];
+                bg[p] = b[s];
+                n++;
+            }
+        }
+        version++;
+        return n;
+    }
+
+    /** Сколько байт памяти занимает экран (для видеопамяти): символ 2 + два цвета по 4. */
+    public synchronized long cells() {
+        return (long) width * height;
+    }
+
     /** Строка экрана как текст (для проверок и отладки). */
     public synchronized String line(int y) {
         return new String(chars, y * width, width);
@@ -301,14 +375,16 @@ public final class Terminal {
         int n = width * height;
         byte[] out = new byte[TerminalCodec.HEADER + n * TerminalCodec.CELL];
         out[0] = (byte) width;
-        out[1] = (byte) height;
+        out[1] = (byte) (width >> 8);
+        out[2] = (byte) height;
+        out[3] = (byte) (height >> 8);
         int cx = Math.max(-1, Math.min(32000, cursorX)), cy = Math.max(-1, Math.min(32000, cursorY));
-        out[2] = (byte) cx;
-        out[3] = (byte) (cx >> 8);
-        out[4] = (byte) cy;
-        out[5] = (byte) (cy >> 8);
-        out[6] = (byte) (cursorBlink ? 1 : 0);
-        out[7] = (byte) depth;
+        out[4] = (byte) cx;
+        out[5] = (byte) (cx >> 8);
+        out[6] = (byte) cy;
+        out[7] = (byte) (cy >> 8);
+        out[8] = (byte) (cursorBlink ? 1 : 0);
+        out[9] = (byte) depth;
         int c = TerminalCodec.HEADER, f = c + 2 * n, b = f + 3 * n;
         for (int i = 0; i < n; i++) {
             out[c++] = (byte) (chars[i] >> 8);

@@ -176,6 +176,139 @@ public class HeadlessTest {
         ticks(10);
         expect("exit во вложенной оболочке не выключает компьютер", pc.state() == Computer.State.RUNNING);
 
+        // ===== Память: настоящий лимит =====
+        command("clear");
+        Computer.Limits base = pc.limits();
+        pc.setLimits(new Computer.Limits(base.opsPerTick(), 4, 2L << 20, base.gpuCellsPerTick(), 20_000, 0, 8));
+        Files.writeString(dir.resolve("mem.lua"), String.join("\n",
+                "local t = {}",
+                "local ok, err = pcall(function() for i = 1, 1e7 do t[i] = {i} end end)",
+                "local n = #t",
+                "t = nil",
+                "collectgarbage()",
+                "print('MEM', ok, err, n > 1000, computer.freeMemory() > 1e6)",
+                "local ok2, err2 = pcall(string.rep, 'x', 1e8)",
+                "print('REP', ok2, err2)",
+                ""), java.nio.charset.StandardCharsets.UTF_8);
+        command("mem");
+        for (int i = 0; i < 400 && !screen().contains("REP"); i++) ticks(1);
+        show("память 2 МБ");
+        expect("большая таблица упирается в память", screen().contains("Недостаточно памяти") && screen().contains("MEM"));
+        expect("после ошибки память освобождается", screen().replaceAll("\\s+", " ").contains("true true"));
+        expect("string.rep на 100 МБ не выделяет память", screen().replaceAll("\\s+", " ").contains("REP false"));
+        expect("компьютер жив после нехватки памяти", pc.state() == Computer.State.RUNNING);
+        pc.setLimits(new Computer.Limits(base.opsPerTick(), 4, 64L << 20, base.gpuCellsPerTick(), 20_000, 0, 8));
+
+        // ===== Процессы на ядрах =====
+        command("clear");
+        Files.writeString(dir.resolve("worker.lua"), String.join("\n",
+                "local from, a, b = require('cores').receive()",
+                "local s = 0",
+                "for i = a, b do s = s + i end",
+                "computer.send(from, s, { done = true, name = 'воркер' })",
+                ""), java.nio.charset.StandardCharsets.UTF_8);
+        Files.writeString(dir.resolve("par.lua"), String.join("\n",
+                "local cores = require('cores')",
+                "local p1 = cores.spawn('worker', 1)",
+                "local p2 = cores.spawn('worker')",
+                "cores.send(p1, 1, 100000)",
+                "cores.send(p2, 100001, 200000)",
+                "local total = 0",
+                "for i = 1, 2 do local from, s, info = cores.receive(10) total = total + s assert(info.done and info.name == 'воркер') end",
+                "local ok = cores.wait(p1, 5)",
+                "print('PAR', total, ok, cores.count())",
+                "local bad = cores.spawn('nope_missing_file_test') ",
+                ""), java.nio.charset.StandardCharsets.UTF_8);
+        Files.writeString(dir.resolve("crashy.lua"), "error('сломался')\n");
+        Files.writeString(dir.resolve("crashtest.lua"), String.join("\n",
+                "local cores = require('cores')",
+                "local p = cores.spawn('crashy')",
+                "local ok, err = cores.wait(p, 5)",
+                "print('CRASHY', ok, err)",
+                "local loop = cores.spawn('loop')",
+                "os.sleep(0.2)",
+                "print('KILL', computer.kill(loop), #computer.processes())",
+                "local ok2, err2 = cores.wait(loop, 5)",
+                "print('KILLED', ok2, err2, #computer.processes())",
+                ""), java.nio.charset.StandardCharsets.UTF_8);
+        command("par");
+        for (int i = 0; i < 400 && !screen().contains("Нет такой программы"); i++) ticks(1);
+        show("процессы");
+        expect("два процесса посчитали сумму", screen().replaceAll("\\s+", " ").contains("PAR 20000100000 true 4"));
+        expect("запуск несуществующей программы — ошибка", screen().contains("Нет такой программы"));
+        command("crashtest");
+        for (int i = 0; i < 400 && !screen().contains("KILLED"); i++) ticks(1);
+        show("ошибка и остановка процесса");
+        expect("ошибка процесса приходит родителю", screen().contains("CRASHY") && screen().contains("сломался"));
+        expect("kill останавливает процесс", screen().replaceAll("\\s+", " ").contains("KILLED false Процесс остановлен 1"));
+        expect("главный процесс жив", pc.state() == Computer.State.RUNNING);
+
+        // ===== Видеопамять, data, цена встроенных функций =====
+        command("clear");
+        Files.writeString(dir.resolve("vram.lua"), String.join("\n",
+                "local gpu = require('component').gpu",
+                "local buf = gpu.allocateBuffer(20, 3)",
+                "gpu.setActiveBuffer(buf)",
+                "gpu.set(1, 1, 'ИЗ_БУФЕРА')",
+                "gpu.setActiveBuffer(0)",
+                "gpu.bitblt(0, 5, 12, 20, 1, buf, 1, 1)",
+                "local huge = gpu.allocateBuffer(300, 100)",
+                "local d = require('component').data",
+                "print('HEX', data.toHex(data.sha256('abc')):sub(1, 16), data.inflate(data.deflate(('ab'):rep(1000))) == ('ab'):rep(1000),",
+                "  data.decode64(data.encode64('Привет')) == 'Привет', huge == nil, d ~= nil)",
+                ""), java.nio.charset.StandardCharsets.UTF_8);
+        command("vram");
+        ticks(10);
+        show("видеопамять и data");
+        expect("bitblt скопировал буфер на экран", screen().contains("ИЗ_БУФЕРА"));
+        expect("data: sha256, deflate, base64, лимит видеопамяти",
+                screen().replaceAll("\\s+", " ").contains("HEX ba7816bf8f01cfea true true true true"));
+        Files.writeString(dir.resolve("cost.lua"), String.join("\n",
+                "local function myOps() for _, p in ipairs(computer.processes()) do if p.pid == computer.pid() then return p.ops end end end",
+                "local s = ('x'):rep(1000000)",
+                "local a = myOps()",
+                "for i = 1, 20 do local u = s:upper() end",
+                "print('COST', myOps() - a)",
+                ""), java.nio.charset.StandardCharsets.UTF_8);
+        command("cost");
+        for (int i = 0; i < 100 && !screen().contains("COST"); i++) ticks(1);
+        show("цена встроенных функций");
+        java.util.regex.Matcher cm = java.util.regex.Pattern.compile("COST\\s+(\\d+)").matcher(screen());
+        long costOps = cm.find() ? Long.parseLong(cm.group(1)) : 0;
+        System.out.printf("  20 раз upper() строки 1 МБ стоят %d команд (без цены было бы ~100)%n", costOps);
+        expect("встроенные функции платят за объём", costOps > 1_000_000);
+
+        // ===== Скорость видеокарты и накопителя =====
+        command("clear");
+        pc.setLimits(new Computer.Limits(base.opsPerTick(), 4, 64L << 20, 2_000, 20_000, 0, 8));
+        Files.writeString(dir.resolve("draw.lua"), String.join("\n",
+                "local t0 = os.clock()",
+                "for i = 1, 200 do term.setCursorPos(1, 1) term.write(('#'):rep(40)) end",
+                "print('DRAW', os.clock() - t0 >= 0.1)",
+                ""), java.nio.charset.StandardCharsets.UTF_8);
+        command("draw");
+        for (int i = 0; i < 100 && !screen().contains("DRAW"); i++) ticks(1);
+        show("медленная видеокарта");
+        expect("2000 клеток за тик: 8000 символов рисуются несколько тиков", screen().replaceAll("\\s+", " ").contains("DRAW true"));
+        pc.setLimits(new Computer.Limits(base.opsPerTick(), 4, 64L << 20, base.gpuCellsPerTick(), 20_000, 0, 8));
+
+        Path slowDir = Files.createTempDirectory("minepc_slow");
+        Files.write(slowDir.resolve("big.bin"), new byte[256 * 1024]);
+        pc.fileSystem().mount("slow", new DirMount(slowDir, 1 << 20, "Дискета").withSpeed(128 * 1024, 256));
+        Files.writeString(dir.resolve("io.lua"), String.join("\n",
+                "local t0 = os.clock()",
+                "local f = fs.open('/slow/big.bin', 'r') local d = f.readAll() f.close()",
+                "local t1 = os.clock()",
+                "local g = fs.open('/slow/big.bin', 'r') g.close()",
+                "os.sleep(0)",
+                "print('IO', #d, t1 - t0 >= 0, os.clock() - t0 >= 1.5)",
+                ""), java.nio.charset.StandardCharsets.UTF_8);
+        command("io");
+        for (int i = 0; i < 200 && !screen().contains("IO "); i++) ticks(1);
+        show("медленная дискета");
+        expect("чтение 256 КБ на 128 КБ/с занимает ~2 секунды", screen().replaceAll("\\s+", " ").contains("IO 262144 true true"));
+        pc.fileSystem().unmount("slow");
+
         // Передача экрана: изменения строк и сжатие
         Terminal big = new Terminal(160, 50);
         byte[] f1 = big.snapshot();

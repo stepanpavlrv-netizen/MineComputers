@@ -26,7 +26,7 @@ public final class ClientTerminals {
                 fg[i] = (f[pf++] & 0xFF) << 16 | (f[pf++] & 0xFF) << 8 | (f[pf++] & 0xFF);
                 bg[i] = (f[pb++] & 0xFF) << 16 | (f[pb++] & 0xFF) << 8 | (f[pb++] & 0xFF);
             }
-            return new Snapshot(w, h, TerminalCodec.cursorX(f), TerminalCodec.cursorY(f), f[6] != 0, f[7], c, fg, bg);
+            return new Snapshot(w, h, TerminalCodec.cursorX(f), TerminalCodec.cursorY(f), TerminalCodec.blink(f), TerminalCodec.depth(f), c, fg, bg);
         }
     }
 

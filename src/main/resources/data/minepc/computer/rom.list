@@ -1,6 +1,7 @@
 # Файлы ПЗУ компьютера. Обновляется tools/computer/update_rom_list.py
 openos/colors.lua
 openos/component.lua
+openos/cores.lua
 openos/event.lua
 openos/filesystem.lua
 openos/io.lua
@@ -20,11 +21,13 @@ programs/drives.lua
 programs/edit.lua
 programs/help.lua
 programs/info.lua
+programs/kill.lua
 programs/label.lua
 programs/ls.lua
 programs/lua.lua
 programs/mkdir.lua
 programs/mv.lua
+programs/ps.lua
 programs/reboot.lua
 programs/rm.lua
 programs/sh.lua

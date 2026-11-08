@@ -16,6 +16,8 @@ public class DirMount implements Mount {
     private final Path root;
     private final long capacity;
     private final String label;
+    private long bytesPerSecond;
+    private int opBytes;
     private long used = -1;
 
     public DirMount(Path root, long capacity, String label) {
@@ -124,6 +126,23 @@ public class DirMount implements Mount {
     @Override
     public long capacity() {
         return capacity;
+    }
+
+    /** Задать скорость накопителя (байт/с) и цену одной операции с файлом. */
+    public DirMount withSpeed(long bytesPerSecond, int opBytes) {
+        this.bytesPerSecond = bytesPerSecond;
+        this.opBytes = opBytes;
+        return this;
+    }
+
+    @Override
+    public long bytesPerSecond() {
+        return bytesPerSecond;
+    }
+
+    @Override
+    public int opBytes() {
+        return opBytes;
     }
 
     @Override

@@ -9,15 +9,15 @@ import java.util.zip.Inflater;
  * Как экран компьютера передаётся игрокам. Экран 160×50 — это 16 КБ, а меняется обычно пара строк,
  * поэтому сервер отправляет только изменившиеся строки и сжимает их (как zip).
  *
- * Кадр (снимок {@link Terminal#snapshot()}): 8 байт заголовка (ширина, высота, курсор X и Y по 2 байта,
+ * Кадр (снимок {@link Terminal#snapshot()}): 10 байт заголовка (ширина, высота, курсор X и Y — по 2 байта,
  * мигание, глубина цвета), затем для всех клеток: символы (2 байта), цвета текста (3 байта), цвета фона (3 байта).
  *
- * Пакет (до сжатия): тип (0 — весь кадр, 1 — изменения), 8 байт заголовка, затем
+ * Пакет (до сжатия): тип (0 — весь кадр, 1 — изменения), 10 байт заголовка, затем
  * весь кадр целиком или число строк (2 байта) и для каждой: номер строки, символы, цвета текста, цвета фона.
  */
 public final class TerminalCodec {
 
-    public static final int HEADER = 8;
+    public static final int HEADER = 10;
     /** Байтов на клетку: символ 2 + цвет текста 3 + цвет фона 3. */
     public static final int CELL = 8;
     private static final int FULL = 0, DIFF = 1;
@@ -26,19 +26,31 @@ public final class TerminalCodec {
     }
 
     public static int width(byte[] frame) {
-        return frame[0] & 0xFF;
+        return u16(frame, 0);
     }
 
     public static int height(byte[] frame) {
-        return frame[1] & 0xFF;
+        return u16(frame, 2);
     }
 
     public static int cursorX(byte[] frame) {
-        return (short) ((frame[2] & 0xFF) | (frame[3] << 8));
+        return (short) u16(frame, 4);
     }
 
     public static int cursorY(byte[] frame) {
-        return (short) ((frame[4] & 0xFF) | (frame[5] << 8));
+        return (short) u16(frame, 6);
+    }
+
+    public static boolean blink(byte[] frame) {
+        return frame[8] != 0;
+    }
+
+    public static int depth(byte[] frame) {
+        return frame[9] & 0xFF;
+    }
+
+    private static int u16(byte[] b, int at) {
+        return (b[at] & 0xFF) | (b[at + 1] & 0xFF) << 8;
     }
 
     /** Закодировать кадр: целиком (prev == null или другой размер) или только изменившиеся строки. */
@@ -91,7 +103,8 @@ public final class TerminalCodec {
     public static byte[] apply(byte[] base, byte[] packet) {
         byte[] d = inflate(packet);
         if (d == null || d.length < 1 + HEADER) return null;
-        int w = d[1] & 0xFF, h = d[2] & 0xFF, n = w * h;
+        int w = u16(d, 1), h = u16(d, 3), n = w * h;
+        if (w > Terminal.LIMIT_WIDTH || h > Terminal.LIMIT_HEIGHT) return null;
         if (d[0] == FULL) {
             if (d.length < 1 + HEADER + CELL * n) return null;
             byte[] frame = new byte[HEADER + CELL * n];
@@ -139,7 +152,7 @@ public final class TerminalCodec {
                 int k = inflater.inflate(buf);
                 if (k == 0 && (inflater.needsInput() || inflater.needsDictionary())) break;
                 out.write(buf, 0, k);
-                if (out.size() > 1 << 21) return null;   // защита от «zip-бомбы»
+                if (out.size() > 1 << 22) return null;   // защита от «zip-бомбы»
             }
             return out.toByteArray();
         } catch (DataFormatException e) {

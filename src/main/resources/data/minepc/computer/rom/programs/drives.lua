@@ -5,6 +5,7 @@ for _, m in ipairs(fs.mounts()) do
   if m.readOnly then
     print("  " .. m.label .. ", только чтение")
   else
-    print("  " .. m.label .. ": занято " .. textutils.formatSize(m.used) .. " из " .. textutils.formatSize(m.capacity))
+    local speed = m.speed and m.speed > 0 and (", " .. textutils.formatSize(m.speed) .. "/с") or ""
+    print("  " .. m.label .. ": занято " .. textutils.formatSize(m.used) .. " из " .. textutils.formatSize(m.capacity) .. speed)
   end
 end

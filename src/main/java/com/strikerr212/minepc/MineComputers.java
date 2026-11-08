@@ -31,6 +31,8 @@ public class MineComputers {
         ModBlockEntities.register(modEventBus);   // "умные" блоки с инвентарём
         ModMenus.register(modEventBus);           // окна с интерфейсом (сборочный стол)
         ModCreativeTabs.register(modEventBus);    // вкладка в творческом режиме
+        // Настройки сервера: скорость, память, потоки для компьютеров
+        modContainer.registerConfig(net.neoforged.fml.config.ModConfig.Type.SERVER, MineConfig.SPEC);
 
         LOGGER.info("MineComputers is loading! " + LuaSelfTest.run());
     }

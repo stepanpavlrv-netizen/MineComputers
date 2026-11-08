@@ -3,6 +3,37 @@
 
 local native_yield = coroutine.yield
 
+-- ===================== Цена встроенных функций =====================
+-- string.rep, string.sub, table.concat и т. п. списывают команды по объёму работы прямо в Java.
+-- Функции, которые могут вызывать Lua-код (format с __tostring, gsub с функцией, sort с comparator, load
+-- с функцией-читателем), оборачиваем здесь: цена списывается заранее, а сам вызов — хвостовой.
+do
+  local charge = computer.__charge
+  computer.__charge = nil
+  local BPO = 16    -- байт на одну команду
+  local format, gsub, sort, rawload = string.format, string.gsub, table.sort, load
+  local floor, log = math.floor, math.log
+  function string.format(fmt, ...)
+    if type(fmt) == "string" then charge(floor(#fmt / BPO) + select("#", ...)) end
+    return format(fmt, ...)
+  end
+  function string.gsub(s, pattern, repl, n)
+    if type(s) == "string" then charge(floor(#s / BPO)) end
+    return gsub(s, pattern, repl, n)
+  end
+  function table.sort(t, comp)
+    if type(t) == "table" then
+      local n = #t
+      if n > 1 then charge(floor(n * log(n) / log(2) / 4)) end
+    end
+    return sort(t, comp)
+  end
+  function load(chunk, ...)
+    if type(chunk) == "string" then charge(floor(#chunk / 4)) end
+    return rawload(chunk, ...)
+  end
+end
+
 -- ===================== Цвета (номера палитры экрана) =====================
 colors = {
   white = 0, orange = 1, magenta = 2, lightBlue = 3, yellow = 4, lime = 5, pink = 6, gray = 7,
@@ -335,6 +366,16 @@ function os.exit() error("exit", 0) end
 
 io = require("io")
 component = require("component")
+
+-- ===================== Отдельный процесс (computer.spawn) =====================
+-- Процесс на другом ядре: та же система, но вместо командной строки — одна программа.
+if _PROCESS then
+  local p = _PROCESS
+  _PROCESS = nil
+  local fn, err = loadfile(p.path)
+  if not fn then error(err, 0) end
+  return fn(table.unpack(p.args, 1, p.args.n or #p.args))
+end
 
 -- ===================== Запуск =====================
 term.clear()

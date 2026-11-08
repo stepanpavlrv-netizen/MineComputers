@@ -73,6 +73,12 @@ local function refresh()
         setPrecise = function() return false end, isPrecise = function() return false end,
         setTouchModeInverted = function() return false end, isTouchModeInverted = function() return false end })
   add({ type = "keyboard", address = computer.componentAddress("keyboard") })
+  -- Карта данных (хеши, base64, сжатие) встроена в каждый компьютер
+  if data then
+    local d = { type = "data", address = computer.componentAddress("data") }
+    for k, v in pairs(data) do d[k] = v end
+    add(d)
+  end
   add({ type = "eeprom", address = computer.componentAddress("eeprom"),
         get = function() return "" end, set = function() end, getLabel = function() return "MineComputers BIOS" end,
         setLabel = function(v) return v end, getSize = function() return 4096 end, getDataSize = function() return 256 end,

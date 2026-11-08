@@ -45,6 +45,8 @@ local function translate(ev)
     return { "component_removed", addr("fs:" .. ev[2]:gsub("^/", "")), "filesystem" }
   elseif name == "terminate" then
     return { "interrupted", computer.uptime() }
+  elseif name == "screen_resized" then
+    return { "screen_resized", addr("screen"), ev[2], ev[3] }
   end
   return ev
 end

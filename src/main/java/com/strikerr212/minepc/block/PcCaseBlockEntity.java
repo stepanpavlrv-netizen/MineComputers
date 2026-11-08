@@ -450,7 +450,9 @@ public class PcCaseBlockEntity extends BlockEntity implements MenuProvider {
         if (in.cpu() != null) {
             boolean reduced = r.cpuThrottle() < 1 || r.cpuMemory() < 0.85;
             out.add(perf("message.minepc.status.cpu", reduced, Units.ops(r.cpuGips()), Units.level(r.cpuLevel())));
-            out.add(perf("message.minepc.status.game_ops", reduced, Units.gameOps(Perf.gameOpsPerSecond(r.cpuGips()))));
+            com.strikerr212.minepc.computer.Computer.Limits lim = CaseComputer.limitsFor(in, r, com.strikerr212.minepc.MineConfig.speedFor(level));
+            out.add(perf("message.minepc.status.game", reduced, Units.gameOps(lim.opsPerTick() * com.strikerr212.minepc.computer.Computer.TICKS_PER_SECOND),
+                    lim.cores(), Units.bytes(lim.memoryBytes())));
         }
         if (in.gpu() != null) {
             out.add(perf("message.minepc.status.gpu", r.gpuThrottle() < 1,

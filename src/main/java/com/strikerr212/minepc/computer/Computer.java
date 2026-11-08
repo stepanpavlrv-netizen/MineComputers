@@ -1,23 +1,34 @@
 package com.strikerr212.minepc.computer;
 
 import com.strikerr212.minepc.computer.fs.FileSystem;
+import com.strikerr212.minepc.computer.fs.Mount;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * Один работающий компьютер: экран, файлы, очередь событий и программа на Lua.
+ * Один работающий компьютер: экран, файлы, видеокарта и процессы на Lua.
  *
- * Как устроено время. Каждый тик сервер вызывает {@link #tick()}: компьютер получает порцию команд
- * (лимит процессора) и, если ему есть что делать, встаёт в очередь {@link ComputerExecutor}.
- * Там программа выполняется, пока не начнёт ждать событие (нажатие клавиши, таймер) или пока не
- * кончится порция — тогда она замирает посреди работы и продолжит в следующем тике.
+ * Как устроено время. Каждый тик сервер вызывает {@link #tick()}: каждый процесс получает порцию команд
+ * (скорость ядра процессора) и, если ему есть что делать, встаёт в очередь {@link ComputerExecutor}.
+ * Там программа выполняется, пока не начнёт ждать событие или пока не кончится порция — тогда она
+ * замирает посреди работы и продолжит в следующем тике.
  *
- * Здесь нет ничего из Minecraft: блок системного блока передаёт сюда только числа и накопители.
+ * Характеристики железа — настоящие лимиты ({@link Limits}):
+ * <ul>
+ *   <li>процессор — команд за тик на ядро; ядер столько, сколько процессов работает одновременно;</li>
+ *   <li>память — сколько данных могут держать программы (иначе «Недостаточно памяти»);</li>
+ *   <li>видеокарта — размер экрана, цвета, скорость отрисовки и видеопамять для буферов;</li>
+ *   <li>накопители — объём и скорость чтения/записи; от накопителя зависит и время загрузки.</li>
+ * </ul>
+ *
+ * Здесь нет ничего из Minecraft: системный блок передаёт сюда только числа и накопители.
  */
 public final class Computer {
 
@@ -41,46 +52,76 @@ public final class Computer {
                        String gpu, int score) {
     }
 
+    /**
+     * Лимиты железа.
+     *
+     * @param opsPerTick      команд Lua за тик на одно ядро
+     * @param cores           сколько процессов работает одновременно на полной скорости
+     * @param memoryBytes     память для программ (все процессы вместе)
+     * @param gpuCellsPerTick сколько клеток экрана видеокарта меняет за тик
+     * @param vramCells       видеопамять для буферов, клеток
+     * @param bootTicks       сколько длится загрузка системы
+     * @param maxProcesses    сколько процессов можно запустить всего
+     */
+    public record Limits(int opsPerTick, int cores, long memoryBytes, int gpuCellsPerTick, long vramCells,
+                         int bootTicks, int maxProcesses) {
+        public static Limits basic(int opsPerTick) {
+            return new Limits(opsPerTick, 1, 64L << 20, 1_000_000, 200_000, 0, 16);
+        }
+
+        public Limits withOps(int ops) {
+            return new Limits(Math.max(100, ops), cores, memoryBytes, gpuCellsPerTick, vramCells, bootTicks, maxProcesses);
+        }
+    }
+
     public static final int TICKS_PER_SECOND = 20;
-    /** Больше событий в очереди не держим: программа, которая их не читает, не съест всю память. */
-    private static final int MAX_EVENTS = 256;
     /** Сколько порций можно накопить, пока программа ждёт (чтобы после ожидания сразу был запас). */
-    private static final int BUDGET_BANK_TICKS = 2;
-    /** Максимальное время одного куска работы: даже очень быстрый процессор делится потоками честно. */
-    static final long SLICE_NANOS = 20_000_000L;
+    static final int BUDGET_BANK_TICKS = 2;
+    /** Размер экрана после включения (программа может увеличить его до максимума). */
+    static final int BOOT_WIDTH = 160, BOOT_HEIGHT = 50;
 
     private final Host host;
     private final Terminal terminal = new Terminal(50, 16);
     private final FileSystem fs = new FileSystem();
-    private final ConcurrentLinkedQueue<Object[]> events = new ConcurrentLinkedQueue<>();
-    private final AtomicInteger eventCount = new AtomicInteger();
-    private final AtomicBoolean scheduled = new AtomicBoolean();
-    private final Object lock = new Object();
+    private final Gpu gpu = new Gpu(this);
+    /** События от железа (клавиатура, мышь, диски) получает главный процесс. */
+    private final EventQueue mainEvents = new EventQueue();
+    private final CopyOnWriteArrayList<LuaMachine> machines = new CopyOnWriteArrayList<>();
 
     private volatile State state = State.OFF;
-    private volatile int opsPerTick = 10_000;
-    private volatile long budget;
+    private volatile Limits limits = Limits.basic(10_000);
     private volatile Info info = new Info("?", 1, 0, "Lua", 0, 0, "", 0);
     private volatile String label = "";
     private volatile String crashMessage = "";
 
-    private LuaMachine machine;            // трогается только под lock
+    private volatile LuaMachine main;
+    private int nextPid = 1;
     private volatile boolean stopRequested, rebootRequested;
+    private volatile int bootRemaining;
 
     /** Сколько тиков назад нажали Ctrl+T, а программа так и не прочитала событие (-1 — не нажимали). */
     private volatile int terminateWait = -1;
     private static final int TERMINATE_GRACE_TICKS = 20;
 
     private long ticks;
-    private final Map<Integer, Long> timers = new HashMap<>();
+    private record Timer(long due, EventQueue target) {
+    }
+    private final Map<Integer, Timer> timers = new HashMap<>();
     private int nextTimer = 1;
 
-    /** Сколько команд выполнено за последнюю секунду (для программ и отладки). */
+    /** Сколько команд выполнено за последнюю секунду (все процессы вместе). */
     private volatile long opsLastSecond;
-    private long opsThisSecond;
+    private final AtomicLong opsThisSecond = new AtomicLong();
+
+    /** Запас видеокарты (клеток); меньше нуля — программы ждут, пока видеокарта дорисует. */
+    private final AtomicLong gpuBudget = new AtomicLong();
+    /** Запас каждого накопителя (байт); меньше нуля — программы ждут, пока диск дочитает/допишет. */
+    private final Map<Mount, long[]> ioBudget = new IdentityHashMap<>();
+    private volatile boolean ioWait;
 
     public Computer(Host host) {
         this.host = host;
+        fs.setMeter(this::chargeIo);
     }
 
     // ======================= Состояние =======================
@@ -92,15 +133,21 @@ public final class Computer {
     public String crashMessage() { return crashMessage; }
     public Host host() { return host; }
     public Info info() { return info; }
+    public Limits limits() { return limits; }
     public long opsLastSecond() { return opsLastSecond; }
-    public int opsPerTick() { return opsPerTick; }
+    public int opsPerTick() { return limits.opsPerTick(); }
     public String label() { return label; }
     public String address() { return host.address(); }
+    Gpu gpu() { return gpu; }
+    /** Идёт загрузка системы (программы ещё не запущены). */
+    public boolean booting() { return state == State.RUNNING && bootRemaining > 0; }
 
     public void setInfo(Info info) { this.info = info; }
 
-    /** Лимит процессора: команд за тик. */
-    public void setOpsPerTick(int ops) { opsPerTick = Math.max(100, ops); }
+    public void setLimits(Limits limits) { this.limits = limits; }
+
+    /** Лимит процессора: команд за тик (на ядро). */
+    public void setOpsPerTick(int ops) { limits = limits.withOps(ops); }
 
     public void setLabel(String label) {
         this.label = label == null ? "" : label;
@@ -114,41 +161,56 @@ public final class Computer {
 
     // ======================= Включение и выключение =======================
 
-    public void turnOn() {
-        synchronized (lock) {
-            if (state == State.RUNNING) return;
-            closeMachine();
-            events.clear();
-            eventCount.set(0);
-            terminateWait = -1;
-            synchronized (timers) {
-                timers.clear();
-                ticks = 0;
-            }
-            stopRequested = rebootRequested = false;
-            crashMessage = "";
-            for (int i = 0; i < 16; i++) terminal.setPaletteColor(i, Terminal.DEFAULT_PALETTE[i]);
-            terminal.setTextIndex(Terminal.WHITE);
-            terminal.setBackIndex(Terminal.BLACK);
-            terminal.clear();
-            terminal.setCursor(0, 0);
-            budget = opsPerTick;
-            state = State.RUNNING;
+    public synchronized void turnOn() {
+        if (state == State.RUNNING) return;
+        machines.clear();
+        main = null;
+        mainEvents.clear();
+        terminateWait = -1;
+        synchronized (timers) {
+            timers.clear();
+            ticks = 0;
         }
+        synchronized (ioBudget) {
+            ioBudget.clear();
+            ioWait = false;
+        }
+        gpu.reset();
+        gpuBudget.set(limits.gpuCellsPerTick());
+        stopRequested = rebootRequested = false;
+        crashMessage = "";
+        nextPid = 1;
+        for (int i = 0; i < 16; i++) terminal.setPaletteColor(i, Terminal.DEFAULT_PALETTE[i]);
+        terminal.setDepth(terminal.maxDepth());
+        terminal.setTextIndex(Terminal.WHITE);
+        terminal.setBackIndex(Terminal.BLACK);
+        terminal.resize(Math.min(BOOT_WIDTH, terminal.maxWidth()), Math.min(BOOT_HEIGHT, terminal.maxHeight()));
+        terminal.setCursor(0, 0);
+        terminal.setCursorBlink(false);
+        bootRemaining = limits.bootTicks();
+        state = State.RUNNING;
+        if (bootRemaining > 0) drawBoot();
     }
 
-    /** Выключить. Безопасно вызывать с любого потока: если программа сейчас работает, она остановится. */
+    /**
+     * Выключить. Безопасно вызывать с любого потока: работающие программы остановятся.
+     * Замки процессов берутся вне замка компьютера — иначе упавший процесс и сервер могли бы ждать друг друга.
+     */
     public void shutdown() {
-        stopRequested = true;
-        LuaMachine m = machine;
-        if (m != null) m.interrupt();
-        synchronized (lock) {
-            closeMachine();
+        List<LuaMachine> list;
+        synchronized (this) {
+            list = new ArrayList<>(machines);
+            machines.clear();
+            main = null;
             state = State.OFF;
-            stopRequested = false;
-            terminal.clear();
-            terminal.setCursor(0, 0);
+            stopRequested = rebootRequested = false;
+            bootRemaining = 0;
         }
+        for (LuaMachine m : list) m.kill();
+        for (LuaMachine m : list) m.closeLocked();
+        gpu.reset();
+        terminal.clear();
+        terminal.setCursor(0, 0);
     }
 
     public void reboot() {
@@ -156,28 +218,41 @@ public final class Computer {
         turnOn();
     }
 
-    private void closeMachine() {
-        if (machine != null) {
-            machine.close();
-            machine = null;
-        }
-    }
-
     void requestShutdown() { stopRequested = true; }
 
     void requestReboot() { rebootRequested = true; stopRequested = true; }
 
+    private void drawBoot() {
+        int total = Math.max(1, limits.bootTicks());
+        int done = total - bootRemaining;
+        int pct = done * 100 / total;
+        int w = terminal.width();
+        terminal.setTextIndex(Terminal.WHITE);
+        terminal.setBackIndex(Terminal.BLACK);
+        terminal.clear();
+        terminal.setCursor(1, 1);
+        terminal.write("MineComputers");
+        terminal.setCursor(1, 2);
+        terminal.write("Загрузка системы… " + pct + "%");
+        int bar = Math.max(4, Math.min(40, w - 2));
+        int fill = bar * done / total;
+        terminal.setCursor(1, 3);
+        terminal.write("█".repeat(fill) + "░".repeat(bar - fill));
+    }
+
     // ======================= События =======================
 
-    /** Добавить событие: имя и значения (строки, числа, логические, null). */
+    /** Добавить событие главному процессу: имя и значения (строки, числа, логические, null). */
     public void queueEvent(String name, Object... args) {
         if (state != State.RUNNING) return;
-        if (eventCount.get() >= MAX_EVENTS) return;
+        mainEvents.offer(event(name, args));
+    }
+
+    static Object[] event(String name, Object... args) {
         Object[] ev = new Object[args.length + 1];
         ev[0] = name;
         System.arraycopy(args, 0, ev, 1, args.length);
-        events.add(ev);
-        eventCount.incrementAndGet();
+        return ev;
     }
 
     /** Ctrl+T: попросить программу завершиться. Если она занята и не читает события — прервать через секунду. */
@@ -191,21 +266,11 @@ public final class Computer {
         terminateWait = -1;
     }
 
-    Object[] pollEvent() {
-        Object[] ev = events.poll();
-        if (ev != null) eventCount.decrementAndGet();
-        return ev;
-    }
-
-    boolean hasEvents() {
-        return !events.isEmpty();
-    }
-
-    int startTimer(double seconds) {
+    int startTimer(double seconds, EventQueue target) {
         synchronized (timers) {
             int id = nextTimer++;
             long dueTicks = ticks + Math.max(1, Math.round(seconds * TICKS_PER_SECOND));
-            timers.put(id, dueTicks);
+            timers.put(id, new Timer(dueTicks, target));
             return id;
         }
     }
@@ -216,93 +281,172 @@ public final class Computer {
         }
     }
 
+    // ======================= Процессы =======================
+
+    List<LuaMachine> machines() { return machines; }
+
+    LuaMachine machine(int pid) {
+        for (LuaMachine m : machines) if (m.pid == pid) return m;
+        return null;
+    }
+
+    /** Запустить программу отдельным процессом (на своём ядре). Возвращает номер процесса. */
+    synchronized int spawn(LuaMachine parent, String path, Object[] args) throws LuaMachine.Crash {
+        if (state != State.RUNNING) throw new LuaMachine.Crash("Компьютер выключается");
+        if (machines.size() >= limits.maxProcesses()) {
+            throw new LuaMachine.Crash("Слишком много процессов (не больше " + limits.maxProcesses() + ")");
+        }
+        int pid = nextPid++;
+        machines.add(new LuaMachine(this, pid, parent == null ? 0 : parent.pid, new EventQueue(), path, args));
+        return pid;
+    }
+
+    /** Процесс закончил работу (поток процесса). */
+    void machineDone(LuaMachine m, boolean ok, String error) {
+        if (m == main) {
+            if (ok) stopRequested = true;       // BIOS завершился — выключаемся
+            else crash(error);
+            return;
+        }
+        machines.remove(m);
+        LuaMachine parent = machine(m.parentPid);
+        if (parent == null) parent = main;
+        if (parent != null && state == State.RUNNING) {
+            parent.events.offer(event("process_exit", m.pid, ok, error));
+        }
+    }
+
     // ======================= Работа =======================
 
     /** Вызывается сервером каждый тик (главный поток). */
     public void tick() {
         if (state != State.RUNNING) return;
+        if (stopRequested) {
+            boolean reboot = rebootRequested;
+            shutdown();
+            if (reboot) turnOn();
+            return;
+        }
         synchronized (timers) {
             ticks++;
-            for (Iterator<Map.Entry<Integer, Long>> it = timers.entrySet().iterator(); it.hasNext(); ) {
-                Map.Entry<Integer, Long> e = it.next();
-                if (e.getValue() <= ticks) {
+            for (Iterator<Map.Entry<Integer, Timer>> it = timers.entrySet().iterator(); it.hasNext(); ) {
+                Map.Entry<Integer, Timer> e = it.next();
+                if (e.getValue().due() <= ticks) {
                     it.remove();
-                    queueEvent("timer", e.getKey());
+                    e.getValue().target().offer(event("timer", e.getKey()));
                 }
             }
-            if (ticks % TICKS_PER_SECOND == 0) {
-                opsLastSecond = opsThisSecond;
-                opsThisSecond = 0;
+            if (ticks % TICKS_PER_SECOND == 0) opsLastSecond = opsThisSecond.getAndSet(0);
+        }
+        if (bootRemaining > 0) {
+            bootRemaining--;
+            if (bootRemaining > 0) {
+                if (bootRemaining % 2 == 0) drawBoot();
+                return;
+            }
+            terminal.clear();
+            terminal.setCursor(0, 0);
+        }
+        Limits l = limits;
+        if (main == null) {
+            synchronized (this) {
+                if (main == null && state == State.RUNNING) {
+                    main = new LuaMachine(this, nextPid++, 0, mainEvents, null, null);
+                    machines.add(0, main);
+                }
             }
         }
-        budget = Math.min(budget + opsPerTick, (long) opsPerTick * BUDGET_BANK_TICKS);
+        // Порции команд: каждое ядро — один процесс на полной скорости; процессов больше, чем ядер, — делят
+        int alive = Math.max(1, machines.size());
+        double share = Math.min(1.0, l.cores() / (double) alive);
+        long per = Math.max(100, Math.round(l.opsPerTick() * share));
+        for (LuaMachine m : machines) m.refill(per);
+        gpuBudget.updateAndGet(b -> Math.min(b + l.gpuCellsPerTick(), (long) l.gpuCellsPerTick() * BUDGET_BANK_TICKS));
+        refillIo();
+
         if (terminateWait >= 0 && ++terminateWait > TERMINATE_GRACE_TICKS) {
             terminateWait = -1;
             // Событие так и не прочитали — убираем его и прерываем программу ошибкой
-            if (events.removeIf(ev -> "terminate".equals(ev[0]))) eventCount.decrementAndGet();
-            LuaMachine m = machine;
+            mainEvents.removeNamed("terminate");
+            LuaMachine m = main;
             if (m != null) m.abort();
         }
-        if (needsWork() && scheduled.compareAndSet(false, true)) {
-            ComputerExecutor.submit(this);
+        for (LuaMachine m : machines) {
+            if (m.needsWork() && m.scheduled.compareAndSet(false, true)) ComputerExecutor.submit(m);
         }
     }
 
-    private boolean needsWork() {
-        if (state != State.RUNNING || budget <= 0) return false;
-        LuaMachine m = machine;
-        return m == null || m.isPaused() || hasEvents() || stopRequested;
+    void addOps(long ops) {
+        opsThisSecond.addAndGet(ops);
     }
 
-    long budget() { return budget; }
+    /** Программы должны подождать: видеокарта или накопитель не успевают. */
+    boolean mustWait() {
+        return gpuBudget.get() < 0 || ioWait;
+    }
 
-    void spend(long ops) {
-        budget -= ops;
-        synchronized (timers) {
-            opsThisSecond += ops;
+    // ======================= Видеокарта =======================
+
+    /** Списать работу видеокарты (клетки экрана). */
+    void chargeGpu(long cells) {
+        if (cells > 0) gpuBudget.addAndGet(-cells);
+    }
+
+    // ======================= Накопители =======================
+
+    private void chargeIo(Mount mount, long bytes) {
+        long speed = mount.bytesPerSecond();
+        if (speed <= 0 || bytes <= 0) return;
+        synchronized (ioBudget) {
+            long[] b = ioBudget.computeIfAbsent(mount, k -> new long[]{speed / TICKS_PER_SECOND});
+            b[0] -= bytes;
+            if (b[0] < 0) ioWait = true;
         }
     }
 
-    /** Выполнить кусок работы (поток исполнителя). */
-    void work() {
-        scheduled.set(false);
-        boolean reboot = false;
-        synchronized (lock) {
-            if (state != State.RUNNING) return;
-            try {
-                if (machine == null) machine = new LuaMachine(this);
-                long deadline = System.nanoTime() + SLICE_NANOS;
-                while (!stopRequested && budget > 0 && System.nanoTime() < deadline) {
-                    if (!machine.resume(deadline)) break;     // нечего делать или замерли
-                }
-                if (machine != null && machine.isFinished()) {
-                    stopRequested = true;
-                }
-            } catch (LuaMachine.Crash crash) {
-                crash(crash.getMessage());
-                return;
-            } catch (Throwable t) {
-                crash("Внутренняя ошибка: " + t);
-                return;
+    private void refillIo() {
+        synchronized (ioBudget) {
+            boolean wait = false;
+            for (Map.Entry<Mount, long[]> e : ioBudget.entrySet()) {
+                long speed = e.getKey().bytesPerSecond();
+                long[] b = e.getValue();
+                b[0] = Math.min(b[0] + speed / TICKS_PER_SECOND, speed / TICKS_PER_SECOND * BUDGET_BANK_TICKS);
+                if (b[0] < 0) wait = true;
             }
-            if (stopRequested) {
-                reboot = rebootRequested;
-                closeMachine();
-                state = State.OFF;
-                stopRequested = rebootRequested = false;
-                terminal.clear();
-                terminal.setCursor(0, 0);
-            }
-        }
-        if (reboot) {
-            turnOn();
+            ioWait = wait;
         }
     }
 
-    private void crash(String message) {
-        closeMachine();
-        crashMessage = message;
-        state = State.CRASHED;
+    // ======================= Память =======================
+
+    long memoryLimit() {
+        return limits.memoryBytes();
+    }
+
+    /** Сколько памяти занято всеми процессами (по последнему подсчёту). */
+    public long memoryUsed() {
+        long n = 0;
+        for (LuaMachine m : machines) n += m.liveBytes();
+        return n;
+    }
+
+    long memoryUsedExcept(LuaMachine self) {
+        long n = 0;
+        for (LuaMachine m : machines) if (m != self) n += m.liveBytes();
+        return n;
+    }
+
+    // ======================= Ошибка =======================
+
+    /** Главный процесс упал: остальные процессы останавливаются, на экране — сообщение. */
+    void crash(String message) {
+        synchronized (this) {
+            state = State.CRASHED;
+            crashMessage = message;
+            for (LuaMachine m : machines) m.kill();
+            machines.clear();
+            main = null;
+        }
         terminal.setBackIndex(Terminal.BLACK);
         terminal.setTextIndex(14);
         int y = Math.min(terminal.height() - 1, Math.max(0, terminal.cursorY() + 1));
@@ -319,8 +463,8 @@ public final class Computer {
         terminal.setCursorBlink(false);
     }
 
-    static java.util.List<String> wrap(String text, int width) {
-        java.util.List<String> out = new java.util.ArrayList<>();
+    static List<String> wrap(String text, int width) {
+        List<String> out = new ArrayList<>();
         for (String line : text.split("\n")) {
             while (line.length() > width) {
                 out.add(line.substring(0, width));

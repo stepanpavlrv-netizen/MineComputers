@@ -52,4 +52,14 @@ public interface Mount {
     default String label() {
         return "";
     }
+
+    /** Скорость чтения и записи, байт/с (0 — без ограничения, как у ПЗУ). */
+    default long bytesPerSecond() {
+        return 0;
+    }
+
+    /** Цена одной операции с файлом (открыть, проверить, удалить) в байтах передачи — время поиска на диске. */
+    default int opBytes() {
+        return 0;
+    }
 }

@@ -157,27 +157,56 @@ final class CaseComputer implements Computer.Host {
         if (computer != null) computer.unload();
     }
 
+    /** Сколько блоков в ширину и высоту у подключённого монитора (по нему считается размер экрана). */
+    private int wallCols = 1, wallRows = 1;
+    private int gpuTier;
+
+    /** Настоящие лимиты компьютера по деталям и настройкам сервера. */
+    static Computer.Limits limitsFor(SystemModel.Input in, SystemModel.Report report, double speed) {
+        int opsPerSecond = (int) Math.min(500_000_000L, Math.round(Perf.gameOpsPerSecond(report.cpuGips()) * speed));
+        int cores = in.cpu() == null ? 1 : Math.max(1, Math.min(in.cpu().cores(), com.strikerr212.minepc.MineConfig.maxCores()));
+        long memory = Math.min((long) com.strikerr212.minepc.MineConfig.maxMemoryMb() << 20,
+                Math.round(Perf.gameMemoryKb(report.ramMb()) * 1024L * com.strikerr212.minepc.MineConfig.memory()));
+        GpuData gpu = in.gpu();
+        int tier = gpu == null ? 0 : gpu.tier();
+        int cells = (int) Math.max(100, Perf.gpuCellsPerSecond(tier) * com.strikerr212.minepc.MineConfig.gpu() / Computer.TICKS_PER_SECOND);
+        int boot = com.strikerr212.minepc.MineConfig.bootTime() ? Perf.gameBootTicks(report.bootSeconds()) : 0;
+        return new Computer.Limits(Math.max(100, opsPerSecond / Computer.TICKS_PER_SECOND), cores, Math.max(256 * 1024, memory),
+                cells, Perf.vramCells(gpu), boot, com.strikerr212.minepc.MineConfig.maxProcesses());
+    }
+
+    /** Самый большой экран: сколько тянет видеокарта и сколько помещается на мониторе. */
+    private int[] maxScreen() {
+        int[] gpu = Perf.screenSize(gpuTier);
+        int[] wall = Perf.wallSize(wallCols, wallRows);
+        return new int[]{Math.min(gpu[0], wall[0]), Math.min(gpu[1], wall[1])};
+    }
+
     /** Настроить железо компьютера: скорость, экран, накопители. */
     private void configure(ServerLevel level, SystemModel.Input in, SystemModel.Report report) {
-        // Скорость в игре — с учётом перегрева и нехватки памяти
-        int opsPerSecond = Perf.gameOpsPerSecond(report.cpuGips());
-        computer.setOpsPerTick(Math.max(100, opsPerSecond / Computer.TICKS_PER_SECOND));
+        com.strikerr212.minepc.computer.ComputerExecutor.configure(com.strikerr212.minepc.MineConfig.threads(),
+                com.strikerr212.minepc.MineConfig.sliceMs());
+        // Скорость, ядра, память, видеокарта — с учётом перегрева, нехватки памяти и настроек сервера
+        Computer.Limits limits = limitsFor(in, report, com.strikerr212.minepc.MineConfig.speedFor(level));
+        computer.setLimits(limits);
+        int opsPerSecond = limits.opsPerTick() * Computer.TICKS_PER_SECOND;
 
-        // Экран: без видеокарты — 40×12 монохромный текст, дальше больше и в цвете
+        // Экран: без видеокарты — монохромный текст, дальше больше и в цвете (самый большой — на стене мониторов)
         GpuData gpu = in.gpu();
-        int[] size = Perf.screenSize(gpu == null ? 0 : gpu.tier());
+        gpuTier = gpu == null ? 0 : gpu.tier();
+        int[] size = maxScreen();
         int w = size[0], h = size[1];
+        computer.terminal().setMaxDepth(Perf.colorDepth(gpuTier));
         computer.terminal().setMaxSize(w, h);
-        computer.terminal().setMaxDepth(Perf.colorDepth(gpu == null ? 0 : gpu.tier()));
 
         CpuData cpu = in.cpu();
         ItemStack cpuStack = be.getStack(PcCaseBlockEntity.SLOT_CPU);
         String cpuLabel = cpuStack.getItem() instanceof HardwareItem ? HardwareItem.label(cpuStack) : "";
         String cpuName = (cpuLabel.isEmpty() ? "Процессор ур. " + cpu.tier() : cpuLabel)
                 + ", ядер: " + cpu.cores() + ", " + cpu.clockMhz() + " МГц";
-        String gpuName = gpu == null ? "" : "Видеокарта ур. " + gpu.tier() + ", " + w + "×" + h;
+        String gpuName = gpu == null ? "" : "Видеокарта ур. " + gpu.tier() + ", до " + Perf.screenSize(gpuTier)[0] + "×" + Perf.screenSize(gpuTier)[1];
         computer.setInfo(new Computer.Info(cpuName, cpu.cores(), cpu.clockMhz(), "Lua",
-                Perf.gameMemoryKb(report.ramMb()), opsPerSecond, gpuName, report.score()));
+                (int) (limits.memoryBytes() / 1024), opsPerSecond, gpuName, report.score()));
 
         // Накопители: системный — самый быстрый (M.2, потом SATA SSD, потом жёсткий диск)
         var fs = computer.fileSystem();
@@ -193,18 +222,25 @@ final class CaseComputer implements Computer.Host {
             ItemStack stack = be.getStack(slot);
             long capacity;
             String name;
+            long speed;
+            int opBytes;
             if (stack.getItem() instanceof SsdItem) {
                 SsdData d = SsdItem.data(stack);
                 capacity = Perf.gameStorageBytes(d.capacityMb());
                 name = d.isNvme() ? "NVMe SSD" : "SATA SSD";
+                speed = Perf.gameDiskBytesPerSecond(d.speedMbs());
+                opBytes = 32;
             } else if (stack.getItem() instanceof HddItem) {
                 HddData d = HddItem.data(stack);
                 capacity = Perf.gameStorageBytes(d.capacityMb());
                 name = "Жёсткий диск";
+                speed = Perf.gameDiskBytesPerSecond(d.speedMbs());
+                opBytes = 512;          // головке диска нужно время, чтобы найти файл
             } else {
                 continue;
             }
-            Mount mount = DriveStorage.mount(level.getServer(), stack, capacity, name);
+            Mount mount = DriveStorage.mount(level.getServer(), stack, capacity, name)
+                    .withSpeed(Math.round(speed * com.strikerr212.minepc.MineConfig.disk()), opBytes);
             if (!root) {
                 fs.mount("", mount);
                 root = true;
@@ -243,9 +279,27 @@ final class CaseComputer implements Computer.Host {
     private void scanDevices(ServerLevel level, BlockPos pos) {
         // Монитор рядом с корпусом — и все блоки большого монитора, в который он входит
         java.util.Set<BlockPos> found = new java.util.HashSet<>();
+        int cols = 1, rows = 1;
         for (Direction d : Direction.values()) {
             BlockPos n = pos.relative(d);
-            if (level.getBlockEntity(n) instanceof MonitorBlockEntity) found.addAll(MonitorGroup.of(level, n).blocks());
+            if (level.getBlockEntity(n) instanceof MonitorBlockEntity) {
+                MonitorGroup group = MonitorGroup.of(level, n);
+                found.addAll(group.blocks());
+                if (group.cols() * group.rows() > cols * rows) {
+                    cols = group.cols();
+                    rows = group.rows();
+                }
+            }
+        }
+        if (cols != wallCols || rows != wallRows) {
+            wallCols = cols;
+            wallRows = rows;
+            // Монитор достроили или разобрали на работающем компьютере — меняется самый большой экран
+            if (computer != null && computer.isOn()) {
+                int[] max = maxScreen();
+                var t = computer.terminal();
+                if (t.setLimit(max[0], max[1])) computer.queueEvent("screen_resized", t.width(), t.height());
+            }
         }
         for (BlockPos p : found) {
             if (level.getBlockEntity(p) instanceof MonitorBlockEntity monitor) monitor.link(pos);
@@ -294,8 +348,11 @@ final class CaseComputer implements Computer.Host {
             if (removable.containsKey(e.getKey())) continue;
             ItemStack stack = e.getValue();
             if (!(stack.getItem() instanceof DriveItem drive)) continue;
-            String label = drive.kind() == DriveItem.Kind.FLOPPY ? "Дискета" : "Флешка";
-            fs.mount(e.getKey(), DriveStorage.mount(level.getServer(), stack, drive.capacity(), label));
+            boolean floppy = drive.kind() == DriveItem.Kind.FLOPPY;
+            String label = floppy ? "Дискета" : "Флешка";
+            long speed = Math.round((floppy ? 128 * 1024 : 4 * 1024 * 1024) * com.strikerr212.minepc.MineConfig.disk());
+            fs.mount(e.getKey(), DriveStorage.mount(level.getServer(), stack, drive.capacity(), label)
+                    .withSpeed(speed, floppy ? 256 : 32));
             removable.put(e.getKey(), DriveItem.id(stack));
             if (notify) computer.queueEvent("disk", "/" + e.getKey());
         }

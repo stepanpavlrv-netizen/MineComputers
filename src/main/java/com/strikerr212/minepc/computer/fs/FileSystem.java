@@ -10,6 +10,21 @@ public final class FileSystem {
 
     private final Map<String, Mount> mounts = new TreeMap<>();
 
+    /** Куда сообщать о работе накопителей (компьютер считает по ним время чтения и записи). */
+    public interface Meter {
+        void io(Mount mount, long bytes);
+    }
+
+    private volatile Meter meter = (m, b) -> { };
+
+    public void setMeter(Meter meter) {
+        this.meter = meter == null ? (m, b) -> { } : meter;
+    }
+
+    private void io(Mount m, long bytes) {
+        meter.io(m, bytes + m.opBytes());
+    }
+
     /** Привести путь к виду "a/b/c": без лишних слешей, точек и выходов выше корня. */
     public static String normalize(String path) {
         Deque<String> parts = new ArrayDeque<>();
@@ -72,6 +87,7 @@ public final class FileSystem {
         try {
             if (isMountPoint(path)) return true;
             Resolved r = resolve(path);
+            io(r.mount, 0);
             return r.mount.exists(r.local);
         } catch (FsException e) {
             return false;
@@ -82,6 +98,7 @@ public final class FileSystem {
         try {
             if (isMountPoint(path)) return true;
             Resolved r = resolve(path);
+            io(r.mount, 0);
             return r.mount.isDirectory(r.local);
         } catch (FsException e) {
             return false;
@@ -96,10 +113,11 @@ public final class FileSystem {
         }
     }
 
-    public List<String> list(String path) throws FsException {
+    public synchronized List<String> list(String path) throws FsException {
         String p = normalize(path);
         Resolved r = resolve(p);
         TreeSet<String> out = new TreeSet<>(r.mount.list(r.local));
+        io(r.mount, out.size() * 32L);
         // Точки подключения других накопителей видны как папки
         for (String m : mounts().keySet()) {
             if (!m.isEmpty() && parent(m).equals(p)) out.add(name(m));
@@ -121,30 +139,35 @@ public final class FileSystem {
         }
     }
 
-    public byte[] read(String path) throws FsException {
+    public synchronized byte[] read(String path) throws FsException {
         Resolved r = resolve(path);
-        return r.mount.read(r.local);
+        byte[] data = r.mount.read(r.local);
+        io(r.mount, data.length);
+        return data;
     }
 
-    public void write(String path, byte[] data, boolean append) throws FsException {
+    public synchronized void write(String path, byte[] data, boolean append) throws FsException {
         if (isMountPoint(path)) throw new FsException("Это папка");
         Resolved r = resolve(path);
         r.mount.write(r.local, data, append);
+        io(r.mount, data.length);
     }
 
-    public void makeDirectory(String path) throws FsException {
+    public synchronized void makeDirectory(String path) throws FsException {
         if (isMountPoint(path)) return;
         Resolved r = resolve(path);
         r.mount.makeDirectory(r.local);
+        io(r.mount, 0);
     }
 
-    public void delete(String path) throws FsException {
+    public synchronized void delete(String path) throws FsException {
         if (isMountPoint(path)) throw new FsException("Нельзя удалить накопитель");
         Resolved r = resolve(path);
         r.mount.delete(r.local);
+        io(r.mount, 0);
     }
 
-    public void copy(String from, String to) throws FsException {
+    public synchronized void copy(String from, String to) throws FsException {
         String f = normalize(from), t = normalize(to);
         if (!exists(f)) throw new FsException("Нет такого файла");
         if (exists(t)) throw new FsException("Такой файл уже есть");
@@ -157,7 +180,7 @@ public final class FileSystem {
         }
     }
 
-    public void move(String from, String to) throws FsException {
+    public synchronized void move(String from, String to) throws FsException {
         if (isMountPoint(from)) throw new FsException("Нельзя переместить накопитель");
         copy(from, to);
         delete(from);

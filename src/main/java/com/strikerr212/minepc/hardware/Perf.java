@@ -174,22 +174,63 @@ public final class Perf {
     }
 
     /**
-     * Размер текстового экрана (символов в строке, строк) по уровню видеокарты; 0 — без видеокарты
-     * (чёрно-белый текст). Больше видеокарта — больше символов помещается на экран.
+     * Самый большой текстовый экран (символов в строке, строк), который тянет видеокарта; 0 — без видеокарты
+     * (чёрно-белый текст). Ур. 5 показывает 320×100, но только на стене мониторов (см. {@link #wallSize}).
      */
     public static int[] screenSize(int gpuTier) {
         return switch (gpuTier) {
-            case 0 -> new int[]{40, 12};
-            case 1, 2 -> new int[]{50, 16};
-            case 3 -> new int[]{80, 25};
-            case 4 -> new int[]{120, 40};
-            default -> new int[]{160, 50};
+            case 0 -> new int[]{50, 16};
+            case 1 -> new int[]{80, 25};
+            case 2 -> new int[]{100, 30};
+            case 3 -> new int[]{120, 40};
+            case 4 -> new int[]{160, 50};
+            default -> new int[]{320, 100};
         };
+    }
+
+    /**
+     * Сколько символов помещается на мониторе из cols×rows блоков: один блок — 160×50,
+     * каждый блок вширь добавляет 80 столбцов, каждый ряд — 25 строк (до 320×100).
+     */
+    public static int[] wallSize(int cols, int rows) {
+        return new int[]{Math.min(320, 160 + 80 * Math.max(0, cols - 1)), Math.min(100, 50 + 25 * Math.max(0, rows - 1))};
     }
 
     /** Глубина цвета по уровню видеокарты: без неё 1 бит (ч/б), ур. 1–2 — 16 цветов, ур. 3–4 — 256, ур. 5 — любые. */
     public static int colorDepth(int gpuTier) {
         return gpuTier <= 0 ? 1 : gpuTier <= 2 ? 4 : gpuTier <= 4 ? 8 : 24;
+    }
+
+    /**
+     * Скорость отрисовки: сколько клеток экрана видеокарта меняет за секунду. Заливка и копирование
+     * областей в 8 раз дешевле, чем вывод текста (как аппаратное ускорение). Для сравнения:
+     * видеокарта ур. 3 в OpenComputers перерисовывает экран 160×50 текстом примерно 2–3 раза в секунду,
+     * здесь ур. 3 — около 20 раз.
+     */
+    public static int gpuCellsPerSecond(int gpuTier) {
+        return switch (gpuTier) {
+            case 0 -> 20_000;
+            case 1 -> 40_000;
+            case 2 -> 80_000;
+            case 3 -> 160_000;
+            case 4 -> 320_000;
+            default -> 640_000;
+        };
+    }
+
+    /** Видеопамять для буферов (gpu.allocateBuffer), в клетках: 32 клетки на «мегабайт» видеопамяти детали. */
+    public static long vramCells(GpuData gpu) {
+        return gpu == null ? 8_000 : Math.max(8_000, gpu.vramMb() * 32L);
+    }
+
+    /** Скорость накопителя в игре, байт/с: в 100 раз меньше настоящей (жёсткий диск ≈ 1,5 МБ/с, NVMe ≈ 70 МБ/с). */
+    public static long gameDiskBytesPerSecond(int speedMbs) {
+        return Math.max(16_384, speedMbs * 1024L * 1024L / 100);
+    }
+
+    /** Загрузка системы в игре: в 10 раз быстрее настоящей и не дольше 8 секунд. */
+    public static int gameBootTicks(double bootSeconds) {
+        return (int) Math.round(Math.min(8, bootSeconds / 10) * 20);
     }
 
     /** Сколько байт файлов помещается на накопитель в игре: «гигабайт» детали = мегабайт в игре. */

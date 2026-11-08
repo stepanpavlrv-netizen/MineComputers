@@ -22,7 +22,7 @@ public record TerminalPayload(BlockPos casePos, byte[] data, boolean keyboard) i
 
     public static final StreamCodec<ByteBuf, TerminalPayload> STREAM_CODEC = StreamCodec.composite(
             BlockPos.STREAM_CODEC, TerminalPayload::casePos,
-            ByteBufCodecs.byteArray(1 << 18), TerminalPayload::data,
+            ByteBufCodecs.byteArray(1_000_000), TerminalPayload::data,
             ByteBufCodecs.BOOL, TerminalPayload::keyboard,
             TerminalPayload::new);
 

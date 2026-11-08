@@ -109,7 +109,9 @@ public class GpuSpec extends PartSpec {
             lines.add(line("tooltip.minepc.cooling", Units.watts(d.coolingW())));
         }
         int[] screen = Perf.screenSize(d.tier());
-        lines.add(perfLine("tooltip.minepc.screen", screen[0] + "×" + screen[1]));
+        lines.add(perfLine(screen[0] > 160 ? "tooltip.minepc.screen_wall" : "tooltip.minepc.screen", screen[0] + "×" + screen[1]));
+        lines.add(perfLine("tooltip.minepc.gpu_draw", Perf.gpuCellsPerSecond(d.tier()) / 1000,
+                Math.round(Perf.vramCells(d) / 1000.0)));
         double tflops = Perf.gpuTflops(d);
         lines.add(perfLine("tooltip.minepc.perf_gpu", Units.tflops(tflops), Units.level(Perf.level(tflops, Perf.STOCK_GPU_TFLOPS))));
         lines.add(perfLine("tooltip.minepc.perf_bus", Units.bits(Perf.gpuBusBits(d)), Units.bandwidth(Perf.gpuMemoryGbs(d))));
