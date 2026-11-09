@@ -34,6 +34,11 @@ public class MineComputers {
         // Настройки сервера: скорость, память, потоки для компьютеров
         modContainer.registerConfig(net.neoforged.fml.config.ModConfig.Type.SERVER, MineConfig.SPEC);
 
+        // Сеть: доставка сообщений в тике мира
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener((net.neoforged.neoforge.event.tick.LevelTickEvent.Post e) -> {
+            if (e.getLevel() instanceof net.minecraft.server.level.ServerLevel level) com.strikerr212.minepc.lan.LanManager.get(level).tick(level);
+        });
+
         LOGGER.info("MineComputers is loading! " + LuaSelfTest.run());
     }
 }

@@ -79,6 +79,18 @@ local function refresh()
     for k, v in pairs(data) do d[k] = v end
     add(d)
   end
+  -- Сетевой порт платы — как сетевая карта OpenComputers
+  if net then
+    add({ type = "modem", address = computer.componentAddress("modem"),
+          open = function(p) return net.open(p) end, close = function(p) return net.close(p) end,
+          isOpen = function(p) return net.isOpen(p) end,
+          send = function(a, p, ...) return net.send(a, p, ...) end,
+          broadcast = function(p, ...) return net.broadcast(p, ...) end,
+          isWireless = function() return false end, isWired = function() return true end,
+          maxPacketSize = function() return net.maxPacket() end,
+          getStrength = function() return 0 end, setStrength = function() return 0 end,
+          getWakeMessage = function() return nil end, setWakeMessage = function() return nil end })
+  end
   add({ type = "eeprom", address = computer.componentAddress("eeprom"),
         get = function() return "" end, set = function() end, getLabel = function() return "MineComputers BIOS" end,
         setLabel = function(v) return v end, getSize = function() return 4096 end, getDataSize = function() return 256 end,

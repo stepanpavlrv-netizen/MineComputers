@@ -45,6 +45,24 @@ public final class Computer {
 
         /** Постоянный адрес компьютера (UUID, как в OpenComputers). */
         default String address() { return "00000000-0000-4000-8000-000000000000"; }
+
+        // ----- Сеть -----
+
+        /**
+         * Отправить сообщение по сети (вызывается из потока программы — только поставить в очередь).
+         * target — адрес, его начало или имя компьютера; null — всем в сети. false — сети нет.
+         */
+        default boolean netSend(String target, int port, Object[] payload, int bytes) { return false; }
+
+        /** Скорость сетевого порта (байт/с в игре); 0 — кабеля нет или порт не подключён. */
+        default long netBytesPerSecond() { return 0; }
+
+        /** Кто ещё в сети: {адрес, имя, переходов}. */
+        default java.util.List<Peer> netPeers() { return java.util.List.of(); }
+    }
+
+    /** Компьютер в сети: адрес, имя (может быть пустым) и сколько коммутаторов до него. */
+    public record Peer(String address, String name, int hops) {
     }
 
     /** Сведения о железе для программ (computer.info()). */
@@ -119,6 +137,15 @@ public final class Computer {
     private final Map<Mount, long[]> ioBudget = new IdentityHashMap<>();
     private volatile boolean ioWait;
 
+    // ----- Сеть -----
+    /** Самое большое сообщение, байт (как у сетевой карты OpenComputers). */
+    public static final int NET_MAX_PACKET = 8192;
+    /** Порты, которые слушают программы. */
+    private final java.util.Set<Integer> openPorts = java.util.concurrent.ConcurrentHashMap.newKeySet();
+    /** Запас сетевого порта (байт); меньше нуля — программа ждёт, пока сообщение уйдёт. */
+    private final AtomicLong netBudget = new AtomicLong();
+    private final AtomicLong netSent = new AtomicLong(), netReceived = new AtomicLong();
+
     public Computer(Host host) {
         this.host = host;
         fs.setMeter(this::chargeIo);
@@ -131,7 +158,6 @@ public final class Computer {
     public State state() { return state; }
     public boolean isOn() { return state == State.RUNNING; }
     public String crashMessage() { return crashMessage; }
-    public Host host() { return host; }
     public Info info() { return info; }
     public Limits limits() { return limits; }
     public long opsLastSecond() { return opsLastSecond; }
@@ -177,6 +203,8 @@ public final class Computer {
         }
         gpu.reset();
         gpuBudget.set(limits.gpuCellsPerTick());
+        openPorts.clear();
+        netBudget.set(0);
         stopRequested = rebootRequested = false;
         crashMessage = "";
         nextPid = 1;
@@ -363,6 +391,8 @@ public final class Computer {
         for (LuaMachine m : machines) m.refill(per);
         gpuBudget.updateAndGet(b -> Math.min(b + l.gpuCellsPerTick(), (long) l.gpuCellsPerTick() * BUDGET_BANK_TICKS));
         refillIo();
+        long net = host.netBytesPerSecond() / TICKS_PER_SECOND;
+        netBudget.updateAndGet(b -> Math.min(b + net, net * BUDGET_BANK_TICKS));
 
         if (terminateWait >= 0 && ++terminateWait > TERMINATE_GRACE_TICKS) {
             terminateWait = -1;
@@ -382,7 +412,40 @@ public final class Computer {
 
     /** Программы должны подождать: видеокарта или накопитель не успевают. */
     boolean mustWait() {
-        return gpuBudget.get() < 0 || ioWait;
+        return gpuBudget.get() < 0 || ioWait || netBudget.get() < 0;
+    }
+
+    // ======================= Сеть =======================
+
+
+    public Host host() { return host; }
+
+    public boolean openPort(int port) { return openPorts.add(port); }
+    public boolean closePort(int port) { return openPorts.remove(port); }
+    public boolean isPortOpen(int port) { return openPorts.contains(port); }
+    public void closeAllPorts() { openPorts.clear(); }
+
+    public long netSent() { return netSent.get(); }
+    public long netReceived() { return netReceived.get(); }
+
+    /** Отправка: сообщение уходит со скоростью порта (программа подождёт, если порт занят). */
+    boolean netSend(String target, int port, Object[] payload, int bytes) {
+        if (!host.netSend(target, port, payload, bytes)) return false;
+        netBudget.addAndGet(-bytes);
+        netSent.addAndGet(bytes);
+        return true;
+    }
+
+    /** Пришло сообщение по сети: событие net_message, если программа слушает этот порт. */
+    public void netReceive(String from, int port, int hops, Object[] payload, int bytes) {
+        if (state != State.RUNNING || !openPorts.contains(port)) return;
+        netReceived.addAndGet(bytes);
+        Object[] args = new Object[3 + payload.length];
+        args[0] = from;
+        args[1] = port;
+        args[2] = hops;
+        System.arraycopy(payload, 0, args, 3, payload.length);
+        queueEvent("net_message", args);
     }
 
     // ======================= Видеокарта =======================

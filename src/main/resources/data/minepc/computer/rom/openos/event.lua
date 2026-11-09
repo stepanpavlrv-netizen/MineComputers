@@ -47,6 +47,12 @@ local function translate(ev)
     return { "interrupted", computer.uptime() }
   elseif name == "screen_resized" then
     return { "screen_resized", addr("screen"), ev[2], ev[3] }
+  elseif name == "net_message" then
+    -- Сеть MineComputers -> modem_message OpenComputers: получатель, отправитель, порт, «расстояние», данные
+    local out = { "modem_message", addr("modem"), ev[2], ev[3], ev[4] }
+    for i = 5, (ev.n or #ev) do out[#out + 1] = ev[i] end
+    out.n = math.max(5, (ev.n or #ev))
+    return out
   end
   return ev
 end

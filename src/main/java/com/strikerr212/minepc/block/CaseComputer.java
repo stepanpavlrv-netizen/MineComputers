@@ -124,6 +124,59 @@ public final class CaseComputer implements Computer.Host {
     public void onLabelChanged(String l) {
         label = l;
         be.setChanged();
+        be.markUpdated();   // имя видно в окне корпуса и другим компьютерам сети
+    }
+
+    // ======================= Сеть =======================
+
+    /** Порт: 0 — кабеля нет, 1 — подключён; скорость порта (бит/с) и кто в сети — обновляются в тике. */
+    private volatile int linkCode;
+    private volatile long linkBits;
+    private volatile List<Computer.Peer> peers = List.of();
+
+    @Override
+    public boolean netSend(String target, int port, Object[] payload, int bytes) {
+        if (linkCode != 1 || !(be.getLevel() instanceof ServerLevel level)) return false;
+        com.strikerr212.minepc.lan.LanManager.get(level).post(be.getBlockPos(), target, port, payload, bytes);
+        return true;
+    }
+
+    @Override
+    public long netBytesPerSecond() {
+        return linkCode == 1 ? linkBits / 800 : 0;
+    }
+
+    @Override
+    public List<Computer.Peer> netPeers() {
+        return peers;
+    }
+
+    void netReceive(String from, int port, int hops, Object[] payload, int bytes) {
+        if (computer != null) computer.netReceive(from, port, hops, payload, bytes);
+    }
+
+    int netLinkCode() { return linkCode; }
+    int netPeersCount() { return peers.size(); }
+    int netKbSent() { return computer == null ? 0 : (int) Math.min(Integer.MAX_VALUE, computer.netSent() / 1024); }
+    int netKbReceived() { return computer == null ? 0 : (int) Math.min(Integer.MAX_VALUE, computer.netReceived() / 1024); }
+
+    private void refreshNetwork(ServerLevel level, BlockPos pos) {
+        var lan = com.strikerr212.minepc.lan.LanManager.get(level);
+        net.minecraft.world.level.block.state.BlockState state = level.getBlockState(pos);
+        long bits = state.getBlock() instanceof com.strikerr212.minepc.lan.LanDevice d ? d.lanBitsPerSecond(level, pos, state) : 0;
+        boolean linked = bits > 0 && lan.linked(level, pos);
+        List<Computer.Peer> list = new java.util.ArrayList<>();
+        if (linked) {
+            for (var r : lan.reach(level, pos)) {
+                if (level.getBlockEntity(r.pos()) instanceof PcCaseBlockEntity other && other.computerState() == 1) {
+                    list.add(new Computer.Peer(other.address(), other.label(), r.hops()));
+                }
+            }
+            list.sort(java.util.Comparator.comparingInt(Computer.Peer::hops).thenComparing(Computer.Peer::name));
+        }
+        linkBits = bits;
+        linkCode = linked ? 1 : 0;
+        peers = List.copyOf(list);
     }
 
     // ======================= Включение =======================
@@ -270,6 +323,7 @@ public final class CaseComputer implements Computer.Host {
             if (powerOn(level) != null) wantOn = false;
         }
         if (age % SCAN_INTERVAL == 1) scanDevices(level, pos);
+        if (age % 10 == 3) refreshNetwork(level, pos);
 
         if (computer != null) {
             computer.tick();

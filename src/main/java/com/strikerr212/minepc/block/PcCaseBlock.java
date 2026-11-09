@@ -37,7 +37,7 @@ import net.minecraft.world.phys.shapes.VoxelShape;
  *   ПКМ деталью      — быстро установить её в подходящий свободный слот
  *   Shift + ПКМ      — показать отчёт о сборке в чате
  */
-public class PcCaseBlock extends BaseEntityBlock {
+public class PcCaseBlock extends BaseEntityBlock implements com.strikerr212.minepc.lan.LanDevice {
 
     public static final MapCodec<PcCaseBlock> CODEC = simpleCodec(PcCaseBlock::new);
 
@@ -181,6 +181,44 @@ public class PcCaseBlock extends BaseEntityBlock {
         if (!state.is(newState.getBlock()) && level.getBlockEntity(pos) instanceof PcCaseBlockEntity pc) {
             pc.dropContents(level, pos);
         }
+        if (!level.isClientSide && !state.is(newState.getBlock())) com.strikerr212.minepc.lan.LanManager.invalidate(level);
         super.onRemove(state, level, pos, newState, movedByPiston);
+    }
+
+    @Override
+    protected void onPlace(BlockState state, Level level, BlockPos pos, BlockState old, boolean moved) {
+        super.onPlace(state, level, pos, old, moved);
+        if (!level.isClientSide) com.strikerr212.minepc.lan.LanManager.invalidate(level);
+    }
+
+    // ======================= Сеть: гнездо на плате =======================
+
+    @Override
+    public Kind lanKind() {
+        return Kind.COMPUTER;
+    }
+
+    /** Кабель можно подвести с любой стороны, кроме лицевой. */
+    @Override
+    public boolean acceptsCable(BlockState state, Direction face) {
+        return face.getAxis().isHorizontal() && face != state.getValue(FACING);
+    }
+
+    /** Скорость порта зависит от платы: 100 Мбит/с, 1 Гбит/с, 2,5 Гбит/с, 10 Гбит/с. Нет платы — нет порта. */
+    @Override
+    public long lanBitsPerSecond(Level level, BlockPos pos, BlockState state) {
+        if (!(level.getBlockEntity(pos) instanceof PcCaseBlockEntity pc)) return 0;
+        com.strikerr212.minepc.hardware.MotherboardData board = pc.motherboard();
+        if (board == null) return 0;
+        return portBits(board.tier());
+    }
+
+    public static long portBits(int boardTier) {
+        return switch (boardTier) {
+            case 1 -> 100_000_000L;
+            case 2, 3 -> 1_000_000_000L;
+            case 4 -> 2_500_000_000L;
+            default -> 10_000_000_000L;
+        };
     }
 }

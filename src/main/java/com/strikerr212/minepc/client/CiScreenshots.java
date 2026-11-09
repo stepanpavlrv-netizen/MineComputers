@@ -134,7 +134,28 @@ public class CiScreenshots {
             case 800 -> shot(mc, "world_cases");
             case 805 -> server.execute(CiScreenshots::lookAtMonitors);
             case 825 -> shot(mc, "world_monitors");
-            case 840 -> mc.stop();
+            case 830 -> server.execute(CiScreenshots::placeNetwork);
+            case 1000 -> { typeAt(netB, "chat"); typeAt(netA, "chat"); }
+            case 1030 -> typeAt(netA, "привет по кабелю!");
+            case 1045 -> typeAt(netB, "и тебе привет, A");
+            case 1065 -> shot(mc, "world_network");
+            case 1070 -> {
+                mc.options.hideGui = false;
+                mc.setScreen(new TerminalScreen(netB));
+            }
+            case 1085 -> shot(mc, "terminal_chat");
+            case 1090 -> {
+                mc.setScreen(null);
+                server.execute(() -> {
+                    ServerPlayer p = server.getPlayerList().getPlayers().get(0);
+                    if (p.serverLevel().getBlockEntity(netA) instanceof PcCaseBlockEntity be) {
+                        p.openMenu(be, buf -> buf.writeBlockPos(netA));
+                    }
+                });
+            }
+            case 1100 -> ciCase(mc, null, 4);
+            case 1106 -> shot(mc, "case_gui_net");
+            case 1120 -> mc.stop();
             default -> {
             }
         }
@@ -260,6 +281,58 @@ public class CiScreenshots {
         ServerPlayer p = server.getPlayerList().getPlayers().get(0);
         BlockPos row = casePos.east().south(12).west(7);
         p.teleportTo(p.serverLevel(), row.getX() + 10, row.getY() + 1, row.getZ() - 8.5, 0f, 8f);
+    }
+
+    private static BlockPos netA = BlockPos.ZERO, netB = BlockPos.ZERO;
+
+    private static void typeAt(BlockPos pos, String line) {
+        var server = Minecraft.getInstance().getSingleplayerServer();
+        server.execute(() -> {
+            if (server.overworld().getBlockEntity(pos) instanceof PcCaseBlockEntity be) {
+                for (char c : line.toCharArray()) be.input(TerminalInputPayload.CHAR, String.valueOf(c), false, false);
+                be.input(TerminalInputPayload.KEY, "enter", false, false);
+            }
+        });
+    }
+
+    private static void wire(ServerLevel level, BlockPos pos, int color, int xi, int zi) {
+        if (!(level.getBlockState(pos).getBlock() instanceof com.strikerr212.minepc.lan.CableBlock)) {
+            level.setBlockAndUpdate(pos, ModBlocks.CABLE.get().defaultBlockState());
+        }
+        if (level.getBlockEntity(pos) instanceof com.strikerr212.minepc.lan.CableBlockEntity be && be.free(xi, zi)) {
+            be.add(new com.strikerr212.minepc.lan.Wire(color, xi, zi));
+        }
+    }
+
+    /** Сеть: два компьютера с мониторами, коммутатор между ними, кабели в две дорожки; оба запускают chat. */
+    private static void placeNetwork() {
+        var server = Minecraft.getInstance().getSingleplayerServer();
+        ServerPlayer p = server.getPlayerList().getPlayers().get(0);
+        ServerLevel level = p.serverLevel();
+        BlockPos n = casePos.east().south(26).west(3);
+        for (int dx = -2; dx <= 9; dx++) {
+            for (int dz = -9; dz <= 3; dz++) {
+                level.setBlockAndUpdate(n.offset(dx, -1, dz), net.minecraft.world.level.block.Blocks.SMOOTH_STONE.defaultBlockState());
+                for (int dy = 0; dy <= 3; dy++) level.setBlockAndUpdate(n.offset(dx, dy, dz), net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
+            }
+        }
+        netA = n;
+        netB = n.east(6);
+        fillCase(level, netA, 3);
+        fillCase(level, netB, 4);
+        for (BlockPos c : new BlockPos[]{netA, netB}) {
+            put(level, c.above(), ModBlocks.MONITOR.get().defaultBlockState().setValue(com.strikerr212.minepc.block.MonitorBlock.KEYBOARD, true));
+        }
+        level.setBlockAndUpdate(n.east(3), ModBlocks.NETWORK_SWITCH.get().defaultBlockState()
+                .setValue(com.strikerr212.minepc.lan.SwitchBlock.FACING, Direction.EAST));
+        int blue = net.minecraft.world.item.DyeColor.BLUE.getId(), orange = net.minecraft.world.item.DyeColor.ORANGE.getId();
+        for (int dx : new int[]{1, 2, 4, 5}) wire(level, n.east(dx), blue, 1, 1);
+        for (int dx : new int[]{1, 2}) wire(level, n.east(dx), orange, 2, 2);          // вторая дорожка: отдельная сеть рядом
+        wire(level, n.east(4), orange, 2, 2);
+        for (int dx = 0; dx <= 6; dx++) {
+            if (level.getBlockEntity(n.east(dx)) instanceof com.strikerr212.minepc.lan.CableBlockEntity be) be.reconnect();
+        }
+        p.teleportTo(level, n.getX() + 3.5, n.getY() + 1.5, n.getZ() - 4.5, 0f, 20f);
     }
 
     /** Окно корпуса для скриншота: другая тема и вкладка. */

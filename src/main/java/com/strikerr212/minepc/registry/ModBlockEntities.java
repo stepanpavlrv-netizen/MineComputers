@@ -24,6 +24,10 @@ public class ModBlockEntities {
                     () -> BlockEntityType.Builder.of(PcCaseBlockEntity::new,
                             ModBlocks.allCases().toArray(new net.minecraft.world.level.block.Block[0])).build(null));
 
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<com.strikerr212.minepc.lan.CableBlockEntity>> CABLE =
+            BLOCK_ENTITIES.register("network_cable", () ->
+                    BlockEntityType.Builder.of(com.strikerr212.minepc.lan.CableBlockEntity::new, ModBlocks.CABLE.get()).build(null));
+
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<MonitorBlockEntity>> MONITOR =
             BLOCK_ENTITIES.register("monitor",
                     () -> BlockEntityType.Builder.of(MonitorBlockEntity::new,

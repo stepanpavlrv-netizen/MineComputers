@@ -80,7 +80,11 @@ public class PcCaseMenu extends AbstractContainerMenu {
                 return switch (index) {
                     case 0 -> be.computerState();
                     case 1 -> be.hasKeyboard() ? 1 : 0;
-                    default -> be.loadPercent();
+                    case 2 -> be.loadPercent();
+                    case 3 -> be.netLinkCode();
+                    case 4 -> be.netPeersCount();
+                    case 5 -> be.netKbSent();
+                    default -> be.netKbReceived();
                 };
             }
 
@@ -90,9 +94,9 @@ public class PcCaseMenu extends AbstractContainerMenu {
 
             @Override
             public int getCount() {
-                return 3;
+                return 7;
             }
-        } : new SimpleContainerData(3);
+        } : new SimpleContainerData(7);
         addDataSlots(data);
     }
 
@@ -108,6 +112,12 @@ public class PcCaseMenu extends AbstractContainerMenu {
     public boolean hasKeyboard() {
         return data.get(1) == 1;
     }
+
+    /** Сеть: 1 — кабель подключён; сколько компьютеров в сети; КБ отправлено и принято. */
+    public int netLink() { return data.get(3); }
+    public int netPeers() { return data.get(4); }
+    public int netKbSent() { return data.get(5); }
+    public int netKbReceived() { return data.get(6); }
 
     /** Загрузка процессора за последнюю секунду, 0..100 %. */
     public int loadPercent() {

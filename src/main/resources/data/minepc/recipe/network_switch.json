@@ -1,0 +1,27 @@
+{
+ "type": "minecraft:crafting_shaped",
+ "category": "redstone",
+ "pattern": [
+  " R ",
+  "CGC",
+  "III"
+ ],
+ "key": {
+  "R": {
+   "item": "minecraft:redstone"
+  },
+  "C": {
+   "item": "minepc:network_cable"
+  },
+  "G": {
+   "item": "minecraft:gold_ingot"
+  },
+  "I": {
+   "item": "minecraft:iron_ingot"
+  }
+ },
+ "result": {
+  "id": "minepc:network_switch",
+  "count": 1
+ }
+}

@@ -65,9 +65,10 @@ public class PcCaseScreen extends AbstractContainerScreen<PcCaseMenu> {
     private static final int TAB_Y = SY0 + 23, ROWS_Y = TAB_Y + 15;
     private static final int TEXT_X = SX0 + 15, TEXT_W = SX1 - SX0 - 18;
     private static final int GX0 = PX0 + 4, GY0 = PY0 + 47, GX1 = PX1 - 4, GY1 = PY1 - 4;   // график нагрузки
-    private static final int TABS = 4;
-    private static final String[] TAB_KEYS = {"gui.minepc.tab.summary", "gui.minepc.tab.power", "gui.minepc.tab.heat", "gui.minepc.tab.drives"};
-    private static final String[] TAB_GLYPHS = {"sum", "power", "heat", "disk"};
+    private static final int TABS = 5, TAB_STEP = 16, TAB_W = 15;
+    private static final String[] TAB_KEYS = {"gui.minepc.tab.summary", "gui.minepc.tab.power", "gui.minepc.tab.heat",
+            "gui.minepc.tab.drives", "gui.minepc.tab.net"};
+    private static final String[] TAB_GLYPHS = {"sum", "power", "heat", "disk", "net"};
 
     /** Для скриншотов в CI: принудительная тема и вкладка. */
     public static CaseStyle ciTheme;
@@ -218,6 +219,7 @@ public class PcCaseScreen extends AbstractContainerScreen<PcCaseMenu> {
             case 1 -> powerRows(out, in);
             case 2 -> heatRows(out, in, r);
             case 3 -> driveRows(out, in, r);
+            case 4 -> netRows(out, be);
             default -> summaryRows(out, in, r, lim);
         }
         rows = out;
@@ -354,6 +356,35 @@ public class PcCaseScreen extends AbstractContainerScreen<PcCaseMenu> {
         }
     }
 
+    /** Скорость порта по плате: 100 Мбит/с … 10 Гбит/с. */
+    private static Component bitsText(long bits) {
+        if (bits >= 1_000_000_000L) return tr("gui.minepc.net.gbit", dec(bits / 1e9));
+        return tr("gui.minepc.net.mbit", Math.round(bits / 1e6));
+    }
+
+    private void netRows(List<Row> out, PcCaseBlockEntity be) {
+        String addr = be.address();
+        out.add(Row.of("net", Component.literal(addr.length() > 8 ? addr.substring(0, 8) : addr), th.fg)
+                .tip(tr("gui.minepc.net.address"), Component.literal(addr).withStyle(ChatFormatting.GRAY)));
+        String name = be.label();
+        out.add(name.isEmpty() ? Row.of("cpu", tr("gui.minepc.net.noname"), th.dim)
+                : Row.of("cpu", Component.literal(name), th.fg));
+        com.strikerr212.minepc.hardware.MotherboardData board = be.motherboard();
+        if (board == null) {
+            out.add(Row.of("warn", tr("gui.minepc.why.no_board"), th.bad));
+        } else if (menu.netLink() != 1) {
+            out.add(Row.of("plug", tr("gui.minepc.net.unplugged"), th.dim)
+                    .tip(tr("gui.minepc.net.unplugged_tip")));
+        } else {
+            long bits = com.strikerr212.minepc.block.PcCaseBlock.portBits(board.tier());
+            out.add(Row.of("plug", bitsText(bits), th.fg)
+                    .tip(tr("gui.minepc.net.speed_tip", bytes(bits / 800))));
+            out.add(Row.of("sum", tr("gui.minepc.net.peers", menu.netPeers()), menu.netPeers() > 0 ? th.fg : th.dim));
+        }
+        out.add(Row.of("traffic", tr("gui.minepc.net.traffic", menu.netKbReceived(), menu.netKbSent()), th.fg)
+                .tip(tr("gui.minepc.net.traffic_tip")));
+    }
+
     /** Слот, куда сейчас ничего нельзя поставить (на плате нет такого разъёма). */
     private boolean disabled(int slot) {
         PcCaseBlockEntity be = menu.blockEntity();
@@ -410,7 +441,10 @@ public class PcCaseScreen extends AbstractContainerScreen<PcCaseMenu> {
             "kbd", new String[]{"........", "########", "#.#.#.##", "##.#.#.#", "#.####.#", "########", "........", "........"},
             "warn", new String[]{"...##...", "...##...", "..#..#..", "..#..#..", ".#.##.#.", ".#....#.", "#..##..#", "########"});
     private static final java.util.Map<String, String[]> GLYPHS2 = java.util.Map.of(
-            "board", new String[]{"########", "#.##...#", "#.##.#.#", "#....#.#", "#.###..#", "#......#", "########", ".#.#.#.."});
+            "board", new String[]{"########", "#.##...#", "#.##.#.#", "#....#.#", "#.###..#", "#......#", "########", ".#.#.#.."},
+            "net", new String[]{"...##...", "...##...", "....#...", ".######.", ".#....#.", "##....##", "##....##", "........"},
+            "plug", new String[]{"........", ".######.", ".#....#.", ".#.##.#.", ".######.", "..####..", "...##...", "...##..."},
+            "traffic", new String[]{"..#.....", ".###....", "#.#.....", "..#..#..", "..#..#..", ".....#.#", "....###.", ".....#.."});
 
     private static void glyph(GuiGraphics g, int x, int y, String name, int c) {
         String[] rows = GLYPHS.getOrDefault(name, GLYPHS2.get(name));
@@ -514,9 +548,9 @@ public class PcCaseScreen extends AbstractContainerScreen<PcCaseMenu> {
         }
         drawPowerButton(g, menu.computerState() == 1);
         for (int k = 0; k < TABS; k++) {
-            int tx = SX0 + 4 + k * 19;
-            rect(g, tx, TAB_Y, tx + 17, TAB_Y + 10, k == tab ? th.tabOn : th.tabOff);
-            glyph(g, tx + 5, TAB_Y + 1, TAB_GLYPHS[k], k == tab ? th.fg : th.dim);
+            int tx = SX0 + 4 + k * TAB_STEP;
+            rect(g, tx, TAB_Y, tx + TAB_W - 1, TAB_Y + 10, k == tab ? th.tabOn : th.tabOff);
+            glyph(g, tx + 4, TAB_Y + 1, TAB_GLYPHS[k], k == tab ? th.fg : th.dim);
         }
         int y = ROWS_Y;
         for (Row row : rows) {
@@ -743,7 +777,7 @@ public class PcCaseScreen extends AbstractContainerScreen<PcCaseMenu> {
             return;
         }
         for (int k = 0; k < TABS; k++) {
-            if (in(mx, my, SX0 + 4 + k * 19, TAB_Y, 18, 11)) {
+            if (in(mx, my, SX0 + 4 + k * TAB_STEP, TAB_Y, TAB_W, 11)) {
                 g.renderTooltip(font, tr(TAB_KEYS[k]), mouseX, mouseY);
                 return;
             }
@@ -783,7 +817,7 @@ public class PcCaseScreen extends AbstractContainerScreen<PcCaseMenu> {
                 return true;
             }
             for (int k = 0; k < TABS; k++) {
-                if (in(mx, my, SX0 + 4 + k * 19, TAB_Y, 18, 11)) {
+                if (in(mx, my, SX0 + 4 + k * TAB_STEP, TAB_Y, TAB_W, 11)) {
                     if (tab != k) click();
                     tab = k;
                     refresh();

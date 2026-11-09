@@ -1,0 +1,29 @@
+{
+ "textures": {
+  "particle": "minepc:block/network_cable",
+  "wire": "minepc:block/network_cable",
+  "plug": "minepc:block/network_plug"
+ },
+ "elements": [
+  {
+   "from": [
+    7,
+    0,
+    7
+   ],
+   "to": [
+    9,
+    2,
+    9
+   ],
+   "faces": {
+    "up": {
+     "texture": "#wire"
+    },
+    "north": {
+     "texture": "#plug"
+    }
+   }
+  }
+ ]
+}

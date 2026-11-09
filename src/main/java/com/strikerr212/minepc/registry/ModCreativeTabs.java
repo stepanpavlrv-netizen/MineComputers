@@ -35,6 +35,9 @@ public class ModCreativeTabs {
                         output.accept(ModItems.MONITOR_BLOCK_RETRO.get());
                         output.accept(ModItems.KEYBOARD.get());
                         output.accept(ModItems.KEYBOARD_STAND.get());
+                        output.accept(ModItems.CABLE.get());
+                        output.accept(ModItems.NETWORK_SWITCH.get());
+                        output.accept(ModItems.RACK_SWITCH.get());
                         output.accept(ModItems.DISK_DRIVE.get());
                         output.accept(ModItems.FLOPPY_DISK.get());
                         output.accept(ModItems.FLASH_DRIVE.get());

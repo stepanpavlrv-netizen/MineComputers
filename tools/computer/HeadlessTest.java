@@ -330,7 +330,80 @@ public class HeadlessTest {
         ticks(30);
         expect("компьютер выключился", pc.state() == Computer.State.OFF);
 
+        testNet();
+
         System.out.println(failures == 0 ? "ВСЁ ХОРОШО" : "ОШИБОК: " + failures);
         System.exit(failures == 0 ? 0 : 1);
+    }
+
+    /** Два компьютера, соединённые «сетью» прямо в тесте: сообщение, таблица, порт, предел 8 КБ, OpenOS modem. */
+    static Computer netComputer(String address, Computer[] box, int other, String otherName) throws Exception {
+        Path dir = Files.createTempDirectory("minepc_net");
+        Computer c = new Computer(new Computer.Host() {
+            @Override public String address() { return address; }
+            @Override public long netBytesPerSecond() { return 125_000; }
+            @Override public List<Computer.Peer> netPeers() {
+                return List.of(new Computer.Peer(box[other].address(), otherName, 1));
+            }
+            @Override public boolean netSend(String target, int port, Object[] payload, int bytes) {
+                if (target == null || target.equalsIgnoreCase(otherName) || box[other].address().startsWith(target)) {
+                    box[other].netReceive(address, port, 1, payload, bytes);
+                }
+                return true;
+            }
+        });
+        c.setInfo(new Computer.Info("Тест", 2, 2800, "Lua", 2048, 2_000_000, "ГП", 1000));
+        c.setOpsPerTick(100000);
+        c.fileSystem().mount("rom", ComputerRom.mount());
+        c.fileSystem().mount("", new DirMount(dir, 64 * 1024, "SSD"));
+        c.terminal().resize(50, 16);
+        return c;
+    }
+
+    static void testNet() throws Exception {
+        System.out.println("── сеть ──");
+        Computer[] box = new Computer[2];
+        box[0] = netComputer("aaaaaaaa-1111-4000-8000-000000000000", box, 1, "beta");
+        box[1] = netComputer("bbbbbbbb-2222-4000-8000-000000000000", box, 0, "alpha");
+        Path dirB = Files.createTempDirectory("minepc_netb");
+        box[1].fileSystem().mount("", new DirMount(dirB, 64 * 1024, "SSD"));
+        Files.writeString(dirB.resolve("recv.lua"), String.join("\n",
+                "net.open(7)",
+                "local _, from, port, hops, msg, t = os.pullEvent('net_message')",
+                "print('GOT', from:sub(1, 8), port, hops, msg, t.x)",
+                "local _, _, _, _, m2 = os.pullEvent('net_message')",
+                "print('SECOND', m2)",
+                "local c = require and nil",
+                ""));
+        for (Computer c : box) c.turnOn();
+        Computer saved = pc;
+        for (int i = 0; i < 200; i++) {
+            for (Computer c : box) c.tick();
+            Thread.sleep(2);
+            pc = box[1];
+            if (screen().contains("/>")) break;
+        }
+        pc = box[1];
+        command("recv");
+        pc = box[0];
+        for (int i = 0; i < 200 && !screen().contains("/>"); i++) { for (Computer c : box) c.tick(); Thread.sleep(2); }
+        command("lua");
+        command("print('SENT', net.send('beta', 7, 'привет', {x = 42}))");
+        command("print('BIG', pcall(net.send, 'beta', 7, ('x'):rep(9000)))");
+        command("net.send('beta', 8, 'мимо')");
+        command("net.broadcast(7, 'всем')");
+        command("print('PEERS', #net.peers(), net.peers()[1].name, net.speed())");
+        for (int i = 0; i < 30; i++) { for (Computer c : box) c.tick(); Thread.sleep(2); }
+        show("отправитель");
+        expect("send вернул true", screen().contains("SENT") && screen().contains("true"));
+        expect("больше 8 КБ — ошибка", screen().contains("BIG") && screen().contains("8 КБ"));
+        expect("peers видит соседа", screen().contains("PEERS") && screen().contains("beta"));
+        pc = box[1];
+        for (int i = 0; i < 20; i++) { for (Computer c : box) c.tick(); Thread.sleep(2); }
+        show("получатель");
+        expect("сообщение с таблицей дошло", screen().contains("GOT") && screen().contains("aaaaaaaa") && screen().contains("привет") && screen().contains("42"));
+        expect("закрытый порт не слышен, широковещательное дошло", screen().contains("SECOND") && screen().contains("всем"));
+        expect("принято больше нуля", box[1].netReceived() > 0 && box[0].netSent() > 0);
+        pc = saved;
     }
 }

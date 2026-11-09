@@ -148,7 +148,81 @@ final class LuaApis {
         g.rawset("computer", computer(c, m));
         g.rawset("unicode", OcApis.unicode());
         g.rawset("data", OcApis.data(m));
+        g.rawset("net", net(c));
         g.rawset("_HOST", str("MineComputers 0.11 (Lua 5.2 / Cobalt)"));
+    }
+
+    // ======================= net (сеть) =======================
+
+    /** Примерный размер значения в сообщении, байт: так считается и скорость, и предел 8 КБ. */
+    static int netSize(Object o) {
+        if (o == null || o instanceof Boolean) return 1;
+        if (o instanceof Number) return 8;
+        if (o instanceof byte[] b) return b.length + 2;
+        if (o instanceof Key k) return k.bytes().length + 2;
+        if (o instanceof Map<?, ?> m) {
+            int n = 2;
+            for (Map.Entry<?, ?> e : m.entrySet()) n += netSize(e.getKey()) + netSize(e.getValue());
+            return n;
+        }
+        return 8;
+    }
+
+    private static int port(Varargs a, int i) throws LuaError {
+        int p = a.arg(i).checkInteger();
+        if (p < 1 || p > 65535) throw error("Порт — число от 1 до 65535");
+        return p;
+    }
+
+    private static Varargs netSend(Computer c, String target, int port, Varargs a, int first) throws LuaError {
+        Object[] payload = new Object[Math.max(0, a.count() - first + 1)];
+        int size = 16;
+        for (int i = 0; i < payload.length; i++) {
+            payload[i] = copyOut(a.arg(first + i));
+            size += netSize(payload[i]);
+        }
+        if (size > Computer.NET_MAX_PACKET) throw error("Сообщение больше 8 КБ (" + size + " байт) — разбейте на части");
+        return valueOf(c.netSend(target, port, payload, size));
+    }
+
+    private static LuaTable net(Computer c) {
+        LuaTable t = new LuaTable();
+        RegisteredFunction.bind(t, new RegisteredFunction[]{
+                RegisteredFunction.ofV("open", (s, a) -> valueOf(c.openPort(port(a, 1)))),
+                RegisteredFunction.ofV("close", (s, a) -> {
+                    if (a.arg(1).isNil()) { c.closeAllPorts(); return Constants.TRUE; }
+                    return valueOf(c.closePort(port(a, 1)));
+                }),
+                RegisteredFunction.ofV("isOpen", (s, a) -> valueOf(c.isPortOpen(port(a, 1)))),
+                RegisteredFunction.ofV("send", (s, a) -> netSend(c, text(a.arg(1).checkLuaString()), port(a, 2), a, 3)),
+                RegisteredFunction.ofV("broadcast", (s, a) -> netSend(c, null, port(a, 1), a, 2)),
+                RegisteredFunction.ofV("address", (s, a) -> str(c.address())),
+                RegisteredFunction.ofV("hostname", (s, a) -> {
+                    if (!a.arg(1).isNil()) c.setLabel(text(a.arg(1).checkLuaString()));
+                    return str(c.label());
+                }),
+                RegisteredFunction.ofV("speed", (s, a) -> valueOf((double) c.host().netBytesPerSecond())),
+                RegisteredFunction.ofV("maxPacket", (s, a) -> valueOf(Computer.NET_MAX_PACKET)),
+                RegisteredFunction.ofV("stats", (s, a) -> {
+                    LuaTable r = new LuaTable();
+                    r.rawset("sent", valueOf((double) c.netSent()));
+                    r.rawset("received", valueOf((double) c.netReceived()));
+                    return r;
+                }),
+                RegisteredFunction.ofV("peers", (s, a) -> {
+                    LuaTable r = new LuaTable();
+                    int i = 1;
+                    for (Computer.Peer p : c.host().netPeers()) {
+                        LuaTable e = new LuaTable();
+                        e.rawset("address", str(p.address()));
+                        e.rawset("name", str(p.name()));
+                        e.rawset("hops", valueOf(p.hops()));
+                        r.rawset(i++, e);
+                    }
+                    return r;
+                }),
+        });
+        return t;
     }
 
     // ======================= term =======================

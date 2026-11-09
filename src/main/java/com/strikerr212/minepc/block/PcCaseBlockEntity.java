@@ -223,6 +223,29 @@ public class PcCaseBlockEntity extends BlockEntity implements MenuProvider {
         return pc.hasKeyboard();
     }
 
+    // ======================= Сеть =======================
+
+    /** Постоянный адрес компьютера в сети (есть и на клиенте). */
+    public String address() {
+        return pc.getAddress();
+    }
+
+    /** Имя компьютера (hostname / label). */
+    public String label() {
+        return pc.label();
+    }
+
+    /** Пришло сообщение по сети (вызывает LanManager в тике сервера). */
+    public void netReceive(String from, int port, int hops, Object[] payload, int bytes) {
+        pc.netReceive(from, port, hops, payload, bytes);
+    }
+
+    /** Для окна корпуса: состояние порта и счётчики. */
+    public int netLinkCode() { return pc.netLinkCode(); }
+    public int netPeersCount() { return pc.netPeersCount(); }
+    public int netKbSent() { return pc.netKbSent(); }
+    public int netKbReceived() { return pc.netKbReceived(); }
+
     /** Загрузка процессора за последнюю секунду, 0..100 %. */
     public int loadPercent() {
         return pc.loadPercent();
@@ -268,6 +291,7 @@ public class PcCaseBlockEntity extends BlockEntity implements MenuProvider {
 
     private void slotChanged(int slot) {
         if (level == null || level.isClientSide) return;
+        if (slot == SLOT_MOTHERBOARD) com.strikerr212.minepc.lan.LanManager.invalidate(level);
         if (slot >= SLOT_USB) {
             if (level instanceof ServerLevel server) pc.updateRemovable(server, true);
         } else {
@@ -616,7 +640,7 @@ public class PcCaseBlockEntity extends BlockEntity implements MenuProvider {
     }
 
     /** Сохранить изменения и отправить их игрокам, чтобы детали отрисовались. */
-    private void markUpdated() {
+    void markUpdated() {
         setChanged();
         if (level != null && !level.isClientSide) {
             level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), Block.UPDATE_CLIENTS);

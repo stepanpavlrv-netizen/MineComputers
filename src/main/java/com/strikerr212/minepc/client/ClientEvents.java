@@ -70,6 +70,8 @@ public class ClientEvents {
     private static java.util.List<net.minecraft.world.level.block.Block> paintable() {
         java.util.List<net.minecraft.world.level.block.Block> out = new java.util.ArrayList<>();
         for (var b : com.strikerr212.minepc.registry.ModBlocks.CASES.values()) out.add(b.get());
+        out.add(com.strikerr212.minepc.registry.ModBlocks.NETWORK_SWITCH.get());
+        out.add(com.strikerr212.minepc.registry.ModBlocks.RACK_SWITCH.get());
         for (var b : com.strikerr212.minepc.registry.ModBlocks.allMonitors()) {
             if (b instanceof com.strikerr212.minepc.block.BaseMonitorBlock m && m.paintColor(b.defaultBlockState()) >= 0) out.add(b);
         }
@@ -79,6 +81,7 @@ public class ClientEvents {
     private static int paintColor(net.minecraft.world.level.block.state.BlockState state) {
         if (state.getBlock() instanceof com.strikerr212.minepc.block.PcCaseBlock c) return Math.max(0, c.paintColor(state));
         if (state.getBlock() instanceof com.strikerr212.minepc.block.BaseMonitorBlock m) return Math.max(0, m.paintColor(state));
+        if (state.getBlock() instanceof com.strikerr212.minepc.lan.SwitchBlock sw) return sw.paintColor(state);
         return 0xFFFFFF;
     }
 
@@ -86,6 +89,20 @@ public class ClientEvents {
     public static void registerBlockColors(RegisterColorHandlersEvent.Block event) {
         event.register((state, level, pos, tintIndex) -> tintIndex == 0 ? paintColor(state) : -1,
                 paintable().toArray(new net.minecraft.world.level.block.Block[0]));
+        // Провода кабеля: tintindex — номер красителя
+        event.register((state, level, pos, tintIndex) -> tintIndex >= 0 && tintIndex < 16
+                        ? net.minecraft.world.item.DyeColor.byId(tintIndex).getTextureDiffuseColor() & 0xFFFFFF : -1,
+                com.strikerr212.minepc.registry.ModBlocks.CABLE.get());
+    }
+
+    /** Модель кабеля собирается из проводов в блоке. */
+    @SubscribeEvent
+    public static void modifyModels(net.neoforged.neoforge.client.event.ModelEvent.ModifyBakingResult event) {
+        for (var state : com.strikerr212.minepc.registry.ModBlocks.CABLE.get().getStateDefinition().getPossibleStates()) {
+            var loc = net.minecraft.client.renderer.block.BlockModelShaper.stateToModelLocation(state);
+            var base = event.getModels().get(loc);
+            if (base != null) event.getModels().put(loc, new CableModel(base));
+        }
     }
 
     @SubscribeEvent

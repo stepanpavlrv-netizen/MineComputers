@@ -1,0 +1,19 @@
+{
+ "variants": {
+  "facing=north": {
+   "model": "minepc:block/network_switch"
+  },
+  "facing=east": {
+   "model": "minepc:block/network_switch",
+   "y": 90
+  },
+  "facing=south": {
+   "model": "minepc:block/network_switch",
+   "y": 180
+  },
+  "facing=west": {
+   "model": "minepc:block/network_switch",
+   "y": 270
+  }
+ }
+}

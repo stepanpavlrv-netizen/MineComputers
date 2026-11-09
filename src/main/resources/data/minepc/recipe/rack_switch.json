@@ -1,0 +1,22 @@
+{
+ "type": "minecraft:crafting_shapeless",
+ "category": "redstone",
+ "ingredients": [
+  {
+   "item": "minepc:network_switch"
+  },
+  {
+   "item": "minepc:network_switch"
+  },
+  {
+   "item": "minecraft:iron_block"
+  },
+  {
+   "item": "minecraft:quartz"
+  }
+ ],
+ "result": {
+  "id": "minepc:rack_switch",
+  "count": 1
+ }
+}
