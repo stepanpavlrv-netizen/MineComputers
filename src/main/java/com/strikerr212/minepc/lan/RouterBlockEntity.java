@@ -10,7 +10,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import java.util.Locale;
 
 /** Настройки роутера: имя сети (SSID), пароль, радиус. */
-public class RouterBlockEntity extends BlockEntity {
+public class RouterBlockEntity extends BlockEntity implements CordList.Holder {
 
     public static final int MIN_RADIUS = 4, MAX_RADIUS = 48, MAX_SSID = 24, MIN_PASSWORD = 8, MAX_PASSWORD = 32;
     /** Скорость Wi-Fi со стороны роутера, Мбит/с (как у Wi-Fi 5): клиент получит не больше, чем умеет его адаптер. */
@@ -19,6 +19,12 @@ public class RouterBlockEntity extends BlockEntity {
     private String ssid = "";
     private String password = "";
     private int radius = 32;
+    private final CordList cords = new CordList();
+
+    @Override
+    public CordList cords() {
+        return cords;
+    }
 
     public RouterBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.ROUTER.get(), pos, state);
@@ -62,6 +68,7 @@ public class RouterBlockEntity extends BlockEntity {
         tag.putString("ssid", ssid());
         tag.putString("password", password);
         tag.putInt("radius", radius);
+        cords.save(tag);
     }
 
     @Override
@@ -70,6 +77,31 @@ public class RouterBlockEntity extends BlockEntity {
         ssid = tag.getString("ssid");
         password = tag.getString("password");
         radius = tag.contains("radius") ? Math.max(MIN_RADIUS, Math.min(MAX_RADIUS, tag.getInt("radius"))) : 32;
+        cords.load(tag);
+    }
+
+    /** Корды видны игрокам; пароль роутера игрокам не отправляем. */
+    @Override
+    public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
+        CompoundTag tag = new CompoundTag();
+        cords.save(tag);
+        return tag;
+    }
+
+    @Override
+    public void handleUpdateTag(CompoundTag tag, HolderLookup.Provider registries) {
+        cords.load(tag);
+    }
+
+    @Override
+    public net.minecraft.network.protocol.Packet<net.minecraft.network.protocol.game.ClientGamePacketListener> getUpdatePacket() {
+        return net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket.create(this);
+    }
+
+    @Override
+    public void onDataPacket(net.minecraft.network.Connection net, net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket pkt,
+                             HolderLookup.Provider registries) {
+        cords.load(pkt.getTag());
     }
 
     @Override

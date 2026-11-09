@@ -24,8 +24,20 @@ import java.util.List;
  */
 public class CableItem extends Item {
 
+    private final boolean fiber;
+
     public CableItem(Properties properties) {
+        this(properties, false);
+    }
+
+    /** fiber — оптоволокно (жёлтое, до 2000 блоков, только в стоечный коммутатор). */
+    public CableItem(Properties properties, boolean fiber) {
         super(properties);
+        this.fiber = fiber;
+    }
+
+    public boolean fiber() {
+        return fiber;
     }
 
     private static int lane(double pixel) {
@@ -59,7 +71,9 @@ public class CableItem extends Item {
             if (ctx.getPlayer() != null) ctx.getPlayer().displayClientMessage(Component.translatable("message.minepc.cable.full"), true);
             return InteractionResult.FAIL;
         }
-        be.add(new Wire(DyeColor.BLUE.getId(), lanes[0], lanes[1]));
+        Wire wire = new Wire((fiber ? DyeColor.YELLOW : DyeColor.BLUE).getId(), lanes[0], lanes[1]);
+        wire.fiber = fiber;
+        be.add(wire);
         be.reconnect();
         be.reconnectNeighbours();
         level.playSound(null, pos, SoundEvents.WOOL_PLACE, SoundSource.BLOCKS, 1f, 1.1f);
@@ -70,5 +84,6 @@ public class CableItem extends Item {
     @Override
     public void appendHoverText(net.minecraft.world.item.ItemStack stack, TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
         tooltip.add(Component.translatable("tooltip.minepc.cable").withStyle(net.minecraft.ChatFormatting.GRAY));
+        if (fiber) tooltip.add(Component.translatable("tooltip.minepc.fiber").withStyle(net.minecraft.ChatFormatting.GOLD));
     }
 }

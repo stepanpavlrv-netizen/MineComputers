@@ -1,0 +1,24 @@
+{
+ "type": "minecraft:crafting_shaped",
+ "category": "redstone",
+ "pattern": [
+  "SSS",
+  "GQG",
+  "SSS"
+ ],
+ "key": {
+  "S": {
+   "item": "minecraft:string"
+  },
+  "G": {
+   "item": "minecraft:glass_pane"
+  },
+  "Q": {
+   "item": "minecraft:quartz"
+  }
+ },
+ "result": {
+  "id": "minepc:fiber_cable",
+  "count": 8
+ }
+}

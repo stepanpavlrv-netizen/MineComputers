@@ -14,6 +14,7 @@ import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -185,8 +186,43 @@ public class CiScreenshots {
                     logNetwork();
                 });
             }
+            case 1278 -> com.mojang.logging.LogUtils.getLogger().info("[CI] экран: {}", mc.screen);
             case 1280 -> shot(mc, "router_gui");
-            case 1290 -> mc.stop();
+            case 1290 -> {
+                mc.setScreen(null);
+                server.execute(CiScreenshots::placeLan2);
+            }
+            case 1420 -> { typeAt(lanE, "hostname rack-e"); typeAt(lanF, "hostname rack-f");
+                typeAt(lanJ1, "hostname tray-1"); typeAt(lanJ2, "hostname tray-2"); }
+            case 1440 -> { typeAt(lanE, "ping rack-f 2"); typeAt(lanJ1, "ping tray-2 2"); }
+            case 1500 -> { typeAt(lanE, "switch"); typeAt(lanJ1, "peers"); }
+            case 1510 -> {
+                mc.options.hideGui = true;
+                server.execute(() -> {
+                    ServerPlayer p = server.getPlayerList().getPlayers().get(0);
+                    p.teleportTo(p.serverLevel(), lanBase.getX() + 6.5, lanBase.getY() + 6, lanBase.getZ() - 6.5, 0f, 38f);
+                });
+            }
+            case 1540 -> shot(mc, "world_lan2");
+            case 1545 -> {
+                mc.options.hideGui = false;
+                mc.setScreen(new TerminalScreen(lanE));
+            }
+            case 1560 -> shot(mc, "terminal_rack");
+            case 1565 -> mc.setScreen(new TerminalScreen(lanJ1));
+            case 1580 -> shot(mc, "terminal_tray");
+            case 1585 -> {
+                mc.setScreen(null);
+                server.execute(() -> {
+                    ServerPlayer p = server.getPlayerList().getPlayers().get(0);
+                    net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(p,
+                            com.strikerr212.minepc.lan.SwitchPorts.openPayload(p.serverLevel(), lanBase));
+                    logLan2();
+                });
+            }
+            case 1598 -> com.mojang.logging.LogUtils.getLogger().info("[CI] экран: {}", mc.screen);
+            case 1600 -> shot(mc, "switch_gui");
+            case 1610 -> mc.stop();
             default -> {
             }
         }
@@ -394,6 +430,132 @@ public class CiScreenshots {
         }
         netRouter = router;
         p.teleportTo(level, n.getX() + 3.5, n.getY() + 1.5, n.getZ() - 4.5, 0f, 20f);
+    }
+
+    private static BlockPos lanBase = BlockPos.ZERO, lanE = BlockPos.ZERO, lanF = BlockPos.ZERO, lanJ1 = BlockPos.ZERO,
+            lanJ2 = BlockPos.ZERO, radio1 = BlockPos.ZERO;
+
+    private static void fiber(ServerLevel level, BlockPos pos, int xi, int zi) {
+        if (!(level.getBlockState(pos).getBlock() instanceof com.strikerr212.minepc.lan.CableBlock)) {
+            level.setBlockAndUpdate(pos, ModBlocks.CABLE.get().defaultBlockState());
+        }
+        if (level.getBlockEntity(pos) instanceof com.strikerr212.minepc.lan.CableBlockEntity be && be.free(xi, zi)) {
+            var w = new com.strikerr212.minepc.lan.Wire(net.minecraft.world.item.DyeColor.YELLOW.getId(), xi, zi);
+            w.fiber = true;
+            be.add(w);
+        }
+    }
+
+    private static void tray(ServerLevel level, BlockPos pos) {
+        level.setBlockAndUpdate(pos, ModBlocks.TRAY.get().defaultBlockState());
+        if (level.getBlockEntity(pos) instanceof com.strikerr212.minepc.lan.TrayBlockEntity t) {
+            t.add(com.strikerr212.minepc.lan.TrayBlockEntity.make(net.minecraft.world.item.DyeColor.BLUE.getId(), false));
+            t.add(com.strikerr212.minepc.lan.TrayBlockEntity.make(net.minecraft.world.item.DyeColor.ORANGE.getId(), false));
+            t.add(com.strikerr212.minepc.lan.TrayBlockEntity.make(net.minecraft.world.item.DyeColor.YELLOW.getId(), true));
+        }
+    }
+
+    private static void pcWithMonitor(ServerLevel level, BlockPos pos) {
+        fillCase(level, pos, 3);
+        put(level, pos.above(), ModBlocks.MONITOR.get().defaultBlockState().setValue(com.strikerr212.minepc.block.MonitorBlock.KEYBOARD, true));
+    }
+
+    /**
+     * Вторая сцена сети: стойка (патч-панель → патч-корд → стоечный коммутатор → оптоволокно → второй стоечный → компьютер),
+     * VLAN «lime» на всём пути, кабель под маскировкой, лотки вверх по стене и обратно, пара радиомодемов на 300 блоков.
+     */
+    private static void placeLan2() {
+        var server = Minecraft.getInstance().getSingleplayerServer();
+        ServerPlayer p = server.getPlayerList().getPlayers().get(0);
+        ServerLevel level = p.serverLevel();
+        BlockPos b = casePos.east().south(26).east(14);
+        lanBase = b;
+        for (int dx = -3; dx <= 17; dx++) {
+            for (int dz = -2; dz <= 6; dz++) {
+                level.setBlockAndUpdate(b.offset(dx, -1, dz), net.minecraft.world.level.block.Blocks.SMOOTH_STONE.defaultBlockState());
+                for (int dy = 0; dy <= 4; dy++) level.setBlockAndUpdate(b.offset(dx, dy, dz), net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
+            }
+        }
+        BlockState panel = ModBlocks.PATCH_PANEL.get().defaultBlockState().setValue(com.strikerr212.minepc.lan.PatchPanelBlock.FACING, Direction.NORTH);
+        BlockState rack = ModBlocks.RACK_SWITCH.get().defaultBlockState().setValue(com.strikerr212.minepc.lan.SwitchBlock.FACING, Direction.NORTH);
+        level.setBlockAndUpdate(b.west(), panel);
+        level.setBlockAndUpdate(b, rack);
+        level.setBlockAndUpdate(b.east(5), rack);
+        int blue = net.minecraft.world.item.DyeColor.BLUE.getId();
+        for (int dx = 1; dx <= 4; dx++) fiber(level, b.east(dx), 1, 1);
+        lanF = b.east(6).south();
+        pcWithMonitor(level, lanF);
+        wire(level, b.east(5).south(), blue, 1, 1);
+        lanE = b.south(2);
+        pcWithMonitor(level, lanE);
+        wire(level, b.west().south(), blue, 1, 1);
+        wire(level, b.west().south(2), blue, 1, 1);
+        // Кабель за панелью спрятан под блоком
+        if (level.getBlockEntity(b.west().south()) instanceof com.strikerr212.minepc.lan.CableBlockEntity be) {
+            be.setFacade(net.minecraft.world.level.block.Blocks.STONE_BRICKS.defaultBlockState());
+        }
+        // Лотки: от компьютера J1 вверх, поверху и вниз к J2
+        lanJ1 = b.offset(8, 0, 4);
+        lanJ2 = b.offset(15, 0, 4);
+        pcWithMonitor(level, lanJ1);
+        pcWithMonitor(level, lanJ2);
+        wire(level, b.offset(9, 0, 4), blue, 1, 1);
+        wire(level, b.offset(14, 0, 4), blue, 1, 1);
+        for (int[] t : new int[][]{{10, 0}, {10, 1}, {10, 2}, {11, 2}, {12, 2}, {13, 2}, {13, 1}, {13, 0}}) tray(level, b.offset(t[0], t[1], 4));
+        // Радиомодемы: один здесь, другой в 300 блоках (чанк потом выгрузится — связь в схеме останется)
+        radio1 = b.offset(3, 0, 4);
+        BlockState radio = ModBlocks.RADIO.get().defaultBlockState().setValue(com.strikerr212.minepc.block.Paint.PROPERTY,
+                com.strikerr212.minepc.block.Paint.values()[net.minecraft.world.item.DyeColor.RED.getId() + 1]);
+        level.setBlockAndUpdate(radio1, radio);
+        level.setBlockAndUpdate(radio1.above(), ModBlocks.MAST.get().defaultBlockState());
+        level.setBlockAndUpdate(radio1.above(2), ModBlocks.MAST.get().defaultBlockState());
+        BlockPos far = radio1.east(300);
+        level.setBlockAndUpdate(far, radio);
+        level.setBlockAndUpdate(far.above(), ModBlocks.MAST.get().defaultBlockState());
+        // Пересчитать провода, потом корд и VLAN
+        for (int pass = 0; pass < 2; pass++) {
+            for (int dx = -2; dx <= 16; dx++) {
+                for (int dz = -1; dz <= 5; dz++) {
+                    for (int dy = 0; dy <= 2; dy++) {
+                        BlockPos q = b.offset(dx, dy, dz);
+                        if (level.getBlockEntity(q) instanceof com.strikerr212.minepc.lan.CableBlockEntity be) be.reconnect();
+                        if (level.getBlockEntity(q) instanceof com.strikerr212.minepc.lan.TrayBlockEntity t) t.reconnect();
+                    }
+                }
+            }
+        }
+        var data = com.strikerr212.minepc.lan.LanData.get(level);
+        com.strikerr212.minepc.lan.LanManager.updateDevice(level, b.west());
+        com.strikerr212.minepc.lan.LanManager.updateDevice(level, b);
+        data.addCord(new com.strikerr212.minepc.lan.LanData.Cord(b.west(), com.strikerr212.minepc.lan.LanData.CABLE_PORTS + 1, b,
+                com.strikerr212.minepc.lan.LanData.CABLE_PORTS, net.minecraft.world.item.DyeColor.LIME.getId()));
+        com.strikerr212.minepc.lan.CordList.refresh(level, b.west());
+        com.strikerr212.minepc.lan.CordList.refresh(level, b);
+        int lime = net.minecraft.world.item.DyeColor.LIME.getId() + 1;
+        int eastFiber = com.strikerr212.minepc.lan.LanManager.cablePort(Direction.EAST, 1);
+        int westFiber = com.strikerr212.minepc.lan.LanManager.cablePort(Direction.WEST, 1);
+        int southPort = com.strikerr212.minepc.lan.LanManager.cablePort(Direction.SOUTH, 1);
+        data.setPort(b, com.strikerr212.minepc.lan.LanData.CABLE_PORTS, true, lime);
+        data.setPort(b, eastFiber, true, lime);
+        data.setPort(b.east(5), westFiber, true, lime);
+        data.setPort(b.east(5), southPort, true, lime);
+        p.teleportTo(level, b.getX() + 6.5, b.getY() + 6, b.getZ() - 6.5, 0f, 38f);
+    }
+
+    private static void logLan2() {
+        var server = Minecraft.getInstance().getSingleplayerServer();
+        ServerLevel level = server.overworld();
+        var lan = com.strikerr212.minepc.lan.LanManager.get(level);
+        var log = com.mojang.logging.LogUtils.getLogger();
+        for (BlockPos c : new BlockPos[]{lanE, lanF, lanJ1, lanJ2}) {
+            StringBuilder sb = new StringBuilder("[CI-LAN2] ").append(c.toShortString()).append(" ->");
+            for (var r : lan.reach(level, c)) sb.append(' ').append(r.pos().toShortString()).append(" hops=").append(r.hops()).append(" bits=").append(r.bits());
+            log.info(sb.toString());
+        }
+        var data = com.strikerr212.minepc.lan.LanData.get(level);
+        var d = data.device(radio1);
+        log.info("[CI-LAN2] радио {} слышит {}", d, d == null ? "-" : com.strikerr212.minepc.lan.LanManager.radioPeers(data, radio1, d));
+        log.info("[CI-LAN2] порты R1: {}", com.strikerr212.minepc.lan.SwitchPorts.ports(level, lanBase));
     }
 
     /** В журнал CI: кого видит каждый компьютер по схеме сети (проверка без загрузки чанков). */

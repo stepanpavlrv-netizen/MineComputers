@@ -1,0 +1,19 @@
+{
+ "variants": {
+  "facing=north": {
+   "model": "minepc:block/radio_modem"
+  },
+  "facing=east": {
+   "model": "minepc:block/radio_modem",
+   "y": 90
+  },
+  "facing=south": {
+   "model": "minepc:block/radio_modem",
+   "y": 180
+  },
+  "facing=west": {
+   "model": "minepc:block/radio_modem",
+   "y": 270
+  }
+ }
+}

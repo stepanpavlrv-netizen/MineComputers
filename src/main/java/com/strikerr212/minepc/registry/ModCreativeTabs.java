@@ -36,12 +36,18 @@ public class ModCreativeTabs {
                         output.accept(ModItems.KEYBOARD.get());
                         output.accept(ModItems.KEYBOARD_STAND.get());
                         output.accept(ModItems.CABLE.get());
+                        output.accept(ModItems.FIBER.get());
+                        output.accept(ModItems.TRAY.get());
                         output.accept(ModItems.NETWORK_SWITCH.get());
                         output.accept(ModItems.RACK_SWITCH.get());
+                        output.accept(ModItems.PATCH_CORD.get());
+                        output.accept(ModItems.PATCH_PANEL.get());
                         output.accept(ModItems.ROUTER.get());
                         output.accept(ModItems.WIFI_G.get());
                         output.accept(ModItems.WIFI_N.get());
                         output.accept(ModItems.WIFI_AC.get());
+                        output.accept(ModItems.RADIO.get());
+                        output.accept(ModItems.MAST.get());
                         output.accept(ModItems.DISK_DRIVE.get());
                         output.accept(ModItems.FLOPPY_DISK.get());
                         output.accept(ModItems.FLASH_DRIVE.get());

@@ -1,0 +1,27 @@
+{
+ "type": "minecraft:crafting_shaped",
+ "category": "redstone",
+ "pattern": [
+  " L ",
+  "IRI",
+  "ISI"
+ ],
+ "key": {
+  "L": {
+   "item": "minecraft:lightning_rod"
+  },
+  "I": {
+   "item": "minecraft:iron_ingot"
+  },
+  "R": {
+   "item": "minecraft:redstone_block"
+  },
+  "S": {
+   "item": "minepc:network_switch"
+  }
+ },
+ "result": {
+  "id": "minepc:radio_modem",
+  "count": 1
+ }
+}

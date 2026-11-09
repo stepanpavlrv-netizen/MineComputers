@@ -1,0 +1,21 @@
+{
+ "type": "minecraft:crafting_shaped",
+ "category": "redstone",
+ "pattern": [
+  "III",
+  "CCC",
+  "III"
+ ],
+ "key": {
+  "I": {
+   "item": "minecraft:iron_ingot"
+  },
+  "C": {
+   "item": "minepc:network_cable"
+  }
+ },
+ "result": {
+  "id": "minepc:patch_panel",
+  "count": 1
+ }
+}

@@ -148,4 +148,10 @@ public class RouterBlock extends BaseEntityBlock implements LanDevice {
         super.onRemove(state, level, pos, newState, moved);
         if (!level.isClientSide && !state.is(newState.getBlock())) LanManager.updateDevice(level, pos);
     }
+
+    @Override
+    public void appendHoverText(net.minecraft.world.item.ItemStack stack, net.minecraft.world.item.Item.TooltipContext context,
+                                java.util.List<net.minecraft.network.chat.Component> tooltip, net.minecraft.world.item.TooltipFlag flag) {
+        tooltip.add(net.minecraft.network.chat.Component.translatable("tooltip.minepc.wifi_router").withStyle(net.minecraft.ChatFormatting.GRAY));
+    }
 }

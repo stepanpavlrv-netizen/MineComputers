@@ -24,7 +24,14 @@ public final class ClientAccess {
     /** Окно роутера: открыть или (если уже открыто) обновить список подключённых. */
     public static void openRouter(com.strikerr212.minepc.network.RouterOpenPayload payload) {
         var mc = Minecraft.getInstance();
+        com.mojang.logging.LogUtils.getLogger().debug("Окно роутера {}", payload.pos());
         if (mc.screen instanceof RouterScreen s && s.pos().equals(payload.pos())) s.update(payload);
         else mc.setScreen(new RouterScreen(payload));
+    }
+
+    public static void openSwitch(com.strikerr212.minepc.network.SwitchOpenPayload payload) {
+        var mc = Minecraft.getInstance();
+        if (mc.screen instanceof SwitchScreen s && s.pos().equals(payload.pos())) s.update(payload);
+        else mc.setScreen(new SwitchScreen(payload));
     }
 }

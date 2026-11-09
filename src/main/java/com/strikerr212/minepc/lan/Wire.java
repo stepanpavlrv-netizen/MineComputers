@@ -21,11 +21,17 @@ public final class Wire {
     public int plugs;     // где вилка в устройство
     public int ups;       // где поднимается по стенке соседнего блока на блок выше
     public int downs;     // где спускается к проводу на блок ниже (он поднимается к нам)
+    public boolean fiber; // оптоволокно: 10 Гбит/с, до 2000 блоков, только в стоечный коммутатор
 
     public Wire(int color, int xi, int zi) {
         this.color = color;
         this.xi = xi;
         this.zi = zi;
+    }
+
+    /** Соединяется ли с другим проводом: тот же цвет и тот же вид (медь или оптика). */
+    public boolean sameKind(Wire o) {
+        return o.color == color && o.fiber == fiber;
     }
 
     public static int bit(Direction d) {
@@ -63,6 +69,7 @@ public final class Wire {
         t.putByte("p", (byte) plugs);
         t.putByte("u", (byte) ups);
         t.putByte("dn", (byte) downs);
+        if (fiber) t.putBoolean("f", true);
         return t;
     }
 
@@ -72,12 +79,13 @@ public final class Wire {
         w.plugs = t.getByte("p");
         w.ups = t.getByte("u");
         w.downs = t.getByte("dn");
+        w.fiber = t.getBoolean("f");
         return w;
     }
 
     /** Провод одним числом: для модели и для схемы сети (LanData). */
     public int packed() {
-        return color | xi << 4 | zi << 6 | dirs << 8 | plugs << 12 | ups << 16 | downs << 20;
+        return color | xi << 4 | zi << 6 | dirs << 8 | plugs << 12 | ups << 16 | downs << 20 | (fiber ? 1 << 24 : 0);
     }
 
     public static Wire unpack(int p) {
@@ -86,6 +94,7 @@ public final class Wire {
         w.plugs = (p >> 12) & 15;
         w.ups = (p >> 16) & 15;
         w.downs = (p >> 20) & 15;
+        w.fiber = (p & 1 << 24) != 0;
         return w;
     }
 

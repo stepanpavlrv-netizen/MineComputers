@@ -73,6 +73,7 @@ public class ClientEvents {
         out.add(com.strikerr212.minepc.registry.ModBlocks.NETWORK_SWITCH.get());
         out.add(com.strikerr212.minepc.registry.ModBlocks.RACK_SWITCH.get());
         out.add(com.strikerr212.minepc.registry.ModBlocks.ROUTER.get());
+        out.add(com.strikerr212.minepc.registry.ModBlocks.RADIO.get());
         for (var b : com.strikerr212.minepc.registry.ModBlocks.allMonitors()) {
             if (b instanceof com.strikerr212.minepc.block.BaseMonitorBlock m && m.paintColor(b.defaultBlockState()) >= 0) out.add(b);
         }
@@ -84,6 +85,7 @@ public class ClientEvents {
         if (state.getBlock() instanceof com.strikerr212.minepc.block.BaseMonitorBlock m) return Math.max(0, m.paintColor(state));
         if (state.getBlock() instanceof com.strikerr212.minepc.lan.SwitchBlock sw) return sw.paintColor(state);
         if (state.getBlock() instanceof com.strikerr212.minepc.lan.RouterBlock r) return r.paintColor(state);
+        if (state.getBlock() instanceof com.strikerr212.minepc.lan.RadioBlock r) return r.paintColor(state);
         return 0xFFFFFF;
     }
 
@@ -94,7 +96,7 @@ public class ClientEvents {
         // Провода кабеля: tintindex — номер красителя
         event.register((state, level, pos, tintIndex) -> tintIndex >= 0 && tintIndex < 16
                         ? net.minecraft.world.item.DyeColor.byId(tintIndex).getTextureDiffuseColor() & 0xFFFFFF : -1,
-                com.strikerr212.minepc.registry.ModBlocks.CABLE.get());
+                com.strikerr212.minepc.registry.ModBlocks.CABLE.get(), com.strikerr212.minepc.registry.ModBlocks.TRAY.get());
     }
 
     /** Модель кабеля собирается из проводов в блоке. */
@@ -105,12 +107,19 @@ public class ClientEvents {
             var base = event.getModels().get(loc);
             if (base != null) event.getModels().put(loc, new CableModel(base));
         }
+        for (var state : com.strikerr212.minepc.registry.ModBlocks.TRAY.get().getStateDefinition().getPossibleStates()) {
+            var loc = net.minecraft.client.renderer.block.BlockModelShaper.stateToModelLocation(state);
+            var base = event.getModels().get(loc);
+            if (base != null) event.getModels().put(loc, new TrayModel(base));
+        }
     }
 
     @SubscribeEvent
     public static void registerRenderers(EntityRenderersEvent.RegisterRenderers event) {
         event.registerBlockEntityRenderer(ModBlockEntities.PC_CASE.get(), PcCaseRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.MONITOR.get(), MonitorRenderer::new);
+        event.registerBlockEntityRenderer(ModBlockEntities.LAN.get(), CordRenderer::new);
+        event.registerBlockEntityRenderer(ModBlockEntities.ROUTER.get(), CordRenderer::new);
     }
 
     @SubscribeEvent

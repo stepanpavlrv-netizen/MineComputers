@@ -149,6 +149,7 @@ final class LuaApis {
         g.rawset("unicode", OcApis.unicode());
         g.rawset("data", OcApis.data(m));
         g.rawset("net", net(c));
+        g.rawset("switch", switchApi(c));
         g.rawset("_HOST", str("MineComputers 0.11 (Lua 5.2 / Cobalt)"));
     }
 
@@ -234,6 +235,54 @@ final class LuaApis {
         });
         t.rawset("wifi", wifi(c));
         return t;
+    }
+
+    private static LuaValue listToLua(java.util.List<java.util.Map<String, Object>> list) {
+        LuaTable r = new LuaTable();
+        int i = 1;
+        for (java.util.Map<String, Object> m : list) r.rawset(i++, toLua(m));
+        return r;
+    }
+
+    /** switch: управляемые коммутаторы в сети — список, порты, включить/выключить, VLAN. */
+    private static LuaTable switchApi(Computer c) {
+        LuaTable t = new LuaTable();
+        RegisteredFunction.bind(t, new RegisteredFunction[]{
+                RegisteredFunction.ofV("list", (s, a) -> listToLua(c.host().switchList())),
+                RegisteredFunction.ofV("ports", (s, a) -> {
+                    var ports = c.host().switchPorts(text(a.arg(1).checkLuaString()));
+                    return ports == null ? varargsOf(Constants.NIL, str("Нет такого коммутатора")) : listToLua(ports);
+                }),
+                RegisteredFunction.ofV("set", (s, a) -> {
+                    String id = text(a.arg(1).checkLuaString());
+                    int port = a.arg(2).checkInteger();
+                    boolean enabled = a.arg(3).isNil() || a.arg(3).toBoolean();
+                    LuaValue v = a.arg(4);
+                    int vlan;
+                    if (v.isNil()) vlan = -2;                                   // не менять
+                    else if (v.isNumber()) vlan = v.checkInteger();
+                    else vlan = com.strikerr212.minepc.computer.LuaApis.vlanByName(text(v.checkLuaString()));
+                    if (vlan == -1 || vlan > 16) throw error("VLAN — число 0..16 или цвет: red, blue, lime…");
+                    String err = c.host().switchSet(id, port, enabled, vlan);
+                    return err == null ? Constants.TRUE : varargsOf(Constants.NIL, str(err));
+                }),
+        });
+        return t;
+    }
+
+    private static final String[] DYES = {"white", "orange", "magenta", "light_blue", "yellow", "lime", "pink", "gray",
+            "light_gray", "cyan", "purple", "blue", "brown", "green", "red", "black"};
+
+    /** Цвет VLAN по имени красителя: 0 — общий, 1..16, -1 — непонятно. */
+    static int vlanByName(String name) {
+        String n = name.toLowerCase(java.util.Locale.ROOT).trim();
+        if (n.isEmpty() || n.equals("none") || n.equals("0")) return 0;
+        for (int i = 0; i < DYES.length; i++) if (DYES[i].equals(n)) return i + 1;
+        return -1;
+    }
+
+    static String vlanName(int vlan) {
+        return vlan <= 0 || vlan > 16 ? "" : DYES[vlan - 1];
     }
 
     /** net.wifi: USB Wi-Fi адаптер. */

@@ -35,6 +35,8 @@ public class CableModel extends BakedModelWrapper<BakedModel> {
 
     private static final ResourceLocation WIRE = ResourceLocation.fromNamespaceAndPath(MineComputers.MODID, "block/network_cable");
     private static final ResourceLocation PLUG = ResourceLocation.fromNamespaceAndPath(MineComputers.MODID, "block/network_plug");
+    private static final ResourceLocation FIBER = ResourceLocation.fromNamespaceAndPath(MineComputers.MODID, "block/network_fiber");
+    private static final ResourceLocation FIBER_PLUG = ResourceLocation.fromNamespaceAndPath(MineComputers.MODID, "block/network_fiber_plug");
     private static final FaceBakery BAKERY = new FaceBakery();
     private static final Map<String, List<BakedQuad>> CACHE = new ConcurrentHashMap<>();
 
@@ -42,8 +44,23 @@ public class CableModel extends BakedModelWrapper<BakedModel> {
         super(base);
     }
 
+    /** Модель блока-маскировки (кабель спрятан внутри). */
+    private static BakedModel facadeModel(BlockState facade) {
+        return Minecraft.getInstance().getBlockRenderer().getBlockModel(facade);
+    }
+
     @Override
     public List<BakedQuad> getQuads(BlockState state, Direction side, RandomSource rand, ModelData data, RenderType renderType) {
+        BlockState facade = data.get(CableBlockEntity.FACADE);
+        if (facade != null) {
+            List<BakedQuad> quads = facadeModel(facade).getQuads(facade, side, rand, ModelData.EMPTY, renderType);
+            // Окраска травы и листвы шла бы через цвета кабеля — у маскировки её убираем
+            List<BakedQuad> out = new ArrayList<>(quads.size());
+            for (BakedQuad q : quads) {
+                out.add(q.isTinted() ? new BakedQuad(q.getVertices(), -1, q.getDirection(), q.getSprite(), q.isShade()) : q);
+            }
+            return out;
+        }
         if (side != null) return List.of();
         int[] wires = data.get(CableBlockEntity.WIRES);
         if (wires == null || wires.length == 0) return List.of();
@@ -55,10 +72,11 @@ public class CableModel extends BakedModelWrapper<BakedModel> {
     }
 
     private static List<BakedQuad> build(int[] packed) {
-        TextureAtlasSprite wire = sprite(WIRE), plug = sprite(PLUG);
+        TextureAtlasSprite copper = sprite(WIRE), copperPlug = sprite(PLUG), fiber = sprite(FIBER), fiberPlug = sprite(FIBER_PLUG);
         List<BakedQuad> out = new ArrayList<>();
         for (int p : packed) {
             Wire w = Wire.unpack(p);
+            TextureAtlasSprite wire = w.fiber ? fiber : copper, plug = w.fiber ? fiberPlug : copperPlug;
             for (int[] b : CableBlockEntity.boxes(w)) box(out, b[0], b[1], b[2], b[3], b[4], b[5], wire, w.color);
             int cx = Wire.LANE[w.xi], cz = Wire.LANE[w.zi];
             // Вилка RJ-45: прозрачный пластик у самого гнезда
@@ -89,6 +107,18 @@ public class CableModel extends BakedModelWrapper<BakedModel> {
             BlockElementFace face = new BlockElementFace(null, tint, "#all", new BlockFaceUV(uv, 0));
             out.add(BAKERY.bakeQuad(from, to, face, sprite, d, BlockModelRotation.X0_Y0, null, true));
         }
+    }
+
+    @Override
+    public net.neoforged.neoforge.client.ChunkRenderTypeSet getRenderTypes(BlockState state, RandomSource rand, ModelData data) {
+        BlockState facade = data.get(CableBlockEntity.FACADE);
+        return facade != null ? facadeModel(facade).getRenderTypes(facade, rand, ModelData.EMPTY) : super.getRenderTypes(state, rand, data);
+    }
+
+    @Override
+    public TextureAtlasSprite getParticleIcon(ModelData data) {
+        BlockState facade = data.get(CableBlockEntity.FACADE);
+        return facade != null ? facadeModel(facade).getParticleIcon(ModelData.EMPTY) : super.getParticleIcon(data);
     }
 
     @Override

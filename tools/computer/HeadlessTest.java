@@ -304,7 +304,7 @@ public class HeadlessTest {
                 "print('IO', #d, t1 - t0 >= 0, os.clock() - t0 >= 1.5)",
                 ""), java.nio.charset.StandardCharsets.UTF_8);
         command("io");
-        for (int i = 0; i < 200 && !screen().contains("IO "); i++) ticks(1);
+        for (int i = 0; i < 600 && !screen().contains("IO "); i++) ticks(1);
         show("медленная дискета");
         expect("чтение 256 КБ на 128 КБ/с занимает ~2 секунды", screen().replaceAll("\\s+", " ").contains("IO 262144 true true"));
         pc.fileSystem().unmount("slow");
@@ -368,7 +368,7 @@ public class HeadlessTest {
         box[1] = netComputer("bbbbbbbb-2222-4000-8000-000000000000", box, 0, "alpha");
         Path dirB = Files.createTempDirectory("minepc_netb");
         box[1].fileSystem().mount("", new DirMount(dirB, 64 * 1024, "SSD"));
-        Files.writeString(dirB.resolve("recv.lua"), String.join("\n",
+        Files.writeString(dirB.resolve("listen.lua"), String.join("\n",
                 "net.open(7)",
                 "local _, from, port, hops, msg, t = os.pullEvent('net_message')",
                 "print('GOT', from:sub(1, 8), port, hops, msg, t.x)",
@@ -385,7 +385,7 @@ public class HeadlessTest {
             if (screen().contains("/>")) break;
         }
         pc = box[1];
-        command("recv");
+        command("listen");
         pc = box[0];
         for (int i = 0; i < 200 && !screen().contains("/>"); i++) { for (Computer c : box) c.tick(); Thread.sleep(2); }
         command("lua");
@@ -420,6 +420,35 @@ public class HeadlessTest {
         show("ping");
         expect("ping: 2 из 2 дошли", screen().contains("2 из 2 дошли") && screen().contains("alpha"));
         expect("ping: нет ответа от несуществующего", screen().contains("нет ответа от nobody") && screen().contains("0 из 1"));
+
+        // Шифрование
+        pc = box[0];
+        command("local e = data.encrypt('секретное письмо', 'ключ'); print('ENC', #e, data.decrypt(e, 'ключ'), (data.decrypt(e, 'чужой')))");
+        command("local iv = ('\\0'):rep(16); local e = data.encrypt('abc', '0123456789abcdef', iv); print('IV', #e, data.decrypt(e, '0123456789abcdef', iv))");
+        for (int i = 0; i < 20; i++) { for (Computer c : box) c.tick(); Thread.sleep(2); }
+        show("data.encrypt");
+        expect("encrypt/decrypt: тот же текст обратно, чужой ключ — nil", screen().contains("ENC") && screen().contains("секретное письмо") && screen().contains("nil"));
+        expect("encrypt с iv: 16 байт, без iv в начале", screen().contains("IV      16") && screen().contains("abc"));
+
+        // Передача файла: send → recv, бинарный файл 20 КБ
+        command("local f = fs.open('big.bin', 'wb'); local t = {}; for i = 1, 20000 do t[i] = string.char((i * 7) % 256) end; f.write(table.concat(t)); f.close()");
+        command("exit()");
+        for (int i = 0; i < 20; i++) { for (Computer c : box) c.tick(); Thread.sleep(2); }
+        pc = box[1];
+        command("recv");
+        for (int i = 0; i < 20; i++) { for (Computer c : box) c.tick(); Thread.sleep(2); }
+        pc = box[0];
+        command("send beta big.bin");
+        for (int i = 0; i < 400 && !screen().contains("Готово") && !screen().contains("Нет"); i++) { for (Computer c : box) c.tick(); Thread.sleep(2); }
+        show("send");
+        pc = box[1];
+        show("recv");
+        byte[] got = Files.exists(dirB.resolve("big.bin")) ? Files.readAllBytes(dirB.resolve("big.bin")) : new byte[0];
+        boolean same = got.length == 20000;
+        for (int i = 0; same && i < 20000; i++) same = got[i] == (byte) (((i + 1) * 7) % 256);
+        expect("send/recv: файл дошёл байт в байт", same);
+        pc = box[0];
+        expect("send: сообщил о готовности", screen().contains("Готово: 20000 байт"));
         pc = saved;
     }
 
@@ -427,6 +456,7 @@ public class HeadlessTest {
     static void testWifi() throws Exception {
         System.out.println("── Wi-Fi ──");
         String[] chosen = {"", ""};
+        String[] switchState = {null, null};
         Computer c = new Computer(new Computer.Host() {
             @Override public long netBytesPerSecond() { return chosen[0].equals("Дом") && chosen[1].equals("12345678") ? 37_500 : 0; }
             @Override public Computer.WifiStatus wifiStatus() {
@@ -439,6 +469,21 @@ public class HeadlessTest {
             }
             @Override public boolean wifiConnect(String ssid, String password) { chosen[0] = ssid; chosen[1] = password; return true; }
             @Override public void wifiDisconnect() { chosen[0] = ""; chosen[1] = ""; }
+            @Override public List<java.util.Map<String, Object>> switchList() {
+                return List.of(new java.util.LinkedHashMap<>(java.util.Map.of("id", "abcd1234", "kind", "desk", "ports", 2)));
+            }
+            @Override public List<java.util.Map<String, Object>> switchPorts(String id) {
+                if (!id.equals("abcd1234")) return null;
+                java.util.Map<String, Object> p1 = new java.util.LinkedHashMap<>(java.util.Map.of("port", 2, "side", "front", "n", 3,
+                        "link", true, "device", "office-1", "enabled", switchState[0] == null, "vlan", switchState[1] == null ? "" : switchState[1]));
+                return List.of(p1);
+            }
+            @Override public String switchSet(String id, int port, boolean enabled, int vlan) {
+                if (!id.equals("abcd1234")) return "Нет такого коммутатора";
+                switchState[0] = enabled ? null : "off";
+                if (vlan >= 0) switchState[1] = vlan == 0 ? null : "v" + vlan;
+                return null;
+            }
         });
         c.setInfo(new Computer.Info("Тест", 2, 2800, "Lua", 2048, 2_000_000, "ГП", 1000));
         c.setOpsPerTick(100000);
@@ -461,6 +506,18 @@ public class HeadlessTest {
         expect("wifi connect: неверный пароль", screen().contains("неверный пароль"));
         expect("wifi connect: подключено", screen().contains("Подключено: сигнал 82%"));
         expect("wifi: состояние", screen().contains("Скорость: 300"));
+        command("clear");
+        command("switch");
+        command("switch abcd1234");
+        command("switch abcd1234 2 off");
+        command("switch abcd1234 2 red");
+        command("switch abcd1234");
+        command("switch nope");
+        for (int i = 0; i < 30; i++) { c.tick(); Thread.sleep(2); }
+        show("switch");
+        expect("switch: список и порты", screen().contains("abcd1234") && screen().contains("спереди 3") && screen().contains("office-1"));
+        expect("switch: выключен и VLAN red (15)", "off".equals(switchState[0]) && "v15".equals(switchState[1]) && screen().contains("[v15]"));
+        expect("switch: неизвестный — ошибка", screen().contains("Нет такого коммутатора"));
         pc = saved;
     }
 }

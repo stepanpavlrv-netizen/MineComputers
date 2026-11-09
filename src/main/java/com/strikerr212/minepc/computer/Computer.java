@@ -72,6 +72,17 @@ public final class Computer {
         default boolean wifiConnect(String ssid, String password) { return false; }
 
         default void wifiDisconnect() { }
+
+        // ----- Управляемые коммутаторы -----
+
+        /** Коммутаторы (и роутеры, радиомодемы) на пути из этого компьютера: {id, kind, ports}. */
+        default java.util.List<java.util.Map<String, Object>> switchList() { return java.util.List.of(); }
+
+        /** Порты коммутатора: {port, side, n, link, device, enabled, vlan}; null — нет такого. */
+        default java.util.List<java.util.Map<String, Object>> switchPorts(String id) { return null; }
+
+        /** Включить/выключить порт, задать VLAN (0 — общий, 1..16 — цвет). null — получилось, иначе причина. */
+        default String switchSet(String id, int port, boolean enabled, int vlan) { return "Нет такого коммутатора"; }
     }
 
     /** Сеть Wi-Fi в эфире: имя, сигнал %, есть ли пароль, скорость с этим адаптером (Мбит/с). */

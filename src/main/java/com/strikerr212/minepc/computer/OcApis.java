@@ -236,6 +236,44 @@ final class OcApis {
      * Хеши, base64, сжатие и случайные байты на Java — в сотни раз быстрее, чем то же самое на Lua.
      * Каждая функция списывает команды по объёму данных (как остальные встроенные функции).
      */
+    private static Varargs aes(LuaMachine m, java.security.SecureRandom random, Varargs a, boolean encrypt) throws LuaError {
+        byte[] d = LuaApis.bytes(a.arg(1).checkLuaString());
+        byte[] key = LuaApis.bytes(a.arg(2).checkLuaString());
+        if (key.length != 16) key = java.util.Arrays.copyOf(digest("SHA-256", key), 16);
+        byte[] iv = a.arg(3).isNil() ? null : LuaApis.bytes(a.arg(3).checkLuaString());
+        if (iv != null && iv.length != 16) throw LuaApis.error("iv — ровно 16 байт");
+        if (!m.reserve(d.length + 64L)) throw LuaApis.error("Недостаточно памяти");
+        m.spend(d.length / 4 + 16);
+        boolean ivInside = iv == null;
+        try {
+            if (encrypt) {
+                if (ivInside) {
+                    iv = new byte[16];
+                    random.nextBytes(iv);
+                }
+            } else if (ivInside) {
+                if (d.length < 32) return varargsOf(Constants.NIL, str("Это не зашифрованные данные"));
+                iv = java.util.Arrays.copyOf(d, 16);
+                d = java.util.Arrays.copyOfRange(d, 16, d.length);
+            }
+            javax.crypto.Cipher cipher = javax.crypto.Cipher.getInstance("AES/CBC/PKCS5Padding");
+            cipher.init(encrypt ? javax.crypto.Cipher.ENCRYPT_MODE : javax.crypto.Cipher.DECRYPT_MODE,
+                    new javax.crypto.spec.SecretKeySpec(key, "AES"), new javax.crypto.spec.IvParameterSpec(iv));
+            byte[] out = cipher.doFinal(d);
+            if (encrypt && ivInside) {
+                byte[] withIv = new byte[16 + out.length];
+                System.arraycopy(iv, 0, withIv, 0, 16);
+                System.arraycopy(out, 0, withIv, 16, out.length);
+                out = withIv;
+            }
+            return LuaString.valueOf(out);
+        } catch (javax.crypto.BadPaddingException | javax.crypto.IllegalBlockSizeException e) {
+            return varargsOf(Constants.NIL, str("Неверный ключ или данные повреждены"));
+        } catch (java.security.GeneralSecurityException e) {
+            throw LuaApis.error("Шифрование недоступно: " + e.getMessage());
+        }
+    }
+
     static LuaTable data(LuaMachine m) {
         LuaTable t = new LuaTable();
         java.security.SecureRandom random = new java.security.SecureRandom();
@@ -306,6 +344,10 @@ final class OcApis {
                     m.spend(out.size() / LuaMachine.BYTES_PER_OP);
                     return LuaString.valueOf(out.toByteArray());
                 }),
+                // Шифрование AES-128-CBC (как data.encrypt в OpenComputers). Ключ — 16 байт; любая другая строка
+                // превращается в ключ через SHA-256. Без iv — случайный, кладётся в начало результата (decrypt его найдёт)
+                RegisteredFunction.ofV("encrypt", (s, a) -> aes(m, random, a, true)),
+                RegisteredFunction.ofV("decrypt", (s, a) -> aes(m, random, a, false)),
                 RegisteredFunction.ofV("random", (s, a) -> {
                     int n = Math.max(0, Math.min(1 << 20, a.arg(1).checkInteger()));
                     m.spend(n / LuaMachine.BYTES_PER_OP);

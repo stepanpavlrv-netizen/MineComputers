@@ -26,7 +26,7 @@ import net.minecraft.world.phys.shapes.VoxelShape;
  * Настольный — 8 гнёзд: по 4 спереди и сзади. Стоечный — целый блок, по 4 гнезда с каждой стороны,
  * 10 Гбит/с; стоечные коммутаторы вплотную друг к другу работают как один.
  */
-public class SwitchBlock extends HorizontalDirectionalBlock implements LanDevice {
+public class SwitchBlock extends HorizontalDirectionalBlock implements LanDevice, net.minecraft.world.level.block.EntityBlock {
 
     public static final MapCodec<SwitchBlock> CODEC = simpleCodec(p -> new SwitchBlock(p, false));
     private static final BoxShapes DESK = BoxShapes.of(1, 0, 4, 15, 4, 11);
@@ -77,6 +77,11 @@ public class SwitchBlock extends HorizontalDirectionalBlock implements LanDevice
     }
 
     @Override
+    public boolean acceptsFiber(BlockState state, Direction face) {
+        return rack && face.getAxis().isHorizontal();
+    }
+
+    @Override
     public long lanBitsPerSecond(Level level, BlockPos pos, BlockState state) {
         return rack ? 10_000_000_000L : 1_000_000_000L;
     }
@@ -99,6 +104,20 @@ public class SwitchBlock extends HorizontalDirectionalBlock implements LanDevice
     }
 
     @Override
+    public net.minecraft.world.level.block.entity.BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
+        return new LanBlockEntity(pos, state);
+    }
+
+    /** ПКМ — окно портов: включить/выключить, VLAN (цвет). */
+    @Override
+    protected net.minecraft.world.InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
+        if (level instanceof net.minecraft.server.level.ServerLevel server && player instanceof net.minecraft.server.level.ServerPlayer sp) {
+            net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(sp, SwitchPorts.openPayload(server, pos));
+        }
+        return net.minecraft.world.InteractionResult.sidedSuccess(level.isClientSide);
+    }
+
+    @Override
     protected void onPlace(BlockState state, Level level, BlockPos pos, BlockState old, boolean moved) {
         super.onPlace(state, level, pos, old, moved);
         if (!level.isClientSide) LanManager.updateDevice(level, pos);
@@ -108,5 +127,11 @@ public class SwitchBlock extends HorizontalDirectionalBlock implements LanDevice
     protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean moved) {
         super.onRemove(state, level, pos, newState, moved);
         if (!level.isClientSide && !state.is(newState.getBlock())) LanManager.updateDevice(level, pos);
+    }
+
+    @Override
+    public void appendHoverText(net.minecraft.world.item.ItemStack stack, net.minecraft.world.item.Item.TooltipContext context,
+                                java.util.List<net.minecraft.network.chat.Component> tooltip, net.minecraft.world.item.TooltipFlag flag) {
+        tooltip.add(net.minecraft.network.chat.Component.translatable(rack ? "tooltip.minepc.rack_switch" : "tooltip.minepc.network_switch").withStyle(net.minecraft.ChatFormatting.GRAY));
     }
 }

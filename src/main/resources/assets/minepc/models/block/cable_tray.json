@@ -1,0 +1,120 @@
+{
+ "render_type": "minecraft:cutout",
+ "textures": {
+  "particle": "minepc:block/cable_tray",
+  "mesh": "minepc:block/cable_tray",
+  "wire": "minepc:block/network_cable"
+ },
+ "elements": [
+  {
+   "from": [
+    0,
+    4,
+    4
+   ],
+   "to": [
+    16,
+    12,
+    12
+   ],
+   "faces": {
+    "north": {
+     "texture": "#mesh"
+    },
+    "south": {
+     "texture": "#mesh"
+    },
+    "east": {
+     "texture": "#mesh"
+    },
+    "west": {
+     "texture": "#mesh"
+    },
+    "up": {
+     "texture": "#mesh"
+    },
+    "down": {
+     "texture": "#mesh"
+    }
+   }
+  },
+  {
+   "from": [
+    0,
+    4.2,
+    5
+   ],
+   "to": [
+    16,
+    4.9,
+    6
+   ],
+   "faces": {
+    "up": {
+     "texture": "#wire",
+     "tintindex": 11
+    },
+    "north": {
+     "texture": "#wire",
+     "tintindex": 11
+    },
+    "south": {
+     "texture": "#wire",
+     "tintindex": 11
+    }
+   }
+  },
+  {
+   "from": [
+    0,
+    4.2,
+    7
+   ],
+   "to": [
+    16,
+    4.9,
+    8
+   ],
+   "faces": {
+    "up": {
+     "texture": "#wire",
+     "tintindex": 1
+    },
+    "north": {
+     "texture": "#wire",
+     "tintindex": 1
+    },
+    "south": {
+     "texture": "#wire",
+     "tintindex": 1
+    }
+   }
+  },
+  {
+   "from": [
+    0,
+    4.2,
+    9
+   ],
+   "to": [
+    16,
+    4.9,
+    10
+   ],
+   "faces": {
+    "up": {
+     "texture": "#wire",
+     "tintindex": 5
+    },
+    "north": {
+     "texture": "#wire",
+     "tintindex": 5
+    },
+    "south": {
+     "texture": "#wire",
+     "tintindex": 5
+    }
+   }
+  }
+ ]
+}

@@ -1,0 +1,10 @@
+{
+ "variants": {
+  "top=false": {
+   "model": "minepc:block/radio_mast"
+  },
+  "top=true": {
+   "model": "minepc:block/radio_mast_top"
+  }
+ }
+}

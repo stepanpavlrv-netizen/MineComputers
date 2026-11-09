@@ -10,6 +10,7 @@ import net.minecraft.nbt.Tag;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
+import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -28,9 +29,48 @@ public class CableBlockEntity extends BlockEntity {
     public static final int MAX_WIRES = 4;
     /** Для модели: провода как числа ({@link Wire#packed()}). */
     public static final ModelProperty<int[]> WIRES = new ModelProperty<>();
+    /** Для модели: блок, под которым спрятан кабель (или null). */
+    public static final ModelProperty<BlockState> FACADE = new ModelProperty<>();
 
     private final List<Wire> wires = new ArrayList<>();
     private VoxelShape shape;
+    private BlockState facade;
+
+    /** Блок, которым закрыт кабель (ПКМ блоком) — провода внутри, снаружи обычный блок. */
+    public BlockState facade() {
+        return facade;
+    }
+
+    public void setFacade(BlockState state) {
+        facade = state;
+        changed();
+    }
+
+    /** Можно ли спрятать кабель под этим блоком: обычный непрозрачный куб без своей «начинки». */
+    public static boolean canBeFacade(BlockState s, BlockGetter level, BlockPos pos) {
+        return !s.hasBlockEntity() && s.isSolidRender(level, pos) && s.getRenderShape() == net.minecraft.world.level.block.RenderShape.MODEL
+                && Block.isShapeFullBlock(s.getShape(level, pos));
+    }
+
+    /** Предметы, которые выпадут, если блок сломать целиком: провода и блок-маскировка. */
+    public List<net.minecraft.world.item.ItemStack> drops() {
+        List<net.minecraft.world.item.ItemStack> out = new ArrayList<>();
+        int copper = 0, fiber = 0;
+        for (Wire w : wires) {
+            if (w.fiber) fiber++;
+            else copper++;
+        }
+        if (copper > 0) out.add(new net.minecraft.world.item.ItemStack(com.strikerr212.minepc.registry.ModItems.CABLE.get(), copper));
+        if (fiber > 0) out.add(new net.minecraft.world.item.ItemStack(com.strikerr212.minepc.registry.ModItems.FIBER.get(), fiber));
+        if (facade != null) out.add(new net.minecraft.world.item.ItemStack(facade.getBlock()));
+        return out;
+    }
+
+    /** Ломают в творческом режиме — ничего не выпадает. */
+    public void clearForCreative() {
+        wires.clear();
+        facade = null;
+    }
 
     public CableBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.CABLE.get(), pos, state);
@@ -110,6 +150,7 @@ public class CableBlockEntity extends BlockEntity {
     }
 
     public VoxelShape shape() {
+        if (facade != null) return Shapes.block();
         if (shape == null) {
             VoxelShape s = Shapes.empty();
             for (Wire w : wires) {
@@ -125,7 +166,7 @@ public class CableBlockEntity extends BlockEntity {
     /** Есть ли в блоке провод этого цвета, выходящий на эту дорожку в сторону toward. */
     private static boolean hasMatch(Level level, BlockPos p, Wire w, Direction toward, int lane) {
         if (!level.isLoaded(p) || !(level.getBlockEntity(p) instanceof CableBlockEntity other)) return false;
-        for (Wire o : other.wires) if (o.color == w.color && o.laneToward(toward) == lane) return true;
+        for (Wire o : other.wires) if (o.sameKind(w) && o.laneToward(toward) == lane) return true;
         return false;
     }
 
@@ -156,7 +197,10 @@ public class CableBlockEntity extends BlockEntity {
                 int lane = w.laneToward(d), bit = Wire.bit(d);
                 if (level.getBlockEntity(n) instanceof CableBlockEntity) {
                     if (hasMatch(level, n, w, d.getOpposite(), lane)) dirs |= bit;
-                } else if (ns.getBlock() instanceof LanDevice dev && dev.acceptsCable(ns, d.getOpposite())) {
+                } else if (level.getBlockEntity(n) instanceof TrayBlockEntity tray) {
+                    if (tray.has(w)) dirs |= bit;             // провод уходит в лоток того же цвета
+                } else if (ns.getBlock() instanceof LanDevice dev
+                        && (w.fiber ? dev.acceptsFiber(ns, d.getOpposite()) : dev.acceptsCable(ns, d.getOpposite()))) {
                     dirs |= bit;
                     plugs |= bit;
                     LanManager.updateDevice(level, n);
@@ -218,7 +262,7 @@ public class CableBlockEntity extends BlockEntity {
 
     @Override
     public ModelData getModelData() {
-        return ModelData.builder().with(WIRES, packed()).build();
+        return ModelData.builder().with(WIRES, packed()).with(FACADE, facade).build();
     }
 
     @Override
@@ -227,6 +271,7 @@ public class CableBlockEntity extends BlockEntity {
         ListTag list = new ListTag();
         for (Wire w : wires) list.add(w.save());
         tag.put("wires", list);
+        if (facade != null) tag.put("facade", net.minecraft.nbt.NbtUtils.writeBlockState(facade));
     }
 
     @Override
@@ -234,6 +279,9 @@ public class CableBlockEntity extends BlockEntity {
         super.loadAdditional(tag, registries);
         wires.clear();
         for (Tag t : tag.getList("wires", Tag.TAG_COMPOUND)) wires.add(Wire.load((CompoundTag) t));
+        facade = tag.contains("facade") ? net.minecraft.nbt.NbtUtils.readBlockState(
+                registries.lookupOrThrow(net.minecraft.core.registries.Registries.BLOCK), tag.getCompound("facade")) : null;
+        if (facade != null && facade.isAir()) facade = null;
         shape = null;
         if (level != null && level.isClientSide) {
             requestModelDataUpdate();

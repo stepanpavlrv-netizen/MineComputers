@@ -70,9 +70,17 @@ public class ModItems {
     public static final DeferredItem<BlockItem> MONITOR_CURVED = ITEMS.registerSimpleBlockItem("monitor_curved", ModBlocks.MONITOR_CURVED);
     public static final DeferredItem<com.strikerr212.minepc.lan.CableItem> CABLE = ITEMS.register("network_cable",
             () -> new com.strikerr212.minepc.lan.CableItem(new Item.Properties()));
+    public static final DeferredItem<com.strikerr212.minepc.lan.CableItem> FIBER = ITEMS.register("fiber_cable",
+            () -> new com.strikerr212.minepc.lan.CableItem(new Item.Properties(), true));
     public static final DeferredItem<BlockItem> NETWORK_SWITCH = ITEMS.registerSimpleBlockItem("network_switch", ModBlocks.NETWORK_SWITCH);
     public static final DeferredItem<BlockItem> RACK_SWITCH = ITEMS.registerSimpleBlockItem("rack_switch", ModBlocks.RACK_SWITCH);
     public static final DeferredItem<BlockItem> ROUTER = ITEMS.registerSimpleBlockItem("wifi_router", ModBlocks.ROUTER);
+    public static final DeferredItem<BlockItem> TRAY = ITEMS.registerSimpleBlockItem("cable_tray", ModBlocks.TRAY);
+    public static final DeferredItem<BlockItem> PATCH_PANEL = ITEMS.registerSimpleBlockItem("patch_panel", ModBlocks.PATCH_PANEL);
+    public static final DeferredItem<BlockItem> RADIO = ITEMS.registerSimpleBlockItem("radio_modem", ModBlocks.RADIO);
+    public static final DeferredItem<BlockItem> MAST = ITEMS.registerSimpleBlockItem("radio_mast", ModBlocks.MAST);
+    public static final DeferredItem<com.strikerr212.minepc.lan.PatchCordItem> PATCH_CORD = ITEMS.register("patch_cord",
+            () -> new com.strikerr212.minepc.lan.PatchCordItem(new Item.Properties()));
     public static final DeferredItem<com.strikerr212.minepc.lan.WifiAdapterItem> WIFI_G = ITEMS.register("wifi_adapter_g",
             () -> new com.strikerr212.minepc.lan.WifiAdapterItem("802.11g", 16, 54, new Item.Properties()));
     public static final DeferredItem<com.strikerr212.minepc.lan.WifiAdapterItem> WIFI_N = ITEMS.register("wifi_adapter_n",

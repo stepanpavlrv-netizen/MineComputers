@@ -44,6 +44,7 @@ public class PcCaseRenderer implements BlockEntityRenderer<PcCaseBlockEntity> {
     @Override
     public void render(PcCaseBlockEntity be, float partialTick, PoseStack pose,
                        MultiBufferSource buffers, int light, int overlay) {
+        CordRenderer.renderCords(be, be.cords(), pose, buffers);
         if (!(be.getBlockState().getBlock() instanceof PcCaseBlock block)) return;
         Direction facing = be.getBlockState().getValue(PcCaseBlock.FACING);
         if (block.variant() != null && block.variant().screen != null) {
@@ -125,5 +126,12 @@ public class PcCaseRenderer implements BlockEntityRenderer<PcCaseBlockEntity> {
             case WEST -> 270f;
             default -> 0f;
         };
+    }
+
+    /** Патч-корды до соседнего устройства тоже должны быть видны. */
+    @Override
+    public net.minecraft.world.phys.AABB getRenderBoundingBox(PcCaseBlockEntity be) {
+        return be.cords().ends().isEmpty() ? new net.minecraft.world.phys.AABB(be.getBlockPos()).inflate(1)
+                : new net.minecraft.world.phys.AABB(be.getBlockPos()).inflate(5);
     }
 }

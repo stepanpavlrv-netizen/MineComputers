@@ -34,8 +34,11 @@ programs/peers.lua
 programs/ping.lua
 programs/ps.lua
 programs/reboot.lua
+programs/recv.lua
 programs/rm.lua
+programs/send.lua
 programs/sh.lua
 programs/shutdown.lua
+programs/switch.lua
 programs/wifi.lua
 shell.lua

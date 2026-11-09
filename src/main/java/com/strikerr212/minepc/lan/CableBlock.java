@@ -61,10 +61,10 @@ public class CableBlock extends BaseEntityBlock {
         return level.getBlockEntity(pos) instanceof CableBlockEntity be ? be.shape() : Block.box(6, 0, 6, 10, 2, 10);
     }
 
-    /** По проводам можно ходить, как по редстоуну. */
+    /** По проводам можно ходить, как по редстоуну; под маскировкой — обычный блок. */
     @Override
     protected VoxelShape getCollisionShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
-        return Shapes.empty();
+        return level.getBlockEntity(pos) instanceof CableBlockEntity be && be.facade() != null ? Shapes.block() : Shapes.empty();
     }
 
     @Override
@@ -90,9 +90,9 @@ public class CableBlock extends BaseEntityBlock {
     @Override
     protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean moved) {
         if (!state.is(newState.getBlock())) {
-            if (!level.isClientSide && level.getBlockEntity(pos) instanceof CableBlockEntity be && be.wires().size() > 1) {
-                // Блок пропал целиком (взрыв, вода): лишние провода — в добычу; один выпадет по таблице добычи
-                popResource(level, pos, new ItemStack(ModItems.CABLE.get(), be.wires().size() - 1));
+            if (!level.isClientSide && level.getBlockEntity(pos) instanceof CableBlockEntity be) {
+                // Блок пропал целиком (сломали последний провод, взрыв, вода): провода и маскировка — в добычу
+                for (ItemStack drop : be.drops()) popResource(level, pos, drop);
             }
         }
         super.onRemove(state, level, pos, newState, moved);
@@ -111,6 +111,15 @@ public class CableBlock extends BaseEntityBlock {
     /** Ломаем один провод, на который смотрит игрок; последний — вместе с блоком. */
     @Override
     public boolean onDestroyedByPlayer(BlockState state, Level level, BlockPos pos, Player player, boolean willHarvest, FluidState fluid) {
+        if (level.getBlockEntity(pos) instanceof CableBlockEntity be && be.facade() != null) {
+            // Сначала снимается маскировка, провода остаются
+            if (!level.isClientSide) {
+                if (!player.isCreative()) popResource(level, pos, new ItemStack(be.facade().getBlock()));
+                level.playSound(null, pos, be.facade().getSoundType().getBreakSound(), SoundSource.BLOCKS, 1f, 1f);
+                be.setFacade(null);
+            }
+            return false;
+        }
         if (level.getBlockEntity(pos) instanceof CableBlockEntity be && be.wires().size() > 1) {
             HitResult hit = player.pick(player.blockInteractionRange(), 1f, false);
             Vec3 at = hit.getLocation().subtract(pos.getX(), pos.getY(), pos.getZ()).scale(16);
@@ -119,19 +128,31 @@ public class CableBlock extends BaseEntityBlock {
                 if (!level.isClientSide) {
                     be.remove(w);
                     be.reconnectNeighbours();
-                    if (!player.isCreative()) popResource(level, pos, new ItemStack(ModItems.CABLE.get()));
+                    if (!player.isCreative()) popResource(level, pos, new ItemStack(w.fiber ? ModItems.FIBER.get() : ModItems.CABLE.get()));
                     level.playSound(null, pos, SoundEvents.WOOL_BREAK, SoundSource.BLOCKS, 1f, 1f);
                 }
                 return false;
             }
         }
+        if (player.isCreative() && level.getBlockEntity(pos) instanceof CableBlockEntity be) be.clearForCreative();
         return super.onDestroyedByPlayer(state, level, pos, player, willHarvest, fluid);
     }
 
-    /** ПКМ красителем по проводу — перекрасить его (разные цвета — разные сети). */
+    /** ПКМ красителем по проводу — перекрасить его (разные цвета — разные сети). ПКМ блоком — спрятать кабель в блок. */
     @Override
     protected ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player,
                                               InteractionHand hand, BlockHitResult hit) {
+        if (stack.getItem() instanceof net.minecraft.world.item.BlockItem bi && level.getBlockEntity(pos) instanceof CableBlockEntity be
+                && be.facade() == null && !(bi.getBlock() instanceof CableBlock)) {
+            BlockState look = bi.getBlock().defaultBlockState();
+            if (!CableBlockEntity.canBeFacade(look, level, pos)) return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+            if (!level.isClientSide) {
+                be.setFacade(look);
+                level.playSound(null, pos, look.getSoundType().getPlaceSound(), SoundSource.BLOCKS, 1f, 1f);
+                if (!player.getAbilities().instabuild) stack.shrink(1);
+            }
+            return ItemInteractionResult.sidedSuccess(level.isClientSide);
+        }
         if (stack.getItem() instanceof DyeItem dye && level.getBlockEntity(pos) instanceof CableBlockEntity be) {
             Vec3 at = hit.getLocation().subtract(pos.getX(), pos.getY(), pos.getZ()).scale(16);
             Wire w = be.nearest(at.x, at.z);

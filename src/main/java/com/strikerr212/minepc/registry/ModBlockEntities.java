@@ -24,6 +24,13 @@ public class ModBlockEntities {
                     () -> BlockEntityType.Builder.of(PcCaseBlockEntity::new,
                             ModBlocks.allCases().toArray(new net.minecraft.world.level.block.Block[0])).build(null));
 
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<com.strikerr212.minepc.lan.TrayBlockEntity>> TRAY =
+            BLOCK_ENTITIES.register("cable_tray", () ->
+                    BlockEntityType.Builder.of(com.strikerr212.minepc.lan.TrayBlockEntity::new, ModBlocks.TRAY.get()).build(null));
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<com.strikerr212.minepc.lan.LanBlockEntity>> LAN =
+            BLOCK_ENTITIES.register("lan_device", () ->
+                    BlockEntityType.Builder.of(com.strikerr212.minepc.lan.LanBlockEntity::new, ModBlocks.NETWORK_SWITCH.get(),
+                            ModBlocks.RACK_SWITCH.get(), ModBlocks.PATCH_PANEL.get(), ModBlocks.RADIO.get()).build(null));
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<com.strikerr212.minepc.lan.RouterBlockEntity>> ROUTER =
             BLOCK_ENTITIES.register("wifi_router", () ->
                     BlockEntityType.Builder.of(com.strikerr212.minepc.lan.RouterBlockEntity::new, ModBlocks.ROUTER.get()).build(null));

@@ -185,6 +185,97 @@ public final class CaseComputer implements Computer.Host {
         peers = List.copyOf(list);
     }
 
+    // ======================= Запросы к миру из потока программы =======================
+
+    private final java.util.concurrent.ConcurrentLinkedQueue<Runnable> serverTasks = new java.util.concurrent.ConcurrentLinkedQueue<>();
+
+    /** Выполнить в потоке сервера (там живёт мир) и дождаться ответа; не дождались — fallback. */
+    private <T> T onServer(java.util.function.Function<ServerLevel, T> task, T fallback) {
+        if (!(be.getLevel() instanceof ServerLevel level)) return fallback;
+        if (level.getServer().isSameThread()) return task.apply(level);
+        java.util.concurrent.CompletableFuture<T> f = new java.util.concurrent.CompletableFuture<>();
+        serverTasks.add(() -> {
+            try {
+                f.complete(task.apply(level));
+            } catch (RuntimeException e) {
+                f.completeExceptionally(e);
+            }
+        });
+        try {
+            return f.get(2, java.util.concurrent.TimeUnit.SECONDS);
+        } catch (Exception e) {
+            return fallback;
+        }
+    }
+
+    private BlockPos switchById(ServerLevel level, String id) {
+        for (BlockPos p : com.strikerr212.minepc.lan.LanManager.get(level).switches(level, be.getBlockPos())) {
+            if (com.strikerr212.minepc.lan.SwitchPorts.id(p).equalsIgnoreCase(id)) return p;
+        }
+        return null;
+    }
+
+    @Override
+    public List<Map<String, Object>> switchList() {
+        return onServer(level -> {
+            var data = com.strikerr212.minepc.lan.LanData.get(level);
+            List<Map<String, Object>> out = new ArrayList<>();
+            if (linkCode == 0) return out;
+            for (BlockPos p : com.strikerr212.minepc.lan.LanManager.get(level).switches(level, be.getBlockPos())) {
+                var d = data.device(p);
+                if (d == null) continue;
+                Map<String, Object> m = new LinkedHashMap<>();
+                m.put("id", com.strikerr212.minepc.lan.SwitchPorts.id(p));
+                m.put("kind", com.strikerr212.minepc.lan.SwitchPorts.kind(d));
+                m.put("ports", com.strikerr212.minepc.lan.LanManager.usedPorts(data, p, d).size());
+                m.put("speed", (double) d.bits() / 1_000_000);
+                out.add(m);
+            }
+            return out;
+        }, List.of());
+    }
+
+    @Override
+    public List<Map<String, Object>> switchPorts(String id) {
+        return onServer(level -> {
+            BlockPos p = linkCode == 0 ? null : switchById(level, id);
+            if (p == null) return null;
+            List<Map<String, Object>> out = new ArrayList<>();
+            for (var port : com.strikerr212.minepc.lan.SwitchPorts.ports(level, p)) {
+                Map<String, Object> m = new LinkedHashMap<>();
+                m.put("port", port.port());
+                m.put("side", switch (port.side()) {
+                    case 'F' -> "front";
+                    case 'B' -> "back";
+                    case 'L' -> "left";
+                    case 'R' -> "right";
+                    default -> "cord";
+                });
+                m.put("n", port.number());
+                m.put("link", port.link());
+                String dev = port.device();
+                m.put("device", dev.startsWith("@") ? dev.substring(1) : dev.equals("!") ? "слишком длинный кабель" : dev);
+                m.put("enabled", port.enabled());
+                m.put("vlan", com.strikerr212.minepc.lan.SwitchPorts.vlanName(port.vlan()));
+                out.add(m);
+            }
+            return out;
+        }, null);
+    }
+
+    @Override
+    public String switchSet(String id, int port, boolean enabled, int vlan) {
+        return onServer(level -> {
+            BlockPos p = linkCode == 0 ? null : switchById(level, id);
+            if (p == null) return "Нет такого коммутатора";
+            if (port < 0 || port >= com.strikerr212.minepc.lan.LanData.PORTS) return "Нет такого порта";
+            var data = com.strikerr212.minepc.lan.LanData.get(level);
+            int v = vlan == -2 ? com.strikerr212.minepc.lan.LanData.portVlan(data.portConfig(p, port)) : vlan;
+            data.setPort(p, port, enabled, v);
+            return null;
+        }, "Сервер не ответил");
+    }
+
     // ======================= Wi-Fi =======================
 
     /** Сеть, к которой компьютер подключается (хранится в корпусе). */
@@ -450,6 +541,8 @@ public final class CaseComputer implements Computer.Host {
 
     void tick(ServerLevel level, BlockPos pos) {
         age++;
+        Runnable task;
+        while ((task = serverTasks.poll()) != null) task.run();
         if (age == 1 && wantOn && (computer == null || !computer.isOn())) {
             // Мир загрузился, а компьютер был включён — включаем снова
             if (powerOn(level) != null) wantOn = false;
