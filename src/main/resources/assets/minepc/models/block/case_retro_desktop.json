@@ -1,0 +1,134 @@
+{
+ "parent": "minecraft:block/block",
+ "textures": {
+  "particle": "minepc:block/case/case_retro_desktop",
+  "all": "minepc:block/case/case_retro_desktop"
+ },
+ "elements": [
+  {
+   "from": [
+    1,
+    0,
+    1
+   ],
+   "to": [
+    15,
+    5,
+    14
+   ],
+   "faces": {
+    "north": {
+     "uv": [
+      0.0,
+      6.5,
+      7.0,
+      9.0
+     ],
+     "texture": "#all"
+    },
+    "south": {
+     "uv": [
+      7.0,
+      6.5,
+      14.0,
+      9.0
+     ],
+     "texture": "#all"
+    },
+    "west": {
+     "uv": [
+      0.0,
+      9.0,
+      6.5,
+      11.5
+     ],
+     "texture": "#all"
+    },
+    "east": {
+     "uv": [
+      6.5,
+      9.0,
+      13.0,
+      11.5
+     ],
+     "texture": "#all"
+    },
+    "up": {
+     "uv": [
+      0.0,
+      0.0,
+      7.0,
+      6.5
+     ],
+     "texture": "#all"
+    },
+    "down": {
+     "uv": [
+      7.0,
+      0.0,
+      14.0,
+      6.5
+     ],
+     "texture": "#all",
+     "cullface": "down"
+    }
+   }
+  },
+  {
+   "from": [
+    12,
+    3,
+    0.99
+   ],
+   "to": [
+    14,
+    4,
+    0.99
+   ],
+   "shade": false,
+   "neoforge_data": {
+    "block_light": 15,
+    "sky_light": 15
+   },
+   "faces": {
+    "north": {
+     "uv": [
+      0.5,
+      7.0,
+      1.5,
+      7.5
+     ],
+     "texture": "#all"
+    }
+   }
+  },
+  {
+   "from": [
+    10,
+    3,
+    0.99
+   ],
+   "to": [
+    11,
+    4,
+    0.99
+   ],
+   "shade": false,
+   "neoforge_data": {
+    "block_light": 15,
+    "sky_light": 15
+   },
+   "faces": {
+    "north": {
+     "uv": [
+      2.0,
+      7.0,
+      2.5,
+      7.5
+     ],
+     "texture": "#all"
+    }
+   }
+  }
+ ]
+}

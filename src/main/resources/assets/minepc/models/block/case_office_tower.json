@@ -1,0 +1,106 @@
+{
+ "parent": "minecraft:block/block",
+ "textures": {
+  "particle": "minepc:block/case/case_office_tower",
+  "all": "minepc:block/case/case_office_tower"
+ },
+ "elements": [
+  {
+   "from": [
+    4,
+    0,
+    1
+   ],
+   "to": [
+    12,
+    14,
+    15
+   ],
+   "faces": {
+    "north": {
+     "uv": [
+      0.0,
+      7.0,
+      4.0,
+      14.0
+     ],
+     "texture": "#all"
+    },
+    "south": {
+     "uv": [
+      4.0,
+      7.0,
+      8.0,
+      14.0
+     ],
+     "texture": "#all"
+    },
+    "west": {
+     "uv": [
+      0.0,
+      0.0,
+      7.0,
+      7.0
+     ],
+     "texture": "#all"
+    },
+    "east": {
+     "uv": [
+      7.0,
+      0.0,
+      14.0,
+      7.0
+     ],
+     "texture": "#all"
+    },
+    "up": {
+     "uv": [
+      8.0,
+      7.0,
+      12.0,
+      14.0
+     ],
+     "texture": "#all"
+    },
+    "down": {
+     "uv": [
+      12.0,
+      7.0,
+      16.0,
+      14.0
+     ],
+     "texture": "#all",
+     "cullface": "down"
+    }
+   }
+  },
+  {
+   "from": [
+    7,
+    8,
+    0.99
+   ],
+   "to": [
+    9,
+    9,
+    0.99
+   ],
+   "shade": false,
+   "neoforge_data": {
+    "block_light": 15,
+    "sky_light": 15
+   },
+   "faces": {
+    "north": {
+     "uv": [
+      1.5,
+      9.5,
+      2.5,
+      10.0
+     ],
+     "texture": "#all"
+    }
+   }
+  }
+ ]
+}

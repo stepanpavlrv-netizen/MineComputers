@@ -1,0 +1,16 @@
+{
+ "type": "minecraft:crafting_shapeless",
+ "category": "redstone",
+ "ingredients": [
+  {
+   "item": "minepc:pc_case"
+  },
+  {
+   "item": "minecraft:black_dye"
+  }
+ ],
+ "result": {
+  "id": "minepc:case_office_tower",
+  "count": 1
+ }
+}

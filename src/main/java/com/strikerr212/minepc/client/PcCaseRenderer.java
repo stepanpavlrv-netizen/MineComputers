@@ -42,6 +42,7 @@ public class PcCaseRenderer implements BlockEntityRenderer<PcCaseBlockEntity> {
     @Override
     public void render(PcCaseBlockEntity be, float partialTick, PoseStack pose,
                        MultiBufferSource buffers, int light, int overlay) {
+        if (!(be.getBlockState().getBlock() instanceof PcCaseBlock block) || !block.showsParts()) return;   // глухой корпус
         Direction facing = be.getBlockState().getValue(PcCaseBlock.FACING);
 
         pose.pushPose();

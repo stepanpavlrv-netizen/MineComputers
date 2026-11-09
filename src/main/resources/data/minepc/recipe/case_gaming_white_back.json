@@ -1,0 +1,13 @@
+{
+ "type": "minecraft:crafting_shapeless",
+ "category": "redstone",
+ "ingredients": [
+  {
+   "item": "minepc:case_gaming_white"
+  }
+ ],
+ "result": {
+  "id": "minepc:pc_case",
+  "count": 1
+ }
+}

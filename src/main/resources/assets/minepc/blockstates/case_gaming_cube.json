@@ -1,0 +1,19 @@
+{
+ "variants": {
+  "facing=north": {
+   "model": "minepc:block/case_gaming_cube"
+  },
+  "facing=east": {
+   "model": "minepc:block/case_gaming_cube",
+   "y": 90
+  },
+  "facing=south": {
+   "model": "minepc:block/case_gaming_cube",
+   "y": 180
+  },
+  "facing=west": {
+   "model": "minepc:block/case_gaming_cube",
+   "y": 270
+  }
+ }
+}

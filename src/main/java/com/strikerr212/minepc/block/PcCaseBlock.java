@@ -48,21 +48,27 @@ public class PcCaseBlock extends BaseEntityBlock {
     private static final VoxelShape SHAPE_NORTH_SOUTH = Block.box(3, 0, 0, 13, 16, 16);
     private static final VoxelShape SHAPE_EAST_WEST = Block.box(0, 0, 3, 16, 16, 13);
 
-    private final CaseStyle style;
+    /** Облик корпуса; null — обычный корпус со стеклянным боком, сквозь который видно детали. */
+    private final CaseVariant variant;
 
     public PcCaseBlock(Properties properties) {
-        this(properties, CaseStyle.CLASSIC);
+        this(properties, null);
     }
 
-    public PcCaseBlock(Properties properties, CaseStyle style) {
+    public PcCaseBlock(Properties properties, CaseVariant variant) {
         super(properties);
-        this.style = style;
+        this.variant = variant;
         registerDefaultState(stateDefinition.any().setValue(FACING, Direction.NORTH));
     }
 
     /** Тематика корпуса (оформление окна). */
     public CaseStyle style() {
-        return style;
+        return variant == null ? CaseStyle.CLASSIC : variant.style;
+    }
+
+    /** Видно ли детали внутри (стеклянный бок обычного корпуса). */
+    public boolean showsParts() {
+        return variant == null;
     }
 
     @Override
@@ -93,6 +99,7 @@ public class PcCaseBlock extends BaseEntityBlock {
 
     @Override
     protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+        if (variant != null) return variant.shape(state.getValue(FACING));
         return state.getValue(FACING).getAxis() == Direction.Axis.Z ? SHAPE_NORTH_SOUTH : SHAPE_EAST_WEST;
     }
 

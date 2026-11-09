@@ -1,0 +1,16 @@
+{
+ "type": "minecraft:crafting_shapeless",
+ "category": "redstone",
+ "ingredients": [
+  {
+   "item": "minepc:pc_case"
+  },
+  {
+   "item": "minecraft:amethyst_shard"
+  }
+ ],
+ "result": {
+  "id": "minepc:case_gaming_cube",
+  "count": 1
+ }
+}

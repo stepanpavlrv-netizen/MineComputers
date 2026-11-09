@@ -50,6 +50,10 @@ public class ModItems {
     // Предметы-блоки (то, что лежит в инвентаре)
     public static final DeferredItem<BlockItem> PC_CASE =
             ITEMS.registerSimpleBlockItem("pc_case", ModBlocks.PC_CASE);
+    public static final java.util.Map<com.strikerr212.minepc.block.CaseVariant, DeferredItem<BlockItem>> CASES = new java.util.EnumMap<>(com.strikerr212.minepc.block.CaseVariant.class);
+    static {
+        for (var e : ModBlocks.CASES.entrySet()) CASES.put(e.getKey(), ITEMS.registerSimpleBlockItem(e.getKey().id, e.getValue()));
+    }
     public static final DeferredItem<BlockItem> ASSEMBLY_TABLE =
             ITEMS.registerSimpleBlockItem("assembly_table", ModBlocks.ASSEMBLY_TABLE);
 

@@ -1,0 +1,134 @@
+[
+ {
+  "id": "case_retro_tower",
+  "style": "RETRO",
+  "box": [
+   3,
+   0,
+   1,
+   13,
+   16,
+   15
+  ]
+ },
+ {
+  "id": "case_retro_desktop",
+  "style": "RETRO",
+  "box": [
+   1,
+   0,
+   1,
+   15,
+   5,
+   14
+  ]
+ },
+ {
+  "id": "case_home80",
+  "style": "RETRO",
+  "box": [
+   1,
+   0,
+   3,
+   15,
+   3,
+   12
+  ]
+ },
+ {
+  "id": "case_office_tower",
+  "style": "OFFICE",
+  "box": [
+   4,
+   0,
+   1,
+   12,
+   14,
+   15
+  ]
+ },
+ {
+  "id": "case_mini",
+  "style": "OFFICE",
+  "box": [
+   4,
+   0,
+   4,
+   12,
+   5,
+   12
+  ]
+ },
+ {
+  "id": "case_workstation",
+  "style": "OFFICE",
+  "box": [
+   3,
+   0,
+   1,
+   13,
+   17,
+   15
+  ]
+ },
+ {
+  "id": "case_gaming",
+  "style": "GAMING",
+  "box": [
+   2,
+   0,
+   1,
+   14,
+   16,
+   15
+  ]
+ },
+ {
+  "id": "case_gaming_white",
+  "style": "GAMING",
+  "box": [
+   2,
+   0,
+   1,
+   14,
+   16,
+   15
+  ]
+ },
+ {
+  "id": "case_gaming_cube",
+  "style": "GAMING",
+  "box": [
+   2,
+   0,
+   2,
+   14,
+   12,
+   14
+  ]
+ },
+ {
+  "id": "case_industrial",
+  "style": "INDUSTRIAL",
+  "box": [
+   1,
+   0,
+   1,
+   15,
+   16,
+   15
+  ]
+ },
+ {
+  "id": "case_server",
+  "style": "SERVER",
+  "box": [
+   0,
+   0,
+   0,
+   16,
+   16,
+   16
+  ]
+ }
+]

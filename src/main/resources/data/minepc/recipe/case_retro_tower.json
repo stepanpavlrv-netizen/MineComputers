@@ -1,0 +1,16 @@
+{
+ "type": "minecraft:crafting_shapeless",
+ "category": "redstone",
+ "ingredients": [
+  {
+   "item": "minepc:pc_case"
+  },
+  {
+   "item": "minecraft:birch_planks"
+  }
+ ],
+ "result": {
+  "id": "minepc:case_retro_tower",
+  "count": 1
+ }
+}

@@ -1,0 +1,16 @@
+{
+ "type": "minecraft:crafting_shapeless",
+ "category": "redstone",
+ "ingredients": [
+  {
+   "item": "minepc:pc_case"
+  },
+  {
+   "item": "minecraft:iron_bars"
+  }
+ ],
+ "result": {
+  "id": "minepc:case_workstation",
+  "count": 1
+ }
+}

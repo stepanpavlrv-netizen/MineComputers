@@ -21,7 +21,8 @@ public class ModBlockEntities {
 
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<PcCaseBlockEntity>> PC_CASE =
             BLOCK_ENTITIES.register("pc_case",
-                    () -> BlockEntityType.Builder.of(PcCaseBlockEntity::new, ModBlocks.PC_CASE.get()).build(null));
+                    () -> BlockEntityType.Builder.of(PcCaseBlockEntity::new,
+                            ModBlocks.allCases().toArray(new net.minecraft.world.level.block.Block[0])).build(null));
 
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<MonitorBlockEntity>> MONITOR =
             BLOCK_ENTITIES.register("monitor",

@@ -125,10 +125,33 @@ public class CiScreenshots {
                 mc.setScreen(new TerminalScreen(casePos));
             }
             case 600 -> shot(mc, "terminal_colors");
-            case 620 -> mc.stop();
+            case 605 -> {
+                mc.setScreen(null);
+                server.execute(CiScreenshots::placeCases);
+            }
+            case 625 -> {
+                mc.options.hideGui = true;
+                shot(mc, "world_cases");
+            }
+            case 640 -> mc.stop();
             default -> {
             }
         }
+    }
+
+    /** Все корпуса-варианты в ряд перед игроком. */
+    private static void placeCases() {
+        var server = Minecraft.getInstance().getSingleplayerServer();
+        ServerPlayer p = server.getPlayerList().getPlayers().get(0);
+        ServerLevel level = p.serverLevel();
+        BlockPos row = casePos.east().south(2);
+        var variants = com.strikerr212.minepc.block.CaseVariant.values();
+        for (int i = 0; i < variants.length; i++) {
+            BlockPos pos = row.east(i - variants.length / 2);
+            level.setBlockAndUpdate(pos.below(), net.minecraft.world.level.block.Blocks.SMOOTH_STONE.defaultBlockState());
+            level.setBlockAndUpdate(pos, ModBlocks.CASES.get(variants[i]).get().defaultBlockState().setValue(PcCaseBlock.FACING, Direction.SOUTH));
+        }
+        p.teleportTo(level, row.getX() + 0.5, row.getY() + 1.2, row.getZ() + 6.5, 180f, 18f);
     }
 
     /** Окно корпуса для скриншота: другая тема и вкладка. */

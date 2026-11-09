@@ -1,0 +1,16 @@
+{
+ "type": "minecraft:crafting_shapeless",
+ "category": "redstone",
+ "ingredients": [
+  {
+   "item": "minepc:pc_case"
+  },
+  {
+   "item": "minepc:keyboard"
+  }
+ ],
+ "result": {
+  "id": "minepc:case_home80",
+  "count": 1
+ }
+}

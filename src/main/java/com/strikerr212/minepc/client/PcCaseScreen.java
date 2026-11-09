@@ -149,8 +149,9 @@ public class PcCaseScreen extends AbstractContainerScreen<PcCaseMenu> {
         if (++age % 10 == 0) refresh();
         if (age % 20 == 0) {
             System.arraycopy(load, 1, load, 0, load.length - 1);
-            load[load.length - 1] = menu.computerState() == 1 ? menu.loadPercent() : 0;
-            loadCount = Math.min(load.length, loadCount + 1);
+            boolean on = menu.computerState() == 1;
+            load[load.length - 1] = on ? menu.loadPercent() : 0;
+            loadCount = on ? Math.min(load.length, loadCount + 1) : 0;
         }
     }
 
@@ -548,7 +549,7 @@ public class PcCaseScreen extends AbstractContainerScreen<PcCaseMenu> {
         int hMax = GY1 - GY0 - 2;
         for (int i = 0; i < loadCount; i++) {
             int v = load[load.length - 1 - i];
-            int h = Math.round(hMax * v / 100f);
+            int h = Math.max(1, Math.round(hMax * v / 100f));   // работает — хотя бы черта
             int x1 = GX1 - 1 - i * 3;
             if (h > 0 && x1 - 1 > GX0) {
                 rect(g, x1 - 1, GY1 - h, x1, GY1 - 1, i % 2 == 0 ? th.graphFg : CaseTheme.sh(th.graphFg, 0.8));

@@ -1,0 +1,16 @@
+{
+ "type": "minecraft:crafting_shapeless",
+ "category": "redstone",
+ "ingredients": [
+  {
+   "item": "minepc:pc_case"
+  },
+  {
+   "item": "minecraft:chain"
+  }
+ ],
+ "result": {
+  "id": "minepc:case_server",
+  "count": 1
+ }
+}

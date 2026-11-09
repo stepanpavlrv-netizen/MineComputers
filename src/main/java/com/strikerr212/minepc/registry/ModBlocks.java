@@ -24,6 +24,26 @@ public class ModBlocks {
                     .sound(SoundType.METAL)
                     .noOcclusion()));   // блок не полный, сквозь стекло видно соседей
 
+    /** Корпуса-варианты: другой облик и тема окна, внутри — тот же системный блок. */
+    public static final java.util.Map<com.strikerr212.minepc.block.CaseVariant, DeferredBlock<PcCaseBlock>> CASES = new java.util.EnumMap<>(com.strikerr212.minepc.block.CaseVariant.class);
+    static {
+        for (com.strikerr212.minepc.block.CaseVariant v : com.strikerr212.minepc.block.CaseVariant.values()) {
+            CASES.put(v, BLOCKS.register(v.id, () -> new PcCaseBlock(BlockBehaviour.Properties.of()
+                    .mapColor(MapColor.COLOR_BLACK)
+                    .strength(2.0f, 6.0f)
+                    .sound(SoundType.METAL)
+                    .noOcclusion(), v)));
+        }
+    }
+
+    /** Все системные блоки: обычный и варианты. */
+    public static java.util.List<PcCaseBlock> allCases() {
+        java.util.List<PcCaseBlock> out = new java.util.ArrayList<>();
+        out.add(PC_CASE.get());
+        for (DeferredBlock<PcCaseBlock> b : CASES.values()) out.add(b.get());
+        return out;
+    }
+
     public static final DeferredBlock<AssemblyTableBlock> ASSEMBLY_TABLE = BLOCKS.register("assembly_table",
             () -> new AssemblyTableBlock(BlockBehaviour.Properties.of()
                     .mapColor(MapColor.METAL)

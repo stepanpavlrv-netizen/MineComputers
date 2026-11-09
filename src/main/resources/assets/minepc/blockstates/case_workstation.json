@@ -1,0 +1,19 @@
+{
+ "variants": {
+  "facing=north": {
+   "model": "minepc:block/case_workstation"
+  },
+  "facing=east": {
+   "model": "minepc:block/case_workstation",
+   "y": 90
+  },
+  "facing=south": {
+   "model": "minepc:block/case_workstation",
+   "y": 180
+  },
+  "facing=west": {
+   "model": "minepc:block/case_workstation",
+   "y": 270
+  }
+ }
+}

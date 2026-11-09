@@ -22,6 +22,7 @@ public class ModCreativeTabs {
                     .displayItems((parameters, output) -> {
                         output.accept(ModItems.ASSEMBLY_TABLE.get());
                         output.accept(ModItems.PC_CASE.get());
+                        for (var item : ModItems.CASES.values()) output.accept(item.get());
                         output.accept(ModItems.MONITOR.get());
                         output.accept(ModItems.KEYBOARD.get());
                         output.accept(ModItems.DISK_DRIVE.get());
