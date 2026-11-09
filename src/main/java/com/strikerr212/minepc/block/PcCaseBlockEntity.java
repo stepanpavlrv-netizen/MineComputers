@@ -223,6 +223,16 @@ public class PcCaseBlockEntity extends BlockEntity implements MenuProvider {
         return pc.hasKeyboard();
     }
 
+    /** Загрузка процессора за последнюю секунду, 0..100 %. */
+    public int loadPercent() {
+        return pc.loadPercent();
+    }
+
+    /** Тематика корпуса (оформление окна). */
+    public CaseStyle style() {
+        return getBlockState().getBlock() instanceof PcCaseBlock b ? b.style() : CaseStyle.CLASSIC;
+    }
+
     /** Текст на экране компьютера (для тестов и отладки), "" если выключен. */
     public String screenText() {
         var c = pc.computer();
@@ -397,7 +407,7 @@ public class PcCaseBlockEntity extends BlockEntity implements MenuProvider {
     // ======================= Отчёт о сборке =======================
 
     /** Собрать паспорта установленных деталей для расчёта производительности. */
-    SystemModel.Input collectInput() {
+    public SystemModel.Input collectInput() {
         int power = 0;
         List<RamData> ram = new ArrayList<>();
         List<HddData> hdds = new ArrayList<>();

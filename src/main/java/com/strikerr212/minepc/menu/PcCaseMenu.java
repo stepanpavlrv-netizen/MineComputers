@@ -1,7 +1,6 @@
 package com.strikerr212.minepc.menu;
 
 import com.strikerr212.minepc.block.PcCaseBlockEntity;
-import com.strikerr212.minepc.registry.ModBlocks;
 import com.strikerr212.minepc.registry.ModMenus;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -26,20 +25,24 @@ public class PcCaseMenu extends AbstractContainerMenu {
 
     public static final int BTN_POWER = 0;
 
-    /** Положение слотов в окне (x, y) — в том же порядке, что слоты корпуса. */
+    /**
+     * Положение рамок слотов в окне (x, y) — в том же порядке, что слоты корпуса.
+     * Слоты стоят там, где детали стоят в настоящем компьютере: процессор и кулер у сокета,
+     * память справа, видеокарта над PCIe, M.2 рядом, плата снизу; справа отсек — БП и диски.
+     */
     public static final int[][] SLOT_POS = {
-            {10, 22},                                   // плата
-            {32, 22},                                   // процессор
-            {50, 22},                                   // кулер
-            {10, 46}, {28, 46}, {46, 46}, {64, 46},     // память
-            {72, 22},                                   // видеокарта
-            {94, 22},                                   // блок питания
-            {10, 70}, {28, 70},                         // жёсткие диски
-            {52, 70}, {70, 70},                         // SATA SSD
-            {94, 46}, {112, 46},                        // M.2
-            {112, 70}, {130, 70},                       // USB
+            {18, 98},                                   // плата
+            {18, 30},                                   // процессор
+            {38, 30},                                   // кулер
+            {62, 30}, {80, 30}, {98, 30}, {98, 48},     // память
+            {18, 64},                                   // видеокарта
+            {133, 21},                                  // блок питания
+            {133, 41}, {133, 59},                       // жёсткие диски
+            {133, 81}, {133, 99},                       // SATA SSD
+            {62, 64}, {80, 64},                         // M.2
+            {180, 150}, {200, 150},                     // USB (передняя панель)
     };
-    public static final int INV_X = 8, INV_Y = 100;
+    public static final int INV_X = 8, INV_Y = 140;
 
     private final PcCaseBlockEntity be;
     private final ContainerLevelAccess access;
@@ -74,7 +77,11 @@ public class PcCaseMenu extends AbstractContainerMenu {
         data = server ? new ContainerData() {
             @Override
             public int get(int index) {
-                return index == 0 ? be.computerState() : (be.hasKeyboard() ? 1 : 0);
+                return switch (index) {
+                    case 0 -> be.computerState();
+                    case 1 -> be.hasKeyboard() ? 1 : 0;
+                    default -> be.loadPercent();
+                };
             }
 
             @Override
@@ -83,9 +90,9 @@ public class PcCaseMenu extends AbstractContainerMenu {
 
             @Override
             public int getCount() {
-                return 2;
+                return 3;
             }
-        } : new SimpleContainerData(2);
+        } : new SimpleContainerData(3);
         addDataSlots(data);
     }
 
@@ -100,6 +107,11 @@ public class PcCaseMenu extends AbstractContainerMenu {
 
     public boolean hasKeyboard() {
         return data.get(1) == 1;
+    }
+
+    /** Загрузка процессора за последнюю секунду, 0..100 %. */
+    public int loadPercent() {
+        return data.get(2);
     }
 
     @Override
@@ -133,7 +145,9 @@ public class PcCaseMenu extends AbstractContainerMenu {
 
     @Override
     public boolean stillValid(Player player) {
-        return be != null && stillValid(access, player, ModBlocks.PC_CASE.get());
+        if (be == null || be.isRemoved()) return false;
+        return access.evaluate((level, pos) -> level.getBlockState(pos).getBlock() instanceof com.strikerr212.minepc.block.PcCaseBlock
+                && player.distanceToSqr(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5) <= 64.0, true);
     }
 
     /** Слот корпуса: одна деталь, правила — у системного блока. */

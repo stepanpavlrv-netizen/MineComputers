@@ -48,9 +48,21 @@ public class PcCaseBlock extends BaseEntityBlock {
     private static final VoxelShape SHAPE_NORTH_SOUTH = Block.box(3, 0, 0, 13, 16, 16);
     private static final VoxelShape SHAPE_EAST_WEST = Block.box(0, 0, 3, 16, 16, 13);
 
+    private final CaseStyle style;
+
     public PcCaseBlock(Properties properties) {
+        this(properties, CaseStyle.CLASSIC);
+    }
+
+    public PcCaseBlock(Properties properties, CaseStyle style) {
         super(properties);
+        this.style = style;
         registerDefaultState(stateDefinition.any().setValue(FACING, Direction.NORTH));
+    }
+
+    /** Тематика корпуса (оформление окна). */
+    public CaseStyle style() {
+        return style;
     }
 
     @Override

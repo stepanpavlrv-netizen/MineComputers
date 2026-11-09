@@ -6,6 +6,7 @@ from models3d import rotate
 from materials5 import materials, mobo_face_v5
 from materials import case_tray
 from px import Canvas, noise, hx
+import icons2d
 
 root, dump_path = sys.argv[1], sys.argv[2]
 A = f"{root}/src/main/resources/assets/minepc"
@@ -161,14 +162,21 @@ for t, combos in COMBOS.items():
         part = {"textures": dict(m.textures, particle=PARTICLE), "elements": m.elements}
         write(f"{A}/models/item/{name}/part_{tag}.json", part)
         write(f"{A}/models/item/{name}/show_{tag}.json", showcase(part, hero(t, v)))
+        # Плоская иконка для инвентаря: 4 слоя, игра красит слои 1–3 цветами детали
+        os.makedirs(f"{T}/item/icon/{name}", exist_ok=True)
+        for k, layer in enumerate(icons2d.layers(t, v)):
+            layer.save(f"{T}/item/icon/{name}/{tag}_{k}.png")
+        write(f"{A}/models/item/{name}/icon_{tag}.json", {"parent": "minecraft:item/generated", "textures": {
+            f"layer{k}": f"minepc:item/icon/{name}/{tag}_{k}" for k in range(4)}})
         wrapper = {"loader": "neoforge:separate_transforms", "textures": {"particle": PARTICLE},
                    "base": {"parent": f"minepc:item/{name}/part_{tag}"},
-                   "perspectives": {p: {"parent": f"minepc:item/{name}/show_{tag}"} for p in PERSPECTIVES}}
+                   "perspectives": {p: {"parent": f"minepc:item/{name}/{'icon' if p == 'gui' else 'show'}_{tag}"}
+                                    for p in PERSPECTIVES}}
         write(f"{A}/models/item/{name}/{tag}.json", wrapper)
         count += 1
     main = {"loader": "neoforge:separate_transforms", "textures": {"particle": PARTICLE},
             "base": {"parent": f"minepc:item/{name}/part_{combos[0][0]}_{combos[0][1]}_{combos[0][2]}"},
-            "perspectives": {p: {"parent": f"minepc:item/{name}/show_{combos[0][0]}_{combos[0][1]}_{combos[0][2]}"}
+            "perspectives": {p: {"parent": f"minepc:item/{name}/{'icon' if p == 'gui' else 'show'}_{combos[0][0]}_{combos[0][1]}_{combos[0][2]}"}
                              for p in PERSPECTIVES},
             # Свойства v0..v2 задаёт Java (ClientEvents). Списки отсортированы: побеждает последнее подходящее.
             "overrides": [{"predicate": {"minepc:v0": round(v[0] * .1, 1), "minepc:v1": round(v[1] * .1, 1),

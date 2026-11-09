@@ -89,7 +89,23 @@ public class CiScreenshots {
                 });
             }
             case 430 -> shot(mc, "case_gui");
-            case 440 -> {
+            case 433 -> ciCase(mc, null, 1);
+            case 437 -> shot(mc, "case_gui_power");
+            case 440 -> ciCase(mc, null, 3);
+            case 444 -> shot(mc, "case_gui_drives");
+            case 447 -> ciCase(mc, com.strikerr212.minepc.block.CaseStyle.RETRO, 0);
+            case 451 -> shot(mc, "case_gui_retro");
+            case 454 -> ciCase(mc, com.strikerr212.minepc.block.CaseStyle.OFFICE, 0);
+            case 458 -> shot(mc, "case_gui_office");
+            case 461 -> ciCase(mc, com.strikerr212.minepc.block.CaseStyle.GAMING, 0);
+            case 465 -> shot(mc, "case_gui_gaming");
+            case 468 -> ciCase(mc, com.strikerr212.minepc.block.CaseStyle.INDUSTRIAL, 2);
+            case 472 -> shot(mc, "case_gui_industrial");
+            case 475 -> ciCase(mc, com.strikerr212.minepc.block.CaseStyle.SERVER, 0);
+            case 479 -> shot(mc, "case_gui_server");
+            case 482 -> {
+                PcCaseScreen.ciTheme = null;
+                PcCaseScreen.ciTab = -1;
                 mc.setScreen(null);
                 server.execute(() -> {
                     PcCaseBlockEntity be = be();
@@ -100,19 +116,26 @@ public class CiScreenshots {
                 });
                 type("colors");
             }
-            case 520 -> {
+            case 560 -> {
                 mc.options.hideGui = true;
                 shot(mc, "world_colors");
             }
-            case 530 -> {
+            case 570 -> {
                 mc.options.hideGui = false;
                 mc.setScreen(new TerminalScreen(casePos));
             }
-            case 560 -> shot(mc, "terminal_colors");
-            case 580 -> mc.stop();
+            case 600 -> shot(mc, "terminal_colors");
+            case 620 -> mc.stop();
             default -> {
             }
         }
+    }
+
+    /** Окно корпуса для скриншота: другая тема и вкладка. */
+    private static void ciCase(Minecraft mc, com.strikerr212.minepc.block.CaseStyle style, int tab) {
+        PcCaseScreen.ciTheme = style;
+        PcCaseScreen.ciTab = tab;
+        if (mc.screen instanceof PcCaseScreen s) s.ciRefresh();
     }
 
     /** Поставить системный блок с деталями ур. 5, монитор и клавиатуру перед игроком и включить. */

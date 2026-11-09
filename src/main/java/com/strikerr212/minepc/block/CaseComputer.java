@@ -70,6 +70,14 @@ final class CaseComputer implements Computer.Host {
     void setLabel(String l) { label = l == null ? "" : l; }
     boolean hasKeyboard() { return hasKeyboard; }
 
+    /** Загрузка всех ядер за последнюю секунду, 0..100 %. */
+    int loadPercent() {
+        if (computer == null || !computer.isOn()) return 0;
+        Computer.Limits l = computer.limits();
+        long max = (long) l.opsPerTick() * Computer.TICKS_PER_SECOND * Math.max(1, l.cores());
+        return (int) Math.min(100, computer.opsLastSecond() * 100 / Math.max(1, max));
+    }
+
     /** 0 — выключен, 1 — работает, 2 — ошибка. */
     int stateCode() {
         if (computer == null) return 0;
@@ -162,7 +170,7 @@ final class CaseComputer implements Computer.Host {
     private int gpuTier;
 
     /** Настоящие лимиты компьютера по деталям и настройкам сервера. */
-    static Computer.Limits limitsFor(SystemModel.Input in, SystemModel.Report report, double speed) {
+    public static Computer.Limits limitsFor(SystemModel.Input in, SystemModel.Report report, double speed) {
         int opsPerSecond = (int) Math.min(500_000_000L, Math.round(Perf.gameOpsPerSecond(report.cpuGips()) * speed));
         int cores = in.cpu() == null ? 1 : Math.max(1, Math.min(in.cpu().cores(), com.strikerr212.minepc.MineConfig.maxCores()));
         long memory = Math.min((long) com.strikerr212.minepc.MineConfig.maxMemoryMb() << 20,

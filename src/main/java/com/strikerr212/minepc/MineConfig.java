@@ -71,6 +71,9 @@ public final class MineConfig {
         }
     }
 
+    /** Клиент: играем ли в одиночной игре (выставляет окно корпуса, чтобы показывать скорость как на сервере). */
+    public static volatile boolean clientSingleplayer = true;
+
     public static double speed(boolean singleplayer) {
         return singleplayer ? get(SINGLEPLAYER_SPEED, 2.0) : get(SPEED, 1.0);
     }
@@ -78,7 +81,7 @@ public final class MineConfig {
     /** Множитель скорости для мира: на сервере — по его типу; у клиента одиночной игры — как в одиночной; иначе ×1. */
     public static double speedFor(net.minecraft.world.level.Level level) {
         if (level != null && level.getServer() != null) return speed(!level.getServer().isDedicatedServer());
-        return SPEC.isLoaded() ? speed(true) : 1.0;
+        return SPEC.isLoaded() ? speed(clientSingleplayer) : 1.0;
     }
 
     public static double memory() { return get(MEMORY, 1.0); }
