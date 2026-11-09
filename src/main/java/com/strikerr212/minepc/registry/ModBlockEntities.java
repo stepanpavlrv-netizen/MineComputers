@@ -26,7 +26,8 @@ public class ModBlockEntities {
 
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<MonitorBlockEntity>> MONITOR =
             BLOCK_ENTITIES.register("monitor",
-                    () -> BlockEntityType.Builder.of(MonitorBlockEntity::new, ModBlocks.MONITOR.get()).build(null));
+                    () -> BlockEntityType.Builder.of(MonitorBlockEntity::new,
+                            ModBlocks.allMonitors().toArray(new net.minecraft.world.level.block.Block[0])).build(null));
 
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<DiskDriveBlockEntity>> DISK_DRIVE =
             BLOCK_ENTITIES.register("disk_drive",

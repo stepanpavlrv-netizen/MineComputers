@@ -3,7 +3,10 @@ package com.strikerr212.minepc.client;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
+import com.strikerr212.minepc.block.BaseMonitorBlock;
+import com.strikerr212.minepc.block.BlockMonitorBlock;
 import com.strikerr212.minepc.block.DeviceBlock;
+import com.strikerr212.minepc.block.MonitorKind;
 import com.strikerr212.minepc.block.MonitorBlockEntity;
 import com.strikerr212.minepc.block.MonitorGroup;
 import net.minecraft.client.Minecraft;
@@ -23,7 +26,6 @@ import org.joml.Matrix4f;
  */
 public class MonitorRenderer implements BlockEntityRenderer<MonitorBlockEntity> {
 
-    private static final float Z = 11;                   // передняя грань панели (пиксели блока)
     private static final int CELL_W = 6, CELL_H = 9;     // пропорции клетки экрана
     private static final int FULL = LightTexture.FULL_BRIGHT;
 
@@ -40,7 +42,10 @@ public class MonitorRenderer implements BlockEntityRenderer<MonitorBlockEntity> 
         if (s == null) return;   // выключен — видна обычная тёмная текстура экрана
         MonitorGroup g = be.group();
 
-        Direction facing = be.getBlockState().getValue(DeviceBlock.FACING);
+        var state = be.getBlockState();
+        if (!(state.getBlock() instanceof BaseMonitorBlock monitor)) return;
+        MonitorKind kind = monitor.kind();
+        Direction facing = state.getValue(DeviceBlock.FACING);
         pose.pushPose();
         // Поворачиваем так, будто монитор смотрит на север, и переходим в пиксели
         pose.translate(0.5, 0.5, 0.5);
@@ -52,14 +57,25 @@ public class MonitorRenderer implements BlockEntityRenderer<MonitorBlockEntity> 
         }));
         pose.translate(-0.5, -0.5, -0.5);
         pose.scale(1 / 16f, 1 / 16f, 1 / 16f);
-        // Начало координат — левый верхний угол экрана всего монитора (рамка 1 пиксель): X вправо, Y вниз,
+
+        // Где экран всего монитора (u — вправо от левого края, v — вниз от верха, как видит зритель)
+        float left = kind.uL, top = kind.vT;
+        float right = (g.cols() - 1) * 16 + kind.uR, bottom = (g.rows() - 1) * 16 + kind.vB;
+        if (kind.seamless && g.cols() * g.rows() == 1 && state.getBlock() instanceof BlockMonitorBlock) {
+            // Блоки стоят не прямоугольником: рамки нет там, где сосед, — экран доходит до края
+            if (state.getValue(BlockMonitorBlock.LEFT)) left = 0;
+            if (state.getValue(BlockMonitorBlock.UP)) top = 0;
+            if (state.getValue(BlockMonitorBlock.RIGHT)) right = 16;
+            if (state.getValue(BlockMonitorBlock.DOWN)) bottom = 16;
+        }
+        // Начало координат — левый верхний угол экрана: X вправо, Y вниз,
         // Z — к зрителю (как у табличек, иначе текст окажется изнанкой к игроку)
-        pose.translate(16 + g.col() * 16 - 1, 16 + g.row() * 16 - 1, Z - 0.01f);
+        pose.translate(16 + g.col() * 16 - left, 16 + g.row() * 16 - top, kind.z - 0.01f);
         pose.scale(-1, -1, -1);
 
-        float areaW = g.cols() * 16 - 2, areaH = g.rows() * 16 - 4;
+        float areaW = right - left, areaH = bottom - top;
         // Этот блок — прямоугольник внутри общего экрана; рисуем только то, что в него попадает
-        float bx0 = g.col() * 16 - 1, by0 = g.row() * 16 - 1, bx1 = bx0 + 16, by1 = by0 + 16;
+        float bx0 = g.col() * 16 - left, by0 = g.row() * 16 - top, bx1 = bx0 + 16, by1 = by0 + 16;
 
         Matrix4f m = pose.last().pose();
         VertexConsumer vc = buffers.getBuffer(RenderType.textBackground());

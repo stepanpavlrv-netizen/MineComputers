@@ -1,0 +1,16 @@
+{
+ "type": "minecraft:crafting_shapeless",
+ "category": "redstone",
+ "ingredients": [
+  {
+   "item": "minepc:monitor"
+  },
+  {
+   "item": "minecraft:dark_oak_planks"
+  }
+ ],
+ "result": {
+  "id": "minepc:monitor_tv",
+  "count": 1
+ }
+}

@@ -15,6 +15,14 @@
   "block.minepc.assembly_table": "Assembly Table",
   "container.minepc.assembly_table": "Assembly Table",
   "block.minepc.monitor": "Monitor",
+  "block.minepc.monitor_crt": "CRT Monitor",
+  "block.minepc.monitor_tv": "Tube TV",
+  "block.minepc.monitor_terminal": "Terminal",
+  "block.minepc.monitor_panel": "Wall Panel",
+  "block.minepc.monitor_block": "Block Monitor",
+  "block.minepc.monitor_block_white": "Block Monitor (White)",
+  "block.minepc.monitor_block_retro": "Block Monitor (Retro)",
+  "block.minepc.keyboard_stand": "Keyboard Stand",
   "block.minepc.keyboard": "Keyboard",
   "block.minepc.disk_drive": "Disk Drive",
   "item.minepc.floppy_disk": "Floppy Disk",
@@ -452,5 +460,6 @@
   "gui.minepc.group.video": "Video",
   "gui.minepc.group.board": "Board",
   "unit.minepc.short.m": "%sM",
-  "unit.minepc.short.k": "%sk"
+  "unit.minepc.short.k": "%sk",
+  "message.minepc.monitor.keyboard_bottom": "A keyboard fits only the bottom row of the monitor"
 }

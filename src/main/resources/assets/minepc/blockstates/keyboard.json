@@ -1,19 +1,34 @@
 {
-  "variants": {
-    "facing=north": {
-      "model": "minepc:block/keyboard"
-    },
-    "facing=east": {
-      "model": "minepc:block/keyboard",
-      "y": 90
-    },
-    "facing=south": {
-      "model": "minepc:block/keyboard",
-      "y": 180
-    },
-    "facing=west": {
-      "model": "minepc:block/keyboard",
-      "y": 270
-    }
+ "variants": {
+  "facing=north,mount=floor": {
+   "model": "minepc:block/keyboard"
+  },
+  "facing=north,mount=wall": {
+   "model": "minepc:block/keyboard_wall"
+  },
+  "facing=east,mount=floor": {
+   "model": "minepc:block/keyboard",
+   "y": 90
+  },
+  "facing=east,mount=wall": {
+   "model": "minepc:block/keyboard_wall",
+   "y": 90
+  },
+  "facing=south,mount=floor": {
+   "model": "minepc:block/keyboard",
+   "y": 180
+  },
+  "facing=south,mount=wall": {
+   "model": "minepc:block/keyboard_wall",
+   "y": 180
+  },
+  "facing=west,mount=floor": {
+   "model": "minepc:block/keyboard",
+   "y": 270
+  },
+  "facing=west,mount=wall": {
+   "model": "minepc:block/keyboard_wall",
+   "y": 270
   }
+ }
 }

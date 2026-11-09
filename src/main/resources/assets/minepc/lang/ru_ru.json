@@ -15,6 +15,14 @@
   "block.minepc.assembly_table": "Сборочный стол",
   "container.minepc.assembly_table": "Сборочный стол",
   "block.minepc.monitor": "Монитор",
+  "block.minepc.monitor_crt": "Кинескопный монитор",
+  "block.minepc.monitor_tv": "Ламповый телевизор",
+  "block.minepc.monitor_terminal": "Терминал",
+  "block.minepc.monitor_panel": "Настенная панель",
+  "block.minepc.monitor_block": "Блочный монитор",
+  "block.minepc.monitor_block_white": "Блочный монитор (белый)",
+  "block.minepc.monitor_block_retro": "Блочный монитор (ретро)",
+  "block.minepc.keyboard_stand": "Клавиатурная стойка",
   "block.minepc.keyboard": "Клавиатура",
   "block.minepc.disk_drive": "Дисковод",
   "item.minepc.floppy_disk": "Дискета",
@@ -452,5 +460,6 @@
   "gui.minepc.group.video": "Видео",
   "gui.minepc.group.board": "Плата",
   "unit.minepc.short.m": "%s млн",
-  "unit.minepc.short.k": "%s тыс"
+  "unit.minepc.short.k": "%s тыс",
+  "message.minepc.monitor.keyboard_bottom": "Клавиатуру можно поставить только к нижнему ряду монитора"
 }

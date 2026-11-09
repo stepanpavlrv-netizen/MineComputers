@@ -1,0 +1,67 @@
+{
+ "textures": {
+  "rim": "minepc:block/monitor/monitor_block_rim",
+  "particle": "minepc:block/monitor/monitor_block_rim"
+ },
+ "elements": [
+  {
+   "from": [
+    0,
+    0,
+    -0.25
+   ],
+   "to": [
+    16,
+    1,
+    0
+   ],
+   "faces": {
+    "north": {
+     "uv": [
+      0,
+      15,
+      16,
+      16
+     ],
+     "texture": "#rim"
+    },
+    "east": {
+     "uv": [
+      0,
+      0,
+      1,
+      1
+     ],
+     "texture": "#rim"
+    },
+    "west": {
+     "uv": [
+      0,
+      0,
+      1,
+      1
+     ],
+     "texture": "#rim"
+    },
+    "up": {
+     "uv": [
+      0,
+      0,
+      1,
+      1
+     ],
+     "texture": "#rim"
+    },
+    "down": {
+     "uv": [
+      0,
+      0,
+      1,
+      1
+     ],
+     "texture": "#rim"
+    }
+   }
+  }
+ ]
+}

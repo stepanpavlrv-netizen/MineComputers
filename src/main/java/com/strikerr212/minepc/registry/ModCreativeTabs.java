@@ -24,7 +24,15 @@ public class ModCreativeTabs {
                         output.accept(ModItems.PC_CASE.get());
                         for (var item : ModItems.CASES.values()) output.accept(item.get());
                         output.accept(ModItems.MONITOR.get());
+                        output.accept(ModItems.MONITOR_CRT.get());
+                        output.accept(ModItems.MONITOR_TV.get());
+                        output.accept(ModItems.MONITOR_TERMINAL.get());
+                        output.accept(ModItems.MONITOR_PANEL.get());
+                        output.accept(ModItems.MONITOR_BLOCK.get());
+                        output.accept(ModItems.MONITOR_BLOCK_WHITE.get());
+                        output.accept(ModItems.MONITOR_BLOCK_RETRO.get());
                         output.accept(ModItems.KEYBOARD.get());
+                        output.accept(ModItems.KEYBOARD_STAND.get());
                         output.accept(ModItems.DISK_DRIVE.get());
                         output.accept(ModItems.FLOPPY_DISK.get());
                         output.accept(ModItems.FLASH_DRIVE.get());

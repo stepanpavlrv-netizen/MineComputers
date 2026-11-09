@@ -28,15 +28,15 @@ public record MonitorGroup(int cols, int rows, int col, int row, Set<BlockPos> b
         return new MonitorGroup(1, 1, 0, 0, Set.of(pos));
     }
 
-    private static boolean sameMonitor(BlockGetter level, BlockPos pos, Direction facing) {
+    private static boolean sameMonitor(BlockGetter level, BlockPos pos, net.minecraft.world.level.block.Block block, Direction facing) {
         BlockState s = level.getBlockState(pos);
-        return s.getBlock() instanceof MonitorBlock && s.getValue(DeviceBlock.FACING) == facing;
+        return s.getBlock() == block && s.getValue(DeviceBlock.FACING) == facing;
     }
 
     /** Найти монитор, в который входит блок pos. Если мониторы стоят не прямоугольником — каждый сам по себе. */
     public static MonitorGroup of(BlockGetter level, BlockPos pos) {
         BlockState state = level.getBlockState(pos);
-        if (!(state.getBlock() instanceof MonitorBlock)) return single(pos);
+        if (!(state.getBlock() instanceof BaseMonitorBlock monitor) || !monitor.kind().groups) return single(pos);
         Direction facing = state.getValue(DeviceBlock.FACING);
         Direction right = facing.getCounterClockWise();     // «вправо», если смотреть на экран
         Set<BlockPos> seen = new HashSet<>();
@@ -48,7 +48,7 @@ public record MonitorGroup(int cols, int rows, int col, int row, Set<BlockPos> b
             BlockPos p = queue.poll();
             for (Direction d : List.of(right, right.getOpposite(), Direction.UP, Direction.DOWN)) {
                 BlockPos n = p.relative(d);
-                if (seen.contains(n) || !sameMonitor(level, n, facing)) continue;
+                if (seen.contains(n) || !sameMonitor(level, n, state.getBlock(), facing)) continue;
                 seen.add(n);
                 queue.add(n);
             }

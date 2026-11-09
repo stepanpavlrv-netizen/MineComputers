@@ -1,56 +1,61 @@
 package com.strikerr212.minepc.block;
 
 import com.mojang.serialization.MapCodec;
-import com.strikerr212.minepc.client.ClientAccess;
+import com.strikerr212.minepc.registry.ModItems;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.world.item.context.BlockPlaceContext;
-import net.minecraft.world.level.LevelAccessor;
-import net.minecraft.world.level.block.state.StateDefinition;
-import net.minecraft.world.level.block.state.properties.BooleanProperty;
 import net.minecraft.network.chat.Component;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.ItemInteractionResult;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.StateDefinition;
+import net.minecraft.world.level.block.state.properties.BooleanProperty;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
-import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
 /**
- * Монитор. Ставится вплотную к системному блоку и показывает его экран.
- * ПКМ — открыть экран крупно; печатать можно, если рядом стоит клавиатура.
+ * Плоский монитор на подставке. Складывается в большой экран; у нижнего ряда — подставка.
+ * ПКМ клавиатурой — клавиатура встаёт в тот же блок перед экраном (Shift + ПКМ пустой рукой — вынуть).
  */
-public class MonitorBlock extends DeviceBlock {
+public class MonitorBlock extends BaseMonitorBlock {
 
     public static final MapCodec<MonitorBlock> CODEC = simpleCodec(MonitorBlock::new);
     /** Подставка есть только у нижнего ряда большого монитора. */
     public static final BooleanProperty STAND = BooleanProperty.create("stand");
+    /** Клавиатура стоит в этом же блоке перед экраном. */
+    public static final BooleanProperty KEYBOARD = BooleanProperty.create("keyboard");
 
-    // Экран толщиной 3 пикселя у задней стороны блока + подставка
-    private static final VoxelShape NORTH = Shapes.or(Block.box(0, 2, 11, 16, 16, 14), Block.box(4, 0, 9, 12, 2, 16));
-    private static final VoxelShape SOUTH = Shapes.or(Block.box(0, 2, 2, 16, 16, 5), Block.box(4, 0, 0, 12, 2, 7));
-    private static final VoxelShape WEST = Shapes.or(Block.box(11, 2, 0, 14, 16, 16), Block.box(9, 0, 4, 16, 2, 12));
-    private static final VoxelShape EAST = Shapes.or(Block.box(2, 2, 0, 5, 16, 16), Block.box(0, 0, 4, 7, 2, 12));
-    private static final VoxelShape NORTH_TOP = Block.box(0, 0, 11, 16, 16, 14);
-    private static final VoxelShape SOUTH_TOP = Block.box(0, 0, 2, 16, 16, 5);
-    private static final VoxelShape WEST_TOP = Block.box(11, 0, 0, 14, 16, 16);
-    private static final VoxelShape EAST_TOP = Block.box(2, 0, 0, 5, 16, 16);
+    // Экран толщиной 3 пикселя у задней стороны блока + подставка (+ клавиатура перед ней)
+    private static final BoxShapes WITH_STAND = BoxShapes.of(0, 2, 11, 16, 16, 14).add(4, 0, 9, 12, 2, 16);
+    private static final BoxShapes TOP = BoxShapes.of(0, 0, 11, 16, 16, 14);
+    private static final BoxShapes WITH_KEYBOARD = BoxShapes.of(0, 2, 11, 16, 16, 14).add(4, 0, 9, 12, 2, 16).add(1, 0, 1, 15, 1.5, 9);
 
     public MonitorBlock(Properties properties) {
-        super(properties);
-        registerDefaultState(defaultBlockState().setValue(STAND, true));
+        super(properties, MonitorKind.LCD);
+        registerDefaultState(defaultBlockState().setValue(STAND, true).setValue(KEYBOARD, false));
     }
 
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
         super.createBlockStateDefinition(builder);
-        builder.add(STAND);
+        builder.add(STAND, KEYBOARD);
+    }
+
+    @Override
+    public boolean hasKeyboard(BlockState state) {
+        return state.getValue(KEYBOARD);
     }
 
     private static boolean standFor(BlockState state, LevelAccessor level, BlockPos pos) {
@@ -77,30 +82,42 @@ public class MonitorBlock extends DeviceBlock {
 
     @Override
     protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
-        boolean stand = state.getValue(STAND);
-        return switch (state.getValue(FACING)) {
-            case SOUTH -> stand ? SOUTH : SOUTH_TOP;
-            case WEST -> stand ? WEST : WEST_TOP;
-            case EAST -> stand ? EAST : EAST_TOP;
-            default -> stand ? NORTH : NORTH_TOP;
-        };
+        Direction facing = state.getValue(FACING);
+        if (!state.getValue(STAND)) return TOP.get(facing);
+        return (state.getValue(KEYBOARD) ? WITH_KEYBOARD : WITH_STAND).get(facing);
     }
 
+    /** ПКМ клавиатурой: поставить её в блок монитора, перед подставкой. */
     @Override
-    public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
-        return new MonitorBlockEntity(pos, state);
+    protected ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos,
+                                              Player player, InteractionHand hand, BlockHitResult hit) {
+        if (!stack.is(ModItems.KEYBOARD.get()) || state.getValue(KEYBOARD) || player.isShiftKeyDown()) {
+            return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+        }
+        if (!state.getValue(STAND)) {
+            if (!level.isClientSide) player.displayClientMessage(Component.translatable("message.minepc.monitor.keyboard_bottom"), true);
+            return ItemInteractionResult.sidedSuccess(level.isClientSide);
+        }
+        if (!level.isClientSide) {
+            level.setBlockAndUpdate(pos, state.setValue(KEYBOARD, true));
+            level.playSound(null, pos, SoundEvents.STONE_PLACE, SoundSource.BLOCKS, 1f, 1.2f);
+            if (!player.getAbilities().instabuild) stack.shrink(1);
+        }
+        return ItemInteractionResult.sidedSuccess(level.isClientSide);
     }
 
+    /** Shift + ПКМ пустой рукой — забрать клавиатуру; иначе — открыть экран. */
     @Override
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
-        if (level.isClientSide) {
-            BlockPos casePos = level.getBlockEntity(pos) instanceof MonitorBlockEntity m ? m.casePos() : null;
-            if (casePos == null) {
-                player.displayClientMessage(Component.translatable("message.minepc.monitor.no_case"), true);
-            } else {
-                ClientAccess.openTerminal(casePos);
+        if (player.isShiftKeyDown() && state.getValue(KEYBOARD)) {
+            if (!level.isClientSide) {
+                level.setBlockAndUpdate(pos, state.setValue(KEYBOARD, false));
+                ItemStack kb = new ItemStack(ModItems.KEYBOARD.get());
+                if (!player.getInventory().add(kb)) player.drop(kb, false);
+                level.playSound(null, pos, SoundEvents.STONE_BREAK, SoundSource.BLOCKS, 1f, 1.2f);
             }
+            return InteractionResult.sidedSuccess(level.isClientSide);
         }
-        return InteractionResult.sidedSuccess(level.isClientSide);
+        return super.useWithoutItem(state, level, pos, player, hit);
     }
 }

@@ -69,16 +69,22 @@ public abstract class DeviceBlock extends BaseEntityBlock {
         return null;
     }
 
+    /** Клавиатура в этом блоке: отдельная, на стойке, вставленная в монитор или встроенная в терминал. */
+    public static boolean providesKeyboard(BlockState s) {
+        return s.getBlock() instanceof KeyboardBlock || s.getBlock() instanceof BaseMonitorBlock m && m.hasKeyboard(s);
+    }
+
     /** Есть ли клавиатура рядом с системным блоком или с одним из его мониторов. */
     public static boolean hasKeyboard(Level level, BlockPos casePos) {
         for (Direction d : Direction.values()) {
             BlockPos n = casePos.relative(d);
             BlockState s = level.getBlockState(n);
-            if (s.getBlock() instanceof KeyboardBlock) return true;
+            if (providesKeyboard(s)) return true;
             if (level.getBlockEntity(n) instanceof MonitorBlockEntity) {
                 for (BlockPos m : MonitorGroup.of(level, n).blocks()) {
+                    if (providesKeyboard(level.getBlockState(m))) return true;
                     for (Direction d2 : Direction.values()) {
-                        if (level.getBlockState(m.relative(d2)).getBlock() instanceof KeyboardBlock) return true;
+                        if (providesKeyboard(level.getBlockState(m.relative(d2)))) return true;
                     }
                 }
             }

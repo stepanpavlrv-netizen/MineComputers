@@ -166,8 +166,8 @@ def r4(v):
     return round(v, 4)
 
 
-def build(name, model):
-    vox = rotated(model)
+def build(name, model, folder="case", rotate=True):
+    vox = rotated(model) if rotate else dict(model.v)
     bxs = boxes(set(vox))
     faces = []
     for b in bxs:
@@ -218,7 +218,7 @@ def build(name, model):
                 if c is not None:
                     start = prev = c
     els = list(elements.values()) + glow_elems
-    tex = f"minepc:block/case/{name}"
+    tex = f"minepc:block/{folder}/{name}"
     model_json = {"parent": "minecraft:block/block", "textures": {"particle": tex, "all": tex}, "elements": els}
     lo = [min(b[i] for b in bxs) for i in range(3)]
     hi = [max(b[i + 3] for b in bxs) for i in range(3)]

@@ -1,0 +1,47 @@
+{
+ "textures": {
+  "particle": "minepc:block/keyboard_side",
+  "top": "minepc:block/keyboard_top",
+  "side": "minepc:block/keyboard_side"
+ },
+ "elements": [
+  {
+   "from": [
+    1,
+    0,
+    1
+   ],
+   "to": [
+    15,
+    1.5,
+    9
+   ],
+   "faces": {
+    "up": {
+     "texture": "#top",
+     "uv": [
+      1,
+      0,
+      15,
+      11
+     ]
+    },
+    "down": {
+     "texture": "#side"
+    },
+    "north": {
+     "texture": "#side"
+    },
+    "south": {
+     "texture": "#side"
+    },
+    "east": {
+     "texture": "#side"
+    },
+    "west": {
+     "texture": "#side"
+    }
+   }
+  }
+ ]
+}

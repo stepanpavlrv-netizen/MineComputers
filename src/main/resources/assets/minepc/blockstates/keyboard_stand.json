@@ -1,0 +1,34 @@
+{
+ "variants": {
+  "facing=north,mount=floor": {
+   "model": "minepc:block/keyboard_stand"
+  },
+  "facing=north,mount=wall": {
+   "model": "minepc:block/keyboard_stand"
+  },
+  "facing=east,mount=floor": {
+   "model": "minepc:block/keyboard_stand",
+   "y": 90
+  },
+  "facing=east,mount=wall": {
+   "model": "minepc:block/keyboard_stand",
+   "y": 90
+  },
+  "facing=south,mount=floor": {
+   "model": "minepc:block/keyboard_stand",
+   "y": 180
+  },
+  "facing=south,mount=wall": {
+   "model": "minepc:block/keyboard_stand",
+   "y": 180
+  },
+  "facing=west,mount=floor": {
+   "model": "minepc:block/keyboard_stand",
+   "y": 270
+  },
+  "facing=west,mount=wall": {
+   "model": "minepc:block/keyboard_stand",
+   "y": 270
+  }
+ }
+}

@@ -1,0 +1,16 @@
+{
+ "type": "minecraft:crafting_shapeless",
+ "category": "redstone",
+ "ingredients": [
+  {
+   "item": "minepc:monitor"
+  },
+  {
+   "item": "minecraft:white_concrete"
+  }
+ ],
+ "result": {
+  "id": "minepc:monitor_block_white",
+  "count": 1
+ }
+}

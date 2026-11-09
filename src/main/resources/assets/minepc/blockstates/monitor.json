@@ -1,34 +1,121 @@
 {
-  "variants": {
-    "facing=north,stand=true": {
-      "model": "minepc:block/monitor"
-    },
-    "facing=north,stand=false": {
-      "model": "minepc:block/monitor_top"
-    },
-    "facing=east,stand=true": {
-      "model": "minepc:block/monitor",
-      "y": 90
-    },
-    "facing=east,stand=false": {
-      "model": "minepc:block/monitor_top",
-      "y": 90
-    },
-    "facing=south,stand=true": {
-      "model": "minepc:block/monitor",
-      "y": 180
-    },
-    "facing=south,stand=false": {
-      "model": "minepc:block/monitor_top",
-      "y": 180
-    },
-    "facing=west,stand=true": {
-      "model": "minepc:block/monitor",
-      "y": 270
-    },
-    "facing=west,stand=false": {
-      "model": "minepc:block/monitor_top",
-      "y": 270
-    }
+ "multipart": [
+  {
+   "when": {
+    "facing": "north",
+    "stand": "true"
+   },
+   "apply": {
+    "model": "minepc:block/monitor"
+   }
+  },
+  {
+   "when": {
+    "facing": "north",
+    "stand": "false"
+   },
+   "apply": {
+    "model": "minepc:block/monitor_top"
+   }
+  },
+  {
+   "when": {
+    "facing": "north",
+    "keyboard": "true"
+   },
+   "apply": {
+    "model": "minepc:block/monitor_keyboard"
+   }
+  },
+  {
+   "when": {
+    "facing": "east",
+    "stand": "true"
+   },
+   "apply": {
+    "model": "minepc:block/monitor",
+    "y": 90
+   }
+  },
+  {
+   "when": {
+    "facing": "east",
+    "stand": "false"
+   },
+   "apply": {
+    "model": "minepc:block/monitor_top",
+    "y": 90
+   }
+  },
+  {
+   "when": {
+    "facing": "east",
+    "keyboard": "true"
+   },
+   "apply": {
+    "model": "minepc:block/monitor_keyboard",
+    "y": 90
+   }
+  },
+  {
+   "when": {
+    "facing": "south",
+    "stand": "true"
+   },
+   "apply": {
+    "model": "minepc:block/monitor",
+    "y": 180
+   }
+  },
+  {
+   "when": {
+    "facing": "south",
+    "stand": "false"
+   },
+   "apply": {
+    "model": "minepc:block/monitor_top",
+    "y": 180
+   }
+  },
+  {
+   "when": {
+    "facing": "south",
+    "keyboard": "true"
+   },
+   "apply": {
+    "model": "minepc:block/monitor_keyboard",
+    "y": 180
+   }
+  },
+  {
+   "when": {
+    "facing": "west",
+    "stand": "true"
+   },
+   "apply": {
+    "model": "minepc:block/monitor",
+    "y": 270
+   }
+  },
+  {
+   "when": {
+    "facing": "west",
+    "stand": "false"
+   },
+   "apply": {
+    "model": "minepc:block/monitor_top",
+    "y": 270
+   }
+  },
+  {
+   "when": {
+    "facing": "west",
+    "keyboard": "true"
+   },
+   "apply": {
+    "model": "minepc:block/monitor_keyboard",
+    "y": 270
+   }
   }
+ ]
 }

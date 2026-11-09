@@ -1,0 +1,13 @@
+{
+ "type": "minecraft:crafting_shapeless",
+ "category": "redstone",
+ "ingredients": [
+  {
+   "item": "minepc:monitor_crt"
+  }
+ ],
+ "result": {
+  "id": "minepc:monitor",
+  "count": 1
+ }
+}

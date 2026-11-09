@@ -1,0 +1,13 @@
+{
+ "type": "minecraft:crafting_shapeless",
+ "category": "redstone",
+ "ingredients": [
+  {
+   "item": "minepc:keyboard_stand"
+  }
+ ],
+ "result": {
+  "id": "minepc:keyboard",
+  "count": 1
+ }
+}

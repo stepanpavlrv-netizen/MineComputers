@@ -59,6 +59,14 @@ public class ModItems {
 
     public static final DeferredItem<BlockItem> MONITOR =
             ITEMS.registerSimpleBlockItem("monitor", ModBlocks.MONITOR);
+    public static final DeferredItem<BlockItem> MONITOR_CRT = ITEMS.registerSimpleBlockItem("monitor_crt", ModBlocks.MONITOR_CRT);
+    public static final DeferredItem<BlockItem> MONITOR_TV = ITEMS.registerSimpleBlockItem("monitor_tv", ModBlocks.MONITOR_TV);
+    public static final DeferredItem<BlockItem> MONITOR_TERMINAL = ITEMS.registerSimpleBlockItem("monitor_terminal", ModBlocks.MONITOR_TERMINAL);
+    public static final DeferredItem<BlockItem> MONITOR_PANEL = ITEMS.registerSimpleBlockItem("monitor_panel", ModBlocks.MONITOR_PANEL);
+    public static final DeferredItem<BlockItem> MONITOR_BLOCK = ITEMS.registerSimpleBlockItem("monitor_block", ModBlocks.MONITOR_BLOCK);
+    public static final DeferredItem<BlockItem> MONITOR_BLOCK_WHITE = ITEMS.registerSimpleBlockItem("monitor_block_white", ModBlocks.MONITOR_BLOCK_WHITE);
+    public static final DeferredItem<BlockItem> MONITOR_BLOCK_RETRO = ITEMS.registerSimpleBlockItem("monitor_block_retro", ModBlocks.MONITOR_BLOCK_RETRO);
+    public static final DeferredItem<BlockItem> KEYBOARD_STAND = ITEMS.registerSimpleBlockItem("keyboard_stand", ModBlocks.KEYBOARD_STAND);
     public static final DeferredItem<BlockItem> KEYBOARD =
             ITEMS.registerSimpleBlockItem("keyboard", ModBlocks.KEYBOARD);
     public static final DeferredItem<BlockItem> DISK_DRIVE =

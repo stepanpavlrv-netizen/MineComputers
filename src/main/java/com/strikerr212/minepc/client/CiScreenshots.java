@@ -133,7 +133,9 @@ public class CiScreenshots {
                 mc.options.hideGui = true;
                 shot(mc, "world_cases");
             }
-            case 640 -> mc.stop();
+            case 640 -> server.execute(CiScreenshots::placeMonitors);
+            case 840 -> shot(mc, "world_monitors");
+            case 860 -> mc.stop();
             default -> {
             }
         }
@@ -152,6 +154,71 @@ public class CiScreenshots {
             level.setBlockAndUpdate(pos, ModBlocks.CASES.get(variants[i]).get().defaultBlockState().setValue(PcCaseBlock.FACING, Direction.SOUTH));
         }
         p.teleportTo(level, row.getX() + 0.5, row.getY() + 1.2, row.getZ() + 6.5, 180f, 18f);
+    }
+
+    private static void fillCase(ServerLevel level, BlockPos pos, int tier) {
+        level.setBlockAndUpdate(pos, ModBlocks.PC_CASE.get().defaultBlockState().setValue(PcCaseBlock.FACING, Direction.NORTH));
+        if (level.getBlockEntity(pos) instanceof PcCaseBlockEntity be) {
+            var inv = (IItemHandlerModifiable) be.inventory();
+            inv.setStackInSlot(PcCaseBlockEntity.SLOT_MOTHERBOARD, HardwarePresets.motherboard(tier));
+            inv.setStackInSlot(PcCaseBlockEntity.SLOT_CPU, HardwarePresets.cpu(tier));
+            inv.setStackInSlot(PcCaseBlockEntity.SLOT_COOLER, HardwarePresets.cooler(tier));
+            inv.setStackInSlot(PcCaseBlockEntity.SLOT_RAM, HardwarePresets.ram(tier));
+            inv.setStackInSlot(PcCaseBlockEntity.SLOT_RAM + 1, HardwarePresets.ram(tier));
+            inv.setStackInSlot(PcCaseBlockEntity.SLOT_GPU, HardwarePresets.gpu(tier));
+            inv.setStackInSlot(PcCaseBlockEntity.SLOT_PSU, HardwarePresets.psu(tier));
+            inv.setStackInSlot(PcCaseBlockEntity.SLOT_HDD, HardwarePresets.hdd(2));
+            be.togglePower();
+        }
+    }
+
+    private static void put(ServerLevel level, BlockPos pos, net.minecraft.world.level.block.state.BlockState state) {
+        level.setBlockAndUpdate(pos, state.setValue(DeviceBlock.FACING, Direction.NORTH));
+    }
+
+    /** Мониторы всех видов, каждый на своём системном блоке, экранами к игроку. */
+    private static void placeMonitors() {
+        var server = Minecraft.getInstance().getSingleplayerServer();
+        ServerPlayer p = server.getPlayerList().getPlayers().get(0);
+        ServerLevel level = p.serverLevel();
+        BlockPos row = casePos.east().south(12).west(7);
+        for (int dx = -1; dx <= 16; dx++) {
+            for (int dz = -9; dz <= 1; dz++) {
+                for (int dy = 0; dy <= 4; dy++) level.setBlockAndUpdate(row.offset(dx, dy, dz), net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
+            }
+        }
+        int[] xs = {0, 2, 4, 6, 8};
+        net.minecraft.world.level.block.Block[] singles = {ModBlocks.MONITOR_CRT.get(), ModBlocks.MONITOR_TV.get(),
+                ModBlocks.MONITOR_TERMINAL.get(), ModBlocks.MONITOR_PANEL.get(), ModBlocks.MONITOR.get()};
+        for (int i = 0; i < xs.length; i++) {
+            BlockPos c = row.east(xs[i]);
+            fillCase(level, c, 3);
+            var state = singles[i].defaultBlockState();
+            if (singles[i] == ModBlocks.MONITOR.get()) state = state.setValue(com.strikerr212.minepc.block.MonitorBlock.KEYBOARD, true);
+            put(level, c.above(), state);
+        }
+        // Блочная стена 2×2 без швов, навесная клавиатура на ней
+        BlockPos w = row.east(10);
+        fillCase(level, w, 4);
+        for (int dx = 0; dx < 2; dx++) {
+            for (int dy = 1; dy <= 2; dy++) put(level, w.east(dx).above(dy), ModBlocks.MONITOR_BLOCK.get().defaultBlockState());
+        }
+        put(level, w.east().above().north(), ModBlocks.KEYBOARD.get().defaultBlockState()
+                .setValue(com.strikerr212.minepc.block.KeyboardBlock.MOUNT, com.strikerr212.minepc.block.KeyboardBlock.Mount.WALL));
+        // Белый и ретро-блоки поодиночке, клавиатурная стойка
+        fillCase(level, row.east(13), 3);
+        put(level, row.east(13).above(), ModBlocks.MONITOR_BLOCK_WHITE.get().defaultBlockState());
+        fillCase(level, row.east(15), 2);
+        put(level, row.east(15).above(), ModBlocks.MONITOR_BLOCK_RETRO.get().defaultBlockState());
+        put(level, row.east(14).north(), ModBlocks.KEYBOARD_STAND.get().defaultBlockState());
+        // Соседи сами пересчитают стыки; на всякий случай — обновить формы блочных мониторов
+        for (int dx = 0; dx < 2; dx++) {
+            for (int dy = 1; dy <= 2; dy++) {
+                BlockPos b = w.east(dx).above(dy);
+                level.setBlockAndUpdate(b, net.minecraft.world.level.block.Block.updateFromNeighbourShapes(level.getBlockState(b), level, b));
+            }
+        }
+        p.teleportTo(level, row.getX() + 8, row.getY() + 1, row.getZ() - 6.5, 0f, 8f);
     }
 
     /** Окно корпуса для скриншота: другая тема и вкладка. */
