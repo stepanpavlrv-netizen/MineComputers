@@ -9,22 +9,24 @@ import net.minecraft.world.phys.shapes.VoxelShape;
  * Модели собраны из воксельных эскизов (tools/assetgen/cases.py), габариты — для корпуса, смотрящего на север.
  */
 public enum CaseVariant {
-    RETRO_TOWER("case_retro_tower", CaseStyle.RETRO, null, false, 3, 0, 1, 13, 16, 15),
-    RETRO_DESKTOP("case_retro_desktop", CaseStyle.RETRO, null, false, 1, 0, 1, 15, 5, 14),
-    HOME80("case_home80", CaseStyle.RETRO, null, true, 1, 0, 3, 15, 3, 12),
-    OFFICE_TOWER("case_office_tower", CaseStyle.OFFICE, null, false, 4, 0, 1, 12, 14, 15),
-    MINI("case_mini", CaseStyle.OFFICE, null, false, 4, 0, 4, 12, 5, 12),
-    WORKSTATION("case_workstation", CaseStyle.OFFICE, null, false, 3, 0, 1, 13, 16, 15),
-    GAMING("case_gaming", CaseStyle.GAMING, null, false, 2, 0, 1, 14, 16, 15),
-    GAMING_WHITE("case_gaming_white", CaseStyle.GAMING, null, false, 2, 0, 1, 14, 16, 15),
-    GAMING_CUBE("case_gaming_cube", CaseStyle.GAMING, null, false, 2, 0, 2, 14, 12, 14),
-    INDUSTRIAL("case_industrial", CaseStyle.INDUSTRIAL, null, false, 1, 0, 1, 15, 16, 15),
-    SERVER("case_server", CaseStyle.SERVER, null, false, 0, 0, 0, 16, 16, 16),
-    AIO("case_aio", CaseStyle.OFFICE, new Screen(2, 14, 2, 10, 8, 0), true, 1, 0, 2, 15, 15, 15),
-    RACK_KVM("case_rack_kvm", CaseStyle.SERVER, new Screen(3, 13, 3, 4, 7, 0), true, 0, 0, 0, 16, 16, 16),
-    CONSOLE("case_console", CaseStyle.INDUSTRIAL, new Screen(3, 13, 2, 5, 7.07f, 45), true, 0, 0, 0, 16, 15, 14);
+    RETRO_TOWER("case_retro_tower", 0xFFF4D4, CaseStyle.RETRO, null, false, 3, 0, 1, 13, 16, 15),
+    RETRO_DESKTOP("case_retro_desktop", 0xFFF4D4, CaseStyle.RETRO, null, false, 1, 0, 1, 15, 5, 14),
+    HOME80("case_home80", 0xBF9C79, CaseStyle.RETRO, null, true, 1, 0, 3, 15, 3, 12),
+    OFFICE_TOWER("case_office_tower", 0x454850, CaseStyle.OFFICE, null, false, 4, 0, 1, 12, 14, 15),
+    MINI("case_mini", 0xF2F7FF, CaseStyle.OFFICE, null, false, 4, 0, 4, 12, 5, 12),
+    WORKSTATION("case_workstation", 0xF5F9FF, CaseStyle.OFFICE, null, false, 3, 0, 1, 13, 16, 15),
+    GAMING("case_gaming", 0x292931, CaseStyle.GAMING, null, false, 2, 0, 1, 14, 16, 15),
+    GAMING_WHITE("case_gaming_white", 0xF9FBFF, CaseStyle.GAMING, null, false, 2, 0, 1, 14, 16, 15),
+    GAMING_CUBE("case_gaming_cube", 0x2D2D36, CaseStyle.GAMING, null, false, 2, 0, 2, 14, 12, 14),
+    INDUSTRIAL("case_industrial", 0xA6BCC6, CaseStyle.INDUSTRIAL, null, false, 1, 0, 1, 15, 16, 15),
+    SERVER("case_server", 0x404550, CaseStyle.SERVER, null, false, 0, 0, 0, 16, 16, 16),
+    AIO("case_aio", 0xF9FBFF, CaseStyle.OFFICE, new Screen(2, 14, 2, 10, 8, 0), true, 1, 0, 2, 15, 15, 15),
+    RACK_KVM("case_rack_kvm", 0x404550, CaseStyle.SERVER, new Screen(3, 13, 3, 4, 7, 0), true, 0, 0, 0, 16, 16, 16),
+    CONSOLE("case_console", 0xA6BCC6, CaseStyle.INDUSTRIAL, new Screen(3, 13, 2, 5, 7.07f, 45), true, 0, 0, 0, 16, 15, 14);
 
     public final String id;
+    /** Цвет основы корпуса (некрашеного): им же красится модель через tintindex 0. */
+    public final int paintBase;
     public final CaseStyle style;
     /** Встроенный экран (моноблок, стойка с консолью, пульт) или null. */
     public final Screen screen;
@@ -32,8 +34,9 @@ public enum CaseVariant {
     public final boolean keyboard;
     private final VoxelShape[] shapes = new VoxelShape[4];
 
-    CaseVariant(String id, CaseStyle style, Screen screen, boolean keyboard, int x0, int y0, int z0, int x1, int y1, int z1) {
+    CaseVariant(String id, int paintBase, CaseStyle style, Screen screen, boolean keyboard, int x0, int y0, int z0, int x1, int y1, int z1) {
         this.id = id;
+        this.paintBase = paintBase;
         this.style = style;
         this.screen = screen;
         this.keyboard = keyboard;

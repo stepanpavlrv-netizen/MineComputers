@@ -19,14 +19,14 @@ import net.minecraft.world.level.block.state.properties.BooleanProperty;
  */
 public class BlockMonitorBlock extends BaseMonitorBlock {
 
-    public static final MapCodec<BlockMonitorBlock> CODEC = simpleCodec(BlockMonitorBlock::new);
+    public static final MapCodec<BlockMonitorBlock> CODEC = simpleCodec(p -> new BlockMonitorBlock(p, 0x40434C));
     public static final BooleanProperty LEFT = BooleanProperty.create("left");
     public static final BooleanProperty RIGHT = BooleanProperty.create("right");
     public static final BooleanProperty UP = BooleanProperty.create("up");
     public static final BooleanProperty DOWN = BooleanProperty.create("down");
 
-    public BlockMonitorBlock(Properties properties) {
-        super(properties, MonitorKind.BLOCK);
+    public BlockMonitorBlock(Properties properties, int paintBase) {
+        super(properties, MonitorKind.BLOCK, paintBase);
         registerDefaultState(defaultBlockState().setValue(LEFT, false).setValue(RIGHT, false).setValue(UP, false).setValue(DOWN, false));
     }
 

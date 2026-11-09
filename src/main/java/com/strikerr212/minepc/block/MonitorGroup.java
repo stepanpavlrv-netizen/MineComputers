@@ -36,6 +36,13 @@ public record MonitorGroup(int cols, int rows, int col, int row, Set<BlockPos> b
     /** Найти монитор, в который входит блок pos. Если мониторы стоят не прямоугольником — каждый сам по себе. */
     public static MonitorGroup of(BlockGetter level, BlockPos pos) {
         BlockState state = level.getBlockState(pos);
+        if (state.getBlock() instanceof WideMonitorBlock) {
+            // Две половины — один экран: левая — столбец 0, правая — 1
+            BlockPos other = WideMonitorBlock.partner(state, pos);
+            boolean left = state.getValue(WideMonitorBlock.HALF) == WideMonitorBlock.Half.LEFT;
+            if (level.getBlockState(other).getBlock() != state.getBlock()) return single(pos);
+            return new MonitorGroup(2, 1, left ? 0 : 1, 0, Set.of(pos, other));
+        }
         if (!(state.getBlock() instanceof BaseMonitorBlock monitor) || !monitor.kind().groups) return single(pos);
         Direction facing = state.getValue(DeviceBlock.FACING);
         Direction right = facing.getCounterClockWise();     // «вправо», если смотреть на экран

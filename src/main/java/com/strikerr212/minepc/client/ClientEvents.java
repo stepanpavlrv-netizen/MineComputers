@@ -59,6 +59,33 @@ public class ClientEvents {
         for (var item : ModItems.HARDWARE) {
             event.register(colors, item.get());
         }
+        // Корпуса и мониторы: у предмета — некрашеный цвет основы
+        for (var block : paintable()) {
+            ItemColor paint = (stack, tintIndex) -> tintIndex == 0 ? 0xFF000000 | paintColor(block.defaultBlockState()) : 0xFFFFFFFF;
+            event.register(paint, block.asItem());
+        }
+    }
+
+    /** Блоки, которые красятся красителем. */
+    private static java.util.List<net.minecraft.world.level.block.Block> paintable() {
+        java.util.List<net.minecraft.world.level.block.Block> out = new java.util.ArrayList<>();
+        for (var b : com.strikerr212.minepc.registry.ModBlocks.CASES.values()) out.add(b.get());
+        for (var b : com.strikerr212.minepc.registry.ModBlocks.allMonitors()) {
+            if (b instanceof com.strikerr212.minepc.block.BaseMonitorBlock m && m.paintColor(b.defaultBlockState()) >= 0) out.add(b);
+        }
+        return out;
+    }
+
+    private static int paintColor(net.minecraft.world.level.block.state.BlockState state) {
+        if (state.getBlock() instanceof com.strikerr212.minepc.block.PcCaseBlock c) return Math.max(0, c.paintColor(state));
+        if (state.getBlock() instanceof com.strikerr212.minepc.block.BaseMonitorBlock m) return Math.max(0, m.paintColor(state));
+        return 0xFFFFFF;
+    }
+
+    @SubscribeEvent
+    public static void registerBlockColors(RegisterColorHandlersEvent.Block event) {
+        event.register((state, level, pos, tintIndex) -> tintIndex == 0 ? paintColor(state) : -1,
+                paintable().toArray(new net.minecraft.world.level.block.Block[0]));
     }
 
     @SubscribeEvent

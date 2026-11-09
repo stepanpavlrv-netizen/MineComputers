@@ -17,7 +17,26 @@ public enum MonitorKind {
     /** Промышленная панель на стену. */
     PANEL(3, 13, 2, 12, 14, false, false, false),
     /** Блочный монитор: стыкуется без швов, рамка только по краю всей стены. */
-    BLOCK(1, 15, 1, 15, 0, true, true, false);
+    BLOCK(1, 15, 1, 15, 0, true, true, false),
+    /** Широкоформатный в два блока (uR — в правом блоке). */
+    WIDE(2, 14, 1, 11, 6, false, false, false),
+    /** Изогнутый в два блока: края экрана выдвинуты к зрителю (см. {@link #curve(int)}). */
+    CURVED(1, 15, 1, 11, 7, false, false, false);
+
+    /** Насколько столбец u изогнутого экрана (0..31 по ширине двух блоков) выдвинут к зрителю, пиксели. */
+    private static final int[] CURVE = new int[32];
+    static {
+        for (int u = 0; u < 32; u++) CURVE[u] = (int) Math.rint((u - 15.5) * (u - 15.5) / 70);
+    }
+
+    public int curve(int u) {
+        return this == CURVED && u >= 0 && u < 32 ? CURVE[u] : 0;
+    }
+
+    /** Монитор в два блока: левая и правая половины — один экран. */
+    public boolean pair() {
+        return this == WIDE || this == CURVED;
+    }
 
     public final int uL, uR, vT, vB, z;
     /** Соседние блоки складываются в один большой экран. */

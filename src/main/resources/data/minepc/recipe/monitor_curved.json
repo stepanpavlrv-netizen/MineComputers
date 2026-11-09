@@ -1,0 +1,16 @@
+{
+ "type": "minecraft:crafting_shapeless",
+ "category": "redstone",
+ "ingredients": [
+  {
+   "item": "minepc:monitor_wide"
+  },
+  {
+   "item": "minecraft:red_dye"
+  }
+ ],
+ "result": {
+  "id": "minepc:monitor_curved",
+  "count": 1
+ }
+}

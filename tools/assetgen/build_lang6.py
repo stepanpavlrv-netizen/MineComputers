@@ -297,6 +297,8 @@ COMMON = {
 
 # ----- добавлено в 0.12: окно корпуса, корпуса-варианты, мониторы -----
 COMMON.update({
+    "block.minepc.monitor_wide": ("Широкоформатный монитор", "Widescreen Monitor"),
+    "block.minepc.monitor_curved": ("Изогнутый монитор", "Curved Monitor"),
     "block.minepc.case_retro_tower": ("Ретро-тауэр", "Retro Tower"),
     "block.minepc.case_retro_desktop": ("Настольный ретро-корпус", "Retro Desktop Case"),
     "block.minepc.case_home80": ("Домашний компьютер 80-х", "80s Home Computer"),

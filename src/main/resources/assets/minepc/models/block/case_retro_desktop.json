@@ -24,7 +24,8 @@
       7.0,
       9.0
      ],
-     "texture": "#all"
+     "texture": "#all",
+     "tintindex": 0
     },
     "south": {
      "uv": [
@@ -33,7 +34,8 @@
       14.0,
       9.0
      ],
-     "texture": "#all"
+     "texture": "#all",
+     "tintindex": 0
     },
     "west": {
      "uv": [
@@ -42,7 +44,8 @@
       6.5,
       11.5
      ],
-     "texture": "#all"
+     "texture": "#all",
+     "tintindex": 0
     },
     "east": {
      "uv": [
@@ -51,7 +54,8 @@
       13.0,
       11.5
      ],
-     "texture": "#all"
+     "texture": "#all",
+     "tintindex": 0
     },
     "up": {
      "uv": [
@@ -60,7 +64,8 @@
       7.0,
       6.5
      ],
-     "texture": "#all"
+     "texture": "#all",
+     "tintindex": 0
     },
     "down": {
      "uv": [
@@ -70,7 +75,8 @@
       6.5
      ],
      "texture": "#all",
-     "cullface": "down"
+     "cullface": "down",
+     "tintindex": 0
     }
    }
   },
@@ -125,6 +131,121 @@
       7.0,
       2.5,
       7.5
+     ],
+     "texture": "#all"
+    }
+   }
+  },
+  {
+   "from": [
+    12,
+    1,
+    0.99
+   ],
+   "to": [
+    14,
+    2,
+    0.99
+   ],
+   "faces": {
+    "north": {
+     "uv": [
+      0.5,
+      8.0,
+      1.5,
+      8.5
+     ],
+     "texture": "#all"
+    }
+   }
+  },
+  {
+   "from": [
+    3,
+    1,
+    0.99
+   ],
+   "to": [
+    7,
+    2,
+    0.99
+   ],
+   "faces": {
+    "north": {
+     "uv": [
+      4.0,
+      8.0,
+      6.0,
+      8.5
+     ],
+     "texture": "#all"
+    }
+   }
+  },
+  {
+   "from": [
+    3,
+    3,
+    0.99
+   ],
+   "to": [
+    7,
+    4,
+    0.99
+   ],
+   "faces": {
+    "north": {
+     "uv": [
+      4.0,
+      7.0,
+      6.0,
+      7.5
+     ],
+     "texture": "#all"
+    }
+   }
+  },
+  {
+   "from": [
+    9,
+    2,
+    0.99
+   ],
+   "to": [
+    10,
+    3,
+    0.99
+   ],
+   "faces": {
+    "north": {
+     "uv": [
+      2.5,
+      7.5,
+      3.0,
+      8.0
+     ],
+     "texture": "#all"
+    }
+   }
+  },
+  {
+   "from": [
+    4,
+    2,
+    0.99
+   ],
+   "to": [
+    6,
+    3,
+    0.99
+   ],
+   "faces": {
+    "north": {
+     "uv": [
+      4.5,
+      7.5,
+      5.5,
+      8.0
      ],
      "texture": "#all"
     }

@@ -197,6 +197,8 @@
   "message.minepc.gpu.passive": "Видеокарте (%s) хватает пассивного охлаждения",
   "message.minepc.gpu.weak": "Охлаждение видеокарты слабое: %s тепла, отводит %s — частота %s%%",
   "message.minepc.gpu.ok": "Видеокарта: %s тепла, охлаждение до %s",
+  "block.minepc.monitor_wide": "Широкоформатный монитор",
+  "block.minepc.monitor_curved": "Изогнутый монитор",
   "block.minepc.case_retro_tower": "Ретро-тауэр",
   "block.minepc.case_retro_desktop": "Настольный ретро-корпус",
   "block.minepc.case_home80": "Домашний компьютер 80-х",

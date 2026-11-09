@@ -82,6 +82,17 @@ CASES = {
 }
 
 
+# Цвет основы корпуса — он красится красителем (ПКМ красителем по блоку)
+STEEL = (104, 118, 124)
+PAINT = {
+    "case_retro_tower": (214, 205, 178), "case_retro_desktop": (214, 205, 178), "case_home80": (120, 98, 76),
+    "case_office_tower": (43, 45, 50), "case_mini": (192, 196, 202), "case_workstation": (192, 195, 200),
+    "case_gaming": (26, 26, 31), "case_gaming_white": (232, 234, 238), "case_gaming_cube": (28, 28, 34),
+    "case_industrial": STEEL, "case_server": (40, 43, 50), "case_aio": (232, 234, 238),
+    "case_rack_kvm": (40, 43, 50), "case_console": STEEL,
+}
+
+
 def rotated(m):
     """Эскиз смотрит передом на +z, блок Minecraft (facing=north) — на −z: поворот на 180°."""
     return {(15 - x, y, 15 - z): c for (x, y, z), c in m.v.items()}
@@ -196,7 +207,34 @@ def r4(v):
     return round(v, 4)
 
 
-def build(name, model, folder="case", rotate=True):
+def paint_scale(base):
+    """Во сколько раз текстура «покрашенной» части светлее нуля: краска умножается на серый S·яркость/яркость основы."""
+    return max(160, max(base))
+
+
+def is_body(c, base):
+    """Пиксель — краска корпуса: тот же оттенок, что у основы, и близкая яркость (а не лампочка, экран или деталь)."""
+    if len(c) > 3:
+        return False
+    lb, lc = sum(base), sum(c[:3])
+    if lb == 0 or lc == 0:
+        return False
+    ratio = lc / lb
+    if not (0.75 <= ratio <= 255 / paint_scale(base)):
+        return False
+    tol = 0.045 if lb < 150 else 0.025
+    return all(abs(c[i] / lc - base[i] / lb) < tol for i in range(3))
+
+
+def paint_tint(base):
+    """Цвет-множитель для некрашеного блока: даёт исходный цвет основы."""
+    S = paint_scale(base)
+    r, g, b = (min(255, round(v * 255 / S)) for v in base)
+    return (r << 16) | (g << 8) | b
+
+
+def build(name, model, folder="case", rotate=True, paint=None):
+    """paint — цвет основы корпуса: такие пиксели становятся серыми и красятся (tintindex 0), остальное — поверх."""
     vox = rotated(model) if rotate else dict(model.v)
     bxs = boxes(set(vox))
     faces = []
@@ -223,30 +261,49 @@ def build(name, model, folder="case", rotate=True):
     glow_elems = []
     for i, (b, face, px, w, h, vis) in enumerate(faces):
         ax, ay = pos[i]
+        body = set()
+        if paint:
+            S = paint_scale(paint)
+            for c, r, v in px:
+                if is_body(vox[v], paint):
+                    body.add((c, r))
         for c, r, v in px:
             col = vox[v]
+            if (c, r) in body:
+                g = min(255, round(S * sum(col[:3]) / sum(paint)))
+                col = (g, g, g)
             atlas.img.putpixel((ax + c, ay + r), tuple(col[:3]) + (255,))
         el = elements.setdefault(b, {"from": [b[0], b[1], b[2]], "to": [b[3], b[4], b[5]], "faces": {}})
         f = {"uv": [r4(ax * k), r4(ay * k), r4((ax + w) * k), r4((ay + h) * k)], "texture": "#all"}
         edge = face_uv_rect(b, face)
         if edge in (0, 16) and ((face in ("north", "west", "down") and edge == 0) or (face in ("south", "east", "up") and edge == 16)):
             f["cullface"] = face
+        if body:
+            f["tintindex"] = 0
         el["faces"][face] = f
-        # Светящиеся пиксели: отрезки по строкам грани
-        rows = {}
-        for c, r, v in px:
-            if (c, r) in vis and len(vox[v]) > 3:
-                rows.setdefault(r, []).append(c)
-        for r, cols in rows.items():
-            cols.sort()
-            start = prev = cols[0]
-            for c in cols[1:] + [None]:
-                if c is not None and c == prev + 1:
-                    prev = c
+        # Поверх грани: светящиеся пиксели и (на крашеной грани) детали другого цвета — отрезками по строкам
+        for want_glow in (True, False):
+            rows = {}
+            for c, r, v in px:
+                if (c, r) not in vis:
                     continue
-                glow_elems.append(glow_quad(b, face, start, prev, r, ax, ay, k, w, h))
-                if c is not None:
-                    start = prev = c
+                glowing = len(vox[v]) > 3
+                if want_glow and glowing or not want_glow and body and not glowing and (c, r) not in body:
+                    rows.setdefault(r, []).append(c)
+            for r, cols in rows.items():
+                cols.sort()
+                start = prev = cols[0]
+                for c in cols[1:] + [None]:
+                    if c is not None and c == prev + 1:
+                        prev = c
+                        continue
+                    q = glow_quad(b, face, start, prev, r, ax, ay, k, w, h)
+                    if not want_glow:
+                        q.pop("neoforge_data")
+                        q.pop("shade")
+                    glow_elems.append(q)
+                    if c is not None:
+                        start = prev = c
     els = list(elements.values()) + glow_elems
     tex = f"minepc:block/{folder}/{name}"
     model_json = {"parent": "minecraft:block/block", "textures": {"particle": tex, "all": tex}, "elements": els}
@@ -287,7 +344,7 @@ def write(path, obj):
 def main():
     table = []
     for name, (fn, style, extra) in CASES.items():
-        model_json, img, bbox, n_el, n_glow = build(name, fn())
+        model_json, img, bbox, n_el, n_glow = build(name, fn(), paint=PAINT[name])
         os.makedirs(os.path.join(ASSETS, "textures/block/case"), exist_ok=True)
         img.save(os.path.join(ASSETS, "textures/block/case", name + ".png"))
         write(os.path.join(ASSETS, "models/block", name + ".json"), model_json)
@@ -307,7 +364,7 @@ def main():
             "type": "minecraft:crafting_shapeless", "category": "redstone",
             "ingredients": [{"item": f"minepc:{name}"}],
             "result": {"id": "minepc:pc_case", "count": 1}})
-        table.append({"id": name, "style": style, "box": bbox})
+        table.append({"id": name, "style": style, "box": bbox, "tint": "0x%06X" % paint_tint(PAINT[name])})
         print(f"{name:20s} коробок {n_el:3d}, подсветка {n_glow:3d}, текстура {img.size[0]}, габарит {bbox}")
     write(os.path.join(HERE, "cases.json"), table)
 

@@ -11,12 +11,12 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 /** Монитор в один блок: кинескоп, телевизор, терминал, настенная панель. */
 public class SimpleMonitorBlock extends BaseMonitorBlock {
 
-    public static final MapCodec<SimpleMonitorBlock> CODEC = simpleCodec(p -> new SimpleMonitorBlock(p, MonitorKind.CRT, BoxShapes.of(0, 0, 0, 16, 16, 16)));
+    public static final MapCodec<SimpleMonitorBlock> CODEC = simpleCodec(p -> new SimpleMonitorBlock(p, MonitorKind.CRT, -1, BoxShapes.of(0, 0, 0, 16, 16, 16)));
 
     private final BoxShapes shape;
 
-    public SimpleMonitorBlock(Properties properties, MonitorKind kind, BoxShapes shape) {
-        super(properties, kind);
+    public SimpleMonitorBlock(Properties properties, MonitorKind kind, int paintBase, BoxShapes shape) {
+        super(properties, kind, paintBase);
         this.shape = shape;
     }
 

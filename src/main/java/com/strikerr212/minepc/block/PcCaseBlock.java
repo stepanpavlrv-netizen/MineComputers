@@ -58,7 +58,7 @@ public class PcCaseBlock extends BaseEntityBlock {
     public PcCaseBlock(Properties properties, CaseVariant variant) {
         super(properties);
         this.variant = variant;
-        registerDefaultState(stateDefinition.any().setValue(FACING, Direction.NORTH));
+        registerDefaultState(stateDefinition.any().setValue(FACING, Direction.NORTH).setValue(Paint.PROPERTY, Paint.NONE));
     }
 
     /** Тематика корпуса (оформление окна). */
@@ -76,6 +76,11 @@ public class PcCaseBlock extends BaseEntityBlock {
         return variant != null && variant.keyboard;
     }
 
+    /** Цвет граней с краской (tintindex 0) для этого состояния; -1 — блок не красится. */
+    public int paintColor(BlockState state) {
+        return variant == null ? -1 : state.getValue(Paint.PROPERTY).tint(variant.paintBase);
+    }
+
     /** Видно ли детали внутри (стеклянный бок обычного корпуса). */
     public boolean showsParts() {
         return variant == null;
@@ -88,7 +93,7 @@ public class PcCaseBlock extends BaseEntityBlock {
 
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
-        builder.add(FACING);
+        builder.add(FACING, Paint.PROPERTY);
     }
 
     /** При установке корпус поворачивается передней панелью к игроку. */
@@ -133,6 +138,10 @@ public class PcCaseBlock extends BaseEntityBlock {
     @Override
     protected ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos,
                                               Player player, InteractionHand hand, BlockHitResult hit) {
+        if (variant != null) {
+            ItemInteractionResult painted = Paint.use(stack, state, level, pos, player);
+            if (painted != null) return painted;
+        }
         boolean flash = stack.getItem() instanceof DriveItem d && d.kind() == DriveItem.Kind.FLASH;
         if (!(stack.getItem() instanceof HardwareItem) && !flash || player.isShiftKeyDown()) {
             return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;

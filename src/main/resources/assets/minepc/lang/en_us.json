@@ -197,6 +197,8 @@
   "message.minepc.gpu.passive": "Passive cooling is enough for the graphics card (%s)",
   "message.minepc.gpu.weak": "GPU cooler is too weak: %s of heat, removes %s — clock at %s%%",
   "message.minepc.gpu.ok": "Graphics card: %s of heat, cooling up to %s",
+  "block.minepc.monitor_wide": "Widescreen Monitor",
+  "block.minepc.monitor_curved": "Curved Monitor",
   "block.minepc.case_retro_tower": "Retro Tower",
   "block.minepc.case_retro_desktop": "Retro Desktop Case",
   "block.minepc.case_home80": "80s Home Computer",

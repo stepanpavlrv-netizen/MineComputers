@@ -152,6 +152,12 @@ public class CiScreenshots {
             level.setBlockAndUpdate(pos.below(), net.minecraft.world.level.block.Blocks.SMOOTH_STONE.defaultBlockState());
             level.setBlockAndUpdate(pos, ModBlocks.CASES.get(variants[i]).get().defaultBlockState().setValue(PcCaseBlock.FACING, Direction.SOUTH));
             if (variants[i].screen != null) fillParts(level, pos, 3);   // со встроенным экраном — включить
+            // Второй ряд — те же корпуса, покрашенные красителями
+            BlockPos dyed = pos.north().above();
+            level.setBlockAndUpdate(dyed.below(), net.minecraft.world.level.block.Blocks.SMOOTH_STONE.defaultBlockState());
+            var paints = com.strikerr212.minepc.block.Paint.values();
+            level.setBlockAndUpdate(dyed, ModBlocks.CASES.get(variants[i]).get().defaultBlockState().setValue(PcCaseBlock.FACING, Direction.SOUTH)
+                    .setValue(com.strikerr212.minepc.block.Paint.PROPERTY, paints[1 + (i * 5) % (paints.length - 1)]));
         }
         p.teleportTo(level, row.getX() + 0.5, row.getY() + 1.2, row.getZ() + 7.5, 180f, 12f);
     }
@@ -176,6 +182,13 @@ public class CiScreenshots {
         }
     }
 
+    private static void paint(ServerLevel level, BlockPos pos, net.minecraft.world.item.DyeColor dye) {
+        var s = level.getBlockState(pos);
+        if (s.hasProperty(com.strikerr212.minepc.block.Paint.PROPERTY)) {
+            level.setBlockAndUpdate(pos, s.setValue(com.strikerr212.minepc.block.Paint.PROPERTY, com.strikerr212.minepc.block.Paint.of(dye)));
+        }
+    }
+
     private static void put(ServerLevel level, BlockPos pos, net.minecraft.world.level.block.state.BlockState state) {
         level.setBlockAndUpdate(pos, state.setValue(DeviceBlock.FACING, Direction.NORTH));
     }
@@ -186,7 +199,7 @@ public class CiScreenshots {
         ServerPlayer p = server.getPlayerList().getPlayers().get(0);
         ServerLevel level = p.serverLevel();
         BlockPos row = casePos.east().south(12).west(7);
-        for (int dx = -1; dx <= 16; dx++) {
+        for (int dx = -1; dx <= 22; dx++) {
             for (int dz = -9; dz <= 1; dz++) {
                 for (int dy = 0; dy <= 4; dy++) level.setBlockAndUpdate(row.offset(dx, dy, dz), net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
             }
@@ -215,6 +228,24 @@ public class CiScreenshots {
         fillCase(level, row.east(15), 2);
         put(level, row.east(15).above(), ModBlocks.MONITOR_BLOCK_RETRO.get().defaultBlockState());
         put(level, row.east(14).north(), ModBlocks.KEYBOARD_STAND.get().defaultBlockState());
+        // Мониторы в два блока: широкий и изогнутый (половины ставятся вручную, как это делает предмет)
+        for (int k = 0; k < 2; k++) {
+            BlockPos c = row.east(17 + k * 3);
+            fillCase(level, c, 4);
+            var wide = (k == 0 ? ModBlocks.MONITOR_WIDE : ModBlocks.MONITOR_CURVED).get().defaultBlockState()
+                    .setValue(DeviceBlock.FACING, Direction.NORTH);
+            // Смотрит на север: «вправо» для зрителя — на запад
+            level.setBlockAndUpdate(c.above(), wide.setValue(com.strikerr212.minepc.block.WideMonitorBlock.HALF,
+                    com.strikerr212.minepc.block.WideMonitorBlock.Half.LEFT));
+            level.setBlockAndUpdate(c.above().west(), wide.setValue(com.strikerr212.minepc.block.WideMonitorBlock.HALF,
+                    com.strikerr212.minepc.block.WideMonitorBlock.Half.RIGHT));
+        }
+        // Покрашенные мониторы
+        paint(level, row.east(0).above(), net.minecraft.world.item.DyeColor.RED);
+        paint(level, row.east(4).above(), net.minecraft.world.item.DyeColor.GREEN);
+        for (int dx = 0; dx < 2; dx++) {
+            for (int dy = 1; dy <= 2; dy++) paint(level, w.east(dx).above(dy), net.minecraft.world.item.DyeColor.BLUE);
+        }
         // Соседи сами пересчитают стыки; на всякий случай — обновить формы блочных мониторов
         for (int dx = 0; dx < 2; dx++) {
             for (int dy = 1; dy <= 2; dy++) {
@@ -228,7 +259,7 @@ public class CiScreenshots {
         var server = Minecraft.getInstance().getSingleplayerServer();
         ServerPlayer p = server.getPlayerList().getPlayers().get(0);
         BlockPos row = casePos.east().south(12).west(7);
-        p.teleportTo(p.serverLevel(), row.getX() + 8, row.getY() + 1, row.getZ() - 6.5, 0f, 8f);
+        p.teleportTo(p.serverLevel(), row.getX() + 10, row.getY() + 1, row.getZ() - 8.5, 0f, 8f);
     }
 
     /** Окно корпуса для скриншота: другая тема и вкладка. */

@@ -9,7 +9,8 @@
    13,
    16,
    15
-  ]
+  ],
+  "tint": "0xFFF4D4"
  },
  {
   "id": "case_retro_desktop",
@@ -21,7 +22,8 @@
    15,
    5,
    14
-  ]
+  ],
+  "tint": "0xFFF4D4"
  },
  {
   "id": "case_home80",
@@ -33,7 +35,8 @@
    15,
    3,
    12
-  ]
+  ],
+  "tint": "0xBF9C79"
  },
  {
   "id": "case_office_tower",
@@ -45,7 +48,8 @@
    12,
    14,
    15
-  ]
+  ],
+  "tint": "0x454850"
  },
  {
   "id": "case_mini",
@@ -57,7 +61,8 @@
    12,
    5,
    12
-  ]
+  ],
+  "tint": "0xF2F7FF"
  },
  {
   "id": "case_workstation",
@@ -69,7 +74,8 @@
    13,
    17,
    15
-  ]
+  ],
+  "tint": "0xF5F9FF"
  },
  {
   "id": "case_gaming",
@@ -81,7 +87,8 @@
    14,
    16,
    15
-  ]
+  ],
+  "tint": "0x292931"
  },
  {
   "id": "case_gaming_white",
@@ -93,7 +100,8 @@
    14,
    16,
    15
-  ]
+  ],
+  "tint": "0xF9FBFF"
  },
  {
   "id": "case_gaming_cube",
@@ -105,7 +113,8 @@
    14,
    12,
    14
-  ]
+  ],
+  "tint": "0x2D2D36"
  },
  {
   "id": "case_industrial",
@@ -117,7 +126,8 @@
    15,
    16,
    15
-  ]
+  ],
+  "tint": "0xA6BCC6"
  },
  {
   "id": "case_server",
@@ -129,7 +139,8 @@
    16,
    16,
    16
-  ]
+  ],
+  "tint": "0x404550"
  },
  {
   "id": "case_aio",
@@ -141,7 +152,8 @@
    15,
    15,
    15
-  ]
+  ],
+  "tint": "0xF9FBFF"
  },
  {
   "id": "case_rack_kvm",
@@ -153,7 +165,8 @@
    16,
    16,
    16
-  ]
+  ],
+  "tint": "0x404550"
  },
  {
   "id": "case_console",
@@ -165,6 +178,7 @@
    16,
    15,
    14
-  ]
+  ],
+  "tint": "0xA6BCC6"
  }
 ]

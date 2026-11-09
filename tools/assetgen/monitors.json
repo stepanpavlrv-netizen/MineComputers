@@ -58,5 +58,62 @@
    16,
    16
   ]
+ },
+ "monitor_wide": {
+  "uL": 2,
+  "uR": 14,
+  "vT": 1,
+  "vB": 11,
+  "z": 6,
+  "left": [
+   0,
+   0,
+   5,
+   15,
+   16,
+   10
+  ],
+  "right": [
+   1,
+   0,
+   5,
+   16,
+   16,
+   10
+  ]
+ },
+ "monitor_curved": {
+  "uL": 1,
+  "uR": 15,
+  "vT": 1,
+  "vB": 11,
+  "z": 7,
+  "left": [
+   0,
+   0,
+   4,
+   16,
+   15,
+   13
+  ],
+  "right": [
+   0,
+   0,
+   4,
+   16,
+   15,
+   13
+  ]
+ },
+ "tints": {
+  "monitor_crt": "0xFFF5D6",
+  "monitor_terminal": "0x606369",
+  "monitor_panel": "0x939986",
+  "monitor_block": "0x40434C",
+  "monitor_block_white": "0xF8FBFF",
+  "monitor_block_retro": "0xFFF4D4",
+  "monitor": "0x303036",
+  "monitor_wide": "0x26262D",
+  "monitor_curved": "0x232329"
  }
 }

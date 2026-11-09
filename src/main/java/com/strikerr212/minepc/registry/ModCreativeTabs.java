@@ -24,6 +24,8 @@ public class ModCreativeTabs {
                         output.accept(ModItems.PC_CASE.get());
                         for (var item : ModItems.CASES.values()) output.accept(item.get());
                         output.accept(ModItems.MONITOR.get());
+                        output.accept(ModItems.MONITOR_WIDE.get());
+                        output.accept(ModItems.MONITOR_CURVED.get());
                         output.accept(ModItems.MONITOR_CRT.get());
                         output.accept(ModItems.MONITOR_TV.get());
                         output.accept(ModItems.MONITOR_TERMINAL.get());

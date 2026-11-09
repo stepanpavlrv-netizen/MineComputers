@@ -66,6 +66,8 @@ public class ModItems {
     public static final DeferredItem<BlockItem> MONITOR_BLOCK = ITEMS.registerSimpleBlockItem("monitor_block", ModBlocks.MONITOR_BLOCK);
     public static final DeferredItem<BlockItem> MONITOR_BLOCK_WHITE = ITEMS.registerSimpleBlockItem("monitor_block_white", ModBlocks.MONITOR_BLOCK_WHITE);
     public static final DeferredItem<BlockItem> MONITOR_BLOCK_RETRO = ITEMS.registerSimpleBlockItem("monitor_block_retro", ModBlocks.MONITOR_BLOCK_RETRO);
+    public static final DeferredItem<BlockItem> MONITOR_WIDE = ITEMS.registerSimpleBlockItem("monitor_wide", ModBlocks.MONITOR_WIDE);
+    public static final DeferredItem<BlockItem> MONITOR_CURVED = ITEMS.registerSimpleBlockItem("monitor_curved", ModBlocks.MONITOR_CURVED);
     public static final DeferredItem<BlockItem> KEYBOARD_STAND = ITEMS.registerSimpleBlockItem("keyboard_stand", ModBlocks.KEYBOARD_STAND);
     public static final DeferredItem<BlockItem> KEYBOARD =
             ITEMS.registerSimpleBlockItem("keyboard", ModBlocks.KEYBOARD);

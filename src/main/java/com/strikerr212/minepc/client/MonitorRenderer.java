@@ -78,7 +78,23 @@ public class MonitorRenderer implements BlockEntityRenderer<MonitorBlockEntity> 
         float bx0 = g.col() * 16 - left, by0 = g.row() * 16 - top, bx1 = bx0 + 16, by1 = by0 + 16;
 
         var cam = Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
-        drawScreen(font, pose, buffers, s, areaW, areaH, bx0, by0, bx1, by1, Math.sqrt(cam.distanceToSqr(be.getBlockPos().getCenter())));
+        double dist = Math.sqrt(cam.distanceToSqr(be.getBlockPos().getCenter()));
+        if (kind == MonitorKind.CURVED) {
+            // Изогнутый экран — вертикальными полосами: каждая выдвинута к зрителю на свою глубину
+            int u0 = g.col() * 16, u1 = u0 + 16;
+            int u = u0;
+            while (u < u1) {
+                int depth = kind.curve(u), end = u;
+                while (end < u1 && kind.curve(end) == depth) end++;
+                pose.pushPose();
+                pose.translate(0, 0, depth);
+                drawScreen(font, pose, buffers, s, areaW, areaH, Math.max(bx0, u - left), by0, Math.min(bx1, end - left), by1, dist);
+                pose.popPose();
+                u = end;
+            }
+        } else {
+            drawScreen(font, pose, buffers, s, areaW, areaH, bx0, by0, bx1, by1, dist);
+        }
         pose.popPose();
     }
 

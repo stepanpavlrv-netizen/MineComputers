@@ -43,7 +43,7 @@ public class MonitorBlock extends BaseMonitorBlock {
     private static final BoxShapes WITH_KEYBOARD = BoxShapes.of(0, 2, 11, 16, 16, 14).add(4, 0, 9, 12, 2, 16).add(1, 0, 1, 15, 1.5, 9);
 
     public MonitorBlock(Properties properties) {
-        super(properties, MonitorKind.LCD);
+        super(properties, MonitorKind.LCD, 0x303036);
         registerDefaultState(defaultBlockState().setValue(STAND, true).setValue(KEYBOARD, false));
     }
 
@@ -92,7 +92,7 @@ public class MonitorBlock extends BaseMonitorBlock {
     protected ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos,
                                               Player player, InteractionHand hand, BlockHitResult hit) {
         if (!stack.is(ModItems.KEYBOARD.get()) || state.getValue(KEYBOARD) || player.isShiftKeyDown()) {
-            return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+            return super.useItemOn(stack, state, level, pos, player, hand, hit);
         }
         if (!state.getValue(STAND)) {
             if (!level.isClientSide) player.displayClientMessage(Component.translatable("message.minepc.monitor.keyboard_bottom"), true);
