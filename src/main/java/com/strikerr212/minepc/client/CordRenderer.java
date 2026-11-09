@@ -44,11 +44,26 @@ public class CordRenderer<T extends BlockEntity & CordList.Holder> implements Bl
         return new AABB(be.getBlockPos()).inflate(5);
     }
 
-    /** Точка, где корд выходит из устройства: сбоку, ближе к другому концу, на высоте гнёзд. */
+    /**
+     * Точка, где корд выходит из устройства: у блоков с лицом — из гнезда на лицевой стороне (корд петлёй идёт спереди),
+     * у остальных — сбоку, ближе к другому концу.
+     */
     private static Vec3 anchor(Level level, BlockPos pos, BlockPos toward) {
         BlockState s = level.getBlockState(pos);
-        double y = s.getShape(level, pos).isEmpty() ? 0.5 : Math.min(0.5, s.getShape(level, pos).max(net.minecraft.core.Direction.Axis.Y) * 0.6);
+        var shape = s.getShape(level, pos);
+        double top = shape.isEmpty() ? 1 : shape.max(net.minecraft.core.Direction.Axis.Y);
+        double y = Math.min(0.5, top * 0.6);
         Vec3 c = new Vec3(pos.getX() + 0.5, pos.getY() + y, pos.getZ() + 0.5);
+        if (s.hasProperty(net.minecraft.world.level.block.HorizontalDirectionalBlock.FACING)) {
+            net.minecraft.core.Direction f = s.getValue(net.minecraft.world.level.block.HorizontalDirectionalBlock.FACING);
+            double front = shape.isEmpty() ? 0.5 : (f.getAxisDirection() == net.minecraft.core.Direction.AxisDirection.POSITIVE
+                    ? shape.max(f.getAxis()) - 0.5 : 0.5 - shape.min(f.getAxis()));
+            c = c.add(f.getStepX() * (front + 0.03), 0, f.getStepZ() * (front + 0.03));
+            // вдоль лица — немного в сторону другого конца
+            Vec3 along = new Vec3(Math.abs(f.getStepZ()), 0, Math.abs(f.getStepX()));
+            double side = (toward.getX() - pos.getX()) * along.x + (toward.getZ() - pos.getZ()) * along.z;
+            return c.add(along.scale(Math.signum(side) * 0.3));
+        }
         Vec3 dir = new Vec3(toward.getX() - pos.getX(), 0, toward.getZ() - pos.getZ());
         if (dir.lengthSqr() > 1e-4) {
             dir = dir.normalize();
@@ -68,7 +83,7 @@ public class CordRenderer<T extends BlockEntity & CordList.Holder> implements Bl
             Vec3 a = anchor(level, pos, e.other()).subtract(pos.getX(), pos.getY(), pos.getZ());
             Vec3 b = anchor(level, e.other(), pos).subtract(pos.getX(), pos.getY(), pos.getZ());
             double dist = a.distanceTo(b);
-            double sag = 0.15 + 0.12 * dist;
+            double sag = 0.2 + 0.12 * dist;
             int rgb = DyeColor.byId(e.color()).getTextureDiffuseColor();
             int r = (rgb >> 16) & 255, g = (rgb >> 8) & 255, bl = rgb & 255;
             BlockPos mid = BlockPos.containing(pos.getX() + (a.x + b.x) / 2, pos.getY() + Math.min(a.y, b.y), pos.getZ() + (a.z + b.z) / 2);

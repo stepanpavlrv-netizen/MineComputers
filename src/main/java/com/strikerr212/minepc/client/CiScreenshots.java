@@ -222,7 +222,16 @@ public class CiScreenshots {
             }
             case 1598 -> com.mojang.logging.LogUtils.getLogger().info("[CI] экран: {}", mc.screen);
             case 1600 -> shot(mc, "switch_gui");
-            case 1610 -> mc.stop();
+            case 1602 -> {
+                mc.setScreen(null);
+                mc.options.hideGui = true;
+                server.execute(() -> {
+                    ServerPlayer p = server.getPlayerList().getPlayers().get(0);
+                    p.teleportTo(p.serverLevel(), lanBase.getX() + 0.5, lanBase.getY(), lanBase.getZ() - 2.6, 0f, 28f);
+                });
+            }
+            case 1625 -> shot(mc, "world_rack");
+            case 1635 -> mc.stop();
             default -> {
             }
         }
