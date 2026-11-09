@@ -122,7 +122,7 @@ public final class LanManager {
 
     /** Порт корпуса подключён (хотя бы к одному работающему отрезку). */
     public boolean linked(ServerLevel level, BlockPos casePos) {
-        for (Segment s : segmentsAt(LanData.get(level), casePos)) if (s.ok() && !s.plugs().isEmpty()) return true;
+        for (Segment s : segmentsAt(LanData.get(level), casePos)) if (s.ok()) return true;
         return false;
     }
 
@@ -208,7 +208,7 @@ public final class LanManager {
     }
 
     /** Радиомодемы того же канала, до которых достаёт сигнал (дальность — меньшая из двух). */
-    static List<BlockPos> radioPeers(LanData data, BlockPos pos, LanData.Device dev) {
+    public static List<BlockPos> radioPeers(LanData data, BlockPos pos, LanData.Device dev) {
         List<BlockPos> out = new ArrayList<>();
         int channel = dev.extra() >>> 16, range = dev.extra() & 0xFFFF;
         for (BlockPos other : data.devicesOfType(LanData.RADIO)) {
