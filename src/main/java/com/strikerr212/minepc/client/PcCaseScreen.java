@@ -358,7 +358,10 @@ public class PcCaseScreen extends AbstractContainerScreen<PcCaseMenu> {
 
     /** Скорость порта по плате: 100 Мбит/с … 10 Гбит/с. */
     private static Component bitsText(long bits) {
-        if (bits >= 1_000_000_000L) return tr("gui.minepc.net.gbit", dec(bits / 1e9));
+        if (bits >= 1_000_000_000L) {
+            double g = bits / 1e9;
+            return tr("gui.minepc.net.gbit", g == Math.rint(g) ? String.valueOf((long) g) : dec(g));
+        }
         return tr("gui.minepc.net.mbit", Math.round(bits / 1e6));
     }
 

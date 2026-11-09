@@ -1,5 +1,6 @@
 -- Чат по сети: chat [канал]. Enter — отправить, Ctrl+T — выйти.
-local channel = tonumber(...) or 1
+local arg = ...
+local channel = tonumber(arg or "") or 1
 local PORT = 4000 + channel
 if net.speed() == 0 then print("Кабель не подключён — чату некуда писать") return end
 net.open(PORT)

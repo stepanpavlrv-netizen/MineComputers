@@ -135,6 +135,7 @@ public class CiScreenshots {
             case 805 -> server.execute(CiScreenshots::lookAtMonitors);
             case 825 -> shot(mc, "world_monitors");
             case 830 -> server.execute(CiScreenshots::placeNetwork);
+            case 990 -> { typeAt(netA, "hostname office-1"); typeAt(netB, "hostname server"); }
             case 1000 -> { typeAt(netB, "chat"); typeAt(netA, "chat"); }
             case 1030 -> typeAt(netA, "привет по кабелю!");
             case 1045 -> typeAt(netB, "и тебе привет, A");
