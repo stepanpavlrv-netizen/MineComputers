@@ -18,7 +18,7 @@ import java.util.List;
  */
 public class SwitchScreen extends Screen {
 
-    private static final int W = 276, ROW = 13, MAX_ROWS = 12;
+    private static final int W = 300, ROW = 13, MAX_ROWS = 12;
     private static final int BG = 0xF01D2026, PANEL = 0xFF272B33, LINE = 0xFF3A404B, FG = 0xFFE6E9EF, DIM = 0xFF8D95A3,
             GOOD = 0xFF5BD982, BAD = 0xFFE5534B, OFF = 0xFF555B66, PC = 0xFF7FD48A;
 
@@ -59,7 +59,7 @@ public class SwitchScreen extends Screen {
 
     @Override
     protected void init() {
-        panelH = 44 + Math.max(1, Math.min(MAX_ROWS, rows.size())) * ROW + 26;
+        panelH = 44 + Math.max(1, Math.min(MAX_ROWS, rows.size())) * ROW + 40;
         left = (width - W) / 2;
         top = (height - panelH) / 2;
         addRenderableWidget(net.minecraft.client.gui.components.Button.builder(Component.translatable("gui.done"), b -> onClose())
@@ -70,7 +70,7 @@ public class SwitchScreen extends Screen {
     public void tick() {
         super.tick();
         if (++age % 40 == 0) PacketDistributor.sendToServer(new SwitchPortPayload(pos, -1, true, 0));
-        int want = 44 + Math.max(1, Math.min(MAX_ROWS, rows.size())) * ROW + 26;
+        int want = 44 + Math.max(1, Math.min(MAX_ROWS, rows.size())) * ROW + 40;
         if (want != panelH) rebuildWidgets();
     }
 
@@ -135,9 +135,8 @@ public class SwitchScreen extends Screen {
         if (rows.size() > MAX_ROWS) {
             String more = (scroll + 1) + "–" + Math.min(rows.size(), scroll + MAX_ROWS) + " / " + rows.size();
             g.drawString(font, more, left + 8, top + panelH - 18, DIM, false);
-        } else {
-            g.drawString(font, Component.translatable("gui.minepc.switch.hint"), left + 8, top + panelH - 18, DIM, false);
         }
+        g.drawString(font, Component.translatable("gui.minepc.switch.hint"), left + 8, top + panelH - 34, DIM, false);
     }
 
     @Override

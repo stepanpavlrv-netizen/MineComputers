@@ -200,7 +200,7 @@ public class CiScreenshots {
                 mc.options.hideGui = true;
                 server.execute(() -> {
                     ServerPlayer p = server.getPlayerList().getPlayers().get(0);
-                    p.teleportTo(p.serverLevel(), lanBase.getX() + 6.5, lanBase.getY() + 6, lanBase.getZ() - 6.5, 0f, 38f);
+                    p.teleportTo(p.serverLevel(), lanBase.getX() + 7.5, lanBase.getY() + 1.5, lanBase.getZ() - 8.5, 0f, 22f);
                 });
             }
             case 1540 -> shot(mc, "world_lan2");
@@ -539,7 +539,7 @@ public class CiScreenshots {
         data.setPort(b, eastFiber, true, lime);
         data.setPort(b.east(5), westFiber, true, lime);
         data.setPort(b.east(5), southPort, true, lime);
-        p.teleportTo(level, b.getX() + 6.5, b.getY() + 6, b.getZ() - 6.5, 0f, 38f);
+        p.teleportTo(level, b.getX() + 7.5, b.getY() + 1.5, b.getZ() - 8.5, 0f, 22f);
     }
 
     private static void logLan2() {

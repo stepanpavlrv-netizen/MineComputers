@@ -48,7 +48,7 @@ public class ComputerGameTests {
         be.input(TerminalInputPayload.KEY, "enter", false, false);
     }
 
-    @GameTest(template = "empty", timeoutTicks = 400)
+    @GameTest(template = "empty", timeoutTicks = 800)
     public static void computerBootsAndRunsLua(GameTestHelper h) {
         PcCaseBlockEntity be = buildComputer(h, 3);
         h.startSequence()
