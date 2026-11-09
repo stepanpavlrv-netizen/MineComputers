@@ -175,6 +175,14 @@ public class PcCaseBlock extends BaseEntityBlock implements com.strikerr212.mine
         return InteractionResult.sidedSuccess(level.isClientSide);
     }
 
+    /** Сигнал красного камня: BIOS может включать компьютер по нему. */
+    @Override
+    protected void neighborChanged(BlockState state, Level level, BlockPos pos, net.minecraft.world.level.block.Block block,
+                                   BlockPos from, boolean moving) {
+        super.neighborChanged(state, level, pos, block, from, moving);
+        if (!level.isClientSide && level.getBlockEntity(pos) instanceof PcCaseBlockEntity pc) pc.redstone(level.hasNeighborSignal(pos));
+    }
+
     /** Когда корпус ломают, детали выпадают на землю. */
     @Override
     protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean movedByPiston) {

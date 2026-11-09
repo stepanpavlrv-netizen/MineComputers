@@ -68,6 +68,9 @@ final class LuaMachine {
     private String filter;
     private volatile long budget;
     private volatile long opsTotal;
+    /** Команд за последнюю секунду (для диспетчера задач). */
+    volatile long opsLastSecond;
+    private long opsMark;
 
     private volatile long liveBytes;
     private long allocSince, allocMark;
@@ -85,6 +88,13 @@ final class LuaMachine {
     boolean isFinished() { return finished; }
     long liveBytes() { return liveBytes; }
     long opsTotal() { return opsTotal; }
+
+    /** Раз в секунду (поток сервера): сколько команд выполнено за секунду. */
+    void sampleOps() {
+        long t = opsTotal;
+        opsLastSecond = t - opsMark;
+        opsMark = t;
+    }
     long budget() { return budget; }
 
     /** Состояние для списка процессов. */

@@ -291,6 +291,11 @@ public class PcCaseBlockEntity extends BlockEntity implements com.strikerr212.mi
         markUpdated();
     }
 
+    /** Красный камень рядом изменился (включение по сигналу — если разрешено в BIOS). */
+    public void redstone(boolean powered) {
+        if (level instanceof ServerLevel server) pc.redstone(server, powered);
+    }
+
     private void slotChanged(int slot) {
         if (level == null || level.isClientSide) return;
         if (slot == SLOT_MOTHERBOARD) com.strikerr212.minepc.lan.LanManager.updateDevice(level, worldPosition);

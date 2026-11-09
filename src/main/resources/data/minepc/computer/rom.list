@@ -1,4 +1,5 @@
 # Файлы ПЗУ компьютера. Обновляется tools/computer/update_rom_list.py
+bios/setup.lua
 openos/colors.lua
 openos/component.lua
 openos/cores.lua

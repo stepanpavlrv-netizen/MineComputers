@@ -377,7 +377,24 @@ if _PROCESS then
   return fn(table.unpack(p.args, 1, p.args.n or #p.args))
 end
 
--- ===================== Запуск =====================
+-- ===================== Запуск: самотест, BIOS, загрузка =====================
+-- Самотест (POST), пароли, настройки по Del/F2 и выбор устройства — в /rom/bios/setup.lua
+local bootStartup
+do
+  local setup, err = loadfile("/rom/bios/setup.lua")
+  if setup and bios then
+    local ok, res = pcall(function() return setup().start() end)
+    if ok then bootStartup = res
+    else
+      term.setBackgroundColor(colors.black)
+      term.clear()
+      term.setCursorPos(1, 1)
+      printError("Ошибка BIOS: " .. tostring(res))
+    end
+  end
+end
+term.setBackgroundColor(colors.black)
+term.setTextColor(colors.white)
 term.clear()
 term.setCursorPos(1, 1)
 local info = computer.info()
@@ -392,7 +409,9 @@ if not fs.exists("/rom/shell.lua") then
   while true do os.pullEvent() end
 end
 
-if fs.exists("/startup.lua") then
+if bootStartup then
+  os.run({}, bootStartup)
+elseif bootStartup == nil and not bios and fs.exists("/startup.lua") then
   os.run({}, "/startup.lua")
 end
 

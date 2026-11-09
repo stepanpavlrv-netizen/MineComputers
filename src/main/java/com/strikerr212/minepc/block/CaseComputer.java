@@ -165,7 +165,8 @@ public final class CaseComputer implements Computer.Host {
         if (age % 20 == 3) refreshWifi(level, pos);
         var lan = com.strikerr212.minepc.lan.LanManager.get(level);
         net.minecraft.world.level.block.state.BlockState state = level.getBlockState(pos);
-        long wired = state.getBlock() instanceof com.strikerr212.minepc.lan.LanDevice d ? d.lanBitsPerSecond(level, pos, state) : 0;
+        long wired = !bios().lan() ? 0
+                : state.getBlock() instanceof com.strikerr212.minepc.lan.LanDevice d ? d.lanBitsPerSecond(level, pos, state) : 0;
         boolean cable = wired > 0 && lan.linked(level, pos);
         Computer.WifiStatus ws = wifiStatus;
         boolean wifi = ws != null && ws.connected();
@@ -183,6 +184,105 @@ public final class CaseComputer implements Computer.Host {
         linkBits = bits;
         linkCode = (cable ? 1 : 0) | (wifi ? 2 | ws.signal() << 2 : 0);
         peers = List.copyOf(list);
+    }
+
+    // ======================= BIOS =======================
+
+    /** Настройки BIOS из платы (или по умолчанию, если платы нет). */
+    BiosSettings bios() {
+        return BiosSettings.of(be.getStack(PcCaseBlockEntity.SLOT_MOTHERBOARD));
+    }
+
+    /** Ядра, порядок дисков — применятся при следующей загрузке (перезагрузка из программы тоже считается). */
+    private volatile boolean reconfigure;
+
+    @Override
+    public void beforeBoot() {
+        if (!reconfigure || !(be.getLevel() instanceof ServerLevel level)) return;
+        reconfigure = false;
+        SystemModel.Input in = be.collectInput();
+        SystemModel.Report report = SystemModel.evaluate(in);
+        if (report.bootable()) configure(level, in, report);
+    }
+
+    /** Сигнал красного камня: включиться по фронту, если это разрешено в BIOS. */
+    private boolean lastSignal;
+
+    void redstone(ServerLevel level, boolean powered) {
+        boolean rising = powered && !lastSignal;
+        lastSignal = powered;
+        if (rising && bios().redstone() && (computer == null || !computer.isOn())) {
+            if (powerOn(level) == null) be.stateChanged();
+        }
+    }
+
+    @Override
+    public Map<String, Object> biosSettings() {
+        return bios().toLua();
+    }
+
+    @Override
+    public String biosSave(Map<?, ?> changes) {
+        return onServer(level -> {
+            ItemStack board = be.getStack(PcCaseBlockEntity.SLOT_MOTHERBOARD);
+            if (board.isEmpty()) return "Нет материнской платы";
+            BiosSettings old = BiosSettings.of(board);
+            BiosSettings next = old.with(changes);
+            next.writeTo(board);
+            be.setChanged();
+            if (next.cores() != old.cores() || !next.bootOrder().equals(old.bootOrder()) || next.usb() != old.usb()) {
+                reconfigure = true;
+            }
+            return null;
+        }, "Сервер не ответил");
+    }
+
+    @Override
+    public boolean biosCheckPassword(String kind, String password) {
+        BiosSettings b = bios();
+        String want = "boot".equals(kind) ? b.bootPassword() : b.biosPassword();
+        return want.isEmpty() || want.equals(password);
+    }
+
+    @Override
+    public Map<String, Object> biosInfo() {
+        Map<String, Object> m = new LinkedHashMap<>();
+        var board = be.motherboard();
+        int tier = board == null ? 1 : board.tier();
+        ItemStack stack = be.getStack(PcCaseBlockEntity.SLOT_MOTHERBOARD);
+        String label = stack.getItem() instanceof HardwareItem ? HardwareItem.label(stack) : "";
+        boolean uefi = tier >= 4;
+        m.put("vendor", uefi ? "MineCore UEFI" : "MineBIOS");
+        m.put("version", uefi ? "5.2." + (10 + tier) : "4." + (50 + tier * 3) + "PG");
+        m.put("board", label.isEmpty() ? "Материнская плата ур. " + tier : label);
+        m.put("tier", tier);
+        m.put("theme", uefi ? "uefi" : "classic");
+        m.put("serial", address.substring(0, 8).toUpperCase(java.util.Locale.ROOT));
+        if (be.getLevel() != null) {
+            long day = be.getLevel().getDayTime();
+            m.put("day", (int) (day / 24000) + 1);
+            m.put("time", String.format(java.util.Locale.ROOT, "%02d:%02d", (int) ((day / 1000 + 6) % 24), (int) (day % 1000 * 60 / 1000)));
+        }
+        return m;
+    }
+
+    /** Что может быть устройством загрузки: внутренние диски, флешка, дискета (с путём, если подключено). */
+    private final Map<String, String> bootPaths = new java.util.concurrent.ConcurrentHashMap<>();
+
+    @Override
+    public List<Map<String, Object>> biosDevices() {
+        List<Map<String, Object>> out = new ArrayList<>();
+        String[][] names = {{"nvme", "M.2 NVMe SSD"}, {"sata", "SATA SSD"}, {"hdd", "Жёсткий диск"}, {"usb", "USB-флешка"}, {"floppy", "Дискета"}};
+        for (String[] n : names) {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("id", n[0]);
+            m.put("name", n[1]);
+            String path = bootPaths.get(n[0]);
+            m.put("present", path != null);
+            if (path != null) m.put("path", path);
+            out.add(m);
+        }
+        return out;
     }
 
     // ======================= Запросы к миру из потока программы =======================
@@ -321,6 +421,8 @@ public final class CaseComputer implements Computer.Host {
     }
 
     private com.strikerr212.minepc.lan.WifiAdapterItem adapter() {
+        BiosSettings b = bios();
+        if (!b.usb() || !b.wifi()) return null;
         for (int i = 0; i < PcCaseBlockEntity.USB_SLOTS; i++) {
             if (be.getStack(PcCaseBlockEntity.SLOT_USB + i).getItem() instanceof com.strikerr212.minepc.lan.WifiAdapterItem a) return a;
         }
@@ -414,6 +516,7 @@ public final class CaseComputer implements Computer.Host {
         }
         if (computer == null) computer = new Computer(this);
         else computer.shutdown();
+        reconfigure = false;
         configure(level, in, report);
         computer.setLabel(label);
         computer.turnOn();
@@ -472,6 +575,11 @@ public final class CaseComputer implements Computer.Host {
                 com.strikerr212.minepc.MineConfig.sliceMs());
         // Скорость, ядра, память, видеокарта — с учётом перегрева, нехватки памяти и настроек сервера
         Computer.Limits limits = limitsFor(in, report, com.strikerr212.minepc.MineConfig.speedFor(level));
+        BiosSettings bios = bios();
+        if (bios.cores() > 0 && bios.cores() < limits.cores()) {
+            limits = new Computer.Limits(limits.opsPerTick(), bios.cores(), limits.memoryBytes(), limits.gpuCellsPerTick(),
+                    limits.vramCells(), limits.bootTicks(), limits.maxProcesses());
+        }
         computer.setLimits(limits);
         int opsPerSecond = limits.opsPerTick() * Computer.TICKS_PER_SECOND;
 
@@ -491,15 +599,29 @@ public final class CaseComputer implements Computer.Host {
         String gpuName = gpu == null ? "" : "Видеокарта ур. " + gpu.tier() + ", до " + Perf.screenSize(gpuTier)[0] + "×" + Perf.screenSize(gpuTier)[1];
         computer.setInfo(new Computer.Info(cpuName, cpu.cores(), cpu.clockMhz(), "Lua",
                 (int) (limits.memoryBytes() / 1024), opsPerSecond, gpuName, report.score()));
+        // Тепло и питание: температура в диспетчере задач и в BIOS считается по этим деталям
+        int cpuCooling = in.cooler() != null ? in.cooler().coolingW() : Perf.PASSIVE_COOLING;
+        int gpuCooling = gpu == null ? 0 : gpu.hasCooler() ? gpu.coolingW() : Perf.PASSIVE_COOLING;
+        computer.setThermal(new Computer.Thermal(cpu.tdp(), cpuCooling, gpu == null ? 0 : gpu.tdp(), gpuCooling,
+                gpu != null, in.powerDraw(), in.psu() == null ? 0 : in.psu().wattage(), in.cooler() != null));
 
         // Накопители: системный — самый быстрый (M.2, потом SATA SSD, потом жёсткий диск)
         var fs = computer.fileSystem();
         for (String m : fs.mounts().keySet()) fs.unmount(m);
         removable.clear();
         fs.mount("rom", ComputerRom.mount());
-        int[] order = {PcCaseBlockEntity.SLOT_M2, PcCaseBlockEntity.SLOT_M2 + 1,
-                PcCaseBlockEntity.SLOT_SATA_SSD, PcCaseBlockEntity.SLOT_SATA_SSD + 1,
-                PcCaseBlockEntity.SLOT_HDD, PcCaseBlockEntity.SLOT_HDD + 1};
+        // Системный диск — первый по порядку загрузки в BIOS (по умолчанию: M.2, SATA SSD, жёсткий диск)
+        List<int[]> kinds = new ArrayList<>();
+        for (String id : bios.bootOrder()) {
+            switch (id) {
+                case "nvme" -> kinds.add(new int[]{PcCaseBlockEntity.SLOT_M2, PcCaseBlockEntity.SLOT_M2 + 1});
+                case "sata" -> kinds.add(new int[]{PcCaseBlockEntity.SLOT_SATA_SSD, PcCaseBlockEntity.SLOT_SATA_SSD + 1});
+                case "hdd" -> kinds.add(new int[]{PcCaseBlockEntity.SLOT_HDD, PcCaseBlockEntity.SLOT_HDD + 1});
+                default -> { }
+            }
+        }
+        int[] order = kinds.stream().flatMapToInt(java.util.Arrays::stream).toArray();
+        bootPaths.keySet().removeAll(List.of("nvme", "sata", "hdd"));
         int data = 0;
         boolean root = false;
         for (int slot : order) {
@@ -525,11 +647,15 @@ public final class CaseComputer implements Computer.Host {
             }
             Mount mount = DriveStorage.mount(level.getServer(), stack, capacity, name)
                     .withSpeed(Math.round(speed * com.strikerr212.minepc.MineConfig.disk()), opBytes);
+            String kind = stack.getItem() instanceof SsdItem ? (SsdItem.data(stack).isNvme() ? "nvme" : "sata") : "hdd";
             if (!root) {
                 fs.mount("", mount);
                 root = true;
+                bootPaths.putIfAbsent(kind, "/");
             } else {
-                fs.mount(data == 0 ? "data" : "data" + (data + 1), mount);
+                String at = data == 0 ? "data" : "data" + (data + 1);
+                fs.mount(at, mount);
+                bootPaths.putIfAbsent(kind, "/" + at);
                 data++;
             }
         }
@@ -543,9 +669,15 @@ public final class CaseComputer implements Computer.Host {
         age++;
         Runnable task;
         while ((task = serverTasks.poll()) != null) task.run();
-        if (age == 1 && wantOn && (computer == null || !computer.isOn())) {
-            // Мир загрузился, а компьютер был включён — включаем снова
-            if (powerOn(level) != null) wantOn = false;
+        if (age == 1 && (computer == null || !computer.isOn())) {
+            // Мир загрузился («питание вернулось»): по настройке BIOS — как было, включиться или остаться выключенным
+            int mode = bios().powerLoss();
+            boolean start = mode == 1 || (mode == 0 && wantOn);
+            if (start && be.motherboard() != null) {
+                if (powerOn(level) != null) wantOn = false;
+            } else if (mode == 2) {
+                wantOn = false;
+            }
         }
         if (age % SCAN_INTERVAL == 1) scanDevices(level, pos);
         if (age % 10 == 3) refreshNetwork(level, pos);
@@ -621,9 +753,17 @@ public final class CaseComputer implements Computer.Host {
                 disks++;
             }
         }
-        for (int i = 0; i < PcCaseBlockEntity.USB_SLOTS; i++) {
+        boolean usbOn = bios().usb();
+        for (int i = 0; usbOn && i < PcCaseBlockEntity.USB_SLOTS; i++) {
             ItemStack stack = be.getStack(PcCaseBlockEntity.SLOT_USB + i);
             if (stack.getItem() instanceof DriveItem) wanted.put(i == 0 ? "usb" : "usb" + (i + 1), stack);
+        }
+        // Для BIOS: где флешка и дискета (первые найденные)
+        bootPaths.remove("usb");
+        bootPaths.remove("floppy");
+        for (Map.Entry<String, ItemStack> e : wanted.entrySet()) {
+            boolean fl = e.getValue().getItem() instanceof DriveItem d && d.kind() == DriveItem.Kind.FLOPPY;
+            bootPaths.putIfAbsent(fl ? "floppy" : "usb", "/" + e.getKey());
         }
         var fs = computer.fileSystem();
         // Отключить вынутые и заменённые

@@ -49,6 +49,8 @@ public class HeadlessTest {
         System.out.println("└──");
     }
 
+    static Path root;
+
     static void expect(String what, boolean ok) {
         System.out.println((ok ? "  ✔ " : "  ✘ ") + what);
         if (!ok) failures++;
@@ -56,6 +58,7 @@ public class HeadlessTest {
 
     public static void main(String[] args) throws Exception {
         Path dir = Files.createTempDirectory("minepc_drive");
+        root = dir;
         pc = new Computer(new Computer.Host() { });
         pc.setInfo(new Computer.Info("Тестовый процессор", 4, 2800, "Lua", 2048, 2_000_000, "Видеокарта", 1000));
         pc.setOpsPerTick(Integer.parseInt(args.length > 0 ? args[0] : "100000"));
@@ -330,6 +333,7 @@ public class HeadlessTest {
         ticks(30);
         expect("компьютер выключился", pc.state() == Computer.State.OFF);
 
+        testStats();
         testNet();
         testWifi();
 
@@ -519,5 +523,51 @@ public class HeadlessTest {
         expect("switch: выключен и VLAN red (15)", "off".equals(switchState[0]) && "v15".equals(switchState[1]) && screen().contains("[v15]"));
         expect("switch: неизвестный — ошибка", screen().contains("Нет такого коммутатора"));
         pc = saved;
+    }
+
+    /** computer.stats(): нагрузка ядра от занятого процесса, запись на диск, температура. */
+    static void testStats() throws Exception {
+        System.out.println("── нагрузка ──");
+        pc.setThermal(new Computer.Thermal(95, 60, 0, 0, false, 250, 400, true));
+        pc.setLimits(new Computer.Limits(100000, 2, 64L << 20, 1_000_000, 200_000, 0, 16));
+        pc.shutdown();
+        for (String m : pc.fileSystem().mounts().keySet()) pc.fileSystem().unmount(m);
+        pc.fileSystem().mount("rom", ComputerRom.mount());
+        root = Files.createTempDirectory("minepc_stats");
+        pc.fileSystem().mount("", new DirMount(root, 64 * 1024, "SSD"));
+        pc.terminal().resize(50, 16);
+        pc.turnOn();
+        for (int i = 0; i < 300 && !screen().contains("/>"); i++) ticks(1);
+        java.nio.file.Files.writeString(root.resolve("busy.lua"), "while true do end\n");
+        java.nio.file.Files.writeString(root.resolve("st.lua"), String.join("\n",
+                "local pid = computer.spawn('/busy.lua')",
+                "local f = fs.open('/w.bin', 'wb') f.write(('x'):rep(10000)) f.close()",
+                "sleep(3)",
+                "local s = computer.stats()",
+                "local busy",
+                "for _, p in ipairs(s.processes) do if p.path:find('busy') then busy = p end end",
+                "local maxCore = 0",
+                "for _, v in ipairs(s.cores) do maxCore = math.max(maxCore, v) end",
+                "print('ST', math.floor(maxCore), busy and math.floor(busy.cpu) or -1, s.disks[1].writeTotal >= 10000, s.cpuTemp > 30, s.fan > 0, s.power > 0)",
+                "computer.kill(pid)",
+                ""), java.nio.charset.StandardCharsets.UTF_8);
+        command("st");
+        for (int i = 0; i < 200 && !screen().contains("ST "); i++) ticks(1);
+        show("computer.stats");
+        java.util.regex.Matcher mm = java.util.regex.Pattern.compile("ST\\s+(\\d+)\\s+(-?\\d+)\\s+(\\w+)\\s+(\\w+)\\s+(\\w+)\\s+(\\w+)").matcher(screen());
+        boolean found = mm.find();
+        expect("занятое ядро загружено почти на 100%", found && Integer.parseInt(mm.group(1)) >= 80);
+        expect("процесс виден со своей нагрузкой", found && Integer.parseInt(mm.group(2)) >= 10);
+        expect("запись на диск посчитана", found && mm.group(3).equals("true"));
+        expect("температура выросла, вентилятор крутится, питание есть", found && mm.group(4).equals("true") && mm.group(5).equals("true") && mm.group(6).equals("true"));
+
+        // BIOS: настройки сохраняются, порядок загрузки нормализуется
+        command("clear");
+        command("lua");
+        command("bios.set({lan = false, cores = 2, bootOrder = {'usb', 'hdd'}}); local b = bios.get(); print('BIOS', b.lan, b.cores, b.bootOrder[1], b.bootOrder[2], bios.info().theme)");
+        for (int i = 0; i < 20; i++) ticks(1);
+        command("exit()");
+        show("bios");
+        expect("bios.set/get: LAN выключен, 2 ядра, порядок с флешки", screen().contains("BIOS") && screen().contains("false") && screen().contains("usb") && screen().contains("classic"));
     }
 }

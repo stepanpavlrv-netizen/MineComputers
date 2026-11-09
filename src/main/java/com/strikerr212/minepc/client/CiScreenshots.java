@@ -231,7 +231,20 @@ public class CiScreenshots {
                 });
             }
             case 1625 -> shot(mc, "world_rack");
-            case 1635 -> mc.stop();
+            // BIOS: классический (плата ур. 3) и UEFI (плата ур. 5)
+            case 1630 -> { mc.options.hideGui = false; typeAt(lanE, "reboot"); typeAt(lanJ2, "reboot"); }
+            case 1636, 1642, 1648, 1654, 1660 -> { keyAt(lanE, "delete"); keyAt(lanJ2, "delete"); }
+            case 1700 -> mc.setScreen(new TerminalScreen(lanE));
+            case 1715 -> shot(mc, "bios_classic");
+            case 1716, 1718, 1720, 1722, 1724 -> keyAt(lanE, "right");
+            case 1740 -> shot(mc, "bios_classic_monitor");
+            case 1745 -> mc.setScreen(new TerminalScreen(lanJ2));
+            case 1760 -> shot(mc, "bios_uefi");
+            case 1761, 1763 -> keyAt(lanJ2, "right");
+            case 1780 -> shot(mc, "bios_uefi_boot");
+            case 1781, 1783, 1785 -> keyAt(lanJ2, "right");
+            case 1800 -> shot(mc, "bios_uefi_monitor");
+            case 1810 -> mc.stop();
             default -> {
             }
         }
@@ -361,6 +374,13 @@ public class CiScreenshots {
 
     private static BlockPos netA = BlockPos.ZERO, netB = BlockPos.ZERO, netC = BlockPos.ZERO, netD = BlockPos.ZERO,
             netRouter = BlockPos.ZERO;
+
+    private static void keyAt(BlockPos pos, String key) {
+        var server = Minecraft.getInstance().getSingleplayerServer();
+        server.execute(() -> {
+            if (server.overworld().getBlockEntity(pos) instanceof PcCaseBlockEntity be) be.input(TerminalInputPayload.KEY, key, false, false);
+        });
+    }
 
     private static void typeAt(BlockPos pos, String line) {
         var server = Minecraft.getInstance().getSingleplayerServer();
@@ -507,7 +527,8 @@ public class CiScreenshots {
         lanJ1 = b.offset(8, 0, 4);
         lanJ2 = b.offset(15, 0, 4);
         pcWithMonitor(level, lanJ1);
-        pcWithMonitor(level, lanJ2);
+        fillCase(level, lanJ2, 5);
+        put(level, lanJ2.above(), ModBlocks.MONITOR.get().defaultBlockState().setValue(com.strikerr212.minepc.block.MonitorBlock.KEYBOARD, true));
         wire(level, b.offset(9, 0, 4), blue, 1, 1);
         wire(level, b.offset(14, 0, 4), blue, 1, 1);
         for (int[] t : new int[][]{{10, 0}, {10, 1}, {10, 2}, {11, 2}, {12, 2}, {13, 2}, {13, 1}, {13, 0}}) tray(level, b.offset(t[0], t[1], 4));

@@ -150,6 +150,7 @@ final class LuaApis {
         g.rawset("data", OcApis.data(m));
         g.rawset("net", net(c));
         g.rawset("switch", switchApi(c));
+        g.rawset("bios", biosApi(c));
         g.rawset("_HOST", str("MineComputers 0.11 (Lua 5.2 / Cobalt)"));
     }
 
@@ -234,6 +235,76 @@ final class LuaApis {
                 }),
         });
         t.rawset("wifi", wifi(c));
+        return t;
+    }
+
+    /** Настройки BIOS, если плата их не хранит (тесты): в памяти, до выключения. */
+    private static final java.util.Map<Computer, java.util.Map<String, Object>> LOCAL_BIOS =
+            java.util.Collections.synchronizedMap(new java.util.WeakHashMap<>());
+
+    private static java.util.Map<String, Object> localBios(Computer c) {
+        return LOCAL_BIOS.computeIfAbsent(c, k -> {
+            java.util.Map<String, Object> m = new java.util.LinkedHashMap<>();
+            java.util.Map<Object, Object> order = new java.util.LinkedHashMap<>();
+            String[] ids = {"nvme", "sata", "hdd", "usb", "floppy"};
+            for (int i = 0; i < ids.length; i++) order.put(i + 1, ids[i]);
+            m.put("bootOrder", order);
+            m.put("cores", 0);
+            m.put("lan", true);
+            m.put("usb", true);
+            m.put("wifi", true);
+            m.put("biosPassword", false);
+            m.put("bootPassword", false);
+            m.put("powerLoss", 0);
+            m.put("redstone", false);
+            m.put("fastBoot", false);
+            return m;
+        });
+    }
+
+    private static String keyText(Object k) {
+        if (k instanceof Key key) return new String(key.bytes(), java.nio.charset.StandardCharsets.UTF_8);
+        if (k instanceof byte[] b) return new String(b, java.nio.charset.StandardCharsets.UTF_8);
+        return String.valueOf(k);
+    }
+
+    /** bios: настройки, пароли, сведения о плате и устройства загрузки. */
+    private static LuaTable biosApi(Computer c) {
+        LuaTable t = new LuaTable();
+        RegisteredFunction.bind(t, new RegisteredFunction[]{
+                RegisteredFunction.ofV("get", (s, a) -> {
+                    java.util.Map<String, Object> m = c.host().biosSettings();
+                    return toLua(m != null ? m : localBios(c));
+                }),
+                RegisteredFunction.ofV("set", (s, a) -> {
+                    Object changes = copyOut(a.arg(1).checkTable());
+                    if (!(changes instanceof java.util.Map<?, ?> map)) throw error("Нужна таблица настроек");
+                    if (c.host().biosSettings() == null) {
+                        java.util.Map<String, Object> local = localBios(c);
+                        for (var e : map.entrySet()) {
+                            String k = keyText(e.getKey());
+                            Object v = e.getValue();
+                            if (k.endsWith("Password")) v = v instanceof byte[] b && b.length > 0;
+                            if (v instanceof byte[] b) v = new String(b, java.nio.charset.StandardCharsets.UTF_8);
+                            if (v instanceof Double d && d == Math.rint(d)) v = d.intValue();
+                            local.put(k, v);
+                        }
+                        return Constants.TRUE;
+                    }
+                    // ключи-строки из Lua приходят байтами: переводим в String
+                    java.util.Map<Object, Object> norm = new java.util.LinkedHashMap<>();
+                    for (var e : map.entrySet()) {
+                        Object k = e.getKey() instanceof Key || e.getKey() instanceof byte[] ? keyText(e.getKey()) : e.getKey();
+                        norm.put(k, e.getValue());
+                    }
+                    String err = c.host().biosSave(norm);
+                    return err == null ? Constants.TRUE : varargsOf(Constants.NIL, str(err));
+                }),
+                RegisteredFunction.ofV("check", (s, a) -> valueOf(c.host().biosCheckPassword(
+                        text(a.arg(1).checkLuaString()), text(a.arg(2).checkLuaString())))),
+                RegisteredFunction.ofV("info", (s, a) -> toLua(c.host().biosInfo())),
+                RegisteredFunction.ofV("devices", (s, a) -> listToLua(c.host().biosDevices())),
+        });
         return t;
     }
 
@@ -327,6 +398,76 @@ final class LuaApis {
                     return Constants.NONE;
                 }),
         });
+        return t;
+    }
+
+    private static LuaTable stats(Computer c) throws LuaError {
+        LuaTable t = new LuaTable();
+        Computer.Limits l = c.limits();
+        double perCore = Math.max(1, (double) l.opsPerTick() * Computer.TICKS_PER_SECOND);
+        t.rawset("cpu", valueOf(Math.round(c.cpuLoad() * 1000) / 10.0));
+        LuaTable cores = new LuaTable();
+        double[] loads = c.coreLoads();
+        for (int i = 0; i < loads.length; i++) cores.rawset(i + 1, valueOf(Math.round(loads[i] * 1000) / 10.0));
+        t.rawset("cores", cores);
+        t.rawset("clock", valueOf(c.info().clockMhz()));
+        t.rawset("opsPerSecond", valueOf((double) c.opsLastSecond()));
+        t.rawset("opsMax", valueOf(perCore * Math.max(1, l.cores())));
+        LuaTable procs = new LuaTable();
+        int i = 1;
+        int cores_ = Math.max(1, l.cores());
+        for (LuaMachine p : c.machines()) {
+            LuaTable e = new LuaTable();
+            e.rawset("pid", valueOf(p.pid));
+            e.rawset("parent", valueOf(p.parentPid));
+            e.rawset("path", str(p.isMain() ? "/bios.lua" : p.programPath));
+            e.rawset("status", str(p.status()));
+            e.rawset("cpu", valueOf(Math.round(p.opsLastSecond / (perCore * cores_) * 1000) / 10.0));
+            e.rawset("ops", valueOf((double) p.opsLastSecond));
+            e.rawset("memory", valueOf((double) p.liveBytes()));
+            procs.rawset(i++, e);
+        }
+        t.rawset("processes", procs);
+        LuaTable mem = new LuaTable();
+        mem.rawset("used", valueOf((double) c.memoryUsed()));
+        mem.rawset("total", valueOf((double) c.memoryLimit()));
+        t.rawset("memory", mem);
+        t.rawset("gpu", valueOf(Math.round(c.gpuLoad() * 1000) / 10.0));
+        LuaTable disks = new LuaTable();
+        i = 1;
+        for (Map.Entry<String, com.strikerr212.minepc.computer.fs.Mount> e : c.fileSystem().mounts().entrySet()) {
+            com.strikerr212.minepc.computer.fs.Mount mount = e.getValue();
+            if (e.getKey().equals("rom")) continue;
+            long[] d = c.diskStats(mount);
+            LuaTable dt = new LuaTable();
+            dt.rawset("path", str("/" + e.getKey()));
+            dt.rawset("label", str(mount.label()));
+            dt.rawset("read", valueOf((double) d[2]));
+            dt.rawset("write", valueOf((double) d[3]));
+            dt.rawset("readTotal", valueOf((double) d[4]));
+            dt.rawset("writeTotal", valueOf((double) d[5]));
+            long speed = mount.bytesPerSecond();
+            dt.rawset("speed", valueOf((double) speed));
+            dt.rawset("active", valueOf(speed <= 0 ? 0 : Math.min(100, Math.round((d[2] + d[3]) * 1000.0 / speed) / 10.0)));
+            dt.rawset("capacity", valueOf((double) mount.capacity()));
+            dt.rawset("used", valueOf((double) mount.used()));
+            disks.rawset(i++, dt);
+        }
+        t.rawset("disks", disks);
+        LuaTable net = new LuaTable();
+        net.rawset("up", valueOf((double) c.netUpPerSecond()));
+        net.rawset("down", valueOf((double) c.netDownPerSecond()));
+        net.rawset("sent", valueOf((double) c.netSent()));
+        net.rawset("received", valueOf((double) c.netReceived()));
+        net.rawset("speed", valueOf((double) c.host().netBytesPerSecond()));
+        t.rawset("net", net);
+        Computer.Thermal th = c.thermal();
+        t.rawset("cpuTemp", valueOf(Math.round(c.cpuTemp() * 10) / 10.0));
+        if (th.hasGpu()) t.rawset("gpuTemp", valueOf(Math.round(c.gpuTemp() * 10) / 10.0));
+        t.rawset("fan", valueOf(c.fanRpm()));
+        t.rawset("power", valueOf(c.powerNow()));
+        t.rawset("psu", valueOf(th.psuWatts()));
+        t.rawset("uptime", valueOf(c.uptimeSeconds()));
         return t;
     }
 
@@ -674,6 +815,8 @@ final class LuaApis {
                     }
                     return out;
                 }),
+                // Нагрузка, как в диспетчере задач: ядра, процессы, память, диски, видеокарта, сеть, температура
+                RegisteredFunction.ofV("stats", (s, a) -> stats(c)),
                 RegisteredFunction.ofV("pid", (s, a) -> valueOf(m.pid)),
                 RegisteredFunction.ofV("parentPid", (s, a) -> valueOf(m.parentPid)),
                 RegisteredFunction.ofV("limits", (s, a) -> {
@@ -689,6 +832,7 @@ final class LuaApis {
                     out.rawset("maxHeight", valueOf(t.maxHeight()));
                     out.rawset("depth", valueOf(t.maxDepth()));
                     out.rawset("maxProcesses", valueOf(l.maxProcesses()));
+                    out.rawset("bootSeconds", valueOf(l.bootTicks() / (double) Computer.TICKS_PER_SECOND));
                     return out;
                 }),
                 // Списать команды за работу встроенных функций (используют обёртки BIOS; отрицательное нельзя)

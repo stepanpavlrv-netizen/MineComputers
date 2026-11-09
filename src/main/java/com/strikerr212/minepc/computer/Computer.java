@@ -73,6 +73,28 @@ public final class Computer {
 
         default void wifiDisconnect() { }
 
+        // ----- BIOS -----
+
+        /** Перед каждой загрузкой (и при перезагрузке из программы): применить новые настройки BIOS. */
+        default void beforeBoot() { }
+
+        /** Настройки BIOS для программ (без самих паролей); null — хранить в памяти компьютера (тесты). */
+        default java.util.Map<String, Object> biosSettings() { return null; }
+
+        /** Сохранить изменения настроек; null — получилось, иначе причина. */
+        default String biosSave(java.util.Map<?, ?> changes) { return "Настройки не сохраняются"; }
+
+        /** Проверить пароль: kind = "bios" или "boot". */
+        default boolean biosCheckPassword(String kind, String password) { return true; }
+
+        /** Сведения о плате и BIOS: vendor, version, board, tier, theme ("classic" или "uefi"). */
+        default java.util.Map<String, Object> biosInfo() {
+            return java.util.Map.of("vendor", "MineBIOS", "version", "2.3", "board", "Тестовая плата", "tier", 1, "theme", "classic");
+        }
+
+        /** Устройства загрузки: {id, name, path, present}. */
+        default java.util.List<java.util.Map<String, Object>> biosDevices() { return java.util.List.of(); }
+
         // ----- Управляемые коммутаторы -----
 
         /** Коммутаторы (и роутеры, радиомодемы) на пути из этого компьютера: {id, kind, ports}. */
@@ -224,6 +246,7 @@ public final class Computer {
 
     public synchronized void turnOn() {
         if (state == State.RUNNING) return;
+        host.beforeBoot();
         machines.clear();
         main = null;
         mainEvents.clear();
@@ -240,6 +263,11 @@ public final class Computer {
         gpuBudget.set(limits.gpuCellsPerTick());
         openPorts.clear();
         netBudget.set(0);
+        synchronized (diskStats) {
+            diskStats.clear();
+        }
+        cpuLoad = gpuLoad = 0;
+        coreLoads = new double[Math.max(1, limits.cores())];
         stopRequested = rebootRequested = false;
         crashMessage = "";
         nextPid = 1;
@@ -250,7 +278,8 @@ public final class Computer {
         terminal.resize(Math.min(BOOT_WIDTH, terminal.maxWidth()), Math.min(BOOT_HEIGHT, terminal.maxHeight()));
         terminal.setCursor(0, 0);
         terminal.setCursorBlink(false);
-        bootRemaining = limits.bootTicks();
+        // Загрузку системы (время по скорости диска) теперь показывает BIOS после самотеста
+        bootRemaining = 0;
         state = State.RUNNING;
         if (bootRemaining > 0) drawBoot();
     }
@@ -401,6 +430,7 @@ public final class Computer {
             }
             if (ticks % TICKS_PER_SECOND == 0) opsLastSecond = opsThisSecond.getAndSet(0);
         }
+        if (ticks % TICKS_PER_SECOND == 0) sampleStats();
         if (bootRemaining > 0) {
             bootRemaining--;
             if (bootRemaining > 0) {
@@ -517,16 +547,126 @@ public final class Computer {
         queueEvent("net_message", args);
     }
 
+    // ======================= Нагрузка (диспетчер задач, BIOS) =======================
+
+    /**
+     * Тепло и питание по деталям: TDP процессора и видеокарты, сколько отводят их кулеры, сколько потребляет
+     * система на полной нагрузке и мощность блока питания. Есть ли кулер с вентилятором (для оборотов).
+     */
+    public record Thermal(int cpuTdp, int cpuCooling, int gpuTdp, int gpuCooling, boolean hasGpu,
+                          int powerDraw, int psuWatts, boolean fan) {
+        public static final Thermal NONE = new Thermal(65, 95, 0, 0, false, 120, 300, true);
+    }
+
+    private volatile Thermal thermal = Thermal.NONE;
+    private final AtomicLong gpuThisSecond = new AtomicLong();
+    private final Map<Mount, long[]> diskStats = new IdentityHashMap<>();   // чтение, запись за секунду; прошлой; всего
+    private volatile double cpuLoad, gpuLoad, cpuTemp = 30, gpuTemp = 30;
+    private volatile double[] coreLoads = new double[1];
+    private volatile long netUp, netDown, lastSent, lastReceived;
+
+    public void setThermal(Thermal t) {
+        thermal = t == null ? Thermal.NONE : t;
+    }
+
+    public Thermal thermal() { return thermal; }
+    public double cpuLoad() { return cpuLoad; }
+    public double gpuLoad() { return gpuLoad; }
+    public double cpuTemp() { return cpuTemp; }
+    public double gpuTemp() { return gpuTemp; }
+    public double[] coreLoads() { return coreLoads.clone(); }
+    public long netUpPerSecond() { return netUp; }
+    public long netDownPerSecond() { return netDown; }
+
+    /** Обороты вентилятора процессора (0 — пассивное охлаждение). */
+    public int fanRpm() {
+        if (!thermal.fan()) return 0;
+        double k = Math.max(0, Math.min(1, (cpuTemp - 35) / 40));
+        return (int) Math.round(600 + 1600 * k);
+    }
+
+    /** Сколько ватт потребляет система сейчас. */
+    public int powerNow() {
+        Thermal t = thermal;
+        return (int) Math.round(t.powerDraw() * (0.35 + 0.45 * cpuLoad + (t.hasGpu() ? 0.2 * gpuLoad : 0)));
+    }
+
+    /** Диск: чтение и запись за последнюю секунду, всего. */
+    public long[] diskStats(Mount m) {
+        synchronized (diskStats) {
+            long[] d = diskStats.get(m);
+            return d == null ? new long[6] : d.clone();
+        }
+    }
+
+    private static double approach(double cur, double target) {
+        return cur + (target - cur) * 0.2;
+    }
+
+    /** Раз в секунду: нагрузка по ядрам и процессам, видеокарта, диски, сеть, температура. */
+    private void sampleStats() {
+        Limits l = limits;
+        double perCore = Math.max(1, (double) l.opsPerTick() * TICKS_PER_SECOND);
+        int cores = Math.max(1, l.cores());
+        double[] loads = new double[cores];
+        List<Long> ops = new ArrayList<>();
+        for (LuaMachine m : machines) {
+            m.sampleOps();
+            ops.add(m.opsLastSecond);
+        }
+        ops.sort(java.util.Comparator.reverseOrder());
+        double total = 0;
+        for (long o : ops) {
+            // процесс работает на одном ядре — кладём его на самое свободное
+            int best = 0;
+            for (int i = 1; i < cores; i++) if (loads[i] < loads[best]) best = i;
+            double f = Math.min(1, o / perCore);
+            loads[best] = Math.min(1, loads[best] + f);
+            total += f;
+        }
+        coreLoads = loads;
+        cpuLoad = Math.min(1, total / cores);
+        double gpuCap = Math.max(1, (double) l.gpuCellsPerTick() * TICKS_PER_SECOND);
+        gpuLoad = Math.min(1, gpuThisSecond.getAndSet(0) / gpuCap);
+        synchronized (diskStats) {
+            for (long[] d : diskStats.values()) {
+                d[2] = d[0];
+                d[3] = d[1];
+                d[0] = d[1] = 0;
+            }
+        }
+        long sent = netSent.get(), received = netReceived.get();
+        netUp = Math.max(0, sent - lastSent);
+        netDown = Math.max(0, received - lastReceived);
+        lastSent = sent;
+        lastReceived = received;
+        Thermal t = thermal;
+        double cpuRatio = t.cpuTdp() / (double) Math.max(1, t.cpuCooling());
+        cpuTemp = approach(cpuTemp, Math.max(28, Math.min(105, 28 + (0.22 + 0.78 * cpuLoad) * cpuRatio * 50)));
+        if (t.hasGpu()) {
+            double gpuRatio = t.gpuTdp() / (double) Math.max(1, t.gpuCooling());
+            gpuTemp = approach(gpuTemp, Math.max(28, Math.min(105, 28 + (0.2 + 0.8 * gpuLoad) * gpuRatio * 45)));
+        }
+    }
+
     // ======================= Видеокарта =======================
 
     /** Списать работу видеокарты (клетки экрана). */
     void chargeGpu(long cells) {
-        if (cells > 0) gpuBudget.addAndGet(-cells);
+        if (cells > 0) {
+            gpuBudget.addAndGet(-cells);
+            gpuThisSecond.addAndGet(cells);
+        }
     }
 
     // ======================= Накопители =======================
 
-    private void chargeIo(Mount mount, long bytes) {
+    private void chargeIo(Mount mount, long bytes, boolean write) {
+        synchronized (diskStats) {
+            long[] d = diskStats.computeIfAbsent(mount, k -> new long[6]);
+            d[write ? 1 : 0] += bytes;
+            d[write ? 5 : 4] += bytes;
+        }
         long speed = mount.bytesPerSecond();
         if (speed <= 0 || bytes <= 0) return;
         synchronized (ioBudget) {

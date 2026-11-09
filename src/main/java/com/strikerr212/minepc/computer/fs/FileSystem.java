@@ -12,17 +12,22 @@ public final class FileSystem {
 
     /** Куда сообщать о работе накопителей (компьютер считает по ним время чтения и записи). */
     public interface Meter {
-        void io(Mount mount, long bytes);
+        /** write — запись (иначе чтение); bytes уже с учётом «цены» самой операции. */
+        void io(Mount mount, long bytes, boolean write);
     }
 
-    private volatile Meter meter = (m, b) -> { };
+    private volatile Meter meter = (m, b, w) -> { };
 
     public void setMeter(Meter meter) {
-        this.meter = meter == null ? (m, b) -> { } : meter;
+        this.meter = meter == null ? (m, b, w) -> { } : meter;
     }
 
     private void io(Mount m, long bytes) {
-        meter.io(m, bytes + m.opBytes());
+        meter.io(m, bytes + m.opBytes(), false);
+    }
+
+    private void ioWrite(Mount m, long bytes) {
+        meter.io(m, bytes + m.opBytes(), true);
     }
 
     /** Привести путь к виду "a/b/c": без лишних слешей, точек и выходов выше корня. */
@@ -150,21 +155,21 @@ public final class FileSystem {
         if (isMountPoint(path)) throw new FsException("Это папка");
         Resolved r = resolve(path);
         r.mount.write(r.local, data, append);
-        io(r.mount, data.length);
+        ioWrite(r.mount, data.length);
     }
 
     public synchronized void makeDirectory(String path) throws FsException {
         if (isMountPoint(path)) return;
         Resolved r = resolve(path);
         r.mount.makeDirectory(r.local);
-        io(r.mount, 0);
+        ioWrite(r.mount, 0);
     }
 
     public synchronized void delete(String path) throws FsException {
         if (isMountPoint(path)) throw new FsException("Нельзя удалить накопитель");
         Resolved r = resolve(path);
         r.mount.delete(r.local);
-        io(r.mount, 0);
+        ioWrite(r.mount, 0);
     }
 
     public synchronized void copy(String from, String to) throws FsException {
