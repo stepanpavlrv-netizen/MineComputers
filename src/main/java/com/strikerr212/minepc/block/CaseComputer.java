@@ -44,7 +44,7 @@ public final class CaseComputer implements Computer.Host {
     private final PcCaseBlockEntity be;
     private Computer computer;
     private boolean wantOn;
-    private String label = "";
+    private volatile String label = "";
     private boolean hasKeyboard;
     private final List<BlockPos> monitors = new ArrayList<>();
 
@@ -123,9 +123,10 @@ public final class CaseComputer implements Computer.Host {
     @Override
     public void onLabelChanged(String l) {
         label = l;
-        be.setChanged();
-        be.markUpdated();   // имя видно в окне корпуса и другим компьютерам сети
+        labelDirty = true;  // вызывается из потока программы: сохраним и разошлём в тике сервера
     }
+
+    private volatile boolean labelDirty;
 
     // ======================= Сеть =======================
 
@@ -136,14 +137,14 @@ public final class CaseComputer implements Computer.Host {
 
     @Override
     public boolean netSend(String target, int port, Object[] payload, int bytes) {
-        if (linkCode != 1 || !(be.getLevel() instanceof ServerLevel level)) return false;
+        if (linkCode == 0 || !(be.getLevel() instanceof ServerLevel level)) return false;
         com.strikerr212.minepc.lan.LanManager.get(level).post(be.getBlockPos(), target, port, payload, bytes);
         return true;
     }
 
     @Override
     public long netBytesPerSecond() {
-        return linkCode == 1 ? linkBits / 800 : 0;
+        return linkCode != 0 ? linkBits / 800 : 0;
     }
 
     @Override
@@ -161,10 +162,15 @@ public final class CaseComputer implements Computer.Host {
     int netKbReceived() { return computer == null ? 0 : (int) Math.min(Integer.MAX_VALUE, computer.netReceived() / 1024); }
 
     private void refreshNetwork(ServerLevel level, BlockPos pos) {
+        if (age % 20 == 3) refreshWifi(level, pos);
         var lan = com.strikerr212.minepc.lan.LanManager.get(level);
         net.minecraft.world.level.block.state.BlockState state = level.getBlockState(pos);
-        long bits = state.getBlock() instanceof com.strikerr212.minepc.lan.LanDevice d ? d.lanBitsPerSecond(level, pos, state) : 0;
-        boolean linked = bits > 0 && lan.linked(level, pos);
+        long wired = state.getBlock() instanceof com.strikerr212.minepc.lan.LanDevice d ? d.lanBitsPerSecond(level, pos, state) : 0;
+        boolean cable = wired > 0 && lan.linked(level, pos);
+        Computer.WifiStatus ws = wifiStatus;
+        boolean wifi = ws != null && ws.connected();
+        long bits = Math.max(cable ? wired : 0, wifi ? ws.mbit() * 1_000_000L : 0);
+        boolean linked = cable || wifi;
         List<Computer.Peer> list = new java.util.ArrayList<>();
         if (linked) {
             for (var r : lan.reach(level, pos)) {
@@ -175,8 +181,133 @@ public final class CaseComputer implements Computer.Host {
             list.sort(java.util.Comparator.comparingInt(Computer.Peer::hops).thenComparing(Computer.Peer::name));
         }
         linkBits = bits;
-        linkCode = linked ? 1 : 0;
+        linkCode = (cable ? 1 : 0) | (wifi ? 2 | ws.signal() << 2 : 0);
         peers = List.copyOf(list);
+    }
+
+    // ======================= Wi-Fi =======================
+
+    /** Сеть, к которой компьютер подключается (хранится в корпусе). */
+    private volatile String wifiSsid = "", wifiPassword = "";
+    private volatile Computer.WifiStatus wifiStatus;
+    private volatile List<Computer.WifiNet> wifiNets = List.of();
+
+    String wifiSsid() { return wifiSsid; }
+    String wifiPassword() { return wifiPassword; }
+
+    void setWifi(String ssid, String password) {
+        wifiSsid = ssid == null ? "" : ssid;
+        wifiPassword = password == null ? "" : password;
+    }
+
+    int wifiMbit() {
+        Computer.WifiStatus ws = wifiStatus;
+        return ws != null && ws.connected() ? ws.mbit() : 0;
+    }
+
+    @Override
+    public Computer.WifiStatus wifiStatus() {
+        return wifiStatus;
+    }
+
+    @Override
+    public List<Computer.WifiNet> wifiScan() {
+        return wifiNets;
+    }
+
+    @Override
+    public boolean wifiConnect(String ssid, String password) {
+        if (adapter() == null) return false;
+        setWifi(ssid, password);
+        be.setChanged();
+        return true;
+    }
+
+    @Override
+    public void wifiDisconnect() {
+        setWifi("", "");
+        be.setChanged();
+    }
+
+    private com.strikerr212.minepc.lan.WifiAdapterItem adapter() {
+        for (int i = 0; i < PcCaseBlockEntity.USB_SLOTS; i++) {
+            if (be.getStack(PcCaseBlockEntity.SLOT_USB + i).getItem() instanceof com.strikerr212.minepc.lan.WifiAdapterItem a) return a;
+        }
+        return null;
+    }
+
+    /** Сколько непрозрачных блоков на прямой между двумя блоками (сами они не считаются). */
+    static int walls(ServerLevel level, BlockPos a, BlockPos b) {
+        net.minecraft.world.phys.Vec3 from = net.minecraft.world.phys.Vec3.atCenterOf(a), to = net.minecraft.world.phys.Vec3.atCenterOf(b);
+        double len = from.distanceTo(to);
+        int steps = (int) Math.ceil(len * 4);
+        java.util.Set<BlockPos> seen = new java.util.HashSet<>();
+        int count = 0;
+        for (int i = 1; i < steps; i++) {
+            BlockPos p = BlockPos.containing(from.lerp(to, i / (double) steps));
+            if (p.equals(a) || p.equals(b) || !seen.add(p) || !level.isLoaded(p)) continue;
+            if (level.getBlockState(p).isSolidRender(level, p)) count++;
+        }
+        return count;
+    }
+
+    /** Раз в секунду: какие сети слышно и подключиться к выбранной (самый сильный роутер с этим именем). */
+    private void refreshWifi(ServerLevel level, BlockPos pos) {
+        var data = com.strikerr212.minepc.lan.LanData.get(level);
+        var adapter = adapter();
+        if (adapter == null) {
+            data.removeWifi(pos);
+            wifiStatus = null;
+            wifiNets = List.of();
+            return;
+        }
+        String ssid = wifiSsid;
+        if (computer == null || !computer.isOn()) {
+            data.removeWifi(pos);
+            wifiStatus = new Computer.WifiStatus(adapter.standard(), ssid, false, 0, 0, "");
+            wifiNets = List.of();
+            return;
+        }
+        Map<String, Computer.WifiNet> nets = new LinkedHashMap<>();
+        BlockPos bestRouter = null;
+        Computer.WifiNet best = null;
+        String bestPassword = "";
+        for (BlockPos r : data.routersNear(pos, adapter.range() + 1)) {
+            if (!level.isLoaded(r) || !(level.getBlockEntity(r) instanceof com.strikerr212.minepc.lan.RouterBlockEntity router)) continue;
+            int effective = Math.min(adapter.range(), router.radius()) - 3 * walls(level, pos, r);
+            double dist = Math.sqrt(pos.distSqr(r));
+            if (effective <= 0 || dist > effective) continue;
+            int signal = (int) Math.round(10 + 90 * (1 - dist / effective));
+            int factor = signal >= 60 ? 4 : signal >= 35 ? 2 : 1;
+            int mbit = Math.max(1, Math.min(adapter.mbit(), com.strikerr212.minepc.lan.RouterBlockEntity.RADIO_MBIT) * factor / 4);
+            Computer.WifiNet net = new Computer.WifiNet(router.ssid(), signal, router.secured(), mbit);
+            Computer.WifiNet old = nets.get(net.ssid());
+            if (old == null || old.signal() < signal) nets.put(net.ssid(), net);
+            if (net.ssid().equals(ssid) && (best == null || best.signal() < signal)) {
+                best = net;
+                bestRouter = r.immutable();
+                bestPassword = router.password();
+            }
+        }
+        List<Computer.WifiNet> list = new ArrayList<>(nets.values());
+        list.sort((x, y) -> Integer.compare(y.signal(), x.signal()));
+        wifiNets = List.copyOf(list);
+        String error = "";
+        if (ssid.isEmpty()) {
+            best = null;
+        } else if (best == null) {
+            error = "сеть не найдена";
+        } else if (!bestPassword.isEmpty() && !bestPassword.equals(wifiPassword)) {
+            error = "неверный пароль";
+            best = null;
+        }
+        if (best != null) {
+            data.putWifi(new com.strikerr212.minepc.lan.LanData.WifiLink(pos.immutable(), bestRouter, best.mbit(), best.signal()));
+            wifiStatus = new Computer.WifiStatus(adapter.standard(), ssid, true, best.signal(), best.mbit(), "");
+        } else {
+            data.removeWifi(pos);
+            wifiStatus = new Computer.WifiStatus(adapter.standard(), ssid, false, 0, 0, error);
+        }
     }
 
     // ======================= Включение =======================
@@ -216,6 +347,7 @@ public final class CaseComputer implements Computer.Host {
 
     void unload() {
         if (computer != null) computer.unload();
+        if (be.getLevel() instanceof ServerLevel level) com.strikerr212.minepc.lan.LanData.get(level).removeWifi(be.getBlockPos());
     }
 
     /** Сколько блоков в ширину и высоту у подключённого монитора (по нему считается размер экрана). */
@@ -324,6 +456,10 @@ public final class CaseComputer implements Computer.Host {
         }
         if (age % SCAN_INTERVAL == 1) scanDevices(level, pos);
         if (age % 10 == 3) refreshNetwork(level, pos);
+        if (labelDirty) {
+            labelDirty = false;
+            be.markUpdated();   // имя видно в окне корпуса и другим компьютерам сети
+        }
 
         if (computer != null) {
             computer.tick();

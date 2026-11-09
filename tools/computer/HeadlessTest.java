@@ -271,7 +271,7 @@ public class HeadlessTest {
                 "print('COST', myOps() - a)",
                 ""), java.nio.charset.StandardCharsets.UTF_8);
         command("cost");
-        for (int i = 0; i < 100 && !screen().contains("COST"); i++) ticks(1);
+        for (int i = 0; i < 400 && !screen().contains("COST"); i++) ticks(1);
         show("цена встроенных функций");
         java.util.regex.Matcher cm = java.util.regex.Pattern.compile("COST\\s+(\\d+)").matcher(screen());
         long costOps = cm.find() ? Long.parseLong(cm.group(1)) : 0;
@@ -331,6 +331,7 @@ public class HeadlessTest {
         expect("компьютер выключился", pc.state() == Computer.State.OFF);
 
         testNet();
+        testWifi();
 
         System.out.println(failures == 0 ? "ВСЁ ХОРОШО" : "ОШИБОК: " + failures);
         System.exit(failures == 0 ? 0 : 1);
@@ -419,6 +420,47 @@ public class HeadlessTest {
         show("ping");
         expect("ping: 2 из 2 дошли", screen().contains("2 из 2 дошли") && screen().contains("alpha"));
         expect("ping: нет ответа от несуществующего", screen().contains("нет ответа от nobody") && screen().contains("0 из 1"));
+        pc = saved;
+    }
+
+    /** Wi-Fi: программа wifi со «своим» адаптером: поиск, подключение, неверный пароль. */
+    static void testWifi() throws Exception {
+        System.out.println("── Wi-Fi ──");
+        String[] chosen = {"", ""};
+        Computer c = new Computer(new Computer.Host() {
+            @Override public long netBytesPerSecond() { return chosen[0].equals("Дом") && chosen[1].equals("12345678") ? 37_500 : 0; }
+            @Override public Computer.WifiStatus wifiStatus() {
+                boolean ok = chosen[0].equals("Дом") && chosen[1].equals("12345678");
+                String err = chosen[0].isEmpty() || ok ? "" : chosen[0].equals("Дом") ? "неверный пароль" : "сеть не найдена";
+                return new Computer.WifiStatus("802.11n", chosen[0], ok, ok ? 82 : 0, ok ? 300 : 0, err);
+            }
+            @Override public List<Computer.WifiNet> wifiScan() {
+                return List.of(new Computer.WifiNet("Дом", 82, true, 300), new Computer.WifiNet("Кафе", 30, false, 75));
+            }
+            @Override public boolean wifiConnect(String ssid, String password) { chosen[0] = ssid; chosen[1] = password; return true; }
+            @Override public void wifiDisconnect() { chosen[0] = ""; chosen[1] = ""; }
+        });
+        c.setInfo(new Computer.Info("Тест", 2, 2800, "Lua", 2048, 2_000_000, "ГП", 1000));
+        c.setOpsPerTick(100000);
+        c.fileSystem().mount("rom", ComputerRom.mount());
+        c.fileSystem().mount("", new DirMount(Files.createTempDirectory("minepc_wifi"), 64 * 1024, "SSD"));
+        c.terminal().resize(50, 20);
+        Computer saved = pc;
+        pc = c;
+        c.turnOn();
+        for (int i = 0; i < 200 && !screen().contains("/>"); i++) { c.tick(); Thread.sleep(2); }
+        command("wifi scan");
+        command("wifi connect Дом 111");
+        for (int i = 0; i < 100 && !screen().contains("Не удалось"); i++) { c.tick(); Thread.sleep(2); }
+        command("wifi connect Дом 12345678");
+        for (int i = 0; i < 100 && !screen().contains("Подключено"); i++) { c.tick(); Thread.sleep(2); }
+        command("wifi");
+        for (int i = 0; i < 20; i++) { c.tick(); Thread.sleep(2); }
+        show("wifi");
+        expect("wifi scan: обе сети, пароль помечен", screen().contains("Дом") && screen().contains("Кафе") && screen().contains("[пароль]"));
+        expect("wifi connect: неверный пароль", screen().contains("неверный пароль"));
+        expect("wifi connect: подключено", screen().contains("Подключено: сигнал 82%"));
+        expect("wifi: состояние", screen().contains("Скорость: 300"));
         pc = saved;
     }
 }

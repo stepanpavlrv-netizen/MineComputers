@@ -72,6 +72,13 @@ public class ModItems {
             () -> new com.strikerr212.minepc.lan.CableItem(new Item.Properties()));
     public static final DeferredItem<BlockItem> NETWORK_SWITCH = ITEMS.registerSimpleBlockItem("network_switch", ModBlocks.NETWORK_SWITCH);
     public static final DeferredItem<BlockItem> RACK_SWITCH = ITEMS.registerSimpleBlockItem("rack_switch", ModBlocks.RACK_SWITCH);
+    public static final DeferredItem<BlockItem> ROUTER = ITEMS.registerSimpleBlockItem("wifi_router", ModBlocks.ROUTER);
+    public static final DeferredItem<com.strikerr212.minepc.lan.WifiAdapterItem> WIFI_G = ITEMS.register("wifi_adapter_g",
+            () -> new com.strikerr212.minepc.lan.WifiAdapterItem("802.11g", 16, 54, new Item.Properties()));
+    public static final DeferredItem<com.strikerr212.minepc.lan.WifiAdapterItem> WIFI_N = ITEMS.register("wifi_adapter_n",
+            () -> new com.strikerr212.minepc.lan.WifiAdapterItem("802.11n", 32, 300, new Item.Properties()));
+    public static final DeferredItem<com.strikerr212.minepc.lan.WifiAdapterItem> WIFI_AC = ITEMS.register("wifi_adapter_ac",
+            () -> new com.strikerr212.minepc.lan.WifiAdapterItem("802.11ac", 48, 1200, new Item.Properties()));
     public static final DeferredItem<BlockItem> KEYBOARD_STAND = ITEMS.registerSimpleBlockItem("keyboard_stand", ModBlocks.KEYBOARD_STAND);
     public static final DeferredItem<BlockItem> KEYBOARD =
             ITEMS.registerSimpleBlockItem("keyboard", ModBlocks.KEYBOARD);

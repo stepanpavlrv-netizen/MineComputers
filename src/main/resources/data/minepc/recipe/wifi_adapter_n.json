@@ -1,0 +1,19 @@
+{
+ "type": "minecraft:crafting_shapeless",
+ "category": "redstone",
+ "ingredients": [
+  {
+   "item": "minepc:wifi_adapter_g"
+  },
+  {
+   "item": "minecraft:gold_ingot"
+  },
+  {
+   "item": "minecraft:quartz"
+  }
+ ],
+ "result": {
+  "id": "minepc:wifi_adapter_n",
+  "count": 1
+ }
+}

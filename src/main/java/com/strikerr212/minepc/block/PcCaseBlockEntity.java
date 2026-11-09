@@ -150,7 +150,8 @@ public class PcCaseBlockEntity extends BlockEntity implements MenuProvider {
     public boolean canPlace(int slot, ItemStack stack) {
         if (stack.isEmpty()) return false;
         if (slot >= SLOT_USB && slot < SLOT_USB + USB_SLOTS) {
-            return stack.getItem() instanceof DriveItem d && d.kind() == DriveItem.Kind.FLASH;
+            return stack.getItem() instanceof DriveItem d && d.kind() == DriveItem.Kind.FLASH
+                    || stack.getItem() instanceof com.strikerr212.minepc.lan.WifiAdapterItem;
         }
         if (!(stack.getItem() instanceof HardwareItem hw)) return false;
         HardwareType type = hw.getHardwareType();
@@ -245,6 +246,7 @@ public class PcCaseBlockEntity extends BlockEntity implements MenuProvider {
     public int netPeersCount() { return pc.netPeersCount(); }
     public int netKbSent() { return pc.netKbSent(); }
     public int netKbReceived() { return pc.netKbReceived(); }
+    public int netWifiMbit() { return pc.wifiMbit(); }
 
     /** Загрузка процессора за последнюю секунду, 0..100 %. */
     public int loadPercent() {
@@ -663,6 +665,10 @@ public class PcCaseBlockEntity extends BlockEntity implements MenuProvider {
         if (!pc.label().isEmpty()) tag.putString("label", pc.label());
         tag.putString("address", pc.getAddress());
         tag.putInt("state", pc.stateCode());
+        if (!pc.wifiSsid().isEmpty()) {
+            tag.putString("wifi_ssid", pc.wifiSsid());
+            tag.putString("wifi_password", pc.wifiPassword());
+        }
     }
 
     @Override
@@ -682,6 +688,7 @@ public class PcCaseBlockEntity extends BlockEntity implements MenuProvider {
         pc.setWantOn(tag.getBoolean("on"));
         pc.setLabel(tag.getString("label"));
         pc.setAddress(tag.getString("address"));
+        pc.setWifi(tag.getString("wifi_ssid"), tag.getString("wifi_password"));
         clientState = tag.getInt("state");
         if (!sameLayout && !prefix) {
             // Сохранение из старой версии мода: раскладываем детали по новым слотам

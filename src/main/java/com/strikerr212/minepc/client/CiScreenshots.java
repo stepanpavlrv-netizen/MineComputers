@@ -135,8 +135,10 @@ public class CiScreenshots {
             case 805 -> server.execute(CiScreenshots::lookAtMonitors);
             case 825 -> shot(mc, "world_monitors");
             case 830 -> server.execute(CiScreenshots::placeNetwork);
-            case 990 -> { typeAt(netA, "hostname office-1"); typeAt(netB, "hostname server"); typeAt(netC, "hostname storage"); }
-            case 1000 -> { typeAt(netB, "chat"); typeAt(netA, "chat"); }
+            case 990 -> { typeAt(netA, "hostname office-1"); typeAt(netB, "hostname server"); typeAt(netC, "hostname storage");
+                typeAt(netD, "hostname laptop"); }
+            case 1000 -> typeAt(netD, "wifi connect Office minecraft1");
+            case 1005 -> { typeAt(netB, "chat"); typeAt(netA, "chat"); }
             case 1030 -> typeAt(netA, "привет по кабелю!");
             case 1045 -> typeAt(netB, "и тебе привет, A");
             case 1050 -> typeAt(netC, "ping office-1 3");
@@ -164,7 +166,27 @@ public class CiScreenshots {
             }
             case 1160 -> mc.setScreen(new TerminalScreen(netC));
             case 1175 -> shot(mc, "terminal_ping");
-            case 1190 -> mc.stop();
+            case 1180 -> {
+                mc.setScreen(null);
+                typeAt(netD, "wifi scan");
+            }
+            case 1190 -> typeAt(netD, "wifi");
+            case 1200 -> typeAt(netD, "ping storage 2");
+            case 1240 -> mc.setScreen(new TerminalScreen(netD));
+            case 1255 -> shot(mc, "terminal_wifi");
+            case 1260 -> {
+                mc.setScreen(null);
+                server.execute(() -> {
+                    ServerPlayer p = server.getPlayerList().getPlayers().get(0);
+                    if (p.serverLevel().getBlockEntity(netRouter) instanceof com.strikerr212.minepc.lan.RouterBlockEntity r) {
+                        net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(p,
+                                com.strikerr212.minepc.lan.RouterBlock.openPayload(p.serverLevel(), netRouter, r));
+                    }
+                    logNetwork();
+                });
+            }
+            case 1280 -> shot(mc, "router_gui");
+            case 1290 -> mc.stop();
             default -> {
             }
         }
@@ -292,7 +314,8 @@ public class CiScreenshots {
         p.teleportTo(p.serverLevel(), row.getX() + 10, row.getY() + 1, row.getZ() - 8.5, 0f, 8f);
     }
 
-    private static BlockPos netA = BlockPos.ZERO, netB = BlockPos.ZERO, netC = BlockPos.ZERO;
+    private static BlockPos netA = BlockPos.ZERO, netB = BlockPos.ZERO, netC = BlockPos.ZERO, netD = BlockPos.ZERO,
+            netRouter = BlockPos.ZERO;
 
     private static void typeAt(BlockPos pos, String line) {
         var server = Minecraft.getInstance().getSingleplayerServer();
@@ -356,6 +379,20 @@ public class CiScreenshots {
                 }
             }
         }
+        // Wi-Fi: роутер на том же проводе, ноутбук-компьютер без кабеля с USB-адаптером
+        BlockPos router = br.south().east();
+        level.setBlockAndUpdate(router, ModBlocks.ROUTER.get().defaultBlockState()
+                .setValue(com.strikerr212.minepc.lan.RouterBlock.FACING, Direction.NORTH));
+        if (level.getBlockEntity(router) instanceof com.strikerr212.minepc.lan.RouterBlockEntity r) r.apply("Office", "minecraft1", 32);
+        if (level.getBlockEntity(br.south()) instanceof com.strikerr212.minepc.lan.CableBlockEntity be) be.reconnect();
+        netD = n.offset(-2, 0, 6);
+        fillCase(level, netD, 3);
+        put(level, netD.above(), ModBlocks.MONITOR.get().defaultBlockState().setValue(com.strikerr212.minepc.block.MonitorBlock.KEYBOARD, true));
+        if (level.getBlockEntity(netD) instanceof PcCaseBlockEntity be) {
+            ((IItemHandlerModifiable) be.inventory()).setStackInSlot(PcCaseBlockEntity.SLOT_USB,
+                    new net.minecraft.world.item.ItemStack(com.strikerr212.minepc.registry.ModItems.WIFI_N.get()));
+        }
+        netRouter = router;
         p.teleportTo(level, n.getX() + 3.5, n.getY() + 1.5, n.getZ() - 4.5, 0f, 20f);
     }
 
@@ -364,7 +401,7 @@ public class CiScreenshots {
         var server = Minecraft.getInstance().getSingleplayerServer();
         ServerLevel level = server.overworld();
         var lan = com.strikerr212.minepc.lan.LanManager.get(level);
-        for (BlockPos c : new BlockPos[]{netA, netB, netC}) {
+        for (BlockPos c : new BlockPos[]{netA, netB, netC, netD}) {
             StringBuilder b = new StringBuilder("[CI-LAN] ").append(c.toShortString()).append(" ->");
             for (var r : lan.reach(level, c)) b.append(' ').append(r.pos().toShortString()).append(" hops=").append(r.hops());
             com.mojang.logging.LogUtils.getLogger().info(b.toString());

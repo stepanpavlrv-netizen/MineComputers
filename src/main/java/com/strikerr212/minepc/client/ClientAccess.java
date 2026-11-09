@@ -20,4 +20,11 @@ public final class ClientAccess {
     public static void onTerminal(TerminalPayload payload) {
         ClientTerminals.update(payload.casePos(), payload.data(), payload.keyboard());
     }
+
+    /** Окно роутера: открыть или (если уже открыто) обновить список подключённых. */
+    public static void openRouter(com.strikerr212.minepc.network.RouterOpenPayload payload) {
+        var mc = Minecraft.getInstance();
+        if (mc.screen instanceof RouterScreen s && s.pos().equals(payload.pos())) s.update(payload);
+        else mc.setScreen(new RouterScreen(payload));
+    }
 }

@@ -37,4 +37,5 @@ programs/reboot.lua
 programs/rm.lua
 programs/sh.lua
 programs/shutdown.lua
+programs/wifi.lua
 shell.lua

@@ -63,5 +63,27 @@ public class ModNetwork {
                     var msg = pc.upload(payload.name(), payload.offset(), payload.total(), payload.data());
                     if (msg != null) player.displayClientMessage(msg, false);
                 }));
+
+        // Роутер: окно настроек
+        registrar.playToClient(RouterOpenPayload.TYPE, RouterOpenPayload.STREAM_CODEC, (payload, context) ->
+                context.enqueueWork(() -> com.strikerr212.minepc.client.ClientAccess.openRouter(payload)));
+        registrar.playToServer(RouterSavePayload.TYPE, RouterSavePayload.STREAM_CODEC, (payload, context) ->
+                context.enqueueWork(() -> {
+                    if (!(context.player() instanceof net.minecraft.server.level.ServerPlayer player)) return;
+                    BlockPos pos = payload.pos();
+                    if (player.distanceToSqr(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5) > 8 * 8) return;
+                    if (!(player.level().getBlockEntity(pos) instanceof com.strikerr212.minepc.lan.RouterBlockEntity router)) return;
+                    if (!payload.refresh()) {
+                        String error = com.strikerr212.minepc.lan.RouterBlockEntity.validate(payload.ssid(), payload.password(), payload.radius());
+                        if (error != null) {
+                            player.displayClientMessage(net.minecraft.network.chat.Component.translatable(error), true);
+                            return;
+                        }
+                        router.apply(payload.ssid(), payload.password(), payload.radius());
+                        player.displayClientMessage(net.minecraft.network.chat.Component.translatable("gui.minepc.router.saved"), true);
+                    }
+                    net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(player,
+                            com.strikerr212.minepc.lan.RouterBlock.openPayload(player.serverLevel(), pos, router));
+                }));
     }
 }

@@ -297,6 +297,33 @@ COMMON = {
 
 # ----- добавлено в 0.12: окно корпуса, корпуса-варианты, мониторы -----
 COMMON.update({
+    "block.minepc.wifi_router": ("Wi-Fi роутер", "Wi-Fi Router"),
+    "item.minepc.wifi_adapter_g": ("USB Wi-Fi адаптер (54 Мбит/с)", "USB Wi-Fi Adapter (54 Mbit/s)"),
+    "item.minepc.wifi_adapter_n": ("USB Wi-Fi адаптер (300 Мбит/с)", "USB Wi-Fi Adapter (300 Mbit/s)"),
+    "item.minepc.wifi_adapter_ac": ("USB Wi-Fi адаптер (1200 Мбит/с)", "USB Wi-Fi Adapter (1200 Mbit/s)"),
+    "tooltip.minepc.wifi.spec": ("%s · до %s блоков · %s Мбит/с", "%s · up to %s blocks · %s Mbit/s"),
+    "tooltip.minepc.wifi.hint": ("В USB-порт корпуса. Каждая стена до роутера −3 блока. Программа wifi",
+                                 "Goes into a case USB port. Each wall to the router: −3 blocks. Program: wifi"),
+    "gui.minepc.router.title": ("Wi-Fi роутер", "Wi-Fi Router"),
+    "gui.minepc.router.ssid": ("Имя сети (SSID)", "Network name (SSID)"),
+    "gui.minepc.router.password": ("Пароль", "Password"),
+    "gui.minepc.router.open": ("Пароль: нет — сеть открыта для всех", "Password: none — open network"),
+    "gui.minepc.router.radius": ("Радиус", "Range"),
+    "gui.minepc.router.blocks": ("%s бл.", "%s blocks"),
+    "gui.minepc.router.clients": ("Подключены", "Connected"),
+    "gui.minepc.router.none": ("Никого. Компьютеру нужен USB Wi-Fi адаптер", "Nobody. A computer needs a USB Wi-Fi adapter"),
+    "gui.minepc.router.more": ("…и ещё %s", "…and %s more"),
+    "gui.minepc.router.mbit": ("Мбит/с", "Mbit/s"),
+    "gui.minepc.router.save": ("Сохранить", "Save"),
+    "gui.minepc.router.saved": ("Настройки роутера сохранены", "Router settings saved"),
+    "gui.minepc.router.bad_ssid": ("Имя сети — от 1 до 24 знаков", "Network name: 1 to 24 characters"),
+    "gui.minepc.router.bad_password": ("Пароль — пустой или от 8 до 32 знаков", "Password: empty or 8 to 32 characters"),
+    "gui.minepc.router.bad_radius": ("Радиус — от 4 до 48 блоков", "Range: 4 to 48 blocks"),
+    "gui.minepc.net.wifi": ("Wi-Fi %s, сигнал %s%%", "Wi-Fi %s, signal %s%%"),
+    "gui.minepc.net.wifi_tip": ("Подключено через USB Wi-Fi адаптер", "Connected through a USB Wi-Fi adapter"),
+})
+
+COMMON.update({
     "block.minepc.network_cable": ("Сетевой кабель", "Network Cable"),
     "item.minepc.network_cable": ("Сетевой кабель", "Network Cable"),
     "block.minepc.network_switch": ("Коммутатор", "Network Switch"),

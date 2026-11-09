@@ -1,0 +1,19 @@
+{
+ "type": "minecraft:crafting_shapeless",
+ "category": "redstone",
+ "ingredients": [
+  {
+   "item": "minepc:wifi_adapter_n"
+  },
+  {
+   "item": "minecraft:diamond"
+  },
+  {
+   "item": "minecraft:amethyst_shard"
+  }
+ ],
+ "result": {
+  "id": "minepc:wifi_adapter_ac",
+  "count": 1
+ }
+}

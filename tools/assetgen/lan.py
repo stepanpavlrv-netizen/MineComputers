@@ -15,6 +15,7 @@ from PIL import Image  # noqa: E402
 
 SWITCH_BODY = (52, 56, 62)
 RACK_BODY = (40, 43, 50)
+ROUTER_BODY = (236, 238, 242)
 
 
 def facing_variants(model):
@@ -85,9 +86,61 @@ def coil_icon(color=(52, 104, 200)):
     im.save(os.path.join(ASSETS, "textures/item/network_cable.png"))
 
 
+def wifi_icon(name, stripe, led):
+    """USB Wi-Fi адаптер: тёмный корпус с антенной, серебряный разъём, цветная полоска поколения и лампочка."""
+    im = Image.new("RGBA", (16, 16), (0, 0, 0, 0))
+    def px(x, y, c):
+        im.putpixel((x, y), tuple(c) + (255,))
+    for x in range(5, 11):                      # корпус
+        for y in range(5, 12):
+            px(x, y, (48, 50, 58) if (x + y) % 5 else (40, 42, 48))
+    for x in range(5, 11):
+        px(x, 5, (70, 74, 84))
+    for x in range(6, 10):                      # разъём USB
+        for y in range(12, 16):
+            px(x, y, (196, 200, 206) if x in (6, 9) or y == 15 else (150, 154, 160))
+    px(7, 13, (40, 40, 44)); px(8, 13, (40, 40, 44))
+    for y in range(0, 5):                       # антенна
+        px(9, y, (30, 30, 34))
+    px(9, 0, (70, 74, 84))
+    for x in range(5, 11):                      # полоска поколения
+        px(x, 9, stripe)
+    px(6, 7, led)                               # лампочка
+    src = im.copy()
+    for x in range(16):
+        for y in range(16):
+            if src.getpixel((x, y))[3] == 0 and any(0 <= x + dx < 16 and 0 <= y + dy < 16 and src.getpixel((x + dx, y + dy))[3]
+                                                    for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))):
+                im.putpixel((x, y), (16, 16, 20, 255))
+    im.save(os.path.join(ASSETS, "textures/item", name + ".png"))
+    write(os.path.join(ASSETS, "models/item", name + ".json"),
+          {"parent": "minecraft:item/generated", "textures": {"layer0": f"minepc:item/{name}"}})
+
+
 def main():
     save_block("network_switch", netvox.switch(SWITCH_BODY), SWITCH_BODY)
     save_block("rack_switch", netvox.rack_switch(), RACK_BODY)
+    save_block("wifi_router", netvox.router(ROUTER_BODY), ROUTER_BODY)
+    wifi_icon("wifi_adapter_g", (120, 128, 140), (80, 255, 120))
+    wifi_icon("wifi_adapter_n", (52, 120, 230), (70, 150, 255))
+    wifi_icon("wifi_adapter_ac", (230, 180, 60), (255, 220, 90))
+    write(os.path.join(DATA, "recipe/wifi_router.json"), {
+        "type": "minecraft:crafting_shaped", "category": "redstone", "pattern": ["L L", "QSQ"],
+        "key": {"L": {"item": "minecraft:lightning_rod"}, "Q": {"item": "minecraft:quartz"}, "S": {"item": "minepc:network_switch"}},
+        "result": {"id": "minepc:wifi_router", "count": 1}})
+    write(os.path.join(DATA, "recipe/wifi_adapter_g.json"), {
+        "type": "minecraft:crafting_shapeless", "category": "redstone",
+        "ingredients": [{"item": "minecraft:redstone"}, {"item": "minecraft:copper_ingot"}, {"item": "minecraft:iron_ingot"},
+                        {"item": "minecraft:gold_nugget"}],
+        "result": {"id": "minepc:wifi_adapter_g", "count": 1}})
+    write(os.path.join(DATA, "recipe/wifi_adapter_n.json"), {
+        "type": "minecraft:crafting_shapeless", "category": "redstone",
+        "ingredients": [{"item": "minepc:wifi_adapter_g"}, {"item": "minecraft:gold_ingot"}, {"item": "minecraft:quartz"}],
+        "result": {"id": "minepc:wifi_adapter_n", "count": 1}})
+    write(os.path.join(DATA, "recipe/wifi_adapter_ac.json"), {
+        "type": "minecraft:crafting_shapeless", "category": "redstone",
+        "ingredients": [{"item": "minepc:wifi_adapter_n"}, {"item": "minecraft:diamond"}, {"item": "minecraft:amethyst_shard"}],
+        "result": {"id": "minepc:wifi_adapter_ac", "count": 1}})
     cable_textures()
     coil_icon()
     # Кабель: модель собирает игра из проводов в блоке; здесь — только текстуры для атласа

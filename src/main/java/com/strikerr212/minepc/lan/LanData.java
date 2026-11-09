@@ -34,6 +34,14 @@ public final class LanData extends SavedData {
         }
     }
 
+    /** Компьютер подключён по Wi-Fi к роутеру: скорость (Мбит/с) и сигнал (%). Не сохраняется — компьютер переподключится сам. */
+    public record WifiLink(BlockPos computer, BlockPos router, int mbit, int signal) {
+        public long bits() {
+            return mbit * 1_000_000L;
+        }
+    }
+
+    private final Map<Long, WifiLink> wifi = new HashMap<>();
     private final Map<Long, int[]> cables = new HashMap<>();
     private final Map<Long, Device> devices = new HashMap<>();
     private ServerLevel level;
@@ -80,7 +88,45 @@ public final class LanData extends SavedData {
     }
 
     public void removeDevice(BlockPos pos) {
-        if (devices.remove(pos.asLong()) != null) bump();
+        Device old = devices.remove(pos.asLong());
+        if (old != null) {
+            if (old.type() == ROUTER) wifi.values().removeIf(l -> l.router().equals(pos));
+            removeWifi(pos);
+            bump();
+        }
+    }
+
+    /** Роутеры не дальше r блоков (по горизонтали и вертикали) от точки. */
+    public java.util.List<BlockPos> routersNear(BlockPos at, int r) {
+        java.util.List<BlockPos> out = new java.util.ArrayList<>();
+        for (var e : devices.entrySet()) {
+            if (e.getValue().type() != ROUTER) continue;
+            BlockPos p = BlockPos.of(e.getKey());
+            if (p.distSqr(at) <= (double) r * r) out.add(p);
+        }
+        return out;
+    }
+
+    // ======================= Wi-Fi =======================
+
+    public WifiLink wifiOf(BlockPos computer) {
+        return wifi.get(computer.asLong());
+    }
+
+    public java.util.List<WifiLink> wifiClients(BlockPos router) {
+        java.util.List<WifiLink> out = new java.util.ArrayList<>();
+        for (WifiLink l : wifi.values()) if (l.router().equals(router)) out.add(l);
+        return out;
+    }
+
+    /** Подключить (или обновить скорость). Схема пересчитывается, только если поменялся роутер или скорость. */
+    public void putWifi(WifiLink link) {
+        WifiLink old = wifi.put(link.computer().asLong(), link);
+        if (old == null || !old.router().equals(link.router()) || old.mbit() != link.mbit()) bump();
+    }
+
+    public void removeWifi(BlockPos computer) {
+        if (wifi.remove(computer.asLong()) != null && level != null) LanManager.invalidate(level);
     }
 
     public int cableCount() {

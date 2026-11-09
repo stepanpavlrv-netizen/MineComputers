@@ -375,13 +375,21 @@ public class PcCaseScreen extends AbstractContainerScreen<PcCaseMenu> {
         com.strikerr212.minepc.hardware.MotherboardData board = be.motherboard();
         if (board == null) {
             out.add(Row.of("warn", tr("gui.minepc.why.no_board"), th.bad));
-        } else if (menu.netLink() != 1) {
+        } else if (menu.netLink() == 0) {
             out.add(Row.of("plug", tr("gui.minepc.net.unplugged"), th.dim)
                     .tip(tr("gui.minepc.net.unplugged_tip")));
         } else {
-            long bits = com.strikerr212.minepc.block.PcCaseBlock.portBits(board.tier());
-            out.add(Row.of("plug", bitsText(bits), th.fg)
-                    .tip(tr("gui.minepc.net.speed_tip", bytes(bits / 800))));
+            if ((menu.netLink() & 1) != 0) {
+                long bits = com.strikerr212.minepc.block.PcCaseBlock.portBits(board.tier());
+                out.add(Row.of("plug", bitsText(bits), th.fg)
+                        .tip(tr("gui.minepc.net.speed_tip", bytes(bits / 800))));
+            }
+            if ((menu.netLink() & 2) != 0) {
+                long bits = menu.netWifiMbit() * 1_000_000L;
+                int signal = menu.netLink() >> 2;
+                out.add(Row.of("wifi", tr("gui.minepc.net.wifi", bitsText(bits), signal), signal >= 35 ? th.fg : th.warn)
+                        .tip(tr("gui.minepc.net.wifi_tip"), tr("gui.minepc.net.speed_tip", bytes(bits / 800))));
+            }
             out.add(Row.of("sum", tr("gui.minepc.net.peers", menu.netPeers()), menu.netPeers() > 0 ? th.fg : th.dim));
         }
         out.add(Row.of("traffic", tr("gui.minepc.net.traffic", menu.netKbReceived(), menu.netKbSent()), th.fg)
@@ -447,7 +455,8 @@ public class PcCaseScreen extends AbstractContainerScreen<PcCaseMenu> {
             "board", new String[]{"########", "#.##...#", "#.##.#.#", "#....#.#", "#.###..#", "#......#", "########", ".#.#.#.."},
             "net", new String[]{"...##...", "...##...", "....#...", ".######.", ".#....#.", "##....##", "##....##", "........"},
             "plug", new String[]{"........", ".######.", ".#....#.", ".#.##.#.", ".######.", "..####..", "...##...", "...##..."},
-            "traffic", new String[]{"..#.....", ".###....", "#.#.....", "..#..#..", "..#..#..", ".....#.#", "....###.", ".....#.."});
+            "traffic", new String[]{"..#.....", ".###....", "#.#.....", "..#..#..", "..#..#..", ".....#.#", "....###.", ".....#.."},
+            "wifi", new String[]{"........", ".######.", "#......#", "..####..", ".#....#.", "...##...", "........", "...##..."});
 
     private static void glyph(GuiGraphics g, int x, int y, String name, int c) {
         String[] rows = GLYPHS.getOrDefault(name, GLYPHS2.get(name));

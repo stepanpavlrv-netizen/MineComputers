@@ -95,13 +95,28 @@ public final class LanManager {
 
     static List<Reach> computeReach(LanData data, BlockPos start) {
         LanData.Device self = data.device(start.asLong());
-        if (self == null || self.mbit() <= 0) return List.of();
+        if (self == null) return List.of();
         Map<BlockPos, Reach> best = new HashMap<>();
         Set<BlockPos> visitedSwitches = new HashSet<>();
         ArrayDeque<Reach> queue = new ArrayDeque<>();
         queue.add(new Reach(start, 0, self.bits()));
+        // По Wi-Fi: роутер — как коммутатор, к которому мы подключены
+        LanData.WifiLink own = data.wifiOf(start);
+        if (own != null && visitedSwitches.add(own.router())) queue.add(new Reach(own.router(), 1, own.bits()));
         while (!queue.isEmpty()) {
             Reach cur = queue.poll();
+            LanData.Device curDev = data.device(cur.pos.asLong());
+            if (curDev != null && curDev.type() == LanData.ROUTER) {
+                for (LanData.WifiLink l : data.wifiClients(cur.pos)) {
+                    if (l.computer().equals(start)) continue;
+                    long bits = Math.min(cur.bits, l.bits());
+                    if (bits <= 0) continue;
+                    Reach r = new Reach(l.computer(), cur.hops, bits);
+                    Reach old = best.get(l.computer());
+                    if (old == null || r.hops < old.hops || (r.hops == old.hops && r.bits > old.bits)) best.put(l.computer(), r);
+                }
+            }
+            if (cur.pos.equals(start) && self.mbit() <= 0) continue;
             for (Set<BlockPos> segment : segmentsAt(data, cur.pos)) {
                 for (BlockPos dev : segment) {
                     if (dev.equals(cur.pos) || dev.equals(start)) continue;

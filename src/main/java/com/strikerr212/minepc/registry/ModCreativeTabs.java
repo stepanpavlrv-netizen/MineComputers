@@ -38,6 +38,10 @@ public class ModCreativeTabs {
                         output.accept(ModItems.CABLE.get());
                         output.accept(ModItems.NETWORK_SWITCH.get());
                         output.accept(ModItems.RACK_SWITCH.get());
+                        output.accept(ModItems.ROUTER.get());
+                        output.accept(ModItems.WIFI_G.get());
+                        output.accept(ModItems.WIFI_N.get());
+                        output.accept(ModItems.WIFI_AC.get());
                         output.accept(ModItems.DISK_DRIVE.get());
                         output.accept(ModItems.FLOPPY_DISK.get());
                         output.accept(ModItems.FLASH_DRIVE.get());

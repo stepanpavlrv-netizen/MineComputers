@@ -1,0 +1,23 @@
+{
+ "type": "minecraft:crafting_shaped",
+ "category": "redstone",
+ "pattern": [
+  "L L",
+  "QSQ"
+ ],
+ "key": {
+  "L": {
+   "item": "minecraft:lightning_rod"
+  },
+  "Q": {
+   "item": "minecraft:quartz"
+  },
+  "S": {
+   "item": "minepc:network_switch"
+  }
+ },
+ "result": {
+  "id": "minepc:wifi_router",
+  "count": 1
+ }
+}

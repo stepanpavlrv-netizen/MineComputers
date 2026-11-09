@@ -59,6 +59,30 @@ public final class Computer {
 
         /** Кто ещё в сети: {адрес, имя, переходов}. */
         default java.util.List<Peer> netPeers() { return java.util.List.of(); }
+
+        // ----- Wi-Fi -----
+
+        /** Wi-Fi адаптер и подключение; null — адаптера нет. */
+        default WifiStatus wifiStatus() { return null; }
+
+        /** Сети вокруг (обновляется раз в секунду), сильные первыми. */
+        default java.util.List<WifiNet> wifiScan() { return java.util.List.of(); }
+
+        /** Запомнить сеть и подключаться к ней (сам компьютер подключится в течение секунды). false — нет адаптера. */
+        default boolean wifiConnect(String ssid, String password) { return false; }
+
+        default void wifiDisconnect() { }
+    }
+
+    /** Сеть Wi-Fi в эфире: имя, сигнал %, есть ли пароль, скорость с этим адаптером (Мбит/с). */
+    public record WifiNet(String ssid, int signal, boolean secured, int mbit) {
+    }
+
+    /**
+     * Wi-Fi адаптер: его стандарт, выбранная сеть (или ""), подключён ли, сигнал %, скорость (Мбит/с)
+     * и почему не подключён ("" — всё хорошо или сеть не выбрана).
+     */
+    public record WifiStatus(String adapter, String ssid, boolean connected, int signal, int mbit, String error) {
     }
 
     /** Компьютер в сети: адрес, имя (может быть пустым) и сколько коммутаторов до него. */

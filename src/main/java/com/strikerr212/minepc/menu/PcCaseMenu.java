@@ -84,7 +84,8 @@ public class PcCaseMenu extends AbstractContainerMenu {
                     case 3 -> be.netLinkCode();
                     case 4 -> be.netPeersCount();
                     case 5 -> be.netKbSent();
-                    default -> be.netKbReceived();
+                    case 6 -> be.netKbReceived();
+                    default -> be.netWifiMbit();
                 };
             }
 
@@ -94,9 +95,9 @@ public class PcCaseMenu extends AbstractContainerMenu {
 
             @Override
             public int getCount() {
-                return 7;
+                return 8;
             }
-        } : new SimpleContainerData(7);
+        } : new SimpleContainerData(8);
         addDataSlots(data);
     }
 
@@ -114,7 +115,9 @@ public class PcCaseMenu extends AbstractContainerMenu {
     }
 
     /** Сеть: 1 — кабель подключён; сколько компьютеров в сети; КБ отправлено и принято. */
+    /** Бит 1 — кабель, бит 2 — Wi-Fi; выше — сигнал Wi-Fi, %. */
     public int netLink() { return data.get(3); }
+    public int netWifiMbit() { return data.get(7); }
     public int netPeers() { return data.get(4); }
     public int netKbSent() { return data.get(5); }
     public int netKbReceived() { return data.get(6); }

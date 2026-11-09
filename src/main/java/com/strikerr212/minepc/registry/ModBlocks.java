@@ -123,6 +123,9 @@ public class ModBlocks {
             () -> new com.strikerr212.minepc.lan.SwitchBlock(BlockBehaviour.Properties.of()
                     .mapColor(MapColor.COLOR_BLACK).strength(2.0f, 6.0f).sound(SoundType.METAL)
                     .lightLevel(s -> 3), true));
+    public static final DeferredBlock<com.strikerr212.minepc.lan.RouterBlock> ROUTER = BLOCKS.register("wifi_router",
+            () -> new com.strikerr212.minepc.lan.RouterBlock(BlockBehaviour.Properties.of()
+                    .mapColor(MapColor.SNOW).strength(0.8f).sound(SoundType.METAL).noOcclusion().lightLevel(s -> 3)));
 
     public static final DeferredBlock<KeyboardBlock> KEYBOARD = BLOCKS.register("keyboard",
             () -> new KeyboardBlock(BlockBehaviour.Properties.of()

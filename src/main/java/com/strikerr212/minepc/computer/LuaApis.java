@@ -202,7 +202,13 @@ final class LuaApis {
                 }),
                 RegisteredFunction.ofV("address", (s, a) -> str(c.address())),
                 RegisteredFunction.ofV("hostname", (s, a) -> {
-                    if (!a.arg(1).isNil()) c.setLabel(text(a.arg(1).checkLuaString()));
+                    if (!a.arg(1).isNil()) {
+                        // Имя видят другие компьютеры сети и окно корпуса — сообщаем корпусу (как label)
+                        String name = text(a.arg(1).checkLuaString());
+                        if (name.length() > 32) throw error("Имя — не длиннее 32 знаков");
+                        c.setLabel(name);
+                        c.host().onLabelChanged(name);
+                    }
                     return str(c.label());
                 }),
                 RegisteredFunction.ofV("speed", (s, a) -> valueOf((double) c.host().netBytesPerSecond())),
@@ -224,6 +230,52 @@ final class LuaApis {
                         r.rawset(i++, e);
                     }
                     return r;
+                }),
+        });
+        t.rawset("wifi", wifi(c));
+        return t;
+    }
+
+    /** net.wifi: USB Wi-Fi адаптер. */
+    private static LuaTable wifi(Computer c) {
+        LuaTable t = new LuaTable();
+        RegisteredFunction.bind(t, new RegisteredFunction[]{
+                RegisteredFunction.ofV("status", (s, a) -> {
+                    Computer.WifiStatus st = c.host().wifiStatus();
+                    if (st == null) return Constants.NIL;
+                    LuaTable r = new LuaTable();
+                    r.rawset("adapter", str(st.adapter()));
+                    r.rawset("ssid", str(st.ssid()));
+                    r.rawset("connected", valueOf(st.connected()));
+                    r.rawset("signal", valueOf(st.signal()));
+                    r.rawset("speed", valueOf(st.mbit()));
+                    if (!st.error().isEmpty()) r.rawset("error", str(st.error()));
+                    return r;
+                }),
+                RegisteredFunction.ofV("scan", (s, a) -> {
+                    if (c.host().wifiStatus() == null) return varargsOf(Constants.NIL, str("Нет Wi-Fi адаптера"));
+                    LuaTable r = new LuaTable();
+                    int i = 1;
+                    for (Computer.WifiNet n : c.host().wifiScan()) {
+                        LuaTable e = new LuaTable();
+                        e.rawset("ssid", str(n.ssid()));
+                        e.rawset("signal", valueOf(n.signal()));
+                        e.rawset("secured", valueOf(n.secured()));
+                        e.rawset("speed", valueOf(n.mbit()));
+                        r.rawset(i++, e);
+                    }
+                    return r;
+                }),
+                RegisteredFunction.ofV("connect", (s, a) -> {
+                    String ssid = text(a.arg(1).checkLuaString());
+                    String password = a.arg(2).isNil() ? "" : text(a.arg(2).checkLuaString());
+                    if (ssid.isEmpty() || ssid.length() > 24) throw error("Имя сети — от 1 до 24 знаков");
+                    if (!c.host().wifiConnect(ssid, password)) return varargsOf(Constants.NIL, str("Нет Wi-Fi адаптера"));
+                    return Constants.TRUE;
+                }),
+                RegisteredFunction.ofV("disconnect", (s, a) -> {
+                    c.host().wifiDisconnect();
+                    return Constants.NONE;
                 }),
         });
         return t;
