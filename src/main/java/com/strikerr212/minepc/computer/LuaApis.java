@@ -196,6 +196,10 @@ final class LuaApis {
                 RegisteredFunction.ofV("isOpen", (s, a) -> valueOf(c.isPortOpen(port(a, 1)))),
                 RegisteredFunction.ofV("send", (s, a) -> netSend(c, text(a.arg(1).checkLuaString()), port(a, 2), a, 3)),
                 RegisteredFunction.ofV("broadcast", (s, a) -> netSend(c, null, port(a, 1), a, 2)),
+                RegisteredFunction.ofV("ping", (s, a) -> {
+                    int id = c.netPing(text(a.arg(1).checkLuaString()));
+                    return id < 0 ? Constants.NIL : valueOf(id);
+                }),
                 RegisteredFunction.ofV("address", (s, a) -> str(c.address())),
                 RegisteredFunction.ofV("hostname", (s, a) -> {
                     if (!a.arg(1).isNil()) c.setLabel(text(a.arg(1).checkLuaString()));

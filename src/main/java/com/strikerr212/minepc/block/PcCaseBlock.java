@@ -181,14 +181,14 @@ public class PcCaseBlock extends BaseEntityBlock implements com.strikerr212.mine
         if (!state.is(newState.getBlock()) && level.getBlockEntity(pos) instanceof PcCaseBlockEntity pc) {
             pc.dropContents(level, pos);
         }
-        if (!level.isClientSide && !state.is(newState.getBlock())) com.strikerr212.minepc.lan.LanManager.invalidate(level);
         super.onRemove(state, level, pos, newState, movedByPiston);
+        if (!level.isClientSide && !state.is(newState.getBlock())) com.strikerr212.minepc.lan.LanManager.updateDevice(level, pos);
     }
 
     @Override
     protected void onPlace(BlockState state, Level level, BlockPos pos, BlockState old, boolean moved) {
         super.onPlace(state, level, pos, old, moved);
-        if (!level.isClientSide) com.strikerr212.minepc.lan.LanManager.invalidate(level);
+        if (!level.isClientSide) com.strikerr212.minepc.lan.LanManager.updateDevice(level, pos);
     }
 
     // ======================= Сеть: гнездо на плате =======================

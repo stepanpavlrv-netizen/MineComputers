@@ -25,7 +25,8 @@ import java.util.concurrent.ConcurrentLinkedQueue;
  *
  * Провода, соединённые между собой, образуют «отрезок»: все устройства, в которые воткнуты его вилки, слышат друг друга.
  * Отрезок длиннее 100 блоков не работает (как 100 метров у Ethernet). Коммутатор соединяет отрезки во всех своих гнёздах
- * и добавляет 1 тик задержки. Схема пересчитывается только когда меняются кабели, коммутаторы или корпуса.
+ * и добавляет 1 тик задержки. Схема ({@link LanData}) хранится отдельно от блоков, поэтому путь идёт и через
+ * незагруженные чанки; пересчитывается только когда меняются кабели, коммутаторы или корпуса.
  *
  * Программы отправляют сообщения из своих потоков — они только встают в очередь; доставка идёт в тике сервера.
  */
@@ -63,45 +64,57 @@ public final class LanManager {
 
     // ======================= Схема =======================
 
-    /** Все компьютеры, до которых можно дойти из корпуса casePos (сам он не входит). */
+    /** Устройство поставили, сломали или поменялась его скорость: занести в схему сети. */
+    public static void updateDevice(Level level, BlockPos pos) {
+        if (!(level instanceof ServerLevel server)) return;
+        LanData data = LanData.get(server);
+        BlockState s = level.getBlockState(pos);
+        if (s.getBlock() instanceof LanDevice d) {
+            int mask = 0;
+            for (Direction face : Direction.Plane.HORIZONTAL) if (d.acceptsCable(s, face)) mask |= Wire.bit(face);
+            int mbit = (int) Math.min(Integer.MAX_VALUE, d.lanBitsPerSecond(level, pos, s) / 1_000_000L);
+            data.putDevice(pos, new LanData.Device(d.lanType(s), mbit, mask));
+        } else {
+            data.removeDevice(pos);
+        }
+    }
+
+    /** Все компьютеры, до которых можно дойти из корпуса casePos (сам он не входит). Чанки грузить не нужно. */
     public List<Reach> reach(ServerLevel level, BlockPos casePos) {
         if (cachedVersion != version) {
             reachCache.clear();
             cachedVersion = version;
         }
-        return reachCache.computeIfAbsent(casePos.immutable(), p -> computeReach(level, p));
+        return reachCache.computeIfAbsent(casePos.immutable(), p -> computeReach(LanData.get(level), p));
     }
 
     /** Порт корпуса подключён (хотя бы к одному работающему отрезку). */
     public boolean linked(ServerLevel level, BlockPos casePos) {
-        return !segmentsAt(level, casePos, level.getBlockState(casePos)).isEmpty();
+        return !segmentsAt(LanData.get(level), casePos).isEmpty();
     }
 
-    private List<Reach> computeReach(ServerLevel level, BlockPos start) {
-        BlockState startState = level.getBlockState(start);
-        if (!(startState.getBlock() instanceof LanDevice self)) return List.of();
-        long startBits = self.lanBitsPerSecond(level, start, startState);
-        if (startBits <= 0) return List.of();
+    static List<Reach> computeReach(LanData data, BlockPos start) {
+        LanData.Device self = data.device(start.asLong());
+        if (self == null || self.mbit() <= 0) return List.of();
         Map<BlockPos, Reach> best = new HashMap<>();
         Set<BlockPos> visitedSwitches = new HashSet<>();
         ArrayDeque<Reach> queue = new ArrayDeque<>();
-        queue.add(new Reach(start, 0, startBits));
+        queue.add(new Reach(start, 0, self.bits()));
         while (!queue.isEmpty()) {
             Reach cur = queue.poll();
-            BlockState cs = level.getBlockState(cur.pos);
-            for (Set<BlockPos> segment : segmentsAt(level, cur.pos, cs)) {
+            for (Set<BlockPos> segment : segmentsAt(data, cur.pos)) {
                 for (BlockPos dev : segment) {
                     if (dev.equals(cur.pos) || dev.equals(start)) continue;
-                    BlockState ds = level.getBlockState(dev);
-                    if (!(ds.getBlock() instanceof LanDevice d)) continue;
-                    long bits = Math.min(cur.bits, d.lanBitsPerSecond(level, dev, ds));
+                    LanData.Device d = data.device(dev.asLong());
+                    if (d == null) continue;
+                    long bits = Math.min(cur.bits, d.bits());
                     if (bits <= 0) continue;
-                    if (d.lanKind() == LanDevice.Kind.COMPUTER) {
+                    if (d.computer()) {
                         Reach r = new Reach(dev, cur.hops, bits);
                         Reach old = best.get(dev);
                         if (old == null || r.hops < old.hops || (r.hops == old.hops && r.bits > old.bits)) best.put(dev, r);
                     } else {
-                        for (BlockPos sw : switchGroup(level, dev)) {
+                        for (BlockPos sw : switchGroup(data, dev)) {
                             if (visitedSwitches.add(sw)) queue.add(new Reach(sw, cur.hops + 1, bits));
                         }
                     }
@@ -112,19 +125,20 @@ public final class LanManager {
     }
 
     /** Коммутатор и стоечные коммутаторы, стоящие с ним вплотную (они работают как один). */
-    private static List<BlockPos> switchGroup(ServerLevel level, BlockPos start) {
+    static List<BlockPos> switchGroup(LanData data, BlockPos start) {
         List<BlockPos> out = new ArrayList<>();
         out.add(start);
-        BlockState s = level.getBlockState(start);
-        if (!(s.getBlock() instanceof LanDevice d) || !d.joinsNeighbours()) return out;
+        LanData.Device s = data.device(start.asLong());
+        if (s == null || s.type() != LanData.RACK_SWITCH) return out;
         ArrayDeque<BlockPos> q = new ArrayDeque<>(out);
         Set<BlockPos> seen = new HashSet<>(out);
         while (!q.isEmpty() && seen.size() < 256) {
             BlockPos p = q.poll();
             for (Direction dir : Direction.values()) {
                 BlockPos n = p.relative(dir);
-                if (!level.isLoaded(n) || seen.contains(n)) continue;
-                if (level.getBlockState(n).getBlock() == s.getBlock()) {
+                if (seen.contains(n)) continue;
+                LanData.Device o = data.device(n.asLong());
+                if (o != null && o.type() == LanData.RACK_SWITCH) {
                     seen.add(n);
                     q.add(n);
                     out.add(n);
@@ -138,19 +152,21 @@ public final class LanManager {
      * Отрезки кабеля, вставленные в гнёзда устройства: для каждого — устройства на нём.
      * Отрезок длиннее {@link #MAX_SEGMENT} блоков пропускается (сигнал не доходит).
      */
-    private static List<Set<BlockPos>> segmentsAt(ServerLevel level, BlockPos dev, BlockState state) {
+    static List<Set<BlockPos>> segmentsAt(LanData data, BlockPos dev) {
         List<Set<BlockPos>> out = new ArrayList<>();
-        if (!(state.getBlock() instanceof LanDevice d)) return out;
+        LanData.Device d = data.device(dev.asLong());
+        if (d == null) return out;
         Set<Long> done = new HashSet<>();
         for (Direction face : Direction.Plane.HORIZONTAL) {
-            if (!d.acceptsCable(state, face)) continue;
+            if ((d.mask() & Wire.bit(face)) == 0) continue;
             BlockPos cp = dev.relative(face);
-            if (!level.isLoaded(cp) || !(level.getBlockEntity(cp) instanceof CableBlockEntity cable)) continue;
-            for (int i = 0; i < cable.wires().size(); i++) {
-                Wire w = cable.wires().get(i);
+            int[] wires = data.cable(cp.asLong());
+            if (wires == null) continue;
+            for (int i = 0; i < wires.length; i++) {
+                Wire w = Wire.unpack(wires[i]);
                 if ((w.plugs & Wire.bit(face.getOpposite())) == 0 || done.contains(key(cp, i))) continue;
                 Set<BlockPos> devices = new HashSet<>();
-                int cells = walk(level, cp, i, done, devices);
+                int cells = walk(data, cp, i, done, devices);
                 if (cells <= MAX_SEGMENT) out.add(devices);
             }
         }
@@ -161,8 +177,17 @@ public final class LanManager {
         return p.asLong() * 4 + wire;
     }
 
+    /** Куда ведёт провод в сторону d: в соседний блок, на блок выше (подъём по стенке) или ниже (спуск). */
+    static BlockPos next(BlockPos p, Wire w, Direction d) {
+        int bit = Wire.bit(d);
+        BlockPos n = p.relative(d);
+        if ((w.ups & bit) != 0) return n.above();
+        if ((w.downs & bit) != 0) return n.below();
+        return n;
+    }
+
     /** Пройти по соединённым проводам: собрать устройства с вилками; вернуть длину (блоков). */
-    private static int walk(ServerLevel level, BlockPos startPos, int startWire, Set<Long> done, Set<BlockPos> devices) {
+    static int walk(LanData data, BlockPos startPos, int startWire, Set<Long> done, Set<BlockPos> devices) {
         ArrayDeque<long[]> q = new ArrayDeque<>();
         q.add(new long[]{startPos.asLong(), startWire});
         done.add(key(startPos, startWire));
@@ -172,21 +197,22 @@ public final class LanManager {
             BlockPos p = BlockPos.of(cur[0]);
             cells.add(cur[0]);
             if (cells.size() > MAX_SEGMENT + 1) return cells.size();
-            if (!(level.getBlockEntity(p) instanceof CableBlockEntity be) || cur[1] >= be.wires().size()) continue;
-            Wire w = be.wires().get((int) cur[1]);
+            int[] wires = data.cable(cur[0]);
+            if (wires == null || cur[1] >= wires.length) continue;
+            Wire w = Wire.unpack(wires[(int) cur[1]]);
             for (Direction d : Direction.Plane.HORIZONTAL) {
                 int bit = Wire.bit(d);
                 if ((w.dirs & bit) == 0) continue;
-                BlockPos n = p.relative(d);
-                if (!level.isLoaded(n)) continue;
                 if ((w.plugs & bit) != 0) {
-                    devices.add(n.immutable());
+                    devices.add(p.relative(d).immutable());
                     continue;
                 }
-                if (!(level.getBlockEntity(n) instanceof CableBlockEntity other)) continue;
+                BlockPos n = next(p, w, d);
+                int[] other = data.cable(n.asLong());
+                if (other == null) continue;
                 int lane = w.laneToward(d);
-                for (int j = 0; j < other.wires().size(); j++) {
-                    Wire o = other.wires().get(j);
+                for (int j = 0; j < other.length; j++) {
+                    Wire o = Wire.unpack(other[j]);
                     if (o.color == w.color && o.laneToward(d.getOpposite()) == lane && done.add(key(n, j))) {
                         q.add(new long[]{n.asLong(), j});
                     }
@@ -216,10 +242,11 @@ public final class LanManager {
         long now = level.getGameTime();
         Outgoing o;
         while ((o = outbox.poll()) != null) {
-            if (!(level.getBlockEntity(o.from) instanceof PcCaseBlockEntity src)) continue;
+            if (!level.isLoaded(o.from) || !(level.getBlockEntity(o.from) instanceof PcCaseBlockEntity src)) continue;
             String fromAddr = src.address();
             for (Reach r : reach(level, o.from)) {
-                if (!(level.getBlockEntity(r.pos) instanceof PcCaseBlockEntity dst)) continue;
+                // Компьютер в незагруженном чанке выключен — ему некому ответить (провода по дороге — неважно)
+                if (!level.isLoaded(r.pos) || !(level.getBlockEntity(r.pos) instanceof PcCaseBlockEntity dst)) continue;
                 if (!matches(o.target, dst.address(), dst.label())) continue;
                 // Задержка: по тику на коммутатор, плюс время передачи по самой медленной связи
                 long bytesPerTick = Math.max(1, r.bits / 800 / Computer.TICKS_PER_SECOND);

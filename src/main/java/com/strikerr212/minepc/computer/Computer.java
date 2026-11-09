@@ -436,9 +436,43 @@ public final class Computer {
         return true;
     }
 
+    /** Служебный порт: эхо-запросы ping. Программы его открыть не могут (порты 1..65535). */
+    public static final int PING_PORT = 0;
+    private static final int PING_BYTES = 32;
+    private final java.util.concurrent.atomic.AtomicInteger nextPing = new java.util.concurrent.atomic.AtomicInteger(1);
+
+    private long nowTicks() {
+        synchronized (timers) {
+            return ticks;
+        }
+    }
+
+    /**
+     * Эхо-запрос: уходит по сети как обычное сообщение, адресат (если включён) сразу отвечает,
+     * а сюда приходит событие net_pong(адрес, номер, мс туда и обратно, переходов). Возвращает номер или -1.
+     */
+    public int netPing(String target) {
+        int id = nextPing.getAndIncrement();
+        if (!netSend(target, PING_PORT, new Object[]{"ping", id, (double) nowTicks()}, PING_BYTES)) return -1;
+        return id;
+    }
+
     /** Пришло сообщение по сети: событие net_message, если программа слушает этот порт. */
     public void netReceive(String from, int port, int hops, Object[] payload, int bytes) {
-        if (state != State.RUNNING || !openPorts.contains(port)) return;
+        if (state != State.RUNNING) return;
+        if (port == PING_PORT) {
+            if (payload.length < 3 || !(payload[2] instanceof Number sent)) return;
+            netReceived.addAndGet(bytes);
+            if ("ping".equals(payload[0])) {
+                // Отвечает сама сетевая карта — программа для этого не нужна
+                if (host.netSend(from, PING_PORT, new Object[]{"pong", payload[1], sent}, PING_BYTES)) netSent.addAndGet(PING_BYTES);
+            } else if ("pong".equals(payload[0])) {
+                long rtt = Math.max(0, nowTicks() - sent.longValue());
+                queueEvent("net_pong", from, payload[1], (int) (rtt * 1000 / TICKS_PER_SECOND), hops);
+            }
+            return;
+        }
+        if (!openPorts.contains(port)) return;
         netReceived.addAndGet(bytes);
         Object[] args = new Object[3 + payload.length];
         args[0] = from;

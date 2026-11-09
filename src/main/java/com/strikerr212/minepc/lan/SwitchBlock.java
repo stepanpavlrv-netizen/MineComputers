@@ -101,12 +101,12 @@ public class SwitchBlock extends HorizontalDirectionalBlock implements LanDevice
     @Override
     protected void onPlace(BlockState state, Level level, BlockPos pos, BlockState old, boolean moved) {
         super.onPlace(state, level, pos, old, moved);
-        if (!level.isClientSide) LanManager.invalidate(level);
+        if (!level.isClientSide) LanManager.updateDevice(level, pos);
     }
 
     @Override
     protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean moved) {
-        if (!level.isClientSide && !state.is(newState.getBlock())) LanManager.invalidate(level);
         super.onRemove(state, level, pos, newState, moved);
+        if (!level.isClientSide && !state.is(newState.getBlock())) LanManager.updateDevice(level, pos);
     }
 }

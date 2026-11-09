@@ -101,6 +101,11 @@ public class CableBlockEntity extends BlockEntity {
         if ((d & Wire.W) != 0) out.add(new int[]{0, 0, cz - 1, cx - 1, 2, cz + 1});
         if ((d & Wire.S) != 0) out.add(new int[]{cx - 1, 0, cz + 1, cx + 1, 2, 16});
         if ((d & Wire.N) != 0) out.add(new int[]{cx - 1, 0, 0, cx + 1, 2, cz - 1});
+        // Подъём по стенке соседнего блока: вертикальная полоска у самого края
+        if ((w.ups & Wire.E) != 0) out.add(new int[]{15, 0, cz - 1, 16, 18, cz + 1});
+        if ((w.ups & Wire.W) != 0) out.add(new int[]{0, 0, cz - 1, 1, 18, cz + 1});
+        if ((w.ups & Wire.S) != 0) out.add(new int[]{cx - 1, 0, 15, cx + 1, 18, 16});
+        if ((w.ups & Wire.N) != 0) out.add(new int[]{cx - 1, 0, 0, cx + 1, 18, 1});
         return out;
     }
 
@@ -109,7 +114,7 @@ public class CableBlockEntity extends BlockEntity {
             VoxelShape s = Shapes.empty();
             for (Wire w : wires) {
                 for (int[] b : boxes(w)) {
-                    s = Shapes.or(s, Block.box(b[0], b[1], b[2], b[3], Math.max(b[4], 2.5), b[5]));
+                    s = Shapes.or(s, Block.box(b[0], b[1], b[2], b[3], Math.min(16, Math.max(b[4], 2.5)), b[5]));
                 }
             }
             shape = s.isEmpty() ? Block.box(6, 0, 6, 10, 2, 10) : s;
@@ -117,32 +122,60 @@ public class CableBlockEntity extends BlockEntity {
         return shape;
     }
 
-    /** Пересчитать, с кем соединён каждый провод. true — что-то изменилось. */
+    /** Есть ли в блоке провод этого цвета, выходящий на эту дорожку в сторону toward. */
+    private static boolean hasMatch(Level level, BlockPos p, Wire w, Direction toward, int lane) {
+        if (!level.isLoaded(p) || !(level.getBlockEntity(p) instanceof CableBlockEntity other)) return false;
+        for (Wire o : other.wires) if (o.color == w.color && o.laneToward(toward) == lane) return true;
+        return false;
+    }
+
+    private boolean solid(BlockPos p, Direction face) {
+        return level.isLoaded(p) && level.getBlockState(p).isFaceSturdy(level, p, face);
+    }
+
+    /** Через клетку можно протянуть провод (воздух, трава, факел…). */
+    private boolean open(BlockPos p) {
+        return level.isLoaded(p) && level.getBlockState(p).getCollisionShape(level, p).isEmpty();
+    }
+
+    /**
+     * Пересчитать, с кем соединён каждый провод (как редстоун): сосед на том же уровне, устройство (вилка),
+     * провод на блоке выше (поднимаемся по стенке, если сверху над нами не сплошной блок) или ниже. true — что-то изменилось.
+     */
     public boolean reconnect() {
         if (level == null) return false;
         boolean changed = false;
+        // Подъём по стенке возможен, только если над нами пусто (провод идёт по ребру стенки в клетку выше)
+        boolean roofOpen = open(worldPosition.above());
         for (Wire w : wires) {
-            int dirs = 0, plugs = 0;
+            int dirs = 0, plugs = 0, ups = 0, downs = 0;
             for (Direction d : Direction.Plane.HORIZONTAL) {
                 BlockPos n = worldPosition.relative(d);
                 if (!level.isLoaded(n)) continue;
                 BlockState ns = level.getBlockState(n);
-                int lane = w.laneToward(d);
-                if (level.getBlockEntity(n) instanceof CableBlockEntity other) {
-                    for (Wire o : other.wires) {
-                        if (o.color == w.color && o.laneToward(d.getOpposite()) == lane) {
-                            dirs |= Wire.bit(d);
-                            break;
-                        }
-                    }
+                int lane = w.laneToward(d), bit = Wire.bit(d);
+                if (level.getBlockEntity(n) instanceof CableBlockEntity) {
+                    if (hasMatch(level, n, w, d.getOpposite(), lane)) dirs |= bit;
                 } else if (ns.getBlock() instanceof LanDevice dev && dev.acceptsCable(ns, d.getOpposite())) {
-                    dirs |= Wire.bit(d);
-                    plugs |= Wire.bit(d);
+                    dirs |= bit;
+                    plugs |= bit;
+                    LanManager.updateDevice(level, n);
+                } else if (ns.isFaceSturdy(level, n, d.getOpposite())) {
+                    if (roofOpen && hasMatch(level, n.above(), w, d.getOpposite(), lane)) {
+                        dirs |= bit;
+                        ups |= bit;
+                    }
+                } else if (open(n) && solid(worldPosition.below(), d) && hasMatch(level, n.below(), w, d.getOpposite(), lane)) {
+                    // Мы лежим на стенке, а провод снизу поднимается к нам по её боку (те же условия, что у него)
+                    dirs |= bit;
+                    downs |= bit;
                 }
             }
-            if (dirs != w.dirs || plugs != w.plugs) {
+            if (dirs != w.dirs || plugs != w.plugs || ups != w.ups || downs != w.downs) {
                 w.dirs = dirs;
                 w.plugs = plugs;
+                w.ups = ups;
+                w.downs = downs;
                 changed = true;
             }
         }
@@ -150,29 +183,42 @@ public class CableBlockEntity extends BlockEntity {
         return changed;
     }
 
-    /** Провода изменились: сохранить, обновить форму, модель у клиентов и сеть. */
+    /** Провода изменились: сохранить, обновить форму, модель у клиентов и схему сети. */
     public void changed() {
         shape = null;
         setChanged();
         if (level != null) {
-            if (!level.isClientSide) LanManager.invalidate(level);
+            if (level instanceof net.minecraft.server.level.ServerLevel server) LanData.get(server).putCable(worldPosition, packed());
             level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), Block.UPDATE_ALL);
         }
     }
 
-    /** Соседние провода (добавили/убрали провод — у соседей могли поменяться соединения). */
+    /** Соседние провода, в том числе на блок выше и ниже (подъёмы по стенкам). */
     public void reconnectNeighbours() {
         if (level == null) return;
         for (Direction d : Direction.Plane.HORIZONTAL) {
-            if (level.getBlockEntity(worldPosition.relative(d)) instanceof CableBlockEntity other) other.reconnect();
+            for (BlockPos n : new BlockPos[]{worldPosition.relative(d), worldPosition.relative(d).above(), worldPosition.relative(d).below()}) {
+                if (level.isLoaded(n) && level.getBlockEntity(n) instanceof CableBlockEntity other) other.reconnect();
+            }
         }
+    }
+
+    public int[] packed() {
+        int[] packed = new int[wires.size()];
+        for (int i = 0; i < packed.length; i++) packed[i] = wires.get(i).packed();
+        return packed;
+    }
+
+    /** Загрузился чанк: занести провода в схему сети (для миров, где кабель лежал до появления схемы). */
+    @Override
+    public void onLoad() {
+        super.onLoad();
+        if (level instanceof net.minecraft.server.level.ServerLevel server && !wires.isEmpty()) LanData.get(server).putCable(worldPosition, packed());
     }
 
     @Override
     public ModelData getModelData() {
-        int[] packed = new int[wires.size()];
-        for (int i = 0; i < packed.length; i++) packed[i] = wires.get(i).packed();
-        return ModelData.builder().with(WIRES, packed).build();
+        return ModelData.builder().with(WIRES, packed()).build();
     }
 
     @Override

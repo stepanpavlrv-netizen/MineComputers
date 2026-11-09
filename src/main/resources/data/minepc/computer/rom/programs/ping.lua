@@ -1,30 +1,52 @@
--- Проверка связи: дойдёт ли сообщение и за сколько тиков (туда и обратно)
-local target = ...
-if not target then print("Использование: ping <имя или адрес>") return end
+-- Проверка связи: эхо-запрос уходит по сети, компьютер на том конце отвечает,
+-- время — настоящее (туда и обратно, с задержкой коммутаторов и скоростью самой медленной связи)
+local target, count = ...
+if not target then print("Использование: ping <имя или адрес> [сколько раз]") return end
+count = tonumber(count or "") or 4
 if net.speed() == 0 then print("Кабель не подключён") return end
-local function find()
+
+local function nameOf(address)
   for _, p in ipairs(net.peers()) do
-    if p.address == target or p.name:lower() == target:lower() or (#target >= 4 and p.address:sub(1, #target) == target) then
-      return p
+    if p.address == address then return p.name end
+  end
+  return ""
+end
+
+local ok, total, best, worst = 0, 0, math.huge, 0
+for i = 1, count do
+  local id = net.ping(target)
+  if not id then print("Не удалось отправить запрос") return end
+  local timer = os.startTimer(2)
+  local from, ms, hops
+  while true do
+    local ev = { os.pullEvent() }
+    if ev[1] == "net_pong" and ev[3] == id then
+      from, ms, hops = ev[2], ev[4], ev[5]
+      break
+    elseif ev[1] == "timer" and ev[2] == timer then
+      break
     end
   end
-end
-local ok = 0
-for i = 1, 3 do
-  local p = find()
-  if p then
-    local ticks = p.hops * 2 + 2                  -- по тику на каждый коммутатор туда и обратно и тик на ответ
-    sleep(ticks / 20)
-    if term.isColor() then term.setTextColor(colors.cyan) end
-    write((p.name ~= "" and p.name or "?") .. " ")
-    if term.isColor() then term.setTextColor(colors.lime) end
-    write(p.address:sub(1, 8))
-    term.setTextColor(colors.white)
-    print(string.format(": %d переход(а), %d тика", p.hops, ticks))
+  if from then
     ok = ok + 1
+    total = total + ms
+    best, worst = math.min(best, ms), math.max(worst, ms)
+    local name = nameOf(from)
+    if term.isColor() then term.setTextColor(colors.cyan) end
+    write(name ~= "" and (name .. " ") or "")
+    if term.isColor() then term.setTextColor(colors.lime) end
+    write(from:sub(1, 8))
+    term.setTextColor(colors.white)
+    print(string.format(": время %d мс, переходов %d", ms, hops))
   else
-    sleep(1)
+    if term.isColor() then term.setTextColor(colors.red) end
     print("нет ответа от " .. target)
+    term.setTextColor(colors.white)
   end
+  if i < count then sleep(0.5) end
 end
-print(ok .. " из 3 дошли")
+if ok > 0 then
+  print(string.format("%d из %d дошли, время: мин %d, сред %d, макс %d мс", ok, count, best, math.floor(total / ok + 0.5), worst))
+else
+  print(string.format("0 из %d дошли", count))
+end

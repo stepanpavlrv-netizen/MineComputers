@@ -404,6 +404,21 @@ public class HeadlessTest {
         expect("сообщение с таблицей дошло", screen().contains("GOT") && screen().contains("aaaaaaaa") && screen().contains("привет") && screen().contains("42"));
         expect("закрытый порт не слышен, широковещательное дошло", screen().contains("SECOND") && screen().contains("всем"));
         expect("принято больше нуля", box[1].netReceived() > 0 && box[0].netSent() > 0);
+
+        // Эхо-запрос: отвечает сама сетевая карта адресата, программа там не нужна
+        pc = box[0];
+        command("local id = net.ping('beta'); local e = {os.pullEvent('net_pong')}; print('PONG', e[3] == id, e[2]:sub(1, 8), e[5])");
+        for (int i = 0; i < 20; i++) { for (Computer c : box) c.tick(); Thread.sleep(2); }
+        show("net.ping");
+        expect("net.ping: пришёл ответ с тем же номером", screen().contains("PONG") && screen().contains("true") && screen().contains("bbbbbbbb"));
+        pc = box[1];
+        command("ping alpha 2");
+        for (int i = 0; i < 80 && !screen().contains("дошли"); i++) { for (Computer c : box) c.tick(); Thread.sleep(2); }
+        command("ping nobody 1");
+        for (int i = 0; i < 120 && !screen().contains("0 из 1"); i++) { for (Computer c : box) c.tick(); Thread.sleep(2); }
+        show("ping");
+        expect("ping: 2 из 2 дошли", screen().contains("2 из 2 дошли") && screen().contains("alpha"));
+        expect("ping: нет ответа от несуществующего", screen().contains("нет ответа от nobody") && screen().contains("0 из 1"));
         pc = saved;
     }
 }

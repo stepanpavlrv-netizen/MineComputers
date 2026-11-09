@@ -22,4 +22,10 @@ public interface LanDevice {
     default boolean joinsNeighbours() {
         return false;
     }
+
+    /** Вид для схемы сети ({@link LanData#COMPUTER} и т.д.). */
+    default int lanType(BlockState state) {
+        if (lanKind() == Kind.COMPUTER) return LanData.COMPUTER;
+        return joinsNeighbours() ? LanData.RACK_SWITCH : LanData.DESK_SWITCH;
+    }
 }

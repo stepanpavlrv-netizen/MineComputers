@@ -135,10 +135,11 @@ public class CiScreenshots {
             case 805 -> server.execute(CiScreenshots::lookAtMonitors);
             case 825 -> shot(mc, "world_monitors");
             case 830 -> server.execute(CiScreenshots::placeNetwork);
-            case 990 -> { typeAt(netA, "hostname office-1"); typeAt(netB, "hostname server"); }
+            case 990 -> { typeAt(netA, "hostname office-1"); typeAt(netB, "hostname server"); typeAt(netC, "hostname storage"); }
             case 1000 -> { typeAt(netB, "chat"); typeAt(netA, "chat"); }
             case 1030 -> typeAt(netA, "привет по кабелю!");
             case 1045 -> typeAt(netB, "и тебе привет, A");
+            case 1050 -> typeAt(netC, "ping office-1 3");
             case 1065 -> shot(mc, "world_network");
             case 1070 -> {
                 mc.options.hideGui = false;
@@ -156,7 +157,14 @@ public class CiScreenshots {
             }
             case 1100 -> ciCase(mc, null, 4);
             case 1106 -> shot(mc, "case_gui_net");
-            case 1120 -> mc.stop();
+            case 1110 -> {
+                mc.setScreen(null);
+                typeAt(netC, "ping server 2");
+                server.execute(CiScreenshots::logNetwork);
+            }
+            case 1160 -> mc.setScreen(new TerminalScreen(netC));
+            case 1175 -> shot(mc, "terminal_ping");
+            case 1190 -> mc.stop();
             default -> {
             }
         }
@@ -284,7 +292,7 @@ public class CiScreenshots {
         p.teleportTo(p.serverLevel(), row.getX() + 10, row.getY() + 1, row.getZ() - 8.5, 0f, 8f);
     }
 
-    private static BlockPos netA = BlockPos.ZERO, netB = BlockPos.ZERO;
+    private static BlockPos netA = BlockPos.ZERO, netB = BlockPos.ZERO, netC = BlockPos.ZERO;
 
     private static void typeAt(BlockPos pos, String line) {
         var server = Minecraft.getInstance().getSingleplayerServer();
@@ -312,7 +320,7 @@ public class CiScreenshots {
         ServerLevel level = p.serverLevel();
         BlockPos n = casePos.east().south(26).west(3);
         for (int dx = -2; dx <= 9; dx++) {
-            for (int dz = -9; dz <= 3; dz++) {
+            for (int dz = -9; dz <= 7; dz++) {
                 level.setBlockAndUpdate(n.offset(dx, -1, dz), net.minecraft.world.level.block.Blocks.SMOOTH_STONE.defaultBlockState());
                 for (int dy = 0; dy <= 3; dy++) level.setBlockAndUpdate(n.offset(dx, dy, dz), net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
             }
@@ -330,10 +338,37 @@ public class CiScreenshots {
         for (int dx : new int[]{1, 2, 4, 5}) wire(level, n.east(dx), blue, 1, 1);
         for (int dx : new int[]{1, 2}) wire(level, n.east(dx), orange, 2, 2);          // вторая дорожка: отдельная сеть рядом
         wire(level, n.east(4), orange, 2, 2);
-        for (int dx = 0; dx <= 6; dx++) {
-            if (level.getBlockEntity(n.east(dx)) instanceof com.strikerr212.minepc.lan.CableBlockEntity be) be.reconnect();
+        // Третий компьютер за стенкой: провод ответвляется, поднимается по стенке, идёт поверху и спускается
+        BlockPos br = n.east(4);
+        level.setBlockAndUpdate(br.south(3), net.minecraft.world.level.block.Blocks.BRICKS.defaultBlockState());
+        level.setBlockAndUpdate(br.south(3).east(), net.minecraft.world.level.block.Blocks.BRICKS.defaultBlockState());
+        level.setBlockAndUpdate(br.south(3).west(), net.minecraft.world.level.block.Blocks.BRICKS.defaultBlockState());
+        netC = br.south(4).east();
+        fillCase(level, netC, 2);
+        put(level, netC.above(), ModBlocks.MONITOR.get().defaultBlockState().setValue(com.strikerr212.minepc.block.MonitorBlock.KEYBOARD, true));
+        for (BlockPos c : new BlockPos[]{br.south(), br.south(2), br.south(3).above(), br.south(4)}) wire(level, c, blue, 1, 1);
+        for (int pass = 0; pass < 2; pass++) {
+            for (int dx = 0; dx <= 6; dx++) {
+                for (int dz = 0; dz <= 4; dz++) {
+                    for (int dy = 0; dy <= 1; dy++) {
+                        if (level.getBlockEntity(n.offset(dx, dy, dz)) instanceof com.strikerr212.minepc.lan.CableBlockEntity be) be.reconnect();
+                    }
+                }
+            }
         }
         p.teleportTo(level, n.getX() + 3.5, n.getY() + 1.5, n.getZ() - 4.5, 0f, 20f);
+    }
+
+    /** В журнал CI: кого видит каждый компьютер по схеме сети (проверка без загрузки чанков). */
+    private static void logNetwork() {
+        var server = Minecraft.getInstance().getSingleplayerServer();
+        ServerLevel level = server.overworld();
+        var lan = com.strikerr212.minepc.lan.LanManager.get(level);
+        for (BlockPos c : new BlockPos[]{netA, netB, netC}) {
+            StringBuilder b = new StringBuilder("[CI-LAN] ").append(c.toShortString()).append(" ->");
+            for (var r : lan.reach(level, c)) b.append(' ').append(r.pos().toShortString()).append(" hops=").append(r.hops());
+            com.mojang.logging.LogUtils.getLogger().info(b.toString());
+        }
     }
 
     /** Окно корпуса для скриншота: другая тема и вкладка. */

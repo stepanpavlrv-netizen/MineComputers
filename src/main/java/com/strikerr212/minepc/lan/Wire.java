@@ -19,6 +19,8 @@ public final class Wire {
     public final int xi, zi;
     public int dirs;      // куда идёт (соседний провод или устройство)
     public int plugs;     // где вилка в устройство
+    public int ups;       // где поднимается по стенке соседнего блока на блок выше
+    public int downs;     // где спускается к проводу на блок ниже (он поднимается к нам)
 
     public Wire(int color, int xi, int zi) {
         this.color = color;
@@ -59,6 +61,8 @@ public final class Wire {
         t.putByte("z", (byte) zi);
         t.putByte("d", (byte) dirs);
         t.putByte("p", (byte) plugs);
+        t.putByte("u", (byte) ups);
+        t.putByte("dn", (byte) downs);
         return t;
     }
 
@@ -66,11 +70,31 @@ public final class Wire {
         Wire w = new Wire(t.getByte("c"), t.getByte("x"), t.getByte("z"));
         w.dirs = t.getByte("d");
         w.plugs = t.getByte("p");
+        w.ups = t.getByte("u");
+        w.downs = t.getByte("dn");
         return w;
     }
 
-    /** Совпадает с проводом в другом блоке (для отрисовки и сравнения при синхронизации). */
+    /** Провод одним числом: для модели и для схемы сети (LanData). */
     public int packed() {
-        return color | xi << 4 | zi << 6 | dirs << 8 | plugs << 12;
+        return color | xi << 4 | zi << 6 | dirs << 8 | plugs << 12 | ups << 16 | downs << 20;
+    }
+
+    public static Wire unpack(int p) {
+        Wire w = new Wire(p & 15, (p >> 4) & 3, (p >> 6) & 3);
+        w.dirs = (p >> 8) & 15;
+        w.plugs = (p >> 12) & 15;
+        w.ups = (p >> 16) & 15;
+        w.downs = (p >> 20) & 15;
+        return w;
+    }
+
+    public static Direction dir(int bit) {
+        return switch (bit) {
+            case N -> Direction.NORTH;
+            case S -> Direction.SOUTH;
+            case W -> Direction.WEST;
+            default -> Direction.EAST;
+        };
     }
 }

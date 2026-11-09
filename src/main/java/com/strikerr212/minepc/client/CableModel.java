@@ -58,9 +58,7 @@ public class CableModel extends BakedModelWrapper<BakedModel> {
         TextureAtlasSprite wire = sprite(WIRE), plug = sprite(PLUG);
         List<BakedQuad> out = new ArrayList<>();
         for (int p : packed) {
-            Wire w = new Wire(p & 15, (p >> 4) & 3, (p >> 6) & 3);
-            w.dirs = (p >> 8) & 15;
-            w.plugs = (p >> 12) & 15;
+            Wire w = Wire.unpack(p);
             for (int[] b : CableBlockEntity.boxes(w)) box(out, b[0], b[1], b[2], b[3], b[4], b[5], wire, w.color);
             int cx = Wire.LANE[w.xi], cz = Wire.LANE[w.zi];
             // Вилка RJ-45: прозрачный пластик у самого гнезда
@@ -78,12 +76,14 @@ public class CableModel extends BakedModelWrapper<BakedModel> {
         Vector3f from = new Vector3f(x0, y0, z0), to = new Vector3f(x1, y1, z1);
         for (Direction d : Direction.values()) {
             if (d == Direction.DOWN) continue;
+            // Полоска на стенке выходит на 2 пикселя в клетку выше — развёртку держим в пределах текстуры
+            float y0t = Math.min(y0, 16), y1t = Math.min(y1, 16);
             float[] uv = switch (d) {
                 case UP -> new float[]{x0, z0, x1, z1};
-                case NORTH -> new float[]{16 - x1, 16 - y1, 16 - x0, 16 - y0};
-                case SOUTH -> new float[]{x0, 16 - y1, x1, 16 - y0};
-                case WEST -> new float[]{z0, 16 - y1, z1, 16 - y0};
-                case EAST -> new float[]{16 - z1, 16 - y1, 16 - z0, 16 - y0};
+                case NORTH -> new float[]{16 - x1, 16 - y1t, 16 - x0, 16 - y0t};
+                case SOUTH -> new float[]{x0, 16 - y1t, x1, 16 - y0t};
+                case WEST -> new float[]{z0, 16 - y1t, z1, 16 - y0t};
+                case EAST -> new float[]{16 - z1, 16 - y1t, 16 - z0, 16 - y0t};
                 default -> new float[]{x0, z0, x1, z1};
             };
             BlockElementFace face = new BlockElementFace(null, tint, "#all", new BlockFaceUV(uv, 0));

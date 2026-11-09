@@ -77,14 +77,14 @@ public class CableBlock extends BaseEntityBlock {
     protected BlockState updateShape(BlockState state, Direction dir, BlockState neighbor, LevelAccessor level,
                                      BlockPos pos, BlockPos neighborPos) {
         if (dir == Direction.DOWN && !canSurvive(state, level, pos)) return Blocks.AIR.defaultBlockState();
-        if (!level.isClientSide() && dir.getAxis().isHorizontal() && level.getBlockEntity(pos) instanceof CableBlockEntity be) be.reconnect();
+        // Любой сосед (и блок сверху — он может закрыть подъём по стенке) — пересчитать соединения
+        if (!level.isClientSide() && level.getBlockEntity(pos) instanceof CableBlockEntity be) be.reconnect();
         return state;
     }
 
     @Override
     protected void onPlace(BlockState state, Level level, BlockPos pos, BlockState old, boolean moved) {
         super.onPlace(state, level, pos, old, moved);
-        if (!level.isClientSide) LanManager.invalidate(level);
     }
 
     @Override
@@ -94,9 +94,18 @@ public class CableBlock extends BaseEntityBlock {
                 // Блок пропал целиком (взрыв, вода): лишние провода — в добычу; один выпадет по таблице добычи
                 popResource(level, pos, new ItemStack(ModItems.CABLE.get(), be.wires().size() - 1));
             }
-            if (!level.isClientSide) LanManager.invalidate(level);
         }
         super.onRemove(state, level, pos, newState, moved);
+        if (!state.is(newState.getBlock()) && level instanceof net.minecraft.server.level.ServerLevel server) {
+            LanData.get(server).removeCable(pos);
+            // Блока уже нет: провода на блок выше/ниже (подъёмы по стенкам) должны отцепиться; соседи на том же уровне
+            // узнают сами (updateShape)
+            for (Direction d : Direction.Plane.HORIZONTAL) {
+                for (BlockPos n : new BlockPos[]{pos.relative(d).above(), pos.relative(d).below()}) {
+                    if (level.isLoaded(n) && level.getBlockEntity(n) instanceof CableBlockEntity other) other.reconnect();
+                }
+            }
+        }
     }
 
     /** Ломаем один провод, на который смотрит игрок; последний — вместе с блоком. */

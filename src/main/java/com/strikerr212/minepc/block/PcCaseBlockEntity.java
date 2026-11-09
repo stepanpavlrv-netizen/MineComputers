@@ -291,12 +291,19 @@ public class PcCaseBlockEntity extends BlockEntity implements MenuProvider {
 
     private void slotChanged(int slot) {
         if (level == null || level.isClientSide) return;
-        if (slot == SLOT_MOTHERBOARD) com.strikerr212.minepc.lan.LanManager.invalidate(level);
+        if (slot == SLOT_MOTHERBOARD) com.strikerr212.minepc.lan.LanManager.updateDevice(level, worldPosition);
         if (slot >= SLOT_USB) {
             if (level instanceof ServerLevel server) pc.updateRemovable(server, true);
         } else {
             pc.partsChanged();
         }
+    }
+
+    /** Чанк загрузился (или корпус только что поставили): занести в схему сети. */
+    @Override
+    public void onLoad() {
+        super.onLoad();
+        if (level instanceof ServerLevel) com.strikerr212.minepc.lan.LanManager.updateDevice(level, worldPosition);
     }
 
     @Override
