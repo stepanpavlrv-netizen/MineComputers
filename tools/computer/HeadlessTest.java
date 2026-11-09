@@ -283,13 +283,13 @@ public class HeadlessTest {
         pc.setLimits(new Computer.Limits(base.opsPerTick(), 4, 64L << 20, 2_000, 20_000, 0, 8));
         Files.writeString(dir.resolve("draw.lua"), String.join("\n",
                 "local t0 = os.clock()",
-                "for i = 1, 200 do term.setCursorPos(1, 1) term.write(('#'):rep(40)) end",
-                "print('DRAW', os.clock() - t0 >= 0.1)",
+                "for i = 1, 600 do term.setCursorPos(1, 1) term.write(('#'):rep(40)) end",
+                "print('DRAW', os.clock() - t0 >= 0.25)",
                 ""), java.nio.charset.StandardCharsets.UTF_8);
         command("draw");
         for (int i = 0; i < 100 && !screen().contains("DRAW"); i++) ticks(1);
         show("медленная видеокарта");
-        expect("2000 клеток за тик: 8000 символов рисуются несколько тиков", screen().replaceAll("\\s+", " ").contains("DRAW true"));
+        expect("2000 клеток за тик: 24000 символов рисуются несколько тиков", screen().replaceAll("\\s+", " ").contains("DRAW true"));
         pc.setLimits(new Computer.Limits(base.opsPerTick(), 4, 64L << 20, base.gpuCellsPerTick(), 20_000, 0, 8));
 
         Path slowDir = Files.createTempDirectory("minepc_slow");
