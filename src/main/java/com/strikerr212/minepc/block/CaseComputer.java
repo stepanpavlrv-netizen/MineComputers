@@ -35,7 +35,7 @@ import java.util.Objects;
  * Связь системного блока с компьютером: включение, накопители, периферия, отправка экрана игрокам.
  * Сам компьютер ({@link Computer}) ничего не знает о Minecraft — всё нужное ему передаётся отсюда.
  */
-final class CaseComputer implements Computer.Host {
+public final class CaseComputer implements Computer.Host {
 
     private static final int SCAN_INTERVAL = 10;       // как часто искать монитор, клавиатуру, дисководы (тики)
     private static final int SEND_INTERVAL = 2;        // экран отправляется не чаще раза в 2 тика

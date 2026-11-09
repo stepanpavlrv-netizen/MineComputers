@@ -160,7 +160,7 @@ public class PcCaseScreen extends AbstractContainerScreen<PcCaseMenu> {
         return menu.slots.get(slot).getItem();
     }
 
-    private static Component tr(String key, Object... args) {
+    private static net.minecraft.network.chat.MutableComponent tr(String key, Object... args) {
         return Component.translatable(key, args);
     }
 
