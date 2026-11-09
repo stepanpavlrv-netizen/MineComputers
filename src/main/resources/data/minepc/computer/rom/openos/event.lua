@@ -50,8 +50,9 @@ local function translate(ev)
   elseif name == "net_message" then
     -- Сеть MineComputers -> modem_message OpenComputers: получатель, отправитель, порт, «расстояние», данные
     local out = { "modem_message", addr("modem"), ev[2], ev[3], ev[4] }
-    for i = 5, (ev.n or #ev) do out[#out + 1] = ev[i] end
-    out.n = math.max(5, (ev.n or #ev))
+    local n = ev.n or #ev
+    for i = 5, n do out[i + 1] = ev[i] end
+    out.n = math.max(5, n + 1)          -- на одно поле больше, чем у net_message (адрес получателя)
     return out
   end
   return ev
