@@ -192,11 +192,11 @@ public class CiScreenshots {
                 mc.setScreen(null);
                 server.execute(CiScreenshots::placeLan2);
             }
-            case 1420 -> { typeAt(lanE, "hostname rack-e"); typeAt(lanF, "hostname rack-f");
+            case 1450 -> { typeAt(lanE, "hostname rack-e"); typeAt(lanF, "hostname rack-f");
                 typeAt(lanJ1, "hostname tray-1"); typeAt(lanJ2, "hostname tray-2"); }
-            case 1440 -> { typeAt(lanE, "ping rack-f 2"); typeAt(lanJ1, "ping tray-2 2"); }
-            case 1500 -> { typeAt(lanE, "switch"); typeAt(lanJ1, "peers"); }
-            case 1510 -> {
+            case 1465 -> { typeAt(lanE, "ping rack-f 2"); typeAt(lanJ1, "ping tray-2 2"); }
+            case 1515 -> { typeAt(lanE, "switch"); typeAt(lanJ1, "peers"); }
+            case 1520 -> {
                 mc.options.hideGui = true;
                 server.execute(() -> {
                     ServerPlayer p = server.getPlayerList().getPlayers().get(0);
@@ -227,7 +227,7 @@ public class CiScreenshots {
                 mc.options.hideGui = true;
                 server.execute(() -> {
                     ServerPlayer p = server.getPlayerList().getPlayers().get(0);
-                    p.teleportTo(p.serverLevel(), lanBase.getX() + 0.5, lanBase.getY(), lanBase.getZ() - 2.6, 0f, 28f);
+                    p.teleportTo(p.serverLevel(), lanBase.getX() + 0.5, lanBase.getY(), lanBase.getZ() - 3.2, 0f, 30f);
                 });
             }
             case 1625 -> shot(mc, "world_rack");
@@ -480,7 +480,7 @@ public class CiScreenshots {
         BlockPos b = casePos.east().south(26).east(14);
         lanBase = b;
         for (int dx = -3; dx <= 17; dx++) {
-            for (int dz = -2; dz <= 6; dz++) {
+            for (int dz = -5; dz <= 6; dz++) {
                 level.setBlockAndUpdate(b.offset(dx, -1, dz), net.minecraft.world.level.block.Blocks.SMOOTH_STONE.defaultBlockState());
                 for (int dy = 0; dy <= 4; dy++) level.setBlockAndUpdate(b.offset(dx, dy, dz), net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
             }
@@ -591,6 +591,11 @@ public class CiScreenshots {
         var server = Minecraft.getInstance().getSingleplayerServer();
         ServerPlayer p = server.getPlayerList().getPlayers().get(0);
         ServerLevel level = p.serverLevel();
+        // Снимки долгие: без мобов, вечный день, игрок неуязвим
+        server.setDifficulty(net.minecraft.world.Difficulty.PEACEFUL, true);
+        level.getGameRules().getRule(net.minecraft.world.level.GameRules.RULE_DAYLIGHT).set(false, server);
+        level.setDayTime(6000);
+        p.setGameMode(net.minecraft.world.level.GameType.CREATIVE);
         BlockPos base = p.blockPosition().north(3);
         casePos = base.west();
         level.setBlockAndUpdate(casePos, ModBlocks.PC_CASE.get().defaultBlockState().setValue(PcCaseBlock.FACING, Direction.SOUTH));
