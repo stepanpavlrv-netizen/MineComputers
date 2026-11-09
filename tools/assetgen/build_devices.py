@@ -238,3 +238,9 @@ for name in ("monitor", "keyboard", "disk_drive"):
         values.append(f"minepc:{name}")
 save_json(tag, {"values": values})
 print("ok")
+
+# Мониторы других видов, клавиатура на мониторе и навесная (переписывают blockstates монитора и клавиатуры)
+import sys as _sys
+_sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import monitors as _monitors  # noqa: E402
+_monitors.main()

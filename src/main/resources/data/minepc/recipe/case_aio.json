@@ -1,0 +1,16 @@
+{
+ "type": "minecraft:crafting_shapeless",
+ "category": "redstone",
+ "ingredients": [
+  {
+   "item": "minepc:pc_case"
+  },
+  {
+   "item": "minepc:monitor"
+  }
+ ],
+ "result": {
+  "id": "minepc:case_aio",
+  "count": 1
+ }
+}

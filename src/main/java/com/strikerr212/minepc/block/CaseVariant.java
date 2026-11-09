@@ -9,30 +9,46 @@ import net.minecraft.world.phys.shapes.VoxelShape;
  * Модели собраны из воксельных эскизов (tools/assetgen/cases.py), габариты — для корпуса, смотрящего на север.
  */
 public enum CaseVariant {
-    RETRO_TOWER("case_retro_tower", CaseStyle.RETRO, 3, 0, 1, 13, 16, 15),
-    RETRO_DESKTOP("case_retro_desktop", CaseStyle.RETRO, 1, 0, 1, 15, 5, 14),
-    HOME80("case_home80", CaseStyle.RETRO, 1, 0, 3, 15, 3, 12),
-    OFFICE_TOWER("case_office_tower", CaseStyle.OFFICE, 4, 0, 1, 12, 14, 15),
-    MINI("case_mini", CaseStyle.OFFICE, 4, 0, 4, 12, 5, 12),
-    WORKSTATION("case_workstation", CaseStyle.OFFICE, 3, 0, 1, 13, 16, 15),
-    GAMING("case_gaming", CaseStyle.GAMING, 2, 0, 1, 14, 16, 15),
-    GAMING_WHITE("case_gaming_white", CaseStyle.GAMING, 2, 0, 1, 14, 16, 15),
-    GAMING_CUBE("case_gaming_cube", CaseStyle.GAMING, 2, 0, 2, 14, 12, 14),
-    INDUSTRIAL("case_industrial", CaseStyle.INDUSTRIAL, 1, 0, 1, 15, 16, 15),
-    SERVER("case_server", CaseStyle.SERVER, 0, 0, 0, 16, 16, 16);
+    RETRO_TOWER("case_retro_tower", CaseStyle.RETRO, null, false, 3, 0, 1, 13, 16, 15),
+    RETRO_DESKTOP("case_retro_desktop", CaseStyle.RETRO, null, false, 1, 0, 1, 15, 5, 14),
+    HOME80("case_home80", CaseStyle.RETRO, null, true, 1, 0, 3, 15, 3, 12),
+    OFFICE_TOWER("case_office_tower", CaseStyle.OFFICE, null, false, 4, 0, 1, 12, 14, 15),
+    MINI("case_mini", CaseStyle.OFFICE, null, false, 4, 0, 4, 12, 5, 12),
+    WORKSTATION("case_workstation", CaseStyle.OFFICE, null, false, 3, 0, 1, 13, 16, 15),
+    GAMING("case_gaming", CaseStyle.GAMING, null, false, 2, 0, 1, 14, 16, 15),
+    GAMING_WHITE("case_gaming_white", CaseStyle.GAMING, null, false, 2, 0, 1, 14, 16, 15),
+    GAMING_CUBE("case_gaming_cube", CaseStyle.GAMING, null, false, 2, 0, 2, 14, 12, 14),
+    INDUSTRIAL("case_industrial", CaseStyle.INDUSTRIAL, null, false, 1, 0, 1, 15, 16, 15),
+    SERVER("case_server", CaseStyle.SERVER, null, false, 0, 0, 0, 16, 16, 16),
+    AIO("case_aio", CaseStyle.OFFICE, new Screen(2, 14, 2, 10, 8, 0), true, 1, 0, 2, 15, 15, 15),
+    RACK_KVM("case_rack_kvm", CaseStyle.SERVER, new Screen(3, 13, 3, 4, 7, 0), true, 0, 0, 0, 16, 16, 16),
+    CONSOLE("case_console", CaseStyle.INDUSTRIAL, new Screen(3, 13, 2, 5, 7.07f, 45), true, 0, 0, 0, 16, 15, 14);
 
     public final String id;
     public final CaseStyle style;
+    /** Встроенный экран (моноблок, стойка с консолью, пульт) или null. */
+    public final Screen screen;
+    /** Встроенная клавиатура. */
+    public final boolean keyboard;
     private final VoxelShape[] shapes = new VoxelShape[4];
 
-    CaseVariant(String id, CaseStyle style, int x0, int y0, int z0, int x1, int y1, int z1) {
+    CaseVariant(String id, CaseStyle style, Screen screen, boolean keyboard, int x0, int y0, int z0, int x1, int y1, int z1) {
         this.id = id;
         this.style = style;
+        this.screen = screen;
+        this.keyboard = keyboard;
         // Север, восток, юг, запад — как повороты в blockstate (y = 0, 90, 180, 270)
         shapes[0] = Block.box(x0, y0, z0, x1, y1, z1);
         shapes[1] = Block.box(16 - z1, y0, x0, 16 - z0, y1, x1);
         shapes[2] = Block.box(16 - x1, y0, 16 - z1, 16 - x0, y1, 16 - z0);
         shapes[3] = Block.box(z0, y0, 16 - x1, z1, y1, 16 - x0);
+    }
+
+    /**
+     * Встроенный экран: u — от левого края блока, v — от верха (как видит зритель), z — верхний край экрана
+     * у корпуса, смотрящего на север; height — высота по плоскости экрана; tilt — наклон назад, градусы.
+     */
+    public record Screen(float uL, float uR, float vT, float z, float height, float tilt) {
     }
 
     public VoxelShape shape(Direction facing) {

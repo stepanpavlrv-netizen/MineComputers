@@ -66,6 +66,16 @@ public class PcCaseBlock extends BaseEntityBlock {
         return variant == null ? CaseStyle.CLASSIC : variant.style;
     }
 
+    /** Облик корпуса (null — обычный). */
+    public CaseVariant variant() {
+        return variant;
+    }
+
+    /** Встроенная клавиатура (моноблок, домашний компьютер, пульт, стойка с консолью). */
+    public boolean hasKeyboard() {
+        return variant != null && variant.keyboard;
+    }
+
     /** Видно ли детали внутри (стеклянный бок обычного корпуса). */
     public boolean showsParts() {
         return variant == null;
@@ -137,6 +147,15 @@ public class PcCaseBlock extends BaseEntityBlock {
     @Override
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos,
                                                Player player, BlockHitResult hit) {
+        if (variant != null && variant.screen != null) {
+            // Корпус со встроенным экраном: ПКМ — экран, Shift + ПКМ — окно корпуса
+            if (!player.isShiftKeyDown()) {
+                if (level.isClientSide) com.strikerr212.minepc.client.ClientAccess.openTerminal(pos);
+            } else if (!level.isClientSide && level.getBlockEntity(pos) instanceof PcCaseBlockEntity pc) {
+                player.openMenu(pc, buf -> buf.writeBlockPos(pos));
+            }
+            return InteractionResult.sidedSuccess(level.isClientSide);
+        }
         if (!level.isClientSide && level.getBlockEntity(pos) instanceof PcCaseBlockEntity pc) {
             if (player.isShiftKeyDown()) {
                 pc.sendStatus(player);

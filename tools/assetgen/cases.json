@@ -130,5 +130,41 @@
    16,
    16
   ]
+ },
+ {
+  "id": "case_aio",
+  "style": "OFFICE",
+  "box": [
+   1,
+   0,
+   2,
+   15,
+   15,
+   15
+  ]
+ },
+ {
+  "id": "case_rack_kvm",
+  "style": "SERVER",
+  "box": [
+   0,
+   0,
+   0,
+   16,
+   16,
+   16
+  ]
+ },
+ {
+  "id": "case_console",
+  "style": "INDUSTRIAL",
+  "box": [
+   0,
+   0,
+   0,
+   16,
+   15,
+   14
+  ]
  }
 ]

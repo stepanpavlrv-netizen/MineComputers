@@ -34,16 +34,23 @@ public class PcCaseRenderer implements BlockEntityRenderer<PcCaseBlockEntity> {
     private static final float M2_STEP_Y = -2.8f;         // второй слот M.2 — под видеокартой
 
     private final ItemRenderer itemRenderer;
+    private final net.minecraft.client.gui.Font font;
 
     public PcCaseRenderer(BlockEntityRendererProvider.Context context) {
         this.itemRenderer = context.getItemRenderer();
+        this.font = context.getFont();
     }
 
     @Override
     public void render(PcCaseBlockEntity be, float partialTick, PoseStack pose,
                        MultiBufferSource buffers, int light, int overlay) {
-        if (!(be.getBlockState().getBlock() instanceof PcCaseBlock block) || !block.showsParts()) return;   // глухой корпус
+        if (!(be.getBlockState().getBlock() instanceof PcCaseBlock block)) return;
         Direction facing = be.getBlockState().getValue(PcCaseBlock.FACING);
+        if (block.variant() != null && block.variant().screen != null) {
+            renderScreen(be, block.variant().screen, facing, pose, buffers);
+            return;
+        }
+        if (!block.showsParts()) return;   // глухой корпус
 
         pose.pushPose();
         // Поворачиваем всю "сцену" вокруг центра блока по направлению корпуса
@@ -69,6 +76,30 @@ public class PcCaseRenderer implements BlockEntityRenderer<PcCaseBlockEntity> {
             part(be, PcCaseBlockEntity.SLOT_M2 + i, 0, M2_STEP_Y * i, 0, pose, buffers, light, overlay);
         }
 
+        pose.popPose();
+    }
+
+    /** Встроенный экран (моноблок, консоль, пульт): тот же рисунок, что у монитора. */
+    private void renderScreen(PcCaseBlockEntity be, com.strikerr212.minepc.block.CaseVariant.Screen sc, Direction facing,
+                              PoseStack pose, MultiBufferSource buffers) {
+        ClientTerminals.Snapshot s = ClientTerminals.get(be.getBlockPos());
+        if (s == null) return;
+        pose.pushPose();
+        pose.translate(0.5, 0.5, 0.5);
+        pose.mulPose(Axis.YP.rotationDegrees(switch (facing) {
+            case SOUTH -> 180;
+            case WEST -> 90;
+            case EAST -> -90;
+            default -> 0;
+        }));
+        pose.translate(-0.5, -0.5, -0.5);
+        pose.scale(1 / 16f, 1 / 16f, 1 / 16f);
+        pose.translate(16 - sc.uL(), 16 - sc.vT(), sc.z() - 0.01f);
+        if (sc.tilt() != 0) pose.mulPose(Axis.XP.rotationDegrees(sc.tilt()));
+        pose.scale(-1, -1, -1);
+        float w = sc.uR() - sc.uL(), h = sc.height();
+        var cam = net.minecraft.client.Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
+        MonitorRenderer.drawScreen(font, pose, buffers, s, w, h, 0, 0, w, h, Math.sqrt(cam.distanceToSqr(be.getBlockPos().getCenter())));
         pose.popPose();
     }
 

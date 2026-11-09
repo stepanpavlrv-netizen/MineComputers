@@ -129,13 +129,12 @@ public class CiScreenshots {
                 mc.setScreen(null);
                 server.execute(CiScreenshots::placeCases);
             }
-            case 625 -> {
-                mc.options.hideGui = true;
-                shot(mc, "world_cases");
-            }
-            case 640 -> server.execute(CiScreenshots::placeMonitors);
-            case 840 -> shot(mc, "world_monitors");
-            case 860 -> mc.stop();
+            case 607 -> server.execute(CiScreenshots::placeMonitors);
+            case 610 -> mc.options.hideGui = true;
+            case 800 -> shot(mc, "world_cases");
+            case 805 -> server.execute(CiScreenshots::lookAtMonitors);
+            case 825 -> shot(mc, "world_monitors");
+            case 840 -> mc.stop();
             default -> {
             }
         }
@@ -152,12 +151,17 @@ public class CiScreenshots {
             BlockPos pos = row.east(i - variants.length / 2);
             level.setBlockAndUpdate(pos.below(), net.minecraft.world.level.block.Blocks.SMOOTH_STONE.defaultBlockState());
             level.setBlockAndUpdate(pos, ModBlocks.CASES.get(variants[i]).get().defaultBlockState().setValue(PcCaseBlock.FACING, Direction.SOUTH));
+            if (variants[i].screen != null) fillParts(level, pos, 3);   // со встроенным экраном — включить
         }
-        p.teleportTo(level, row.getX() + 0.5, row.getY() + 1.2, row.getZ() + 6.5, 180f, 18f);
+        p.teleportTo(level, row.getX() + 0.5, row.getY() + 1.2, row.getZ() + 7.5, 180f, 12f);
     }
 
     private static void fillCase(ServerLevel level, BlockPos pos, int tier) {
         level.setBlockAndUpdate(pos, ModBlocks.PC_CASE.get().defaultBlockState().setValue(PcCaseBlock.FACING, Direction.NORTH));
+        fillParts(level, pos, tier);
+    }
+
+    private static void fillParts(ServerLevel level, BlockPos pos, int tier) {
         if (level.getBlockEntity(pos) instanceof PcCaseBlockEntity be) {
             var inv = (IItemHandlerModifiable) be.inventory();
             inv.setStackInSlot(PcCaseBlockEntity.SLOT_MOTHERBOARD, HardwarePresets.motherboard(tier));
@@ -218,7 +222,13 @@ public class CiScreenshots {
                 level.setBlockAndUpdate(b, net.minecraft.world.level.block.Block.updateFromNeighbourShapes(level.getBlockState(b), level, b));
             }
         }
-        p.teleportTo(level, row.getX() + 8, row.getY() + 1, row.getZ() - 6.5, 0f, 8f);
+    }
+
+    private static void lookAtMonitors() {
+        var server = Minecraft.getInstance().getSingleplayerServer();
+        ServerPlayer p = server.getPlayerList().getPlayers().get(0);
+        BlockPos row = casePos.east().south(12).west(7);
+        p.teleportTo(p.serverLevel(), row.getX() + 8, row.getY() + 1, row.getZ() - 6.5, 0f, 8f);
     }
 
     /** Окно корпуса для скриншота: другая тема и вкладка. */

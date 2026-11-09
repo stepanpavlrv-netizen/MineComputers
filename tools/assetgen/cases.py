@@ -36,6 +36,33 @@ def gaming_white():
     return recolor(models.case_gaming(), [((26, 26, 31), (232, 234, 238)), ((44, 44, 52), (200, 202, 208)), ((12, 12, 16), (180, 182, 188))])
 
 
+def off_screen(m, cells, base, seed=1):
+    """Картинку экрана — на тёмное «выключенное» стекло (картинку рисует игра поверх)."""
+    import random
+    r = random.Random(seed)
+    for k in cells:
+        f = 1.0 + 0.06 * r.random()
+        m.v[k] = tuple(min(255, int(c * f)) for c in base)
+
+
+def aio():
+    m = models2.office_allinone(True)
+    off_screen(m, [(x, y, 5) for x in range(2, 14) for y in range(6, 14)], (26, 28, 32), 7)
+    return m
+
+
+def kvm():
+    m = models2.rack_kvm()
+    off_screen(m, [(x, y, 11) for x in range(3, 13) for y in range(6, 13)], (8, 20, 12), 8)
+    return m
+
+
+def console():
+    m = models2.ind_console()
+    off_screen(m, [(x, y, 15 - (y - 8)) for x in range(3, 13) for y in range(9, 14)], (40, 24, 8), 9)
+    return m
+
+
 # id: (эскиз, тема окна, рецепт: что добавить к обычному корпусу)
 CASES = {
     "case_retro_tower": (models.case_office, "RETRO", "minecraft:birch_planks"),
@@ -49,6 +76,9 @@ CASES = {
     "case_gaming_cube": (models2.gaming_cube, "GAMING", "minecraft:amethyst_shard"),
     "case_industrial": (models2.ind_cabinet, "INDUSTRIAL", "minecraft:iron_block"),
     "case_server": (models.case_server, "SERVER", "minecraft:chain"),
+    "case_aio": (aio, "OFFICE", "minepc:monitor"),
+    "case_rack_kvm": (kvm, "SERVER", "minepc:monitor_terminal"),
+    "case_console": (console, "INDUSTRIAL", "minepc:monitor_panel"),
 }
 
 

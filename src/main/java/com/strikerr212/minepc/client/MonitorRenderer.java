@@ -77,6 +77,18 @@ public class MonitorRenderer implements BlockEntityRenderer<MonitorBlockEntity> 
         // Этот блок — прямоугольник внутри общего экрана; рисуем только то, что в него попадает
         float bx0 = g.col() * 16 - left, by0 = g.row() * 16 - top, bx1 = bx0 + 16, by1 = by0 + 16;
 
+        var cam = Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
+        drawScreen(font, pose, buffers, s, areaW, areaH, bx0, by0, bx1, by1, Math.sqrt(cam.distanceToSqr(be.getBlockPos().getCenter())));
+        pose.popPose();
+    }
+
+    /**
+     * Нарисовать кадр терминала в прямоугольник 0..areaW × 0..areaH (в текущих координатах позы: X вправо, Y вниз),
+     * обрезая по (bx0, by0)–(bx1, by1). Нужен мониторам и корпусам со встроенным экраном.
+     */
+    public static void drawScreen(Font font, PoseStack pose, MultiBufferSource buffers, ClientTerminals.Snapshot s,
+                                  float areaW, float areaH, float bx0, float by0, float bx1, float by1, double dist) {
+        pose.pushPose();
         Matrix4f m = pose.last().pose();
         VertexConsumer vc = buffers.getBuffer(RenderType.textBackground());
         quadClip(vc, m, 0, 0, areaW, areaH, 0x000000, bx0, by0, bx1, by1);
@@ -111,8 +123,6 @@ public class MonitorRenderer implements BlockEntityRenderer<MonitorBlockEntity> 
         }
 
         // Издалека мелкий текст не разглядеть — тогда только цветной фон
-        var cam = Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
-        double dist = Math.sqrt(cam.distanceToSqr(be.getBlockPos().getCenter()));
         float pixelsPerChar = ch * 16;   // высота символа в «пикселях» на расстоянии 1 блока
         if (dist > pixelsPerChar * 4 + 3) {
             pose.popPose();

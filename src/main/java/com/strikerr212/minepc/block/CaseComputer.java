@@ -321,7 +321,8 @@ public final class CaseComputer implements Computer.Host {
         }
         monitors.clear();
         monitors.addAll(found);
-        hasKeyboard = DeviceBlock.hasKeyboard(level, pos);
+        hasKeyboard = DeviceBlock.hasKeyboard(level, pos)
+                || level.getBlockState(pos).getBlock() instanceof PcCaseBlock b && b.hasKeyboard();
         if (computer != null && computer.isOn()) updateRemovable(level, true);
     }
 
