@@ -11,7 +11,7 @@ local topics = {
   { "сеть", "ip, peers, ping, chat, wifi, send/recv, switch" },
   { "clear", "очистить экран" },
   { "sh", "новая командная строка (exit — назад)" },
-  { "ps / kill <номер>", "процессы на ядрах / остановить" },
+  { "ps, top, kill N", "процессы, нагрузка, остановить" },
   { "reboot / shutdown", "перезагрузить / выключить" },
 }
 local w = term.getSize()

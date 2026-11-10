@@ -213,13 +213,16 @@ local function drawClassic(st)
   local page = st.pages[st.page]
   local y = 5
   local labelW = math.min(30, math.floor(listW * 0.5))
+  local valW = math.max(4, listW - labelW - 1)
+  -- длинное значение обрезаем «…», чтобы не залезало на панель справки
+  local function fit(t) t = tostring(t); return unicode.len(t) > valW and unicode.sub(t, 1, valW - 1) .. "…" or t end
   local cur = page.items[st.row]
   if page.id == "monitor" then
     at(3, y, "PC Health Status — мониторинг", C.value, C.bg)
     y = y + 2
     for _, r in ipairs(readings()) do
       at(3, y, pad(r[1], labelW), C.text, C.bg)
-      at(3 + labelW, y, r[2], r[3] == "hot" and C.warn or r[3] == "warm" and C.value or C.ok, C.bg)
+      at(3 + labelW, y, fit(r[2]), r[3] == "hot" and C.warn or r[3] == "warm" and C.value or C.ok, C.bg)
       y = y + 1
     end
   elseif page.id == "boot" then
@@ -242,9 +245,9 @@ local function drawClassic(st)
       local selected = i == st.row
       if item.kind == "info" then
         at(3, y, pad(label, labelW), C.dim, C.bg)
-        at(3 + labelW, y, value, C.text, C.bg)
+        at(3 + labelW, y, fit(value), C.text, C.bg)
       else
-        local v = item.kind == "action" and item.action ~= "password" and "" or ("[" .. value .. "]")
+        local v = item.kind == "action" and item.action ~= "password" and "" or fit("[" .. value .. "]")
         if selected then
           at(3, y, pad(label, labelW), C.selText, C.sel)
           at(3 + labelW, y, v, C.selText, C.sel)
@@ -610,7 +613,7 @@ local function post(info, cfg, theme)
     local devs = devices()
     for _, id in ipairs({ "nvme", "sata", "hdd", "usb", "floppy" }) do
       local d = devs[id]
-      if d and d.present then line(string.format("  %-16s: %s", DEVICE_NAMES[id], d.path or ""), colors.lightGray) end
+      if d and d.present then line("  " .. pad(DEVICE_NAMES[id] or id, 16) .. ": " .. (d.path or ""), colors.lightGray) end
     end
     at(1, H, "Нажмите DEL — настройки, F12 — меню загрузки", colors.white, colors.black)
     poll(cfg.fastBoot and 0.3 or 1.0)

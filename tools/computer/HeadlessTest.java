@@ -561,6 +561,16 @@ public class HeadlessTest {
         expect("запись на диск посчитана", found && mm.group(3).equals("true"));
         expect("температура выросла, вентилятор крутится, питание есть", found && mm.group(4).equals("true") && mm.group(5).equals("true") && mm.group(6).equals("true"));
 
+        // top: рисует ядра и процессы, выходит по q
+        command("clear");
+        command("top");
+        for (int i = 0; i < 60 && !screen().contains("PID"); i++) ticks(1);
+        show("top");
+        expect("top показывает ядра, память и процессы", screen().contains("Пам") && screen().contains("PID") && screen().contains("bios.lua"));
+        pc.queueEvent("char", "q");
+        for (int i = 0; i < 30 && !screen().contains("/>"); i++) ticks(1);
+        expect("top закрывается по q", screen().contains("/>"));
+
         // BIOS: настройки сохраняются, порядок загрузки нормализуется
         command("clear");
         command("lua");
