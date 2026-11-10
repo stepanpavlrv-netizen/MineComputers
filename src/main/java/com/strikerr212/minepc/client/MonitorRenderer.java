@@ -116,18 +116,21 @@ public class MonitorRenderer implements BlockEntityRenderer<MonitorBlockEntity> 
         float cw = CELL_W * k, ch = CELL_H * k;
 
         int w = s.width(), h = s.height();
+        // Только клетки, которые попадают в этот блок: стена 3×3 не перебирает весь экран девять раз
+        int xa = Math.max(0, (int) Math.floor((bx0 - ox) / cw)), xb = Math.min(w, (int) Math.ceil((bx1 - ox) / cw) + 1);
+        int ya = Math.max(0, (int) Math.floor((by0 - oy) / ch)), yb = Math.min(h, (int) Math.ceil((by1 - oy) / ch) + 1);
         pose.translate(0, 0, 0.002f);
         m = pose.last().pose();
-        for (int y = 0; y < h; y++) {
+        for (int y = ya; y < yb; y++) {
             float y0 = oy + y * ch, y1 = y0 + ch;
             if (y1 < by0 || y0 > by1) continue;
-            int x = 0;
-            while (x < w) {
+            int x = xa;
+            while (x < xb) {
                 int color = s.bg()[y * w + x], start = x;
-                while (x < w && s.bg()[y * w + x] == color) x++;
+                while (x < xb && s.bg()[y * w + x] == color) x++;
                 quadClip(vc, m, ox + start * cw, y0, ox + x * cw, y1, color, bx0, by0, bx1, by1);
             }
-            for (x = 0; x < w; x++) {
+            for (x = xa; x < xb; x++) {
                 int p = y * w + x;
                 float cx = ox + x * cw;
                 if (cx + cw < bx0 || cx > bx1) continue;
@@ -147,9 +150,9 @@ public class MonitorRenderer implements BlockEntityRenderer<MonitorBlockEntity> 
 
         pose.translate(0, 0, 0.002f);
         float glyph = Math.min(cw / CELL_W, ch / CELL_H);
-        for (int y = 0; y < h; y++) {
+        for (int y = ya; y < yb; y++) {
             float y0 = oy + y * ch;
-            for (int x = 0; x < w; x++) {
+            for (int x = xa; x < xb; x++) {
                 int p = y * w + x;
                 char c = s.chars()[p];
                 if (c <= ' ' || TerminalScreen.isArt(c)) continue;

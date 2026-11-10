@@ -96,6 +96,18 @@ end
 
 --- Следующий сигнал с таймаутом (в секундах). nil — ждать бесконечно.
 function event.pullRaw(timeout)
+  if timeout and timeout <= 0 then
+    -- Как в OpenComputers: pull(0) отдаёт то, что уже пришло, и не ждёт ни такта
+    while computer.pending() > 0 do
+      local raw = table.pack(os.pullEventRaw())
+      local sig = translate(raw)
+      if sig then
+        sig.n = sig.n or #sig
+        if not dispatch(sig) then return sig end
+      end
+    end
+    return nil
+  end
   local tid
   if timeout then tid = os.startTimer(math.max(0, timeout)) end
   while true do
@@ -128,7 +140,6 @@ function event.pull(...)
   local deadline = timeout and computer.uptime() + timeout
   while true do
     local left = deadline and math.max(0, deadline - computer.uptime())
-    if deadline and left <= 0 then return nil end
     local sig = event.pullRaw(left)
     if not sig then return nil end
     if sig[1] == "interrupted" then error("interrupted", 0) end
@@ -143,7 +154,6 @@ function event.pullFiltered(...)
   local deadline = timeout and computer.uptime() + timeout
   while true do
     local left = deadline and math.max(0, deadline - computer.uptime())
-    if deadline and left <= 0 then return nil end
     local sig = event.pullRaw(left)
     if not sig then return nil end
     if not filter or filter(table.unpack(sig, 1, sig.n)) then return table.unpack(sig, 1, sig.n) end

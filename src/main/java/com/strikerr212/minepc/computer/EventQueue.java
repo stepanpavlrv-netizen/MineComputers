@@ -33,6 +33,10 @@ final class EventQueue {
         return events.isEmpty();
     }
 
+    int size() {
+        return count.get();
+    }
+
     /** Убрать все события с этим именем. Возвращает true, если что-то убрали. */
     boolean removeNamed(String name) {
         boolean removed = false;

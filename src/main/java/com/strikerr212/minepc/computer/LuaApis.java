@@ -747,6 +747,8 @@ final class LuaApis {
                     return t;
                 }),
                 RegisteredFunction.ofV("uptime", (s, a) -> valueOf(c.uptimeSeconds())),
+                // Сколько событий уже ждёт в очереди: можно забрать их все, не засыпая (event.pull(0))
+                RegisteredFunction.ofV("pending", (s, a) -> valueOf(m.events.size())),
                 // ----- Как в OpenComputers -----
                 RegisteredFunction.ofV("address", (s, a) -> str(c.address())),
                 RegisteredFunction.ofV("componentAddress", (s, a) -> str(OcApis.address(c, text(a.arg(1).checkLuaString())))),

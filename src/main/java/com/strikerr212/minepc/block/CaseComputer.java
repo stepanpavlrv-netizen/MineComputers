@@ -38,7 +38,9 @@ import java.util.Objects;
 public final class CaseComputer implements Computer.Host {
 
     private static final int SCAN_INTERVAL = 10;       // как часто искать монитор, клавиатуру, дисководы (тики)
-    private static final int SEND_INTERVAL = 2;        // экран отправляется не чаще раза в 2 тика
+    // Экран уходит игрокам каждый тик (20 кадров/с); если кадры тяжёлые (меняется почти весь большой экран) —
+    // раз в 2 тика, чтобы не забивать сеть сервера
+    private static final int HEAVY_FRAME = 32 * 1024;
     private static final int KEEPALIVE = 100;          // и обязательно раз в 5 секунд (для новых зрителей)
 
     private final PcCaseBlockEntity be;
@@ -797,13 +799,15 @@ public final class CaseComputer implements Computer.Host {
         forceFull = true;
     }
 
+    private int lastBytes;
+
     private void syncScreen(ServerLevel level, BlockPos pos) {
         long now = level.getGameTime();
         boolean on = computer != null && computer.state() != Computer.State.OFF;
         int version = on ? computer.terminal().version() : -1;
         boolean changed = version != lastVersion;
         boolean keepalive = now - lastSent >= KEEPALIVE;
-        if ((changed && now - lastSent >= SEND_INTERVAL) || keepalive || forceFull) {
+        if ((changed && now - lastSent >= (lastBytes > HEAVY_FRAME ? 2 : 1)) || keepalive || forceFull) {
             byte[] data;
             if (on) {
                 byte[] frame = computer.terminal().snapshot();
@@ -816,6 +820,7 @@ public final class CaseComputer implements Computer.Host {
             }
             PacketDistributor.sendToPlayersTrackingChunk(level, new ChunkPos(pos),
                     new TerminalPayload(pos, data, hasKeyboard));
+            lastBytes = data.length;
             lastSent = now;
             lastVersion = version;
             forceFull = false;

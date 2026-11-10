@@ -571,6 +571,16 @@ public class HeadlessTest {
         for (int i = 0; i < 30 && !screen().contains("/>"); i++) ticks(1);
         expect("top закрывается по q", screen().contains("/>"));
 
+        // event.pull(0) как в OpenComputers: отдаёт уже пришедшие события и не ждёт такта
+        command("clear");
+        command("lua");
+        command("E = require('event') os.queueEvent('aa', 1) os.queueEvent('bb', 2) T = computer.uptime() X, Y, Z = E.pull(0), E.pull(0), E.pull(0) D = computer.uptime() - T");
+        command("print('PULL0', X, Y, Z, D, computer.pending())");
+        for (int i = 0; i < 20; i++) ticks(1);
+        command("exit()");
+        show("event.pull(0)");
+        expect("event.pull(0) забирает очередь без ожидания", screen().replaceAll("\\s+", " ").contains("PULL0 aa bb nil 0 0"));
+
         // BIOS: настройки сохраняются, порядок загрузки нормализуется
         command("clear");
         command("lua");
