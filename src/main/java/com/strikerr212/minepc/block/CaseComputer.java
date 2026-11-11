@@ -38,6 +38,10 @@ import java.util.Objects;
 public final class CaseComputer implements Computer.Host {
 
     private static final int SCAN_INTERVAL = 10;       // как часто искать монитор, клавиатуру, дисководы (тики)
+    private static final long SETTLE_NANOS = 1_500_000L;
+    private int seenVersion = -2;
+    private long seenChangeNanos;
+
     /** Сколько кадров экрана отправлено всего (для проверки скорости в CI). */
     public static final java.util.concurrent.atomic.AtomicLong FRAMES_SENT = new java.util.concurrent.atomic.AtomicLong();
 
@@ -839,9 +843,16 @@ public final class CaseComputer implements Computer.Host {
             long rate = (long) com.strikerr212.minepc.MineConfig.screenKbPerSecond() * 1024;
             if (lastSentNanos != 0) screenTokens = Math.min(rate / 4.0, screenTokens + rate * ((now - lastSentNanos) / 1e9));
             if (!changed && !full) return;
+            if (version != seenVersion) {
+                seenVersion = version;
+                seenChangeNanos = now;
+            }
             if (!full) {
                 long minGap = 1_000_000_000L / Math.max(10, com.strikerr212.minepc.MineConfig.screenFps());
                 if (now - lastSentNanos < minGap) return;
+                // Программа ещё рисует кадр (например, картинка уже готова, а строка состояния — нет):
+                // подождать, пока экран 1.5 мс не меняется, но не дольше 1/20 секунды. Так кадр приходит целиком.
+                if (now - seenChangeNanos < SETTLE_NANOS && now - lastSentNanos < 50_000_000L) return;
                 if (!unlimited && screenTokens < 0) return;
             }
             byte[] data;
