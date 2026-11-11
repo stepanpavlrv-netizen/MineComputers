@@ -17,6 +17,7 @@ sleep 3
 echo "--- строки журнала с ошибками ---"
 grep -E "ERROR|Exception|Missing|missing|minepc" $LOG | grep -v "DEBUG\|Narrator\|flite\|OpenAL\|sound\|Sound\|sessionserver\|SocketTimeout" | head -60
 if grep -E "Exception|ERROR" $LOG | grep -q -i "minepc"; then
+  grep -E -B2 -A12 "Exception|ERROR" $LOG | grep -v DEBUG | grep -i -B2 -A12 "minepc" | head -80
   echo "Есть ошибки, связанные с модом"; exit 1
 fi
 grep -q "blocks.png-atlas" $LOG || { echo "Клиент не загрузил ресурсы"; tail -80 client.log; exit 1; }
