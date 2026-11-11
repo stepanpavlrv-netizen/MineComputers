@@ -14,8 +14,9 @@ import net.minecraft.resources.ResourceLocation;
  * @param pos  системный блок
  * @param fan  обороты вентиляторов, 0..100 (0 — выключен)
  * @param hdd  есть ли жёсткий диск (он тоже шумит)
+ * @param start компьютер только что включили — звук раскручивается (иначе игрок просто подошёл)
  */
-public record HumPayload(BlockPos pos, int fan, boolean hdd) implements CustomPacketPayload {
+public record HumPayload(BlockPos pos, int fan, boolean hdd, boolean start) implements CustomPacketPayload {
 
     public static final Type<HumPayload> TYPE =
             new Type<>(ResourceLocation.fromNamespaceAndPath(MineComputers.MODID, "hum"));
@@ -24,6 +25,7 @@ public record HumPayload(BlockPos pos, int fan, boolean hdd) implements CustomPa
             BlockPos.STREAM_CODEC, HumPayload::pos,
             ByteBufCodecs.VAR_INT, HumPayload::fan,
             ByteBufCodecs.BOOL, HumPayload::hdd,
+            ByteBufCodecs.BOOL, HumPayload::start,
             HumPayload::new);
 
     @Override

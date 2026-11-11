@@ -821,6 +821,7 @@ public final class CaseComputer implements Computer.Host {
     private final java.util.Set<BlockPos> diskBusy = java.util.concurrent.ConcurrentHashMap.newKeySet();
     private final Map<BlockPos, Long> lastDiskSound = new HashMap<>();
     private int lastHum = -1;
+    private boolean humStart;
     private long lastHumTick;
     private boolean hasHdd;
     private volatile BlockPos keyboardPos;
@@ -871,6 +872,7 @@ public final class CaseComputer implements Computer.Host {
         double[] d = noGpu ? new double[]{0.6, 0.15, 0.15} : new double[]{0.12};
         audio(700, 0, com.strikerr212.minepc.computer.audio.Audio.beepCommands(f, d, 0.12));
         lastHum = -1;
+        humStart = true;
     }
 
     /** Компьютер не включился: коды ошибок писком (нет памяти — три длинных, нет диска — один короткий). */
@@ -931,7 +933,8 @@ public final class CaseComputer implements Computer.Host {
         if (changed || (fan > 0 && age - lastHumTick >= 40)) {
             lastHum = fan;
             lastHumTick = age;
-            var payload = new com.strikerr212.minepc.network.HumPayload(pos, fan, fan > 0 && hasHdd);
+            var payload = new com.strikerr212.minepc.network.HumPayload(pos, fan, fan > 0 && hasHdd, humStart);
+            humStart = false;
             for (net.minecraft.server.level.ServerPlayer player : viewers) {
                 if (player.distanceToSqr(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5) < 32 * 32) {
                     PacketDistributor.sendToPlayer(player, payload);

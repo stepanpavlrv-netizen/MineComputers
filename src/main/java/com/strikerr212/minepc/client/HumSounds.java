@@ -25,12 +25,12 @@ public final class HumSounds {
     }
 
     /** Главный поток: пришли обороты от сервера. */
-    public static void update(BlockPos pos, int fan, boolean hdd) {
-        set(FANS, pos, fan / 100f, false);
-        set(DISKS, pos, hdd ? 1f : 0f, true);
+    public static void update(BlockPos pos, int fan, boolean hdd, boolean start) {
+        set(FANS, pos, fan / 100f, false, start);
+        set(DISKS, pos, hdd ? 1f : 0f, true, start);
     }
 
-    private static void set(Map<BlockPos, Hum> map, BlockPos pos, float target, boolean disk) {
+    private static void set(Map<BlockPos, Hum> map, BlockPos pos, float target, boolean disk, boolean start) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.level == null) return;
         Hum h = map.get(pos);
@@ -41,6 +41,8 @@ public final class HumSounds {
         if (h == null) {
             if (target <= 0) return;
             h = new Hum(disk ? ModSounds.HDD_SPIN.get() : ModSounds.FAN.get(), pos, disk);
+            // Компьютер уже работал (игрок подошёл) — сразу на нужных оборотах, без раскрутки
+            if (!start) h.level = target;
             map.put(pos.immutable(), h);
             mc.getSoundManager().play(h);
         }

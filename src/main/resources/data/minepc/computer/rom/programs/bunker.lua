@@ -31,12 +31,14 @@ end
 local HALF = CH / 2
 
 ---------------------------------------------------------------- звук (звуковой чип платы; без него игра идёт молча)
--- Каналы: 1 — выстрел, 2 — роботы, 3 — подбор и сообщения, 4 — шаги
-local snd = (sound and sound.channels and sound.channels() >= 4) and sound or nil
+-- Каналы: 1 — выстрел, 2 — роботы, 3 — подбор и сообщения, 4 — шаги (на простой плате каналов меньше — делят)
+local snd = (sound and sound.channels and sound.channels() >= 1) and sound or nil
+local CHN = snd and snd.channels() or 1
+local function chan(c) return (c - 1) % CHN + 1 end
 local function sfx(ch, freq, sec, vol, wave, to)
-  if snd then pcall(snd.play, ch, freq, sec, vol, wave, to) end
+  if snd then pcall(snd.play, chan(ch), freq, sec, vol, wave, to) end
 end
-if snd then
+if snd and CHN >= 4 then
   snd.setADSR(1, 1, 110, 0.15, 60)
   snd.setADSR(2, 3, 80, 0.5, 90)
   snd.setADSR(3, 2, 60, 0.7, 60)
@@ -384,9 +386,10 @@ local function shoot(t)
       say(score == total and "Все роботы уничтожены!" or "Робот уничтожен")
       sfx(2, 520, 0.45, 0.9, "sawtooth", 45)          -- робот ломается
       if score == total and snd then                  -- победа: арпеджио по очереди
+        local c = chan(3)
         for i, n in ipairs({ "C5", "E5", "G5", "C6" }) do
-          snd.setWave(3, snd.modes.square) snd.setVolume(3, 0.6) snd.setFrequency(3, n)
-          snd.open(3) snd.delay(i == 4 and 400 or 110) snd.close(3) snd.delay(20)
+          snd.setWave(c, snd.modes.square) snd.setVolume(c, 0.6) snd.setFrequency(c, n)
+          snd.open(c) snd.delay(i == 4 and 400 or 110) snd.close(c) snd.delay(20)
         end
         snd.process()
       end

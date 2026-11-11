@@ -22,7 +22,7 @@ public final class ClientAccess {
     }
 
     public static void onHum(com.strikerr212.minepc.network.HumPayload payload) {
-        HumSounds.update(payload.pos(), payload.fan(), payload.hdd());
+        HumSounds.update(payload.pos(), payload.fan(), payload.hdd(), payload.start());
     }
 
     public static void onTerminal(TerminalPayload payload) {
