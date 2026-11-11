@@ -128,9 +128,11 @@ public class MonitorRenderer implements BlockEntityRenderer<MonitorBlockEntity> 
             float u0 = (sx0 - ox) / (w * cw), u1 = (sx1 - ox) / (w * cw), v0 = (sy0 - oy) / (h * ch), v1 = (sy1 - oy) / (h * ch);
             texQuad(tc, m, sx0, sy0, sx1, sy1, u0, v0, u1, v1);
         }
-        // Рамки, восьмушки, четвертинки — прямоугольниками чуть ближе к зрителю
+        // Рамки, восьмушки, четвертинки — прямоугольниками чуть ближе к зрителю.
+        // Буфер берём заново: после буфера текстуры прежний уже закрыт
         pose.translate(0, 0, 0.002f);
         m = pose.last().pose();
+        final VertexConsumer ac = buffers.getBuffer(RenderType.textBackground());
         for (int y = ya; y < yb; y++) {
             float y0 = oy + y * ch, y1 = y0 + ch;
             if (y1 < by0 || y0 > by1) continue;
@@ -142,7 +144,7 @@ public class MonitorRenderer implements BlockEntityRenderer<MonitorBlockEntity> 
                 final Matrix4f mm = m;
                 final float fy = y0;
                 CellArt.draw(s.chars()[p], s.fg()[p], s.bg()[p], (a0, b0, a1, b1, rgb) ->
-                        quadClip(vc, mm, cx + a0 * cw, fy + b0 * ch, cx + a1 * cw, fy + b1 * ch, rgb, bx0, by0, bx1, by1));
+                        quadClip(ac, mm, cx + a0 * cw, fy + b0 * ch, cx + a1 * cw, fy + b1 * ch, rgb, bx0, by0, bx1, by1));
             }
         }
 
