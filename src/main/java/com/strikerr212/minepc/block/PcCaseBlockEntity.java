@@ -525,28 +525,32 @@ public class PcCaseBlockEntity extends BlockEntity implements com.strikerr212.mi
         if (withParts) out.add(Component.translatable("message.minepc.status.perf").withStyle(ChatFormatting.AQUA));
         if (in.cpu() != null) {
             boolean reduced = r.cpuThrottle() < 1 || r.cpuMemory() < 0.85;
-            out.add(perf("message.minepc.status.cpu", reduced, Units.ops(r.cpuGips()), Units.level(r.cpuLevel())));
+            int coreKhz = (int) Math.round(in.cpu().clockKhz() * r.cpuThrottle() * r.cpuMemory());
+            out.add(perf("message.minepc.status.cpu", reduced, Units.gameClock(coreKhz), Units.gameClock((int) Math.round(r.cpuMhz() * 1000)),
+                    Units.level(r.cpuLevel())));
             com.strikerr212.minepc.computer.Computer.Limits lim = CaseComputer.limitsFor(in, r, com.strikerr212.minepc.MineConfig.speedFor(level));
-            out.add(perf("message.minepc.status.game", reduced, Units.gameOps(lim.opsPerTick() * com.strikerr212.minepc.computer.Computer.TICKS_PER_SECOND),
+            long hz = (long) lim.opsPerTick() * com.strikerr212.minepc.computer.Computer.TICKS_PER_SECOND;
+            out.add(perf("message.minepc.status.game", reduced, Units.gameClock((int) (hz / 1000)),
+                    Units.gameClock((int) Math.round(hz / 1000.0 * (1 + in.cpu().boostPct() / 100.0))),
                     lim.cores(), Units.bytes(lim.memoryBytes())));
         }
         if (in.gpu() != null) {
             out.add(perf("message.minepc.status.gpu", r.gpuThrottle() < 1,
-                    Units.tflops(r.gpuTflops()), Units.level(r.gpuLevel())));
+                    Units.cells(Perf.gpuCellsPerSecond(r.gpuLevel())), Units.level(r.gpuLevel())));
         } else if (in.integrated() != null) {
             out.add(perf("message.minepc.status.igpu", r.gpuThrottle() < 1,
-                    Units.tflops(r.gpuTflops()), Units.level(r.gpuLevel())));
+                    Units.cells(Perf.gpuCellsPerSecond(r.gpuLevel())), Units.level(r.gpuLevel())));
         }
         if (r.ramMb() > 0) {
             MutableComponent line = perf("message.minepc.status.ram", r.channels() < (in.board() != null ? in.board().channels() : 1),
-                    Units.size(r.ramMb()), Units.frequency(r.ramMts()), r.channels(), Units.bandwidth(r.ramGbs()));
+                    Units.gameSize(r.ramMb()), Units.gameBandwidth(Perf.ramChannelMbs(r.ramMts())), r.channels(), Units.gameBandwidth(r.ramMbs()));
             if (hasNote(r, SystemModel.Issue.RAM_LIMITED)) {
                 line.append(Component.translatable("message.minepc.status.ram_limited").withStyle(ChatFormatting.GOLD));
             }
             out.add(line);
         }
         if (r.bootSeconds() > 0) {
-            out.add(perf("message.minepc.status.boot", r.bootSeconds() > 20, Units.seconds(r.bootSeconds()),
+            out.add(perf("message.minepc.status.boot", r.bootSeconds() > 20, Units.seconds(Perf.gameBootTicks(r.bootSeconds()) / 20.0),
                     Component.translatable(r.bootFromSsd() ? "message.minepc.status.boot_ssd" : "message.minepc.status.boot_hdd")));
         }
 
@@ -596,13 +600,13 @@ public class PcCaseBlockEntity extends BlockEntity implements com.strikerr212.mi
         return switch (n.issue()) {
             case MEMORY_BOUND -> Component.translatable(key, Math.round(n.a()));
             case CHANNELS -> Component.translatable(key, (int) n.a(), (int) n.b());
-            case MIXED_RAM -> Component.translatable(key, Units.frequency((int) n.a()));
+            case MIXED_RAM -> Component.translatable(key, Units.gameBandwidth(Perf.ramChannelMbs((int) n.a())));
             case CPU_BOTTLENECK, GPU_BOTTLENECK -> Component.translatable(key,
                     String.format(Locale.ROOT, "%.1f", n.a()), String.format(Locale.ROOT, "%.1f", n.b()));
             case PSU_OVERLOAD, PSU_HIGH -> Component.translatable(key, Math.round(n.a()));
-            case RAM_LIMITED -> Component.translatable(key, Units.frequency((int) n.a()));
-            case SLOW_BOOT -> Component.translatable(key, Units.seconds(n.a()));
-            case INTEGRATED_GPU -> Component.translatable(key, Units.size((int) n.a()));
+            case RAM_LIMITED -> Component.translatable(key, Units.gameBandwidth(Perf.ramChannelMbs((int) n.a())));
+            case SLOW_BOOT -> Component.translatable(key, Units.seconds(Perf.gameBootTicks(n.a()) / 20.0));
+            case INTEGRATED_GPU -> Component.translatable(key, Units.gameSize((int) n.a()));
             default -> Component.translatable(key);
         };
     }
@@ -648,7 +652,7 @@ public class PcCaseBlockEntity extends BlockEntity implements com.strikerr212.mi
             return Component.translatable("message.minepc.cooling.weak", Units.watts(heat), Units.watts(capacity),
                     pct(r.cpuThrottle())).withStyle(ChatFormatting.GOLD);
         }
-        return Component.translatable("message.minepc.cooling.ok", Units.watts(heat), Units.watts(capacity))
+        return Component.translatable("message.minepc.cooling.ok", Units.watts(heat), Units.watts(capacity), pct(r.cpuThrottle()))
                 .withStyle(ChatFormatting.GREEN);
     }
 

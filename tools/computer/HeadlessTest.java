@@ -596,6 +596,23 @@ public class HeadlessTest {
         expect("запись на диск посчитана", found && mm.group(3).equals("true"));
         expect("температура выросла, вентилятор крутится, питание есть", found && mm.group(4).equals("true") && mm.group(5).equals("true") && mm.group(6).equals("true"));
 
+        // Живая частота: холодный процессор в бусте, под нагрузкой на слабом кулере — сбрасывает частоту
+        pc.setThermal(new Computer.Thermal(200, 60, 0, 0, false, 250, 400, true, 0.2));
+        for (int i = 0; i < 160; i++) ticks(1);
+        double idle = pc.clockFactor();
+        command("clear");
+        command("lua");
+        command("P = computer.spawn('/busy.lua')");
+        for (int i = 0; i < 300; i++) ticks(1);
+        double hot = pc.clockFactor();
+        command("print('CLK', computer.stats().clock) computer.kill(P)");
+        command("exit()");
+        show("частота");
+        System.out.println("  частота: в простое ×" + idle + ", под нагрузкой ×" + hot);
+        expect("в простое буст, под нагрузкой на слабом кулере частота ниже базовой", idle > 1.05 && hot < 1 && hot > 0.3);
+        pc.setThermal(new Computer.Thermal(95, 60, 0, 0, false, 250, 400, true));
+        for (int i = 0; i < 100; i++) ticks(1);
+
         // top: рисует ядра и процессы, выходит по q
         command("clear");
         command("top");

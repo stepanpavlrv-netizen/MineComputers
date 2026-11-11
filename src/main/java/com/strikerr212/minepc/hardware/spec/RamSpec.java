@@ -19,8 +19,8 @@ public class RamSpec extends PartSpec {
     public RamSpec() {
         super(HardwareType.RAM, List.of(
                 Param.number("ram.chips", 0, NONE, new int[]{4, 8, 16}, new int[]{1, 2, 3}),
-                Param.number("ram.chip_mb", 0, MB, new int[]{64, 128, 256, 512, 1024, 2048}, new int[]{1, 1, 2, 3, 4, 5}),
-                Param.number("ram.speed", 0, MHZ, new int[]{800, 1600, 2400, 3200, 4000, 4800, 6000, 7200},
+                Param.number("ram.chip_mb", 0, KB, new int[]{64, 128, 256, 512, 1024, 2048}, new int[]{1, 1, 2, 3, 4, 5}),
+                Param.number("ram.speed", 0, RAM, new int[]{800, 1600, 2400, 3200, 4000, 4800, 6000, 7200},
                         new int[]{1, 1, 2, 3, 3, 4, 5, 5}),
                 Param.option("ram.heatsink", 0, 1, 1, 2, 3),
                 Param.pcb("ram.pcb", 0),
@@ -64,12 +64,11 @@ public class RamSpec extends PartSpec {
     @Override
     public void describe(List<Integer> v, List<Component> lines) {
         RamData d = derive(v);
-        lines.add(line("tooltip.minepc.capacity", Units.size(d.capacityMb())));
+        lines.add(line("tooltip.minepc.capacity", Units.gameSize(d.capacityMb())));
         lines.add(line("tooltip.minepc.chips",
-                Component.translatable("tooltip.minepc.chips_value", d.chips(), Units.size(d.chipMb()))));
-        lines.add(line("tooltip.minepc.clock", Units.frequency(d.speedMhz())));
-        lines.add(perfLine("tooltip.minepc.perf_ram_channel", Units.bandwidth(Perf.ramChannelGbs(d.speedMhz()))));
-        lines.add(perfLine("tooltip.minepc.game_memory", Units.bytes(Perf.gameMemoryKb(d.capacityMb()) * 1024L)));
+                Component.translatable("tooltip.minepc.chips_value", d.chips(), Units.gameSize(d.chipMb()))));
+        lines.add(line("tooltip.minepc.ram_speed", Units.gameBandwidth(Perf.ramChannelMbs(d.speedMhz()))));
+        lines.add(perfLine("tooltip.minepc.perf_ram_two", Units.gameBandwidth(Perf.ramChannelMbs(d.speedMhz()) * 2)));
     }
 
     @Override

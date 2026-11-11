@@ -49,9 +49,9 @@ public class PerfReport {
     static String fmt(SystemModel.Report r) {
         StringBuilder b = new StringBuilder();
         b.append(String.format(Locale.ROOT,
-                "CPU %7.1f GIPS (ур.%.1f, частота %3d%%, память %3d%%) | GPU %6.2f TF (ур.%.1f, %3d%%) | RAM %5.1f ГБ/с x%d | загрузка %5.1f с | розетка %4d Вт | оценка %5d%s",
-                r.cpuGips(), r.cpuLevel(), Math.round(r.cpuThrottle() * 100), Math.round(r.cpuMemory() * 100),
-                r.gpuTflops(), r.gpuLevel(), Math.round(r.gpuThrottle() * 100), r.ramGbs(), r.channels(),
+                "CPU %6.1f МГц (ур.%.1f, частота %3d%%, память %3d%%) | GPU %6.2f TF (ур.%.1f, %3d%%, %4d тыс.кл/с) | RAM %5.0f МБ/с x%d | загрузка %5.1f с | розетка %4d Вт | оценка %5d%s",
+                r.cpuMhz(), r.cpuLevel(), Math.round(r.cpuThrottle() * 100), Math.round(r.cpuMemory() * 100),
+                r.gpuTflops(), r.gpuLevel(), Math.round(r.gpuThrottle() * 100), Perf.gpuCellsPerSecond(r.gpuLevel()) / 1000, r.ramMbs(), r.channels(),
                 r.bootSeconds(), r.wallWatts(), r.score(), r.bootable() ? "" : " НЕ ЗАПУСТИТСЯ"));
         for (SystemModel.Note n : r.notes()) {
             b.append(String.format(Locale.ROOT, "\n      ! %s %.1f %.1f", n.issue(), n.a(), n.b()));
@@ -77,13 +77,13 @@ public class PerfReport {
             SsdData ssd = Specs.SSD.derive(L(StockTables.SSD[t - 1]));
             RamData ram = Specs.RAM.derive(L(StockTables.RAM[t - 1]));
             System.err.printf(Locale.ROOT,
-                    "ур.%d  CPU %6.1f GIPS (ядро %5.2f, нужно памяти %5.1f ГБ/с, %3d Вт) | GPU %5.2f TF, шина %3d бит %5.0f ГБ/с, память %3d%% | RAM %5.1f ГБ/с/канал | HDD %3d оп/с %5.1f с | SSD %7d оп/с %4.1f с%n",
-                    t, Perf.cpuGips(cpu), Perf.cpuSingleGips(cpu), Perf.cpuMemoryDemand(cpu), cpu.tdp(),
+                    "ур.%d  CPU %6.1f МГц (ядро %4.2f, буст %2d%%, нужно памяти %5.0f МБ/с, %3d Вт) | GPU %5.2f TF, шина %3d бит %5.0f ГБ/с, память %3d%% | RAM %5.0f МБ/с/канал | HDD %3d оп/с %5.1f с | SSD %7d оп/с %4.1f с%n",
+                    t, Perf.cpuMhz(cpu), Perf.coreMhz(cpu), cpu.boostPct(), Perf.cpuMemoryDemand(cpu), cpu.tdp(),
                     Perf.gpuTflops(gpu), Perf.gpuBusBits(gpu), Perf.gpuMemoryGbs(gpu), Math.round(Perf.gpuMemoryFactor(gpu) * 100),
-                    Perf.ramChannelGbs(ram.speedMhz()), hdd.iops(), Perf.bootSeconds(hdd), ssd.iops(), Perf.bootSeconds(ssd));
-            near(Perf.cpuGips(cpu), Perf.STOCK_CPU_GIPS[t - 1], "STOCK_CPU_GIPS[" + (t - 1) + "]");
+                    Perf.ramChannelMbs(ram.speedMhz()), hdd.iops(), Perf.bootSeconds(hdd), ssd.iops(), Perf.bootSeconds(ssd));
+            near(Perf.cpuMhz(cpu), Perf.STOCK_CPU_MHZ[t - 1], "STOCK_CPU_MHZ[" + (t - 1) + "]");
             near(Perf.gpuTflops(gpu), Perf.STOCK_GPU_TFLOPS[t - 1], "STOCK_GPU_TFLOPS[" + (t - 1) + "]");
-            check(Math.abs(Perf.level(Perf.cpuGips(cpu), Perf.STOCK_CPU_GIPS) - t) < 0.05, "уровень CPU " + t);
+            check(Math.abs(Perf.level(Perf.cpuMhz(cpu), Perf.STOCK_CPU_MHZ) - t) < 0.05, "уровень CPU " + t);
         }
 
         System.err.println("=== Заводские сборки (все детали одного уровня) ===");
@@ -91,11 +91,11 @@ public class PerfReport {
         for (int t = 1; t <= 5; t++) {
             SystemModel.Input in = stock(t, false, false, t, sticks(t));
             SystemModel.Report r = SystemModel.evaluate(in);
-            near(Perf.ramChannelGbs(r.ramMts()) * r.channels(), Perf.STOCK_RAM_GBS[t - 1], "STOCK_RAM_GBS[" + (t - 1) + "]");
+            near(Perf.ramChannelMbs(r.ramMts()) * r.channels(), Perf.STOCK_RAM_MBS[t - 1], "STOCK_RAM_MBS[" + (t - 1) + "]");
             System.err.printf("ур.%d  %s%n", t, fmt(r));
             check(r.bootable(), "заводская сборка ур." + t + " должна запускаться");
             check(r.score() > prev, "оценка должна расти с уровнем");
-            check(r.cpuThrottle() == 1 && r.gpuThrottle() == 1, "заводская сборка ур." + t + " не должна троттлить");
+            check(r.cpuThrottle() >= 1 && r.gpuThrottle() == 1, "заводская сборка ур." + t + " не должна троттлить (" + r.cpuThrottle() + ")");
             for (SystemModel.Note n : r.notes()) {
                 check(n.issue() != SystemModel.Issue.CPU_BOTTLENECK && n.issue() != SystemModel.Issue.GPU_BOTTLENECK,
                         "в заводской сборке ур." + t + " не должно быть узких мест: " + n.issue());

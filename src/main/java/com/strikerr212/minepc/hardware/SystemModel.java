@@ -19,7 +19,7 @@ public final class SystemModel {
     public record Input(MotherboardData board, CpuData cpu, CoolerData cooler, List<RamData> ram, GpuData gpu,
                         PsuData psu, List<HddData> hdds, List<SsdData> ssds, int powerDraw) {
 
-        /** Сколько всего оперативной памяти, МБ. */
+        /** Сколько всего оперативной памяти: «МБ» детали = КБ в игре. */
         public int ramMb() {
             int mb = 0;
             if (ram != null) for (RamData r : ram) mb += r.capacityMb();
@@ -36,10 +36,9 @@ public final class SystemModel {
             return gpu != null ? gpu : integrated();
         }
 
-        /** Сколько оперативной памяти забрало видеоядро под экран, МБ. */
+        /** Сколько оперативной памяти забрало видеоядро под экран, КБ в игре. */
         public int sharedVramMb() {
-            GpuData i = integrated();
-            return i == null ? 0 : i.vramMb();
+            return gpu == null ? Perf.igpuSharedKb(cpu, ramMb()) : 0;
         }
     }
 
@@ -56,7 +55,7 @@ public final class SystemModel {
         /** a = во сколько раз медленнее работает чужая память, если планки разные */
         MIXED_RAM(false),
         NO_GPU(false),
-        /** a = сколько МБ оперативной памяти отдано видеоядру */
+        /** a = сколько КБ оперативной памяти отдано видеоядру */
         INTEGRATED_GPU(false),
         /** a = уровень процессора, b = уровень видеокарты */
         CPU_BOTTLENECK(false),
@@ -80,22 +79,23 @@ public final class SystemModel {
     /**
      * Итог оценки.
      *
-     * @param cpuThrottle  доля частоты процессора, которую держит кулер (1 — без троттлинга)
+     * @param cpuThrottle  частота процессора под полной нагрузкой от базовой: больше 1 — держит буст,
+     *                     меньше 1 — кулер не справляется и процессор сбрасывает частоту
      * @param cpuMemory    доля скорости процессора, которую успевает прокормить память
-     * @param cpuGips      реальная скорость процессора в этой сборке, млрд оп/с
+     * @param cpuMhz       мощность процессора в этой сборке: все ядра под полной нагрузкой, МГц
      * @param gpuThrottle  доля частоты видеокарты, которую держит её охлаждение
      * @param gpuTflops    реальная скорость видеокарты, TFLOPS (0 — нет видеокарты)
      * @param ramMts       на какой скорости работает память (с учётом платы и самой медленной планки)
      * @param channels     сколько каналов задействовано
-     * @param ramGbs       итоговая пропускная способность памяти
+     * @param ramMbs       итоговая пропускная способность памяти, МБ/с в игре
      * @param bootSeconds  время загрузки с самого быстрого накопителя (0 — накопителей нет)
      * @param bootFromSsd  загрузка идёт с SSD
      * @param wallWatts    сколько берётся из розетки (0 — нет блока питания)
      * @param score        оценка системы: заводская сборка ур. 3 ≈ 1000
      */
-    public record Report(boolean bootable, double cpuThrottle, double cpuMemory, double cpuGips, double cpuLevel,
+    public record Report(boolean bootable, double cpuThrottle, double cpuMemory, double cpuMhz, double cpuLevel,
                          double gpuThrottle, double gpuTflops, double gpuLevel,
-                         int ramMb, int ramMts, int channels, double ramGbs,
+                         int ramMb, int ramMts, int channels, double ramMbs,
                          double bootSeconds, boolean bootFromSsd, int wallWatts, int score, List<Note> notes) {
     }
 
@@ -104,7 +104,7 @@ public final class SystemModel {
     /** Скорость, которую даёт простейший видеовыход без видеокарты, TFLOPS. */
     private static final double NO_GPU_TFLOPS = 0.05;
     /** Опорные значения оценки — заводская сборка ур. 3. */
-    private static final double REF_CPU = 58.5, REF_GPU = 9.0, REF_RAM = 51.2, REF_BOOT = 3.5;
+    private static final double REF_CPU = 28, REF_CORE = 3.5, REF_GPU = 9.0, REF_RAM = 512, REF_BOOT = 3.5;
 
     public static Report evaluate(Input in) {
         List<Note> notes = new ArrayList<>();
@@ -136,7 +136,7 @@ public final class SystemModel {
             maxMts = Math.max(maxMts, r.speedMhz());
         }
         int ramMts = 0, channels = 0;
-        double ramGbs = 0;
+        double ramMbs = 0;
         if (!ram.isEmpty()) {
             ramMts = minMts;
             if (maxMts > minMts) notes.add(new Note(Issue.MIXED_RAM, minMts, maxMts));
@@ -152,20 +152,21 @@ public final class SystemModel {
             } else {
                 channels = 1;
             }
-            ramGbs = Perf.ramChannelGbs(ramMts) * channels;
+            ramMbs = Perf.ramChannelMbs(ramMts) * channels;
         }
 
         // ----- Процессор -----
-        double cpuThrottle = 1, cpuMemory = 1, cpuGips = 0, cpuLevel = 0;
+        double cpuThrottle = 1, cpuMemory = 1, cpuMhz = 0, cpuLevel = 0;
         if (in.cpu() != null) {
             int cooling = in.cooler() != null ? in.cooler().coolingW() : Perf.PASSIVE_COOLING;
-            cpuThrottle = Perf.throttle(in.cpu().tdp(), cooling);
+            // Под полной нагрузкой: на какой частоте процессор держится (буст, база или ниже — если кулер слабый)
+            cpuThrottle = com.strikerr212.minepc.computer.CpuClock.steady(in.cpu().tdp(), cooling, in.cpu().boostPct() / 100.0, 1.0);
             double need = Perf.cpuMemoryDemand(in.cpu()) * cpuThrottle;
-            cpuMemory = ramGbs > 0 ? Perf.memoryFactor(ramGbs / need) : Perf.memoryFactor(0);
-            cpuGips = Perf.cpuGips(in.cpu()) * cpuThrottle * cpuMemory;
-            cpuLevel = Perf.level(cpuGips, Perf.STOCK_CPU_GIPS);
+            cpuMemory = ramMbs > 0 ? Perf.memoryFactor(ramMbs / need) : Perf.memoryFactor(0);
+            cpuMhz = Perf.cpuMhz(in.cpu()) * cpuThrottle * cpuMemory;
+            cpuLevel = Perf.level(cpuMhz, Perf.STOCK_CPU_MHZ);
             // Предупреждаем, когда память отнимает заметно больше, чем при хорошем запасе
-            if (ramGbs > 0 && ramGbs < need) {
+            if (ramMbs > 0 && ramMbs < need) {
                 notes.add(new Note(Issue.MEMORY_BOUND, Math.round((1 - cpuMemory) * 100), 0));
             }
         }
@@ -179,7 +180,7 @@ public final class SystemModel {
         } else if (in.integrated() != null) {
             // Видеоядро: греется вместе с процессором, видеопамять и полоса — из оперативной памяти
             gpuThrottle = cpuThrottle;
-            gpuTflops = Perf.integratedTflops(in.integrated(), ramGbs, cpuThrottle);
+            gpuTflops = Perf.integratedTflops(in.integrated(), ramMbs, cpuThrottle);
             gpuLevel = Perf.level(gpuTflops, Perf.STOCK_GPU_TFLOPS);
             notes.add(new Note(Issue.INTEGRATED_GPU, in.sharedVramMb(), 0));
         } else {
@@ -212,16 +213,18 @@ public final class SystemModel {
         // ----- Итог -----
         boolean bootable = notes.stream().noneMatch(n -> n.issue().critical);
         int score = 0;
-        if (in.cpu() != null && ramGbs > 0) {
+        if (in.cpu() != null && ramMbs > 0) {
             double gpu = gpuTflops > 0 ? gpuTflops : NO_GPU_TFLOPS;
+            double core = Perf.coreMhz(in.cpu()) * cpuThrottle * cpuMemory;
             double s = 1000
-                    * Math.pow(cpuGips / REF_CPU, 0.45)
+                    * Math.pow(cpuMhz / REF_CPU, 0.30)
+                    * Math.pow(core / REF_CORE, 0.15)
                     * Math.pow(gpu / REF_GPU, 0.35)
-                    * Math.pow(ramGbs / REF_RAM, 0.10)
+                    * Math.pow(ramMbs / REF_RAM, 0.10)
                     * Math.pow(boot > 0 ? REF_BOOT / boot : 0.1, 0.10);
             score = (int) Math.round(s);
         }
-        return new Report(bootable, cpuThrottle, cpuMemory, cpuGips, cpuLevel, gpuThrottle, gpuTflops, gpuLevel,
-                ramMb, ramMts, channels, ramGbs, boot, fromSsd, wall, score, notes);
+        return new Report(bootable, cpuThrottle, cpuMemory, cpuMhz, cpuLevel, gpuThrottle, gpuTflops, gpuLevel,
+                ramMb, ramMts, channels, ramMbs, boot, fromSsd, wall, score, notes);
     }
 }

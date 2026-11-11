@@ -27,7 +27,7 @@ public class MotherboardSpec extends PartSpec {
                 Param.option("mobo.chipset", 0, 1, 2, 3, 4, 5),
                 Param.number("mobo.ram_slots", 0, NONE, new int[]{2, 4}, new int[]{1, 2}),
                 Param.number("mobo.channels", 0, NONE, new int[]{1, 2, 4}, new int[]{1, 2, 4}),
-                Param.number("mobo.ram_speed", 0, MHZ, new int[]{1600, 2400, 3200, 4400, 5600, 6400, 8000},
+                Param.number("mobo.ram_speed", 0, RAM, new int[]{1600, 2400, 3200, 4400, 5600, 6400, 8000},
                         new int[]{1, 1, 2, 3, 4, 4, 5}),
                 Param.number("mobo.m2", 0, NONE, new int[]{0, 1, 2}, new int[]{1, 2, 3}),
                 Param.number("mobo.sata", 0, NONE, new int[]{2, 4, 6}, new int[]{1, 1, 2}),
@@ -79,10 +79,10 @@ public class MotherboardSpec extends PartSpec {
         lines.add(line("tooltip.minepc.cpu_support", d.maxCpuTier()));
         lines.add(line("tooltip.minepc.ram_slots", d.ramSlots()));
         lines.add(line("tooltip.minepc.channels", d.channels()));
-        lines.add(line("tooltip.minepc.max_ram_speed", Units.frequency(d.maxRamMhz())));
+        lines.add(line("tooltip.minepc.max_ram_speed", Units.gameBandwidth(Perf.ramChannelMbs(d.maxRamMhz()))));
         lines.add(line("tooltip.minepc.m2_slots", d.m2Slots()));
         lines.add(line("tooltip.minepc.sata_ports", d.sataPorts()));
-        lines.add(perfLine("tooltip.minepc.perf_board_bw", Units.bandwidth(Perf.ramChannelGbs(d.maxRamMhz()) * d.channels())));
+        lines.add(perfLine("tooltip.minepc.perf_board_bw", Units.gameBandwidth(Perf.ramChannelMbs(d.maxRamMhz()) * d.channels())));
     }
 
     @Override

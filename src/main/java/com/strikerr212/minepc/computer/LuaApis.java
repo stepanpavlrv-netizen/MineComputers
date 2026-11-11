@@ -411,7 +411,8 @@ final class LuaApis {
         double[] loads = c.coreLoads();
         for (int i = 0; i < loads.length; i++) cores.rawset(i + 1, valueOf(Math.round(loads[i] * 1000) / 10.0));
         t.rawset("cores", cores);
-        t.rawset("clock", valueOf(c.info().clockMhz()));
+        // текущая частота ядра, кГц (с бустом или сбросом от перегрева)
+        t.rawset("clock", valueOf(Math.round(c.info().clockKhz() * c.clockFactor())));
         t.rawset("opsPerSecond", valueOf((double) c.opsLastSecond()));
         t.rawset("opsMax", valueOf(perCore * Math.max(1, l.cores())));
         LuaTable procs = new LuaTable();
@@ -739,7 +740,7 @@ final class LuaApis {
                     LuaTable t = new LuaTable();
                     t.rawset("cpu", str(i.cpu()));
                     t.rawset("cores", valueOf(i.cores()));
-                    t.rawset("clock", valueOf(i.clockMhz()));
+                    t.rawset("clock", valueOf(i.clockKhz()));
                     t.rawset("architecture", str(i.architecture()));
                     t.rawset("ram", valueOf(i.ramKb()));
                     t.rawset("opsPerSecond", valueOf(i.opsPerSecond()));

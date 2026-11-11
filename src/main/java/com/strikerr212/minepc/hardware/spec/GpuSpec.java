@@ -32,10 +32,10 @@ public class GpuSpec extends PartSpec {
     public GpuSpec() {
         super(HardwareType.GPU, List.of(
                 Param.option("gpu.chip", 0, 1, 2, 3, 4, 5),
-                Param.number("gpu.clock", 0, MHZ, new int[]{600, 900, 1200, 1500, 1800, 2100, 2400, 2700},
+                Param.number("gpu.clock", 0, KHZ, new int[]{600, 900, 1200, 1500, 1800, 2100, 2400, 2700},
                         new int[]{1, 1, 2, 2, 3, 4, 4, 5}),
                 Param.number("gpu.vram_chips", 0, NONE, new int[]{2, 4, 6, 8, 12}, new int[]{1, 1, 2, 3, 4}),
-                Param.number("gpu.vram_chip_mb", 0, MB, new int[]{128, 256, 512, 1024, 2048}, new int[]{1, 2, 3, 4, 5}),
+                Param.number("gpu.vram_chip_mb", 0, VRAM, new int[]{128, 256, 512, 1024, 2048}, new int[]{1, 2, 3, 4, 5}),
                 Param.option("gpu.vram_type", 0, 1, 2, 3, 5),
                 Param.option("gpu.length", 0, 1, 1, 2),
                 Param.pcb("gpu.pcb", 0),
@@ -98,11 +98,11 @@ public class GpuSpec extends PartSpec {
         GpuData d = derive(v);
         lines.add(paramLine(v, CHIP));
         lines.add(line("tooltip.minepc.shaders", d.shaders()));
-        lines.add(line("tooltip.minepc.clock", Units.frequency(d.clockMhz())));
+        lines.add(line("tooltip.minepc.clock", Units.gameClock(d.clockMhz())));
         lines.add(line("tooltip.minepc.vram", Component.translatable("tooltip.minepc.vram_value",
-                Units.size(d.vramMb()), params().get(VRAM_TYPE).display(idx(v, VRAM_TYPE)))));
+                Units.gameSize(Perf.vramKb(d.vramMb())), params().get(VRAM_TYPE).display(idx(v, VRAM_TYPE)))));
         lines.add(line("tooltip.minepc.chips",
-                Component.translatable("tooltip.minepc.chips_value", val(v, VRAM_CHIPS), Units.size(val(v, VRAM_CHIP_MB)))));
+                Component.translatable("tooltip.minepc.chips_value", val(v, VRAM_CHIPS), Units.gameSize(Perf.vramKb(val(v, VRAM_CHIP_MB))))));
         lines.add(line("tooltip.minepc.heat", Units.watts(d.tdp())));
         lines.add(paramLine(v, COOLER));
         if (d.hasCooler()) {
@@ -110,11 +110,12 @@ public class GpuSpec extends PartSpec {
         }
         int[] screen = Perf.screenSize(d.tier());
         lines.add(perfLine(screen[0] > 160 ? "tooltip.minepc.screen_wall" : "tooltip.minepc.screen", screen[0] + "×" + screen[1]));
-        lines.add(perfLine("tooltip.minepc.gpu_draw", Perf.gpuCellsPerSecond(d.tier()) / 1000,
-                Math.round(Perf.vramCells(d) / 1000.0)));
-        double tflops = Perf.gpuTflops(d);
-        lines.add(perfLine("tooltip.minepc.perf_gpu", Units.tflops(tflops), Units.level(Perf.level(tflops, Perf.STOCK_GPU_TFLOPS))));
-        lines.add(perfLine("tooltip.minepc.perf_bus", Units.bits(Perf.gpuBusBits(d)), Units.bandwidth(Perf.gpuMemoryGbs(d))));
+        // Скорость отрисовки — по настоящей мощности: чип, частота, видеопамять и охлаждение
+        double level = Perf.level(Perf.gpuEffectiveTflops(d), Perf.STOCK_GPU_TFLOPS);
+        int cells = Perf.gpuCellsPerSecond(level);
+        lines.add(perfLine("tooltip.minepc.gpu_draw", Units.cells(cells), Units.num(cells / 8000.0), Units.level(level)));
+        lines.add(perfLine("tooltip.minepc.gpu_vram_screens", Units.num(Perf.vramCells(d) / 8000.0)));
+        lines.add(perfLine("tooltip.minepc.perf_bus", Units.bits(Perf.gpuBusBits(d))));
         double throttle = Perf.throttle(d.tdp(), d.hasCooler() ? d.coolingW() : Perf.PASSIVE_COOLING);
         if (throttle < 1) lines.add(perfLine("tooltip.minepc.perf_throttle", Units.percent(throttle)));
         double memory = Perf.gpuMemoryFactor(d);

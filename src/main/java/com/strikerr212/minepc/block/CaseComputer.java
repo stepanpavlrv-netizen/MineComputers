@@ -564,14 +564,18 @@ public final class CaseComputer implements Computer.Host {
 
     /** Настоящие лимиты компьютера по деталям и настройкам сервера. */
     public static Computer.Limits limitsFor(SystemModel.Input in, SystemModel.Report report, double speed) {
-        int opsPerSecond = (int) Math.min(500_000_000L, Math.round(Perf.gameOpsPerSecond(report.cpuGips()) * speed));
+        // Одна программа — одно ядро на своей частоте: одна команда Lua — один такт (3,5 МГц = 3,5 млн команд/с).
+        // Буст и сброс частоты от перегрева — вживую, по температуре (Computer.clockFactor)
+        int opsPerSecond = in.cpu() == null ? 0
+                : (int) Math.min(500_000_000L, Math.round(in.cpu().clockKhz() * 1000.0 * report.cpuMemory() * speed));
         int cores = in.cpu() == null ? 1 : Math.max(1, Math.min(in.cpu().cores(), com.strikerr212.minepc.MineConfig.maxCores()));
         // Видеоядро забирает часть оперативной памяти под экран
         long memory = Math.min((long) com.strikerr212.minepc.MineConfig.maxMemoryMb() << 20,
                 Math.round(Perf.gameMemoryKb(Math.max(0, report.ramMb() - in.sharedVramMb())) * 1024L * com.strikerr212.minepc.MineConfig.memory()));
         GpuData gpu = in.graphics();
-        int tier = gpu == null ? 0 : gpu.tier();
-        int cells = (int) Math.max(100, Perf.gpuCellsPerSecond(tier) * com.strikerr212.minepc.MineConfig.gpu() / Computer.TICKS_PER_SECOND);
+        // Скорость отрисовки — по настоящей мощности видеокарты (или видеоядра) с охлаждением и памятью
+        int cells = (int) Math.max(100, Perf.gpuCellsPerSecond(gpu == null ? 0 : report.gpuLevel())
+                * com.strikerr212.minepc.MineConfig.gpu() / Computer.TICKS_PER_SECOND);
         int boot = com.strikerr212.minepc.MineConfig.bootTime() ? Perf.gameBootTicks(report.bootSeconds()) : 0;
         return new Computer.Limits(Math.max(100, opsPerSecond / Computer.TICKS_PER_SECOND), cores, Math.max(256 * 1024, memory),
                 cells, Perf.vramCells(gpu), boot, com.strikerr212.minepc.MineConfig.maxProcesses());
@@ -609,11 +613,12 @@ public final class CaseComputer implements Computer.Host {
         CpuData cpu = in.cpu();
         ItemStack cpuStack = be.getStack(PcCaseBlockEntity.SLOT_CPU);
         String cpuLabel = cpuStack.getItem() instanceof HardwareItem ? HardwareItem.label(cpuStack) : "";
+        String mhz = String.format(java.util.Locale.ROOT, cpu.clockKhz() % 1000 == 0 ? "%.0f" : "%.1f", cpu.clockKhz() / 1000.0);
         String cpuName = (cpuLabel.isEmpty() ? "Процессор ур. " + cpu.tier() : cpuLabel)
-                + ", ядер: " + cpu.cores() + ", " + cpu.clockMhz() + " МГц";
+                + ", ядер: " + cpu.cores() + ", " + mhz + " МГц";
         String gpuName = gpu == null ? "" : (in.gpu() == null ? "Видеоядро процессора" : "Видеокарта ур. " + gpu.tier())
                 + ", до " + Perf.screenSize(gpuTier)[0] + "×" + Perf.screenSize(gpuTier)[1];
-        computer.setInfo(new Computer.Info(cpuName, cpu.cores(), cpu.clockMhz(), "Lua",
+        computer.setInfo(new Computer.Info(cpuName, cpu.cores(), cpu.clockKhz(), "Lua",
                 (int) (limits.memoryBytes() / 1024), opsPerSecond, gpuName, report.score()));
         // Тепло и питание: температура в диспетчере задач и в BIOS считается по этим деталям
         int cpuCooling = in.cooler() != null ? in.cooler().coolingW() : Perf.PASSIVE_COOLING;
@@ -621,7 +626,8 @@ public final class CaseComputer implements Computer.Host {
         GpuData card = in.gpu();
         int gpuCooling = card == null ? 0 : card.hasCooler() ? card.coolingW() : Perf.PASSIVE_COOLING;
         computer.setThermal(new Computer.Thermal(cpu.tdp(), cpuCooling, card == null ? 0 : card.tdp(), gpuCooling,
-                card != null, in.powerDraw(), in.psu() == null ? 0 : in.psu().wattage(), in.cooler() != null));
+                card != null, in.powerDraw(), in.psu() == null ? 0 : in.psu().wattage(), in.cooler() != null,
+                cpu.boostPct() / 100.0));
 
         // Накопители: системный — самый быстрый (M.2, потом SATA SSD, потом жёсткий диск)
         var fs = computer.fileSystem();

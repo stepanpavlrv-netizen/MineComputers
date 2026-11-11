@@ -131,8 +131,8 @@ public final class Computer {
     public record Peer(String address, String name, int hops) {
     }
 
-    /** Сведения о железе для программ (computer.info()). */
-    public record Info(String cpu, int cores, int clockMhz, String architecture, int ramKb, int opsPerSecond,
+    /** Сведения о железе для программ (computer.info()). clockKhz — базовая частота ядра, кГц (3500 = 3,5 МГц). */
+    public record Info(String cpu, int cores, int clockKhz, String architecture, int ramKb, int opsPerSecond,
                        String gpu, int score) {
     }
 
@@ -536,11 +536,11 @@ public final class Computer {
         // Процессор: каждое ядро — один процесс на полной скорости; процессов больше, чем ядер, — делят
         int alive = Math.max(1, machines.size());
         double share = Math.min(1.0, l.cores() / (double) alive);
-        double perSecond = (double) l.opsPerTick() * TICKS_PER_SECOND * share;
+        double perSecond = (double) l.opsPerTick() * TICKS_PER_SECOND * share * clockFactor;
         cpuCarry += perSecond * sec;
         long add = (long) cpuCarry;
         cpuCarry -= add;
-        long cap = Math.max(100, Math.round(l.opsPerTick() * share)) * BUDGET_BANK_TICKS;
+        long cap = Math.max(100, Math.round(l.opsPerTick() * share * clockFactor)) * BUDGET_BANK_TICKS;
         if (add > 0) for (LuaMachine m : machines) m.refill(add, cap);
         gpuCarry += (double) l.gpuCellsPerTick() * TICKS_PER_SECOND * sec;
         long g = (long) gpuCarry;
@@ -654,10 +654,20 @@ public final class Computer {
      * Тепло и питание по деталям: TDP процессора и видеокарты, сколько отводят их кулеры, сколько потребляет
      * система на полной нагрузке и мощность блока питания. Есть ли кулер с вентилятором (для оборотов).
      */
+    /** Тепло и питание. boost — насколько процессор разгоняется, пока холодный (0.15 = +15%). */
     public record Thermal(int cpuTdp, int cpuCooling, int gpuTdp, int gpuCooling, boolean hasGpu,
-                          int powerDraw, int psuWatts, boolean fan) {
-        public static final Thermal NONE = new Thermal(65, 95, 0, 0, false, 120, 300, true);
+                          int powerDraw, int psuWatts, boolean fan, double boost) {
+        public static final Thermal NONE = new Thermal(65, 95, 0, 0, false, 120, 300, true, 0);
+
+        public Thermal(int cpuTdp, int cpuCooling, int gpuTdp, int gpuCooling, boolean hasGpu, int powerDraw, int psuWatts, boolean fan) {
+            this(cpuTdp, cpuCooling, gpuTdp, gpuCooling, hasGpu, powerDraw, psuWatts, fan, 0);
+        }
     }
+
+    /** Частота процессора сейчас — доля базовой: больше 1 — буст, меньше — перегрев. */
+    private volatile double clockFactor = 1;
+
+    public double clockFactor() { return clockFactor; }
 
     private volatile Thermal thermal = Thermal.NONE;
     private final AtomicLong gpuThisSecond = new AtomicLong();
@@ -668,6 +678,7 @@ public final class Computer {
 
     public void setThermal(Thermal t) {
         thermal = t == null ? Thermal.NONE : t;
+        clockFactor = CpuClock.factor(cpuTemp, thermal.boost());
     }
 
     public Thermal thermal() { return thermal; }
@@ -742,8 +753,9 @@ public final class Computer {
         lastSent = sent;
         lastReceived = received;
         Thermal t = thermal;
-        double cpuRatio = t.cpuTdp() / (double) Math.max(1, t.cpuCooling());
-        cpuTemp = approach(cpuTemp, Math.max(28, Math.min(105, 28 + (0.22 + 0.78 * cpuLoad) * cpuRatio * 50)));
+        // Живая температура: под нагрузкой греется, в простое остывает. От неё — буст или сброс частоты
+        cpuTemp = approach(cpuTemp, CpuClock.temperature(t.cpuTdp(), t.cpuCooling(), cpuLoad, clockFactor));
+        clockFactor = CpuClock.factor(cpuTemp, t.boost());
         if (t.hasGpu()) {
             double gpuRatio = t.gpuTdp() / (double) Math.max(1, t.gpuCooling());
             gpuTemp = approach(gpuTemp, Math.max(28, Math.min(105, 28 + (0.2 + 0.8 * gpuLoad) * gpuRatio * 45)));

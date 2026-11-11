@@ -237,8 +237,10 @@ public class PcCaseScreen extends AbstractContainerScreen<PcCaseMenu> {
         }
         long perCore = (long) lim.opsPerTick() * Computer.TICKS_PER_SECOND;
         boolean slowCpu = r.cpuThrottle() < 1 || r.cpuMemory() < 0.85;
-        out.add(Row.of("cpu", tr("gui.minepc.row.cpu", shortOps(perCore), lim.cores()), slowCpu ? th.warn : th.fg)
-                .tip(tr("message.minepc.status.game", Units.gameOps((int) perCore), lim.cores(), Units.bytes(lim.memoryBytes()))));
+        int boostKhz = (int) Math.round(perCore / 1000.0 * (in.cpu() == null ? 1 : 1 + in.cpu().boostPct() / 100.0));
+        out.add(Row.of("cpu", tr("gui.minepc.row.cpu", Units.gameClock((int) (perCore / 1000)), lim.cores()), slowCpu ? th.warn : th.fg)
+                .tip(tr("message.minepc.status.game", Units.gameClock((int) (perCore / 1000)), Units.gameClock(boostKhz),
+                        lim.cores(), Units.bytes(lim.memoryBytes()))));
         out.add(Row.of("ram", bytes(lim.memoryBytes()), th.fg));
         GpuData gpu = in.graphics();
         int[] screen = Perf.screenSize(gpu == null ? 0 : gpu.tier());

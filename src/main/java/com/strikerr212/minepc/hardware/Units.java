@@ -90,6 +90,37 @@ public final class Units {
         return Component.translatable("unit.minepc.kcmds", Math.round(ops / 1000.0));
     }
 
+    /** Частота в игре: кГц → «3,5 МГц» (одна команда Lua — один такт). */
+    public static Component gameClock(int khz) {
+        String s = khz % 1000 == 0 ? String.valueOf(khz / 1000)
+                : String.format(Locale.ROOT, khz % 100 == 0 ? "%.1f" : "%.2f", khz / 1000.0);
+        return Component.translatable("unit.minepc.mhz", s);
+    }
+
+    /** Объём в игре, заданный в КБ: «512 КБ», «2 МБ». */
+    public static Component gameSize(long kb) {
+        if (kb >= 1024) {
+            String mb = kb % 1024 == 0 ? String.valueOf(kb / 1024) : num(kb / 1024.0);
+            return Component.translatable("unit.minepc.mb", mb);
+        }
+        return Component.translatable("unit.minepc.kb", kb);
+    }
+
+    /** Скорость памяти в игре, МБ/с. */
+    public static Component gameBandwidth(double mbs) {
+        return Component.translatable("unit.minepc.mbs", Math.round(mbs));
+    }
+
+    /** Скорость отрисовки: «320 тыс. клеток/с». */
+    public static Component cells(long perSecond) {
+        return Component.translatable("unit.minepc.kcells", Math.round(perSecond / 1000.0));
+    }
+
+    /** Скорость в байтах в секунду: «1,5 МБ/с». */
+    public static Component perSecond(long bytes) {
+        return Component.translatable("unit.minepc.per_second", bytes(bytes));
+    }
+
     /** Размер в байтах: Б, КБ или МБ. */
     public static Component bytes(long b) {
         if (b >= 1024 * 1024) return Component.translatable("unit.minepc.mb", num(b / 1048576.0));

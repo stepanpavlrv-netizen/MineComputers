@@ -83,13 +83,16 @@ def main():
         for f in os.listdir(HW):
             if f.endswith("Data.java") or f in ("HardwareType.java", "Units.java", "Perf.java", "SystemModel.java"):
                 shutil.copy(os.path.join(HW, f), src)
+        # частота процессора от температуры — общая с живым компьютером
+        os.makedirs(os.path.join(work, "computer"), exist_ok=True)
+        shutil.copy(os.path.join(HW, "..", "computer", "CpuClock.java"), os.path.join(work, "computer"))
         presets = open(os.path.join(HW, "HardwarePresets.java"), encoding="utf-8").read()
         with open(os.path.join(src, "spec", "SpecTest.java"), "w", encoding="utf-8") as f:
             f.write(make_test(presets))
         with open(os.path.join(src, "spec", "StockTables.java"), "w", encoding="utf-8") as f:
             f.write(make_tables(presets))
         shutil.copy(os.path.join(os.path.dirname(__file__), "PerfReport.java"), os.path.join(src, "spec"))
-        files = [os.path.join(dp, n) for base in (src, STUBS) for dp, _, fs in os.walk(base) for n in fs if n.endswith(".java")]
+        files = [os.path.join(dp, n) for base in (src, STUBS, os.path.join(work, "computer")) for dp, _, fs in os.walk(base) for n in fs if n.endswith(".java")]
         out = os.path.join(work, "out")
         subprocess.run(["javac", "-encoding", "UTF-8", "-d", out] + files, check=True)
         res = subprocess.run(["java", "-cp", out, "com.strikerr212.minepc.hardware.spec.SpecTest"],

@@ -5,11 +5,11 @@ package com.strikerr212.minepc.hardware;
  *
  * Формулы упрощены, но устроены как в настоящем железе:
  * <ul>
- *   <li><b>Процессор.</b> Операций в секунду = частота × IPC (сколько команд ядро выполняет за такт) × ядра.
- *       IPC растёт с каждым техпроцессом (новые поколения архитектур) и немного — с кэшем.
- *       Ядра складываются не идеально: часть работы не делится, плюс ядра делят кэш и память.</li>
- *   <li><b>Память.</b> Пропускная способность канала = скорость (МТ/с) × 8 байт. Каналы складываются.
- *       Процессору нужен поток данных пропорционально его скорости; кэш снижает эту потребность.</li>
+ *   <li><b>Процессор.</b> Частота в игре — это и есть скорость: одна команда Lua — один такт. Одна программа
+ *       работает на одном ядре; ядра — сколько программ идёт одновременно. Пока процессор холодный, он
+ *       разгоняется (буст), горячий — сбрасывает частоту ({@link com.strikerr212.minepc.computer.CpuClock}).</li>
+ *   <li><b>Память.</b> Пропускная способность канала = скорость (МТ/с) × 8 байт (в игре — МБ/с). Каналы складываются.
+ *       Процессору нужен поток данных пропорционально его мегагерцам; кэш снижает эту потребность.</li>
  *   <li><b>Видеокарта.</b> TFLOPS = шейдеры × частота × 2 (умножение и сложение за такт).
  *       Шина памяти = чипы × 32 бита, пропускная способность = шина × скорость памяти.</li>
  *   <li><b>Нагрев.</b> Если охлаждение не справляется, чип снижает частоту. Тепловыделение растёт
@@ -28,55 +28,41 @@ public final class Perf {
     }
 
     // ===================== Процессор =====================
+    // В игре одна команда Lua — один такт: ядро на 3,5 МГц выполняет 3,5 млн команд в секунду.
+    // Одна программа работает на одном ядре; ядра — сколько программ идут одновременно, не мешая друг другу.
 
-    private static final int[] PROCESS_NM = {90, 65, 45, 32, 22, 14, 10, 7, 5, 3};
-    /** Команд за такт на ядро для архитектуры каждого техпроцесса. */
-    private static final double[] PROCESS_IPC = {1.0, 1.3, 1.7, 2.1, 2.6, 3.0, 3.5, 4.0, 4.5, 5.0};
-    /** Какая доля работы мешает ядрам друг другу (общий кэш, память, синхронизация). */
-    private static final double CORE_OVERHEAD = 0.02;
-    /** ГБ/с данных на каждый миллиард операций в секунду, если бы кэша не было. */
-    private static final double MEMORY_PER_GIPS = 0.4;
+    /** МБ/с памяти на каждый мегагерц всех ядер, если бы кэша не было. */
+    private static final double MEMORY_PER_MHZ = 10;
 
     private static double log2(double x) {
         return Math.log(x) / Math.log(2);
     }
 
-    public static double cpuIpc(int processNm, int cacheMb) {
-        double base = PROCESS_IPC[PROCESS_IPC.length - 1];
-        for (int i = 0; i < PROCESS_NM.length; i++) {
-            if (PROCESS_NM[i] <= processNm) {
-                base = PROCESS_IPC[i];
-                break;
-            }
-        }
-        return base * (1 + 0.04 * log2(Math.max(1, cacheMb)));
+    /** Базовая частота одного ядра, МГц. */
+    public static double coreMhz(CpuData d) {
+        return d.clockKhz() / 1000.0;
     }
 
-    /** Во сколько раз N ядер быстрее одного. */
-    public static double coreScaling(int cores) {
-        return cores / (1 + CORE_OVERHEAD * (cores - 1));
+    /** Частота ядра в бусте (пока процессор холодный), МГц. */
+    public static double boostMhz(CpuData d) {
+        return coreMhz(d) * (1 + d.boostPct() / 100.0);
     }
 
-    /** Миллиардов операций в секунду на одном ядре. */
-    public static double cpuSingleGips(CpuData d) {
-        return d.clockMhz() / 1000.0 * cpuIpc(d.processNm(), d.cacheMb());
+    /** Все ядра вместе на базовой частоте, МГц — общая мощность процессора. */
+    public static double cpuMhz(CpuData d) {
+        return coreMhz(d) * d.cores();
     }
 
-    /** Миллиардов операций в секунду всеми ядрами. */
-    public static double cpuGips(CpuData d) {
-        return cpuSingleGips(d) * coreScaling(d.cores());
-    }
-
-    /** Сколько ГБ/с памяти нужно процессору на полной частоте. Большой кэш снижает потребность. */
+    /** Сколько МБ/с памяти нужно процессору, когда заняты все ядра. Большой кэш снижает потребность. */
     public static double cpuMemoryDemand(CpuData d) {
-        return cpuGips(d) * MEMORY_PER_GIPS / (1 + 0.1 * log2(Math.max(1, d.cacheMb())));
+        return cpuMhz(d) * MEMORY_PER_MHZ / (1 + 0.1 * log2(Math.max(1, d.cacheKb())));
     }
 
     // ===================== Память =====================
 
-    /** ГБ/с одного канала: за каждую передачу уходит 64 бита = 8 байт. */
-    public static double ramChannelGbs(int mts) {
-        return mts * 8 / 1000.0;
+    /** МБ/с одного канала памяти в игре по скорости планки (МТ/с): 3200 МТ/с → 256 МБ/с. */
+    public static double ramChannelMbs(int mts) {
+        return mts * 8 / 100.0;
     }
 
     /**
@@ -126,8 +112,8 @@ public final class Perf {
     private static final int[] IGPU_CLOCK = {0, 1000, 1100, 1300};
     /** Какому уровню видеокарты соответствует экран видеоядра. */
     private static final int[] IGPU_TIER = {0, 1, 1, 2};
-    /** Сколько оперативной памяти видеоядро забирает под экран (но не больше четверти памяти). */
-    private static final int[] IGPU_VRAM_MB = {0, 256, 512, 1024};
+    /** Сколько оперативной памяти видеоядро забирает под экран, КБ в игре (но не больше четверти памяти). */
+    private static final int[] IGPU_SHARE_KB = {0, 64, 128, 256};
     /** Видеоядру достаётся половина полосы оперативной памяти — остальное нужно процессору. */
     private static final double IGPU_RAM_SHARE = 0.5;
 
@@ -135,18 +121,24 @@ public final class Perf {
      * Видеоядро как «видеокарта»: уровень экрана, скорость чипа и видеопамять из оперативной.
      * Тепла своего нет — оно уже в тепле процессора. null — видеоядра нет.
      */
-    public static GpuData integratedGpu(CpuData cpu, int ramMb) {
+    public static GpuData integratedGpu(CpuData cpu, int ramKb) {
         if (cpu == null || cpu.igpu() <= 0) return null;
         int l = Math.min(3, cpu.igpu());
-        int vram = (int) Math.min(IGPU_VRAM_MB[l], Math.max(64, ramMb / 4L));
-        return new GpuData(IGPU_TIER[l], IGPU_SHADERS[l], IGPU_CLOCK[l], 0, vram, 0, 0, 0);
+        // видеопамять детали хранится в «МБ», а в игре это четверть КБ на «МБ» (см. vramKb)
+        return new GpuData(IGPU_TIER[l], IGPU_SHADERS[l], IGPU_CLOCK[l], 0, igpuSharedKb(cpu, ramKb) * 4, 0, 0, 0);
     }
 
-    /** Скорость видеоядра: греется вместе с процессором и кормится из оперативной памяти. */
-    public static double integratedTflops(GpuData igpu, double ramGbs, double cpuThrottle) {
-        double t = gpuTflops(igpu) * cpuThrottle;
+    /** Сколько КБ оперативной памяти видеоядро забирает под экран. */
+    public static int igpuSharedKb(CpuData cpu, int ramKb) {
+        if (cpu == null || cpu.igpu() <= 0) return 0;
+        return (int) Math.min(IGPU_SHARE_KB[Math.min(3, cpu.igpu())], Math.max(16, ramKb / 4L));
+    }
+
+    /** Скорость видеоядра: греется вместе с процессором и кормится из оперативной памяти (МБ/с в игре). */
+    public static double integratedTflops(GpuData igpu, double ramMbs, double cpuClock) {
+        double t = gpuTflops(igpu) * Math.min(1, cpuClock);
         if (t <= 0) return 0;
-        return t * memoryFactor(ramGbs * IGPU_RAM_SHARE / (t * VRAM_PER_TFLOPS));
+        return t * memoryFactor(ramMbs / 10 * IGPU_RAM_SHARE / (t * VRAM_PER_TFLOPS));
     }
 
     // ===================== Нагрев =====================
@@ -193,16 +185,6 @@ public final class Perf {
     // ===================== Лимиты в игре =====================
 
     /**
-     * Сколько команд Lua в секунду компьютер реально получает в игре. Программы выполняет процессор
-     * сервера, поэтому шкала сжата: ур. 1 ≈ 200 тыс., ур. 3 ≈ 4 млн, ур. 5 ≈ 20 млн команд/с
-     * (вместо разницы в сотни раз между настоящими процессорами).
-     */
-    public static int gameOpsPerSecond(double gips) {
-        if (gips <= 0) return 0;
-        return (int) Math.min(50_000_000, Math.round(200_000 * Math.pow(gips / STOCK_CPU_GIPS[0], 0.69)));
-    }
-
-    /**
      * Самый большой текстовый экран (символов в строке, строк), который тянет видеокарта; 0 — без видеокарты
      * (чёрно-белый текст). Ур. 5 показывает 320×100, но только на стене мониторов (см. {@link #wallSize}).
      */
@@ -231,25 +213,23 @@ public final class Perf {
     }
 
     /**
-     * Скорость отрисовки: сколько клеток экрана видеокарта меняет за секунду. Заливка и копирование
-     * областей в 8 раз дешевле, чем вывод текста (как аппаратное ускорение). Для сравнения:
-     * видеокарта ур. 3 в OpenComputers перерисовывает экран 160×50 текстом примерно 2–3 раза в секунду,
-     * здесь ур. 3 — около 20 раз.
+     * Скорость отрисовки: сколько клеток экрана видеокарта меняет за секунду — по её настоящей мощности
+     * (с охлаждением и видеопамятью), выраженной заводским уровнем: ур. 1 — 40 тыс., каждый уровень вдвое больше,
+     * ур. 5 — 640 тыс. Без видеокарты — 20 тыс. Заливка и копирование областей в 8 раз дешевле, чем вывод текста.
      */
-    public static int gpuCellsPerSecond(int gpuTier) {
-        return switch (gpuTier) {
-            case 0 -> 20_000;
-            case 1 -> 40_000;
-            case 2 -> 80_000;
-            case 3 -> 160_000;
-            case 4 -> 320_000;
-            default -> 640_000;
-        };
+    public static int gpuCellsPerSecond(double level) {
+        if (level <= 0) return 20_000;
+        return (int) Math.max(20_000, Math.min(1_280_000, Math.round(40_000 * Math.pow(2, level - 1))));
     }
 
-    /** Видеопамять для буферов (gpu.allocateBuffer), в клетках: 32 клетки на «мегабайт» видеопамяти детали. */
+    /** Видеопамять детали в игре, КБ: «мегабайт» чипа — четверть килобайта (8 байт на клетку экрана). */
+    public static int vramKb(int vramMb) {
+        return Math.max(1, vramMb / 4);
+    }
+
+    /** Видеопамять для буферов (gpu.allocateBuffer), в клетках: по 8 байт на клетку. */
     public static long vramCells(GpuData gpu) {
-        return gpu == null ? 8_000 : Math.max(8_000, gpu.vramMb() * 32L);
+        return gpu == null ? 8_000 : Math.max(8_000, vramKb(gpu.vramMb()) * 128L);
     }
 
     /** Скорость накопителя в игре, байт/с: в 100 раз меньше настоящей (жёсткий диск ≈ 1,5 МБ/с, NVMe ≈ 70 МБ/с). */
@@ -274,12 +254,12 @@ public final class Perf {
 
     // ===================== Сравнение с заводскими уровнями =====================
 
-    /** Скорость заводских процессоров ур. 1–5, млрд оп/с (проверяется тестом). */
-    public static final double[] STOCK_CPU_GIPS = {0.8, 7.2, 59.3, 192.3, 632.1};
+    /** Мощность заводских процессоров ур. 1–5: все ядра на базовой частоте, МГц (проверяется тестом). */
+    public static final double[] STOCK_CPU_MHZ = {0.5, 4, 28, 80, 224};
     /** Скорость заводских видеокарт ур. 1–5, TFLOPS. */
     public static final double[] STOCK_GPU_TFLOPS = {0.31, 2.46, 9.22, 25.8, 59.0};
-    /** Пропускная способность памяти в заводских сборках ур. 1–5, ГБ/с. */
-    public static final double[] STOCK_RAM_GBS = {6.4, 25.6, 51.2, 76.8, 192};
+    /** Пропускная способность памяти в заводских сборках ур. 1–5, МБ/с в игре. */
+    public static final double[] STOCK_RAM_MBS = {64, 256, 512, 768, 1920};
 
     /**
      * На какой заводской уровень похожа скорость {@code value}: 3.0 — как заводская деталь ур. 3,

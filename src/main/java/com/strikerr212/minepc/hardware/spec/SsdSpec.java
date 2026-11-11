@@ -24,7 +24,7 @@ public class SsdSpec extends PartSpec {
     public SsdSpec() {
         super(HardwareType.SSD, List.of(
                 Param.option("ssd.iface", 0, 1, 2, 3, 5),
-                Param.number("ssd.capacity", 0, MB, new int[]{256, 512, 1024, 2048, 4096, 8192, 16384, 32768},
+                Param.number("ssd.capacity", 0, KB, new int[]{256, 512, 1024, 2048, 4096, 8192, 16384, 32768},
                         new int[]{1, 1, 1, 2, 3, 3, 4, 5}),
                 Param.option("ssd.nand", 0, 1, 1, 2, 3),
                 Param.option("ssd.cooling", 0, 1, 1, 2),
@@ -65,12 +65,11 @@ public class SsdSpec extends PartSpec {
     public void describe(List<Integer> v, List<Component> lines) {
         SsdData d = derive(v);
         lines.add(paramLine(v, IFACE));
-        lines.add(line("tooltip.minepc.capacity", Units.size(d.capacityMb())));
+        lines.add(line("tooltip.minepc.capacity", Units.gameSize(d.capacityMb())));
         lines.add(paramLine(v, NAND));
-        lines.add(line("tooltip.minepc.speed", Units.speed(d.speedMbs())));
+        lines.add(line("tooltip.minepc.speed", Units.perSecond(Perf.gameDiskBytesPerSecond(d.speedMbs()))));
         lines.add(perfLine("tooltip.minepc.perf_random", Units.iops(d.iops())));
-        lines.add(perfLine("tooltip.minepc.perf_boot", Units.seconds(Perf.bootSeconds(d))));
-        lines.add(perfLine("tooltip.minepc.game_storage", Units.bytes(Perf.gameStorageBytes(d.capacityMb()))));
+        lines.add(perfLine("tooltip.minepc.perf_boot", Units.seconds(Perf.gameBootTicks(Perf.bootSeconds(d)) / 20.0)));
     }
 
     @Override

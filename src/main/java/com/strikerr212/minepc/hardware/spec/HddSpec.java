@@ -19,10 +19,10 @@ public class HddSpec extends PartSpec {
     public HddSpec() {
         super(HardwareType.HDD, List.of(
                 Param.option("hdd.form", 0, 1, 1),
-                Param.number("hdd.capacity", 0, MB, new int[]{128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768},
+                Param.number("hdd.capacity", 0, KB, new int[]{128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768},
                         new int[]{1, 1, 1, 2, 2, 3, 4, 5, 5}),
                 Param.number("hdd.rpm", 0, RPM, new int[]{4200, 5400, 7200, 10000, 15000}, new int[]{1, 1, 2, 3, 4}),
-                Param.number("hdd.cache", 0, MB, new int[]{8, 16, 32, 64, 128, 256, 512}, new int[]{1, 1, 2, 2, 3, 4, 5}),
+                Param.number("hdd.cache", 0, KB, new int[]{8, 16, 32, 64, 128, 256, 512}, new int[]{1, 1, 2, 2, 3, 4, 5}),
                 Param.option("hdd.lid", 0, 1, 2, 3),
                 Param.metal("hdd.color", 0),
                 Param.led("hdd.label", 0)
@@ -47,13 +47,12 @@ public class HddSpec extends PartSpec {
     public void describe(List<Integer> v, List<Component> lines) {
         HddData d = derive(v);
         lines.add(paramLine(v, FORM));
-        lines.add(line("tooltip.minepc.capacity", Units.size(d.capacityMb())));
+        lines.add(line("tooltip.minepc.capacity", Units.gameSize(d.capacityMb())));
         lines.add(line("tooltip.minepc.rpm", Component.translatable("unit.minepc.rpm", d.rpm())));
-        lines.add(line("tooltip.minepc.cache", Units.size(d.cacheMb())));
-        lines.add(line("tooltip.minepc.speed", Units.speed(d.speedMbs())));
+        lines.add(line("tooltip.minepc.cache", Units.gameSize(d.cacheMb())));
+        lines.add(line("tooltip.minepc.speed", Units.perSecond(Perf.gameDiskBytesPerSecond(d.speedMbs()))));
         lines.add(perfLine("tooltip.minepc.perf_random", Units.iops(d.iops())));
-        lines.add(perfLine("tooltip.minepc.perf_boot", Units.seconds(Perf.bootSeconds(d))));
-        lines.add(perfLine("tooltip.minepc.game_storage", Units.bytes(Perf.gameStorageBytes(d.capacityMb()))));
+        lines.add(perfLine("tooltip.minepc.perf_boot", Units.seconds(Perf.gameBootTicks(Perf.bootSeconds(d)) / 20.0)));
     }
 
     @Override

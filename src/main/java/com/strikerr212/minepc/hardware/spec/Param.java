@@ -1,5 +1,6 @@
 package com.strikerr212.minepc.hardware.spec;
 
+import com.strikerr212.minepc.hardware.Perf;
 import com.strikerr212.minepc.hardware.Units;
 import net.minecraft.network.chat.Component;
 
@@ -21,7 +22,13 @@ public record Param(String key, Kind kind, Unit unit, int[] values, int[] tiers,
 
     public enum Kind { NUMBER, OPTION, METAL, LED, PCB, TOGGLE }
 
-    public enum Unit { NONE, MHZ, MB, NM, WATTS, RPM, MM }
+    /**
+     * Единицы. Все «компьютерные» величины показываются в игровых единицах — тех, с которыми компьютер
+     * реально работает: KHZ — частота в кГц (показывается как «3,5 МГц»: одна команда Lua — один такт),
+     * KB — объём в игре, RAM — скорость памяти (хранится МТ/с, показывается как МБ/с на канал),
+     * VRAM — чип видеопамяти (хранится в «МБ» детали, в игре это четверть килобайта на мегабайт).
+     */
+    public enum Unit { NONE, MHZ, MB, NM, WATTS, RPM, MM, KHZ, KB, RAM, VRAM }
 
     // ---------- Фабрики ----------
 
@@ -101,6 +108,10 @@ public record Param(String key, Kind kind, Unit unit, int[] values, int[] tiers,
         return switch (unit) {
             case MHZ -> Units.frequency(v);
             case MB -> Units.size(v);
+            case KHZ -> Units.gameClock(v);
+            case KB -> Units.gameSize(v);
+            case RAM -> Units.gameBandwidth(Perf.ramChannelMbs(v));
+            case VRAM -> Units.gameSize(Perf.vramKb(v));
             case NM -> Component.translatable("unit.minepc.nm", v);
             case WATTS -> Units.watts(v);
             case RPM -> Component.translatable("unit.minepc.rpm", v);
