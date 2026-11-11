@@ -15,6 +15,7 @@ openos/sides.lua
 openos/term.lua
 openos/text.lua
 openos/uuid.lua
+programs/bunker.lua
 programs/cat.lua
 programs/chat.lua
 programs/clear.lua

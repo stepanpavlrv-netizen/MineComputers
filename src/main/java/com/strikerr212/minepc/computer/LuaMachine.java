@@ -66,7 +66,8 @@ final class LuaMachine {
     private volatile boolean finished;
     private long deadline;
     private String filter;
-    private volatile long budget;
+    /** Запас команд: тратит поток процесса, пополняют часы компьютера — поэтому атомарный. */
+    private final java.util.concurrent.atomic.AtomicLong budget = new java.util.concurrent.atomic.AtomicLong();
     private volatile long opsTotal;
     /** Команд за последнюю секунду (для диспетчера задач). */
     volatile long opsLastSecond;
@@ -95,7 +96,7 @@ final class LuaMachine {
         opsLastSecond = t - opsMark;
         opsMark = t;
     }
-    long budget() { return budget; }
+    long budget() { return budget.get(); }
 
     /** Состояние для списка процессов. */
     String status() {
@@ -156,7 +157,7 @@ final class LuaMachine {
             public void onCount(LuaState s, DebugState ds, DebugFrame frame) throws LuaError {
                 spend(HOOK_STEP);
                 trackMemory();
-                if (budget <= 0 || System.nanoTime() > deadline || computer.mustWait() || killRequested) {
+                if (budget.get() <= 0 || System.nanoTime() > deadline || computer.mustWait() || killRequested) {
                     pauseRequested = true;
                     s.interrupt();
                 }
@@ -333,17 +334,17 @@ final class LuaMachine {
     // ======================= Порции и планирование =======================
 
     void spend(long ops) {
-        budget -= ops;
+        budget.addAndGet(-ops);
         opsTotal += ops;
         computer.addOps(ops);
     }
 
-    void refill(long perTick) {
-        budget = Math.min(budget + perTick, perTick * Computer.BUDGET_BANK_TICKS);
+    void refill(long add, long cap) {
+        budget.updateAndGet(b -> Math.min(b + add, cap));
     }
 
     boolean needsWork() {
-        if (finished || budget <= 0 || computer.mustWait()) return false;
+        if (finished || budget.get() <= 0 || computer.mustWait()) return false;
         return state == null || paused || !events.isEmpty() || killRequested;
     }
 
@@ -406,7 +407,7 @@ final class LuaMachine {
                 long a = allocated();
                 if (a >= 0) allocMark = a;
                 deadline = System.nanoTime() + ComputerExecutor.sliceNanos();
-                while (!killRequested && budget > 0 && !computer.mustWait() && System.nanoTime() < deadline) {
+                while (!killRequested && budget.get() > 0 && !computer.mustWait() && System.nanoTime() < deadline) {
                     if (!resume()) break;     // нечего делать или замерли
                 }
                 if (finished) {

@@ -30,6 +30,13 @@ public class HeadlessTest {
         ticks(3);
     }
 
+    /** Ввести строку и подождать, тикая как настоящий сервер: 20 раз в секунду. */
+    static void realLine(String line, int realTicks) throws Exception {
+        for (char ch : line.toCharArray()) pc.queueEvent("char", String.valueOf(ch));
+        pc.queueEvent("key", "enter", false, false);
+        for (int i = 0; i < realTicks; i++) { pc.tick(); Thread.sleep(50); }
+    }
+
     static void command(String line) throws Exception {
         type(line);
         key("enter", false);
@@ -125,7 +132,8 @@ public class HeadlessTest {
         long used = pc.opsLastSecond();
         System.out.printf("  команд за последнюю секунду игры: %d (лимит %d/с), реальное время 40 тиков: %.2f с%n",
                 used, (long) pc.opsPerTick() * 20, sec);
-        expect("бесконечный цикл ест не больше лимита", used <= (long) pc.opsPerTick() * 20 * 102 / 100);
+        // Запас на 2 тика (100 мс) можно истратить разом, поэтому за отдельную секунду — до +10%
+        expect("бесконечный цикл ест не больше лимита", used <= (long) pc.opsPerTick() * 20 * 111 / 100);
         pc.terminate();
         ticks(40);
         show("после Ctrl+T");
@@ -575,11 +583,48 @@ public class HeadlessTest {
         command("clear");
         command("lua");
         command("E = require('event') os.queueEvent('aa', 1) os.queueEvent('bb', 2) T = computer.uptime() X, Y, Z = E.pull(0), E.pull(0), E.pull(0) D = computer.uptime() - T");
-        command("print('PULL0', X, Y, Z, D, computer.pending())");
+        command("print('PULL0', X, Y, Z, D < 0.01, computer.pending())");
         for (int i = 0; i < 20; i++) ticks(1);
         command("exit()");
         show("event.pull(0)");
-        expect("event.pull(0) забирает очередь без ожидания", screen().replaceAll("\\s+", " ").contains("PULL0 aa bb nil 0 0"));
+        expect("event.pull(0) забирает очередь без ожидания", screen().replaceAll("\\s+", " ").contains("PULL0 aa bb nil true 0"));
+
+        // Настоящее время: os.sleep(0.01) спит 10 мс, а не тик (50 мс); при паузе игры часы стоят
+        command("clear");
+        command("lua");
+        // Здесь тикаем как настоящий сервер (раз в 50 мс): быстрые тики теста подгоняют часы вперёд
+        realLine("T0 = computer.uptime() for i = 1, 40 do os.sleep(0.01) end SL = computer.uptime() - T0", 40);
+        realLine("print('SLEEP40', SL > 0.35 and SL < 0.9, SL)", 10);
+        realLine("U0 = computer.uptime()", 10);
+        Thread.sleep(1500);                                                   // «пауза»: сервер не тикает 1,5 с
+        realLine("print('PAUSE', computer.uptime() - U0 < 0.9, computer.uptime() - U0)", 10);
+        command("exit()");
+        show("время");
+        String flat = screen().replaceAll("\\s+", " ");
+        expect("os.sleep(0.01) ×40 — примерно 0,4 с, а не 2 с", flat.contains("SLEEP40 true"));
+        expect("пока игра на паузе, время компьютера стоит", flat.contains("PAUSE true"));
+
+        // Кадровый буфер: столбец стены с текстурой, спрайт за стеной не виден, вывод полублоками
+        command("clear");
+        command("lua");
+        command("CV = component.gpu.canvas(8, 8) TX = component.gpu.newTexture(2, 2, {0xFF0000, 0x00FF00, 0x0000FF, 0xFFFFFF})");
+        command("CV:clear(0x101010) CV:column(1, 0, 8, TX, 0, 0, 2, 1, 5) SP = component.gpu.newTexture(1, 1, {0xFFFF00})");
+        command("CV:sprite(SP, 0, 0, 3, 3, 1, 9) CV:span(7, 4, 8, TX, 0, 0, 4, 0)");
+        command("print('CANVAS', CV:get(1, 0), CV:get(1, 5), CV:get(0, 0), CV:get(1, 1) == 0xFF0000, CV:get(5, 7), CV:present(1, 1))");
+        command("exit()");
+        show("кадровый буфер");
+        String cvs = screen().replaceAll("\\s+", " ");
+        // (1,0) красный, (1,5) синий; спрайт в (0,0) жёлтый, а в столбце 1 закрыт стеной (глубина 5 < 9)
+        expect("кадровый буфер: стена с текстурой, спрайт за стеной скрыт",
+                cvs.contains("CANVAS 16711680 255 16776960 true"));
+        expect("кадровый буфер: вывод полублоками", pc.terminal().line(0).startsWith("\u2580\u2580"));
+
+        // 3D-игра на кадровом буфере: замер рисует кадры и печатает скорость
+        command("clear");
+        command("bunker bench 10");
+        for (int i = 0; i < 200 && !screen().contains("BUNKER"); i++) ticks(1);
+        show("bunker bench");
+        expect("bunker: кадры рисуются (замер)", screen().contains("BUNKER") && screen().contains("кадров/с"));
 
         // BIOS: настройки сохраняются, порядок загрузки нормализуется
         command("clear");

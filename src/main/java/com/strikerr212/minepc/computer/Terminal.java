@@ -240,6 +240,39 @@ public final class Terminal {
         version++;
     }
 
+    /**
+     * Вывести картинку полублоками «▀»: каждая клетка — две точки (верх — цвет текста, низ — фон).
+     * px — цвета RGB строками по pw точек, ph строк. Возвращает, сколько клеток изменилось.
+     */
+    public synchronized int putPixels(int x, int y, int[] px, int pw, int ph) {
+        int rows = (ph + 1) / 2, changed = 0;
+        java.util.Map<Integer, Integer> cache = depth < 24 ? new java.util.HashMap<>() : null;
+        for (int r = 0; r < rows; r++) {
+            int ty = y + r;
+            if (ty < 0 || ty >= height) continue;
+            int top0 = 2 * r * pw, bot0 = (2 * r + 1 < ph ? 2 * r + 1 : 2 * r) * pw;
+            for (int c = 0; c < pw; c++) {
+                int tx = x + c;
+                if (tx < 0 || tx >= width) continue;
+                int top = px[top0 + c] & 0xFFFFFF, bot = px[bot0 + c] & 0xFFFFFF;
+                if (cache != null) {
+                    int t0 = top, b0 = bot;
+                    top = cache.computeIfAbsent(t0, this::quantize);
+                    bot = cache.computeIfAbsent(b0, this::quantize);
+                }
+                int p = ty * width + tx;
+                if (chars[p] != '\u2580' || fg[p] != top || bg[p] != bot) {
+                    chars[p] = '\u2580';
+                    fg[p] = top;
+                    bg[p] = bot;
+                    changed++;
+                }
+            }
+        }
+        if (changed > 0) version++;
+        return changed;
+    }
+
     /** Залить прямоугольник символом текущими цветами. */
     public synchronized void fill(int x, int y, int w, int h, char c) {
         for (int yy = Math.max(0, y); yy < Math.min(height, y + h); yy++) {

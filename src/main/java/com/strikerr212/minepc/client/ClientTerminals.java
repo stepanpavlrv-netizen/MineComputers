@@ -12,10 +12,10 @@ import java.util.Map;
 public final class ClientTerminals {
 
     /** Разобранный кадр: символы и цвета (RGB) каждой клетки. */
-    public record Snapshot(int width, int height, int cursorX, int cursorY, boolean blink, int depth,
+    public record Snapshot(BlockPos pos, int width, int height, int cursorX, int cursorY, boolean blink, int depth,
                            char[] chars, int[] fg, int[] bg) {
 
-        static Snapshot parse(byte[] f) {
+        static Snapshot parse(BlockPos pos, byte[] f) {
             int w = TerminalCodec.width(f), h = TerminalCodec.height(f), n = w * h;
             if (w == 0 || h == 0 || f.length < TerminalCodec.HEADER + TerminalCodec.CELL * n) return null;
             char[] c = new char[n];
@@ -26,7 +26,7 @@ public final class ClientTerminals {
                 fg[i] = (f[pf++] & 0xFF) << 16 | (f[pf++] & 0xFF) << 8 | (f[pf++] & 0xFF);
                 bg[i] = (f[pb++] & 0xFF) << 16 | (f[pb++] & 0xFF) << 8 | (f[pb++] & 0xFF);
             }
-            return new Snapshot(w, h, TerminalCodec.cursorX(f), TerminalCodec.cursorY(f), TerminalCodec.blink(f), TerminalCodec.depth(f), c, fg, bg);
+            return new Snapshot(pos, w, h, TerminalCodec.cursorX(f), TerminalCodec.cursorY(f), TerminalCodec.blink(f), TerminalCodec.depth(f), c, fg, bg);
         }
     }
 
@@ -43,6 +43,7 @@ public final class ClientTerminals {
         if (data.length == 0) {          // компьютер выключен
             FRAMES.remove(pos);
             SCREENS.remove(pos);
+            PixelLayer.release(pos);
             return;
         }
         byte[] frame = TerminalCodec.apply(FRAMES.get(pos), data);
@@ -51,7 +52,7 @@ public final class ClientTerminals {
             requestFull(pos);
             return;
         }
-        Snapshot s = Snapshot.parse(frame);
+        Snapshot s = Snapshot.parse(pos, frame);
         if (s == null) return;
         FRAMES.put(pos, frame);
         SCREENS.put(pos, s);
@@ -76,6 +77,7 @@ public final class ClientTerminals {
     }
 
     public static void clear() {
+        PixelLayer.releaseAll();
         FRAMES.clear();
         SCREENS.clear();
         KEYBOARD.clear();

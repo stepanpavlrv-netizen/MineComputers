@@ -178,7 +178,21 @@ public final class Computer {
     private volatile int terminateWait = -1;
     private static final int TERMINATE_GRACE_TICKS = 20;
 
-    private long ticks;
+    /**
+     * Время компьютера (нс): идёт по настоящим часам, пока игра не на паузе и сервер не завис.
+     * Таймеры, os.sleep и computer.uptime() считаются по нему с точностью до миллисекунды,
+     * а не тиками по 50 мс. Если тики идут быстрее часов (сервер догоняет после лага, тесты),
+     * время подтягивается до числа тиков — так ничто не «отстаёт» от игры.
+     */
+    private long clockNanos;
+    private long tickCount;
+    private long lastPumpNanos = System.nanoTime();
+    private volatile long lastTickNanos = System.nanoTime();
+    /** Сервер не тикал дольше этого — игра на паузе или зависла: время компьютера стоит. */
+    static final long PAUSE_NANOS = 300_000_000L;
+    static final long TICK_NANOS = 1_000_000_000L / TICKS_PER_SECOND;
+    /** Дробные остатки пополнения (команд, клеток, байт), чтобы маленькие шаги по 1 мс не терялись. */
+    private double cpuCarry, gpuCarry, netCarry;
     private record Timer(long due, EventQueue target) {
     }
     private final Map<Integer, Timer> timers = new HashMap<>();
@@ -238,7 +252,13 @@ public final class Computer {
 
     double uptimeSeconds() {
         synchronized (timers) {
-            return ticks / (double) TICKS_PER_SECOND;
+            return clockNanos / 1e9;
+        }
+    }
+
+    long clockMillis() {
+        synchronized (timers) {
+            return clockNanos / 1_000_000L;
         }
     }
 
@@ -253,7 +273,11 @@ public final class Computer {
         terminateWait = -1;
         synchronized (timers) {
             timers.clear();
-            ticks = 0;
+            clockNanos = 0;
+            tickCount = 0;
+            lastPumpNanos = System.nanoTime();
+            lastTickNanos = lastPumpNanos;
+            cpuCarry = gpuCarry = netCarry = 0;
         }
         synchronized (ioBudget) {
             ioBudget.clear();
@@ -281,6 +305,7 @@ public final class Computer {
         // Загрузку системы (время по скорости диска) теперь показывает BIOS после самотеста
         bootRemaining = 0;
         state = State.RUNNING;
+        ComputerClock.register(this);
         if (bootRemaining > 0) drawBoot();
     }
 
@@ -298,6 +323,7 @@ public final class Computer {
             stopRequested = rebootRequested = false;
             bootRemaining = 0;
         }
+        ComputerClock.unregister(this);
         for (LuaMachine m : list) m.kill();
         for (LuaMachine m : list) m.closeLocked();
         gpu.reset();
@@ -361,8 +387,8 @@ public final class Computer {
     int startTimer(double seconds, EventQueue target) {
         synchronized (timers) {
             int id = nextTimer++;
-            long dueTicks = ticks + Math.max(1, Math.round(seconds * TICKS_PER_SECOND));
-            timers.put(id, new Timer(dueTicks, target));
+            long delay = (long) (Math.max(0, Math.min(1e7, seconds)) * 1e9);
+            timers.put(id, new Timer(clockNanos + Math.max(0, delay), target));
             return id;
         }
     }
@@ -419,18 +445,14 @@ public final class Computer {
             if (reboot) turnOn();
             return;
         }
+        boolean second;
         synchronized (timers) {
-            ticks++;
-            for (Iterator<Map.Entry<Integer, Timer>> it = timers.entrySet().iterator(); it.hasNext(); ) {
-                Map.Entry<Integer, Timer> e = it.next();
-                if (e.getValue().due() <= ticks) {
-                    it.remove();
-                    e.getValue().target().offer(event("timer", e.getKey()));
-                }
-            }
-            if (ticks % TICKS_PER_SECOND == 0) opsLastSecond = opsThisSecond.getAndSet(0);
+            tickCount++;
+            lastTickNanos = System.nanoTime();
+            second = tickCount % TICKS_PER_SECOND == 0;
+            if (second) opsLastSecond = opsThisSecond.getAndSet(0);
         }
-        if (ticks % TICKS_PER_SECOND == 0) sampleStats();
+        if (second) sampleStats();
         if (bootRemaining > 0) {
             bootRemaining--;
             if (bootRemaining > 0) {
@@ -440,7 +462,6 @@ public final class Computer {
             terminal.clear();
             terminal.setCursor(0, 0);
         }
-        Limits l = limits;
         if (main == null) {
             synchronized (this) {
                 if (main == null && state == State.RUNNING) {
@@ -449,15 +470,7 @@ public final class Computer {
                 }
             }
         }
-        // Порции команд: каждое ядро — один процесс на полной скорости; процессов больше, чем ядер, — делят
-        int alive = Math.max(1, machines.size());
-        double share = Math.min(1.0, l.cores() / (double) alive);
-        long per = Math.max(100, Math.round(l.opsPerTick() * share));
-        for (LuaMachine m : machines) m.refill(per);
-        gpuBudget.updateAndGet(b -> Math.min(b + l.gpuCellsPerTick(), (long) l.gpuCellsPerTick() * BUDGET_BANK_TICKS));
-        refillIo();
-        long net = host.netBytesPerSecond() / TICKS_PER_SECOND;
-        netBudget.updateAndGet(b -> Math.min(b + net, net * BUDGET_BANK_TICKS));
+        advance();
 
         if (terminateWait >= 0 && ++terminateWait > TERMINATE_GRACE_TICKS) {
             terminateWait = -1;
@@ -466,9 +479,69 @@ public final class Computer {
             LuaMachine m = main;
             if (m != null) m.abort();
         }
+    }
+
+    /**
+     * Шаг часов компьютера (раз в 1 мс из {@link ComputerClock} и каждый тик): сработавшие таймеры,
+     * пополнение процессора, видеокарты, дисков и сети по прошедшему времени, запуск ждущих процессов.
+     */
+    void advance() {
+        if (state != State.RUNNING || stopRequested) return;
+        long dt;
+        List<Object[]> fired = null;
+        List<EventQueue> targets = null;
+        synchronized (timers) {
+            long now = System.nanoTime();
+            long real = now - lastPumpNanos;
+            lastPumpNanos = now;
+            boolean active = now - lastTickNanos < PAUSE_NANOS;
+            long next = clockNanos + (active ? Math.min(Math.max(0, real), 100_000_000L) : 0);
+            long floor = tickCount * TICK_NANOS;
+            if (next < floor) next = floor;
+            dt = next - clockNanos;
+            clockNanos = next;
+            for (Iterator<Map.Entry<Integer, Timer>> it = timers.entrySet().iterator(); it.hasNext(); ) {
+                Map.Entry<Integer, Timer> e = it.next();
+                if (e.getValue().due() <= clockNanos) {
+                    it.remove();
+                    if (fired == null) { fired = new ArrayList<>(); targets = new ArrayList<>(); }
+                    fired.add(event("timer", e.getKey()));
+                    targets.add(e.getValue().target());
+                }
+            }
+            if (dt > 0) refill(dt);
+        }
+        if (fired != null) for (int i = 0; i < fired.size(); i++) targets.get(i).offer(fired.get(i));
         for (LuaMachine m : machines) {
             if (m.needsWork() && m.scheduled.compareAndSet(false, true)) ComputerExecutor.submit(m);
         }
+    }
+
+    /** Пополнить запасы за dt нс (под замком часов). Копить можно не больше, чем на 2 тика. */
+    private void refill(long dt) {
+        Limits l = limits;
+        double sec = dt / 1e9;
+        // Процессор: каждое ядро — один процесс на полной скорости; процессов больше, чем ядер, — делят
+        int alive = Math.max(1, machines.size());
+        double share = Math.min(1.0, l.cores() / (double) alive);
+        double perSecond = (double) l.opsPerTick() * TICKS_PER_SECOND * share;
+        cpuCarry += perSecond * sec;
+        long add = (long) cpuCarry;
+        cpuCarry -= add;
+        long cap = Math.max(100, Math.round(l.opsPerTick() * share)) * BUDGET_BANK_TICKS;
+        if (add > 0) for (LuaMachine m : machines) m.refill(add, cap);
+        gpuCarry += (double) l.gpuCellsPerTick() * TICKS_PER_SECOND * sec;
+        long g = (long) gpuCarry;
+        gpuCarry -= g;
+        long gcap = (long) l.gpuCellsPerTick() * BUDGET_BANK_TICKS;
+        if (g > 0) gpuBudget.updateAndGet(b -> Math.min(b + g, gcap));
+        refillIo(sec);
+        long nps = host.netBytesPerSecond();
+        netCarry += nps * sec;
+        long n = (long) netCarry;
+        netCarry -= n;
+        long ncap = nps / TICKS_PER_SECOND * BUDGET_BANK_TICKS;
+        if (n > 0) netBudget.updateAndGet(b -> Math.min(b + n, ncap));
     }
 
     void addOps(long ops) {
@@ -506,10 +579,8 @@ public final class Computer {
     private static final int PING_BYTES = 32;
     private final java.util.concurrent.atomic.AtomicInteger nextPing = new java.util.concurrent.atomic.AtomicInteger(1);
 
-    private long nowTicks() {
-        synchronized (timers) {
-            return ticks;
-        }
+    private long nowMillis() {
+        return clockMillis();
     }
 
     /**
@@ -518,7 +589,7 @@ public final class Computer {
      */
     public int netPing(String target) {
         int id = nextPing.getAndIncrement();
-        if (!netSend(target, PING_PORT, new Object[]{"ping", id, (double) nowTicks()}, PING_BYTES)) return -1;
+        if (!netSend(target, PING_PORT, new Object[]{"ping", id, (double) nowMillis()}, PING_BYTES)) return -1;
         return id;
     }
 
@@ -532,8 +603,8 @@ public final class Computer {
                 // Отвечает сама сетевая карта — программа для этого не нужна
                 if (host.netSend(from, PING_PORT, new Object[]{"pong", payload[1], sent}, PING_BYTES)) netSent.addAndGet(PING_BYTES);
             } else if ("pong".equals(payload[0])) {
-                long rtt = Math.max(0, nowTicks() - sent.longValue());
-                queueEvent("net_pong", from, payload[1], (int) (rtt * 1000 / TICKS_PER_SECOND), hops);
+                long rtt = Math.max(0, nowMillis() - sent.longValue());
+                queueEvent("net_pong", from, payload[1], (int) rtt, hops);
             }
             return;
         }
@@ -676,13 +747,13 @@ public final class Computer {
         }
     }
 
-    private void refillIo() {
+    private void refillIo(double sec) {
         synchronized (ioBudget) {
             boolean wait = false;
             for (Map.Entry<Mount, long[]> e : ioBudget.entrySet()) {
                 long speed = e.getKey().bytesPerSecond();
                 long[] b = e.getValue();
-                b[0] = Math.min(b[0] + speed / TICKS_PER_SECOND, speed / TICKS_PER_SECOND * BUDGET_BANK_TICKS);
+                b[0] = Math.min(b[0] + Math.max(1, Math.round(speed * sec)), speed / TICKS_PER_SECOND * BUDGET_BANK_TICKS);
                 if (b[0] < 0) wait = true;
             }
             ioWait = wait;

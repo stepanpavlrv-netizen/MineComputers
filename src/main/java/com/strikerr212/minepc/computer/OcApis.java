@@ -173,6 +173,39 @@ final class OcApis {
                             ch.isEmpty() ? ' ' : ch.charAt(0));
                     return Constants.TRUE;
                 }),
+                // ----- Кадровый буфер и текстуры (ускорители MineComputers) -----
+                RegisteredFunction.ofV("canvas", (s, a) -> {
+                    Terminal scr = c.terminal();
+                    int w = a.arg(1).optInteger(scr.width()), h = a.arg(2).optInteger(scr.height() * 2);
+                    Canvas cv = gpu.newCanvas(w, h);
+                    if (cv == null) return varargsOf(Constants.NIL, str("не хватает видеопамяти или слишком большой"));
+                    m.spend((long) w * h / 64 + 16);
+                    return Canvas.lua(c, m, gpu, cv);
+                }),
+                RegisteredFunction.ofV("newTexture", (s, a) -> {
+                    int w = a.arg(1).checkInteger(), h = a.arg(2).checkInteger();
+                    if (w < 1 || h < 1 || w > 1024 || h > 1024) throw LuaApis.error("текстура от 1×1 до 1024×1024");
+                    int[] px = new int[w * h];
+                    LuaValue d = a.arg(3);
+                    if (d.isString()) {
+                        byte[] b = LuaApis.bytes(d.checkLuaString());
+                        for (int i = 0; i < px.length; i++) {
+                            int o = i * 3;
+                            int rgb = o + 2 < b.length ? (b[o] & 255) << 16 | (b[o + 1] & 255) << 8 | (b[o + 2] & 255) : 0;
+                            px[i] = rgb == 0xFF00FF ? Canvas.TRANSPARENT : rgb;     // пурпурный — прозрачный
+                        }
+                    } else {
+                        LuaTable tbl = d.checkTable();
+                        for (int i = 0; i < px.length; i++) {
+                            LuaValue v = tbl.rawget(i + 1);
+                            px[i] = v.isNumber() && v.toInteger() >= 0 ? v.toInteger() & 0xFFFFFF : Canvas.TRANSPARENT;
+                        }
+                    }
+                    m.spend(px.length / 4 + 16);
+                    int id = gpu.newTexture(w, h, px);
+                    return id < 0 ? varargsOf(Constants.NIL, str("не хватает видеопамяти")) : valueOf(id);
+                }),
+                RegisteredFunction.ofV("freeTexture", (s, a) -> valueOf(gpu.freeTexture(a.arg(1).checkInteger()))),
                 // ----- Видеопамять (как в OpenComputers 1.8) -----
                 RegisteredFunction.ofV("getActiveBuffer", (s, a) -> valueOf(gpu.active())),
                 RegisteredFunction.ofV("setActiveBuffer", (s, a) -> {

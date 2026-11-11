@@ -244,7 +244,14 @@ public class CiScreenshots {
             case 1780 -> shot(mc, "bios_uefi_boot");
             case 1781, 1783, 1785 -> keyAt(lanJ2, "right");
             case 1800 -> shot(mc, "bios_uefi_monitor");
-            case 1810 -> mc.stop();
+            // 3D-игра bunker на кадровом буфере: выходим из BIOS (F10), запускаем демо и записываем видео
+            case 1806 -> keyAt(lanJ2, "f10");
+            case 2000 -> shot(mc, "bunker_boot");
+            case 2002 -> typeAt(lanJ2, "bunker demo 20");
+            case 2040 -> startRecording(mc);
+            case 2140 -> shot(mc, "bunker_1");
+            case 2220 -> shot(mc, "bunker_2");
+            case 2290 -> mc.stop();
             default -> {
             }
         }
@@ -374,6 +381,17 @@ public class CiScreenshots {
 
     private static BlockPos netA = BlockPos.ZERO, netB = BlockPos.ZERO, netC = BlockPos.ZERO, netD = BlockPos.ZERO,
             netRouter = BlockPos.ZERO;
+
+    /** Сообщить скрипту CI, где окно игры: он запишет видео этой области (ffmpeg, 11 секунд). */
+    private static void startRecording(Minecraft mc) {
+        var w = mc.getWindow();
+        try {
+            java.nio.file.Files.writeString(mc.gameDirectory.toPath().resolve("record.txt"),
+                    w.getX() + " " + w.getY() + " " + (w.getWidth() & ~1) + " " + (w.getHeight() & ~1) + "\n");
+        } catch (java.io.IOException e) {
+            e.printStackTrace();
+        }
+    }
 
     private static void keyAt(BlockPos pos, String key) {
         var server = Minecraft.getInstance().getSingleplayerServer();

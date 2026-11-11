@@ -87,7 +87,9 @@ public class TerminalScreen extends Screen {
 
     /** Нарисовать сетку символов (общая для окна и, в упрощённом виде, для монитора в мире). */
     private void drawTerminal(GuiGraphics g, ClientTerminals.Snapshot s) {
-        // Всё рисуется одной пачкой: на экране 160×50 это 8000 символов за кадр
+        // Фон и полублоки — одной текстурой (обновляется только с новым кадром), сверху буквы и рамки одной пачкой
+        int w = s.width(), h = s.height();
+        g.blit(PixelLayer.of(s), 0, 0, w * CELL_W, h * CELL_H, 0f, 0f, w, h * 2, w, h * 2);
         g.drawManaged(() -> drawCells(g, s));
     }
 
@@ -96,16 +98,10 @@ public class TerminalScreen extends Screen {
         Matrix4f m = g.pose().last().pose();
         VertexConsumer vc = g.bufferSource().getBuffer(RenderType.gui());
         for (int y = 0; y < h; y++) {
-            // Фон: подряд идущие клетки одного цвета — одним прямоугольником
-            int x = 0;
-            while (x < w) {
-                int color = s.bg()[y * w + x], start = x;
-                while (x < w && s.bg()[y * w + x] == color) x++;
-                rect(vc, m, start * CELL_W, y * CELL_H, x * CELL_W, (y + 1) * CELL_H, color);
-            }
-            // Псевдографика — прямоугольниками, без щелей
-            for (x = 0; x < w; x++) {
+            // Псевдографика, которой нет в текстуре (рамки, восьмушки, четвертинки), — прямоугольниками
+            for (int x = 0; x < w; x++) {
                 int p = y * w + x;
+                if (PixelLayer.covered(s.chars()[p])) continue;
                 final int cx = x * CELL_W, cy = y * CELL_H;
                 CellArt.draw(s.chars()[p], s.fg()[p], s.bg()[p],
                         (x0, y0, x1, y1, rgb) -> rect(vc, m, cx + x0 * CELL_W, cy + y0 * CELL_H, cx + x1 * CELL_W, cy + y1 * CELL_H, rgb));

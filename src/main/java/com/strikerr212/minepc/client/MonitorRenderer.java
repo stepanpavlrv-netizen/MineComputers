@@ -119,19 +119,24 @@ public class MonitorRenderer implements BlockEntityRenderer<MonitorBlockEntity> 
         // Только клетки, которые попадают в этот блок: стена 3×3 не перебирает весь экран девять раз
         int xa = Math.max(0, (int) Math.floor((bx0 - ox) / cw)), xb = Math.min(w, (int) Math.ceil((bx1 - ox) / cw) + 1);
         int ya = Math.max(0, (int) Math.floor((by0 - oy) / ch)), yb = Math.min(h, (int) Math.ceil((by1 - oy) / ch) + 1);
+        // Фон и полублоки — одной текстурой: часть экрана, которая попадает в этот блок
+        pose.translate(0, 0, 0.002f);
+        m = pose.last().pose();
+        float sx0 = Math.max(bx0, ox), sy0 = Math.max(by0, oy), sx1 = Math.min(bx1, ox + w * cw), sy1 = Math.min(by1, oy + h * ch);
+        if (sx0 < sx1 && sy0 < sy1) {
+            VertexConsumer tc = buffers.getBuffer(RenderType.text(PixelLayer.of(s)));
+            float u0 = (sx0 - ox) / (w * cw), u1 = (sx1 - ox) / (w * cw), v0 = (sy0 - oy) / (h * ch), v1 = (sy1 - oy) / (h * ch);
+            texQuad(tc, m, sx0, sy0, sx1, sy1, u0, v0, u1, v1);
+        }
+        // Рамки, восьмушки, четвертинки — прямоугольниками чуть ближе к зрителю
         pose.translate(0, 0, 0.002f);
         m = pose.last().pose();
         for (int y = ya; y < yb; y++) {
             float y0 = oy + y * ch, y1 = y0 + ch;
             if (y1 < by0 || y0 > by1) continue;
-            int x = xa;
-            while (x < xb) {
-                int color = s.bg()[y * w + x], start = x;
-                while (x < xb && s.bg()[y * w + x] == color) x++;
-                quadClip(vc, m, ox + start * cw, y0, ox + x * cw, y1, color, bx0, by0, bx1, by1);
-            }
-            for (x = xa; x < xb; x++) {
+            for (int x = xa; x < xb; x++) {
                 int p = y * w + x;
+                if (PixelLayer.covered(s.chars()[p])) continue;
                 float cx = ox + x * cw;
                 if (cx + cw < bx0 || cx > bx1) continue;
                 final Matrix4f mm = m;
@@ -187,6 +192,19 @@ public class MonitorRenderer implements BlockEntityRenderer<MonitorBlockEntity> 
         vc.addVertex(m, x1, y1, 0).setColor(argb).setLight(FULL);
         vc.addVertex(m, x0, y1, 0).setColor(argb).setLight(FULL);
         vc.addVertex(m, x0, y0, 0).setColor(argb).setLight(FULL);
+    }
+
+    /** Прямоугольник с текстурой, с обеих сторон (как quadClip). */
+    private static void texQuad(VertexConsumer vc, Matrix4f m, float x0, float y0, float x1, float y1,
+                                float u0, float v0, float u1, float v1) {
+        vc.addVertex(m, x0, y0, 0).setColor(-1).setUv(u0, v0).setLight(FULL);
+        vc.addVertex(m, x0, y1, 0).setColor(-1).setUv(u0, v1).setLight(FULL);
+        vc.addVertex(m, x1, y1, 0).setColor(-1).setUv(u1, v1).setLight(FULL);
+        vc.addVertex(m, x1, y0, 0).setColor(-1).setUv(u1, v0).setLight(FULL);
+        vc.addVertex(m, x1, y0, 0).setColor(-1).setUv(u1, v0).setLight(FULL);
+        vc.addVertex(m, x1, y1, 0).setColor(-1).setUv(u1, v1).setLight(FULL);
+        vc.addVertex(m, x0, y1, 0).setColor(-1).setUv(u0, v1).setLight(FULL);
+        vc.addVertex(m, x0, y0, 0).setColor(-1).setUv(u0, v0).setLight(FULL);
     }
 
     @Override

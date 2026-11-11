@@ -19,9 +19,16 @@ final class Gpu {
         this.computer = computer;
     }
 
+    /** Кадровые буферы (точки) и текстуры — тоже в видеопамяти. */
+    private final List<Canvas> canvases = new ArrayList<>();
+    private final List<Canvas.Texture> textures = new ArrayList<>();
+
     synchronized void reset() {
         buffers.clear();
         active = 0;
+        for (Canvas c : canvases) c.freed = true;
+        canvases.clear();
+        textures.clear();
     }
 
     /** Куда сейчас рисует видеокарта. */
@@ -62,7 +69,48 @@ final class Gpu {
     synchronized long usedCells() {
         long n = 0;
         for (Terminal t : buffers) if (t != null) n += t.cells();
+        for (Canvas c : canvases) n += c.cells();
+        for (Canvas.Texture t : textures) if (t != null) n += t.cells();
         return n;
+    }
+
+    /** Кадровый буфер w×h точек (не больше экрана: ширина × двойная высота) или null, если не хватает видеопамяти. */
+    synchronized Canvas newCanvas(int w, int h) {
+        Terminal screen = computer.terminal();
+        if (w < 1 || h < 1 || w > screen.maxWidth() || h > screen.maxHeight() * 2) return null;
+        Canvas c = new Canvas(w, h);
+        if (usedCells() + c.cells() > totalCells()) return null;
+        canvases.add(c);
+        return c;
+    }
+
+    synchronized void freeCanvas(Canvas c) {
+        c.freed = true;
+        canvases.remove(c);
+    }
+
+    /** Текстура (номер с 1) или -1, если не хватает видеопамяти. */
+    synchronized int newTexture(int w, int h, int[] px) {
+        Canvas.Texture t = new Canvas.Texture(w, h, px);
+        if (usedCells() + t.cells() > totalCells()) return -1;
+        for (int i = 0; i < textures.size(); i++) {
+            if (textures.get(i) == null) {
+                textures.set(i, t);
+                return i + 1;
+            }
+        }
+        textures.add(t);
+        return textures.size();
+    }
+
+    synchronized Canvas.Texture texture(int id) {
+        return id < 1 || id > textures.size() ? null : textures.get(id - 1);
+    }
+
+    synchronized boolean freeTexture(int id) {
+        if (texture(id) == null) return false;
+        textures.set(id - 1, null);
+        return true;
     }
 
     long totalCells() {
@@ -103,6 +151,9 @@ final class Gpu {
     synchronized void freeAll() {
         buffers.clear();
         active = 0;
+        for (Canvas c : canvases) c.freed = true;
+        canvases.clear();
+        textures.clear();
     }
 
     synchronized List<Integer> indexes() {

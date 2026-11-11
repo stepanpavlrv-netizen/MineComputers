@@ -38,16 +38,14 @@ import java.util.Objects;
 public final class CaseComputer implements Computer.Host {
 
     private static final int SCAN_INTERVAL = 10;       // как часто искать монитор, клавиатуру, дисководы (тики)
-    // Экран уходит игрокам каждый тик (20 кадров/с); если кадры тяжёлые (меняется почти весь большой экран) —
-    // раз в 2 тика, чтобы не забивать сеть сервера
-    private static final int HEAVY_FRAME = 32 * 1024;
-    private static final int KEEPALIVE = 100;          // и обязательно раз в 5 секунд (для новых зрителей)
+    /** Весь кадр (не только изменения) — раз в 5 секунд, для игроков, которые только подошли. */
+    private static final long KEEPALIVE_NANOS = 5_000_000_000L;
 
     private final PcCaseBlockEntity be;
-    private Computer computer;
+    private volatile Computer computer;
     private boolean wantOn;
     private volatile String label = "";
-    private boolean hasKeyboard;
+    private volatile boolean hasKeyboard;
     private final List<BlockPos> monitors = new ArrayList<>();
 
     /** Съёмные накопители, подключённые сейчас: путь в компьютере → номер накопителя. */
@@ -55,9 +53,16 @@ public final class CaseComputer implements Computer.Host {
     private int lastVersion = -1;
     /** Последний отправленный кадр: следующий пакет содержит только отличия от него. */
     private byte[] lastFrame;
-    private boolean forceFull;
+    private volatile boolean forceFull;
     private Computer.State lastState = Computer.State.OFF;
-    private long lastSent = -1000;
+    private long lastSentNanos, lastFullNanos;
+    /** Кто видит экран (игроки рядом с корпусом); обновляется каждый тик в главном потоке. */
+    private volatile List<net.minecraft.server.level.ServerPlayer> viewers = List.of();
+    private volatile boolean unlimited = true;
+    private volatile long lastTickNanos = System.nanoTime();
+    /** Запас трафика на зрителя (байт) для сервера; в одиночной игре не ограничиваем. */
+    private double screenTokens;
+    private final Object screenLock = new Object();
     private long age;
 
     CaseComputer(PcCaseBlockEntity be) {
@@ -701,6 +706,8 @@ public final class CaseComputer implements Computer.Host {
         syncScreen(level, pos);
     }
 
+    long lastTickNanos() { return lastTickNanos; }
+
     private void scanDevices(ServerLevel level, BlockPos pos) {
         // Монитор рядом с корпусом — и все блоки большого монитора, в который он входит
         java.util.Set<BlockPos> found = new java.util.HashSet<>();
@@ -799,29 +806,57 @@ public final class CaseComputer implements Computer.Host {
         forceFull = true;
     }
 
-    private int lastBytes;
-
+    /** Главный поток (каждый тик): кто смотрит на экран; новым зрителям — весь кадр. Сама отправка — в {@link ScreenSender}. */
     private void syncScreen(ServerLevel level, BlockPos pos) {
-        long now = level.getGameTime();
-        boolean on = computer != null && computer.state() != Computer.State.OFF;
-        int version = on ? computer.terminal().version() : -1;
-        boolean changed = version != lastVersion;
-        boolean keepalive = now - lastSent >= KEEPALIVE;
-        if ((changed && now - lastSent >= (lastBytes > HEAVY_FRAME ? 2 : 1)) || keepalive || forceFull) {
+        lastTickNanos = System.nanoTime();
+        List<net.minecraft.server.level.ServerPlayer> now = level.getChunkSource().chunkMap.getPlayers(new ChunkPos(pos), false);
+        List<net.minecraft.server.level.ServerPlayer> before = viewers;
+        if (!before.containsAll(now)) forceFull = true;
+        viewers = List.copyOf(now);
+        var server = level.getServer();
+        unlimited = server == null || (server.isSingleplayer() && !server.isPublished());
+        ScreenSender.track(this);
+        flushScreen(true);
+    }
+
+    /**
+     * Отправить кадр, если экран изменился (из потока {@link ScreenSender} или из тика).
+     * Не чаще screenFps раз в секунду и, на сервере, не больше screenKbPerSecond на зрителя.
+     */
+    void flushScreen(boolean fromTick) {
+        synchronized (screenLock) {
+            long now = System.nanoTime();
+            Computer c = computer;
+            boolean on = c != null && c.state() != Computer.State.OFF;
+            int version = on ? c.terminal().version() : -1;
+            boolean changed = version != lastVersion;
+            boolean keepalive = now - lastFullNanos >= KEEPALIVE_NANOS;
+            boolean full = keepalive || forceFull;
+            // Запас трафика копится не больше чем на 1/4 секунды
+            long rate = (long) com.strikerr212.minepc.MineConfig.screenKbPerSecond() * 1024;
+            if (lastSentNanos != 0) screenTokens = Math.min(rate / 4.0, screenTokens + rate * ((now - lastSentNanos) / 1e9));
+            if (!changed && !full) return;
+            if (!full) {
+                long minGap = 1_000_000_000L / Math.max(10, com.strikerr212.minepc.MineConfig.screenFps());
+                if (now - lastSentNanos < minGap) return;
+                if (!unlimited && screenTokens < 0) return;
+            }
             byte[] data;
             if (on) {
-                byte[] frame = computer.terminal().snapshot();
-                // Раз в 5 секунд — весь кадр (для игроков, которые только подошли), иначе только изменения
-                data = TerminalCodec.encode(keepalive || forceFull ? null : lastFrame, frame);
+                byte[] frame = c.terminal().snapshot();
+                data = TerminalCodec.encode(full ? null : lastFrame, frame);
                 lastFrame = frame;
             } else {
                 data = new byte[0];
                 lastFrame = null;
             }
-            PacketDistributor.sendToPlayersTrackingChunk(level, new ChunkPos(pos),
-                    new TerminalPayload(pos, data, hasKeyboard));
-            lastBytes = data.length;
-            lastSent = now;
+            TerminalPayload payload = new TerminalPayload(be.getBlockPos(), data, hasKeyboard);
+            for (net.minecraft.server.level.ServerPlayer p : viewers) {
+                PacketDistributor.sendToPlayer(p, payload);
+            }
+            screenTokens -= data.length;
+            lastSentNanos = now;
+            if (full) lastFullNanos = now;
             lastVersion = version;
             forceFull = false;
         }

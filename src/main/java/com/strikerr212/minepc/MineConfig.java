@@ -21,6 +21,8 @@ public final class MineConfig {
     private static final ModConfigSpec.IntValue MAX_PROCESSES;
     private static final ModConfigSpec.IntValue THREADS;
     private static final ModConfigSpec.IntValue SLICE_MS;
+    private static final ModConfigSpec.IntValue SCREEN_FPS;
+    private static final ModConfigSpec.IntValue SCREEN_KB;
     private static final ModConfigSpec.BooleanValue BOOT_TIME;
 
     static {
@@ -53,6 +55,12 @@ public final class MineConfig {
         SLICE_MS = b.comment("Сколько миллисекунд за тик может работать один процесс (из 50 мс тика)",
                         "Max milliseconds per tick for one process")
                 .defineInRange("sliceMs", 20, 2, 45);
+        SCREEN_FPS = b.comment("Сколько раз в секунду экран компьютера может обновляться у игроков",
+                        "Max screen updates per second sent to players")
+                .defineInRange("screenFps", 60, 10, 120);
+        SCREEN_KB = b.comment("Сколько КБ/с один компьютер может слать каждому зрителю на сервере (в одиночной игре без ограничения)",
+                        "Max screen traffic per computer per viewer, KB/s (unlimited in singleplayer)")
+                .defineInRange("screenKbPerSecond", 2048, 64, 65536);
         BOOT_TIME = b.comment("Загрузка системы занимает время (зависит от накопителя: SSD быстрее жёсткого диска)",
                         "System boot takes time depending on the drive")
                 .define("bootTime", true);
@@ -93,4 +101,6 @@ public final class MineConfig {
     public static int threads() { return get(THREADS, 0); }
     public static int sliceMs() { return get(SLICE_MS, 20); }
     public static boolean bootTime() { return get(BOOT_TIME, true); }
+    public static int screenFps() { return get(SCREEN_FPS, 60); }
+    public static int screenKbPerSecond() { return get(SCREEN_KB, 2048); }
 }

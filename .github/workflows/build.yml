@@ -48,12 +48,13 @@ jobs:
         run: |
           bash tools/ci/client_shots.sh
           mkdir -p /tmp/shots && cp run/screenshots/minepc_*.png /tmp/shots/ 2>/dev/null || true
+          cp run/screenshots/minepc_*.mp4 /tmp/shots/ 2>/dev/null || true
           cp run/logs/latest.log /tmp/shots/client.log 2>/dev/null || true
           git config user.name "ci" && git config user.email "ci@users.noreply.github.com"
           git checkout --orphan ci-screenshots
           git rm -rf --cached . -q
           git clean -fdq -e run -e build
-          cp /tmp/shots/* . && git add *.png client.log 2>/dev/null; git add -A . ':!run' ':!build' || true
+          cp /tmp/shots/* . && git add *.png *.mp4 client.log 2>/dev/null; git add -A . ':!run' ':!build' || true
           git commit -q -m "screenshots" && git push -f origin ci-screenshots
 
       - name: Upload mod jar
