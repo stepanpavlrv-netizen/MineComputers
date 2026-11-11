@@ -7,7 +7,7 @@ package com.strikerr212.minepc.computer.audio;
  */
 public final class Timeline {
 
-    public static final int LEAD_MS = 40;
+    public static final int LEAD_MS = 30;
     private static final long LEAD = (long) Synth.RATE * LEAD_MS / 1000;
     /** Насколько можно отстать от идеала, прежде чем догонять. */
     private static final long SLACK = (long) Synth.RATE * 150 / 1000;

@@ -22,13 +22,13 @@ import java.util.concurrent.locks.LockSupport;
  * Звук из программ (пищалка и звуковой чип) у игрока. Для каждого звучащего компьютера — свой синтезатор
  * и свой источник OpenAL в мире (у корпуса): звук стихает с расстоянием и слышен с нужной стороны.
  *
- * Звук генерируется кусочками по 10 мс в отдельном потоке и сразу уходит в OpenAL — задержка около 0.1 с,
+ * Звук генерируется кусочками по 10 мс в отдельном потоке и сразу уходит в OpenAL — задержка меньше 0.1 с,
  * поэтому выстрелы в игре звучат вовремя. Громкость — «Музыкальные блоки» × общая × настройка мода.
  */
 public final class ComputerAudio {
 
     private static final int CHUNK = Synth.RATE / 100;       // 10 мс
-    private static final int BUFFERS = 6;                    // 60 мс в очереди OpenAL
+    private static final int BUFFERS = 5;                    // 50 мс в очереди OpenAL
     /** Тишина дольше этого — динамик убираем (и источник OpenAL освобождаем). */
     private static final long IDLE_NANOS = 8_000_000_000L;
     private static final int MAX_SPEAKERS = 16;
