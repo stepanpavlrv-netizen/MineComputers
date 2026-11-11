@@ -114,12 +114,13 @@ public class HeadlessTest {
         command("cd code");
         // Пишем программу через редактор
         command("edit hello.lua");
+        for (int i = 0; i < 60 && !screen().contains("hello.lua"); i++) { ticks(1); Thread.sleep(5); }
         type("for i = 1, 3 do");
         key("enter", false);
         type("  print(\"Привет, \" .. i)");
         key("enter", false);
         type("end");
-        ticks(5);
+        for (int i = 0; i < 60 && !screen().contains("for i = 1, 3 do"); i++) { ticks(1); Thread.sleep(5); }
         show("редактор");
         expect("подсветка: ключевое слово на экране", screen().contains("for i = 1, 3 do"));
         key("s", true);

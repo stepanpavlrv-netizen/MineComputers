@@ -39,9 +39,12 @@ timeout 700 xvfb-run -a -s "-screen 0 1280x720x24" bash -c '
       mkdir -p run/screenshots
       echo "Запись видео: окно ${W}x${H} в ($X,$Y), экран $DISPLAY"
       date +%s.%N > run/record_start.txt
-      ffmpeg -y -loglevel error -f x11grab -draw_mouse 0 -framerate 30 -video_size ${W}x${H} -i ${DISPLAY}+${X},${Y} \
-        -t 11 -c:v libx264 -preset veryfast -crf 20 -pix_fmt yuv420p run/screenshots/minepc_bunker.mp4 \
+      ffmpeg -y -loglevel info -nostats -f x11grab -draw_mouse 0 -framerate 30 -video_size ${W}x${H} -i ${DISPLAY}+${X},${Y} \
+        -t 11 -c:v libx264 -preset veryfast -crf 20 -pix_fmt yuv420p run/screenshots/minepc_bunker.mp4 2> run/ffmpeg.log \
         && echo "Видео записано"
+      # Точное время первого кадра — его пишет сам ffmpeg (запускается он ещё ~0.15 с после date)
+      T=$(grep -o "start: [0-9.]*" run/ffmpeg.log | head -1 | cut -d" " -f2)
+      [ -n "$T" ] && echo "$T" > run/record_start.txt
     fi
   ) &
   ./gradlew runClient -PciShots > shots.log 2>&1

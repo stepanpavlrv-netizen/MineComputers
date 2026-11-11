@@ -2,15 +2,16 @@ package com.strikerr212.minepc.computer.audio;
 
 /**
  * Привязка времени сервера (мс по часам компьютера) ко времени синтезатора у игрока (отсчёты).
- * Пакеты приходят по сети неровно, поэтому звук играет с небольшим запасом {@link #LEAD_MS}:
- * пакеты, отправленные заранее, встают точно друг за другом, а опоздавшие — сдвигают привязку.
+ *
+ * Звук «сразу» (выстрел в игре, писк) играет без всякого запаса — как только пакет пришёл.
+ * Музыка программы отправляет заранее (очередь sound.process на секунду-другую вперёд), поэтому её пакеты
+ * встают точно друг за другом по часам сервера. Если пакет опоздал (сеть задержала) — играем сразу и
+ * сдвигаем привязку; если привязка убежала вперёд больше чем на {@link #SLACK_MS} — подтягиваем.
  */
 public final class Timeline {
 
-    public static final int LEAD_MS = 30;
-    private static final long LEAD = (long) Synth.RATE * LEAD_MS / 1000;
-    /** Насколько можно отстать от идеала, прежде чем догонять. */
-    private static final long SLACK = (long) Synth.RATE * 150 / 1000;
+    public static final int SLACK_MS = 120;
+    private static final long SLACK = (long) Synth.RATE * SLACK_MS / 1000;
 
     private final Synth synth;
     private boolean anchored;
@@ -29,22 +30,25 @@ public final class Timeline {
         return ms * Synth.RATE / 1000;
     }
 
-    /** Пакет с сервера. startMs = -1 — играть сразу. */
-    public void receive(long startMs, long nowMs, byte[] commands) {
+    /** Пакет с сервера. startMs = -1 — играть сразу. Возвращает отсчёт, с которого он зазвучит. */
+    public long receive(long startMs, long nowMs, byte[] commands) {
         long here = synth.now();
         if (startMs < 0) {
-            synth.schedule(here + LEAD / 2, commands);
-            return;
+            synth.schedule(here, commands);
+            return here;
         }
-        // Компьютер перезагрузился (часы начались заново) или пакет первый — привязаться заново
-        if (!anchored || nowMs < lastServerNow) {
-            anchor = here + LEAD - samples(nowMs);
+        // Звук «сразу» (или пакет первый, или компьютер перезагрузился и часы начались заново):
+        // играем немедленно и привязываем «сейчас» сервера к этому месту — следующие пакеты встанут вплотную
+        if (!anchored || nowMs < lastServerNow || startMs <= nowMs) {
+            anchor = here - samples(nowMs);
             anchored = true;
         }
         lastServerNow = nowMs;
-        // Где сейчас «сейчас» сервера относительно нашего времени: в идеале ровно на LEAD впереди
+        // Где сейчас «сейчас» сервера относительно нашего времени: в идеале — ровно здесь
         long serverNowHere = anchor + samples(nowMs) - here;
-        if (serverNowHere < LEAD / 4 || serverNowHere > LEAD + SLACK) anchor += LEAD - serverNowHere;
-        synth.schedule(anchor + samples(startMs), commands);
+        if (serverNowHere < 0 || serverNowHere > SLACK) anchor -= serverNowHere;
+        long start = Math.max(here, anchor + samples(startMs));
+        synth.schedule(start, commands);
+        return start;
     }
 }

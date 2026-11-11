@@ -394,8 +394,9 @@ public class CiScreenshots {
             com.strikerr212.minepc.MineComputers.LOGGER.info("CI экран: за {} с отправлено {} кадров ({}/с), получено {} ({}/с), игра рисует {} кадров/с",
                     String.format("%.1f", sec), sent - perfSent, String.format("%.1f", (sent - perfSent) / sec),
                     got - perfGot, String.format("%.1f", (got - perfGot) / sec), mc.getFps());
-            com.strikerr212.minepc.MineComputers.LOGGER.info("CI звук: пакетов {}, кусочков по 10 мс {}, OpenAL {}",
-                    ComputerAudio.packets, ComputerAudio.chunks, org.lwjgl.openal.ALC10.alcGetCurrentContext() != 0 ? "работает" : "нет");
+            com.strikerr212.minepc.MineComputers.LOGGER.info("CI звук: пакетов {}, кусочков звука {}, OpenAL {}, задержка «пакет → звук» в среднем {} мс",
+                    ComputerAudio.packets, ComputerAudio.chunks, org.lwjgl.openal.ALC10.alcGetCurrentContext() != 0 ? "работает" : "нет",
+                    ComputerAudio.latencyCount == 0 ? "?" : String.format("%.1f", ComputerAudio.latencySum / ComputerAudio.latencyCount));
             com.strikerr212.minepc.MineComputers.LOGGER.info("CI экран: из них от компьютера с игрой {} ({}/с)",
                     ClientTerminals.receivedAt - perfOne, String.format("%.1f", (ClientTerminals.receivedAt - perfOne) / sec));
             ClientTerminals.Snapshot sn = at == null ? null : ClientTerminals.get(at);

@@ -22,13 +22,13 @@ import java.util.concurrent.locks.LockSupport;
  * Звук из программ (пищалка и звуковой чип) у игрока. Для каждого звучащего компьютера — свой синтезатор
  * и свой источник OpenAL в мире (у корпуса): звук стихает с расстоянием и слышен с нужной стороны.
  *
- * Звук генерируется кусочками по 10 мс в отдельном потоке и сразу уходит в OpenAL — задержка меньше 0.1 с,
- * поэтому выстрелы в игре звучат вовремя. Громкость — «Музыкальные блоки» × общая × настройка мода.
+ * Звук генерируется кусочками по 5 мс в отдельном потоке и сразу уходит в OpenAL; в очереди — около 30 мс,
+ * поэтому выстрелы в игре звучат вовремя (пакет звука к тому же приходит раньше кадра экрана). Громкость — «Музыкальные блоки» × общая × настройка мода.
  */
 public final class ComputerAudio {
 
-    private static final int CHUNK = Synth.RATE / 100;       // 10 мс
-    private static final int BUFFERS = 5;                    // 50 мс в очереди OpenAL
+    private static final int CHUNK = 256;                    // 5.8 мс
+    private static final int BUFFERS = 5;                    // 29 мс в очереди OpenAL
     /** Тишина дольше этого — динамик убираем (и источник OpenAL освобождаем). */
     private static final long IDLE_NANOS = 8_000_000_000L;
     private static final int MAX_SPEAKERS = 16;
@@ -57,6 +57,9 @@ public final class ComputerAudio {
     private static final Map<BlockPos, Speaker> SPEAKERS = new ConcurrentHashMap<>();
     /** Для проверки в CI: сколько пакетов пришло и сколько кусочков звука отдано в OpenAL. */
     public static volatile long packets, chunks;
+    /** Для проверки в CI: сумма и число задержек «пришёл пакет → зазвучал» (мс, без задержки самой звуковой карты). */
+    public static volatile double latencySum;
+    public static volatile long latencyCount;
     private static volatile Thread thread;
     private static long context;
     private static boolean warned;
@@ -118,7 +121,12 @@ public final class ComputerAudio {
                     }
                 }
             }
-            LockSupport.parkNanos(3_000_000L);
+            try {
+                // sleep(1), а не park: на Windows так включается точный (1 мс) таймер
+                Thread.sleep(1);
+            } catch (InterruptedException e) {
+                return;
+            }
         }
     }
 
@@ -151,8 +159,16 @@ public final class ComputerAudio {
         for (Speaker s : SPEAKERS.values()) {
             Packet p;
             while ((p = s.inbox.poll()) != null) {
-                s.timeline.receive(p.startMs, p.nowMs, p.commands);
+                long start = s.timeline.receive(p.startMs, p.nowMs, p.commands);
                 s.lastSound = now;
+                if (s.source != 0 && (p.startMs < 0 || p.startMs <= p.nowMs)) {
+                    // Сколько ещё не проиграно из очереди OpenAL: зазвучит через это время
+                    int queued = AL10.alGetSourcei(s.source, AL10.AL_BUFFERS_QUEUED);
+                    int offset = AL10.alGetSourcei(s.source, AL11.AL_SAMPLE_OFFSET);
+                    long playing = s.synth.now() - Math.max(0, (long) queued * CHUNK - offset);
+                    latencySum += (start - playing) * 1000.0 / Synth.RATE;
+                    latencyCount++;
+                }
             }
             if (s.source == 0) {
                 if (!create(s)) continue;

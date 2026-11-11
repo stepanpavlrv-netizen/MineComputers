@@ -30,8 +30,9 @@ public class ModNetwork {
                 context.enqueueWork(() -> ClientAccess.onTerminal(payload)));
 
         // Звук компьютера (пищалка, звуковой чип) и гул вентиляторов: сервер → игроки рядом
-        registrar.playToClient(SoundPayload.TYPE, SoundPayload.STREAM_CODEC, (payload, context) ->
-                ClientAccess.onSound(payload));
+        // Звук — прямо в сетевом потоке, не дожидаясь следующего кадра игры (синтезатор потокобезопасен)
+        registrar.executesOn(net.neoforged.neoforge.network.registration.HandlerThread.NETWORK)
+                .playToClient(SoundPayload.TYPE, SoundPayload.STREAM_CODEC, (payload, context) -> ClientAccess.onSound(payload));
         registrar.playToClient(HumPayload.TYPE, HumPayload.STREAM_CODEC, (payload, context) ->
                 context.enqueueWork(() -> ClientAccess.onHum(payload)));
 
