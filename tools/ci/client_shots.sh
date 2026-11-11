@@ -14,6 +14,11 @@ renderDistance:4
 simulationDistance:5
 guiScale:2
 pauseOnLostFocus:false
+menuBackgroundBlurriness:0
+graphicsMode:0
+renderClouds:"false"
+maxFps:120
+enableVsync:false
 OPT
 command -v ffmpeg >/dev/null || (sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg) || true
 timeout 700 xvfb-run -a -s "-screen 0 1280x720x24" bash -c '

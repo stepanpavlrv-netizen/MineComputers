@@ -248,8 +248,8 @@ public class CiScreenshots {
             case 1806 -> keyAt(lanJ2, "f10");
             case 2000 -> shot(mc, "bunker_boot");
             case 2002 -> typeAt(lanJ2, "bunker demo 20");
-            case 2040 -> startRecording(mc);
-            case 2140 -> shot(mc, "bunker_1");
+            case 2040 -> { startRecording(mc); perf(mc, true); }
+            case 2140 -> { perf(mc, false); shot(mc, "bunker_1"); }
             case 2220 -> shot(mc, "bunker_2");
             case 2290 -> mc.stop();
             default -> {
@@ -381,6 +381,23 @@ public class CiScreenshots {
 
     private static BlockPos netA = BlockPos.ZERO, netB = BlockPos.ZERO, netC = BlockPos.ZERO, netD = BlockPos.ZERO,
             netRouter = BlockPos.ZERO;
+
+    private static long perfSent, perfGot, perfAt;
+
+    /** Скорость экрана: сколько кадров отправил сервер, сколько получил клиент и сколько кадров в секунду рисует игра. */
+    private static void perf(Minecraft mc, boolean start) {
+        long sent = com.strikerr212.minepc.block.CaseComputer.FRAMES_SENT.get(), got = ClientTerminals.received;
+        long now = System.nanoTime();
+        if (!start) {
+            double sec = (now - perfAt) / 1e9;
+            com.strikerr212.minepc.MineComputers.LOGGER.info("CI экран: за {} с отправлено {} кадров ({}/с), получено {} ({}/с), игра рисует {} кадров/с",
+                    String.format("%.1f", sec), sent - perfSent, String.format("%.1f", (sent - perfSent) / sec),
+                    got - perfGot, String.format("%.1f", (got - perfGot) / sec), mc.getFps());
+        }
+        perfSent = sent;
+        perfGot = got;
+        perfAt = now;
+    }
 
     /** Сообщить скрипту CI, где окно игры: он запишет видео этой области (ffmpeg, 11 секунд). */
     private static void startRecording(Minecraft mc) {

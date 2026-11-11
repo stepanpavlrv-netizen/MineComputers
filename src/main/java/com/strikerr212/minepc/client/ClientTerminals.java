@@ -38,7 +38,11 @@ public final class ClientTerminals {
     private ClientTerminals() {
     }
 
+    /** Сколько кадров пришло (для проверки скорости в CI). */
+    public static long received;
+
     public static void update(BlockPos pos, byte[] data, boolean keyboard) {
+        received++;
         KEYBOARD.put(pos, keyboard);
         if (data.length == 0) {          // компьютер выключен
             FRAMES.remove(pos);

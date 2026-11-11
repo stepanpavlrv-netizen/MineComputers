@@ -38,6 +38,9 @@ import java.util.Objects;
 public final class CaseComputer implements Computer.Host {
 
     private static final int SCAN_INTERVAL = 10;       // как часто искать монитор, клавиатуру, дисководы (тики)
+    /** Сколько кадров экрана отправлено всего (для проверки скорости в CI). */
+    public static final java.util.concurrent.atomic.AtomicLong FRAMES_SENT = new java.util.concurrent.atomic.AtomicLong();
+
     /** Весь кадр (не только изменения) — раз в 5 секунд, для игроков, которые только подошли. */
     private static final long KEEPALIVE_NANOS = 5_000_000_000L;
 
@@ -854,6 +857,7 @@ public final class CaseComputer implements Computer.Host {
             for (net.minecraft.server.level.ServerPlayer p : viewers) {
                 PacketDistributor.sendToPlayer(p, payload);
             }
+            if (!viewers.isEmpty()) FRAMES_SENT.incrementAndGet();
             screenTokens -= data.length;
             lastSentNanos = now;
             if (full) lastFullNanos = now;
