@@ -240,7 +240,7 @@ public class PcCaseScreen extends AbstractContainerScreen<PcCaseMenu> {
         out.add(Row.of("cpu", tr("gui.minepc.row.cpu", shortOps(perCore), lim.cores()), slowCpu ? th.warn : th.fg)
                 .tip(tr("message.minepc.status.game", Units.gameOps((int) perCore), lim.cores(), Units.bytes(lim.memoryBytes()))));
         out.add(Row.of("ram", bytes(lim.memoryBytes()), th.fg));
-        GpuData gpu = in.gpu();
+        GpuData gpu = in.graphics();
         int[] screen = Perf.screenSize(gpu == null ? 0 : gpu.tier());
         out.add(Row.of("gpu", tr("gui.minepc.row.screen", screen[0], screen[1]), th.fg));
         int best = 0;
@@ -319,6 +319,8 @@ public class PcCaseScreen extends AbstractContainerScreen<PcCaseMenu> {
             out.add(heatRow("gpu", d.tdp(), cooling));
             out.add(Row.of("heat", tr("gui.minepc.row.watts", d.tdp(), cooling), th.dim));
             if (r.gpuThrottle() < 1) out.add(Row.of("warn", tr("gui.minepc.row.speed", Math.round(r.gpuThrottle() * 100)), th.warn));
+        } else if (in.integrated() != null) {
+            out.add(Row.of("gpu", tr("gui.minepc.row.igpu"), th.dim));       // греется вместе с процессором
         } else {
             out.add(Row.of("gpu", tr("gui.minepc.row.no_gpu"), th.dim));
         }

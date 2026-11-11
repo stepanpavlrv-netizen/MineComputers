@@ -35,11 +35,11 @@ public final class HardwarePresets {
     };
     // сокет, ядра, частота, техпроцесс, кэш | крышка, размер крышки, цвет крышки, подложка, логотип
     private static final int[][] CPU = {
-            {0, 0, 0, 0, 0, 0, 1, 0, 0, 0},
-            {0, 1, 3, 2, 2, 1, 1, 0, 0, 0},
-            {1, 4, 5, 4, 4, 2, 1, 0, 0, 0},
-            {1, 6, 7, 6, 6, 3, 1, 0, 2, 0},
-            {2, 8, 10, 9, 7, 4, 2, 1, 3, 3},
+            {0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0},
+            {0, 1, 3, 2, 2, 1, 1, 0, 0, 0, 0},
+            {1, 4, 5, 4, 4, 2, 1, 0, 0, 0, 0},
+            {1, 6, 7, 6, 6, 3, 1, 0, 2, 0, 0},
+            {2, 8, 10, 9, 7, 4, 2, 1, 3, 3, 0},
     };
     // тип, трубки, вентиляторы, радиатор СВО, цвет, подсветка, цвет подсветки
     private static final int[][] COOLER = {
@@ -102,7 +102,8 @@ public final class HardwarePresets {
     /** Примеры деталей "собранных игроком". */
     public static List<ItemStack> customExamples() {
         return List.of(
-                build(HardwareType.CPU, "MINECORE X", 2, 7, 9, 8, 6, 4, 2, 4, 6, 1),
+                build(HardwareType.CPU, "MINECORE X", 2, 7, 9, 8, 6, 4, 2, 4, 6, 1, 0),
+                build(HardwareType.CPU, "MINECORE G", 1, 3, 7, 7, 4, 2, 1, 1, 0, 0, 3),   // с сильным видеоядром
                 build(HardwareType.MOTHERBOARD, "", 1, 3, 1, 1, 4, 2, 2, 3, 3, 3, 1, 1),
                 build(HardwareType.RAM, "", 2, 3, 5, 3, 3, 6, 1, 9),
                 build(HardwareType.GPU, "", 3, 5, 3, 3, 2, 2, 4, 0, 0, 0, 0, 0),           // голая плата

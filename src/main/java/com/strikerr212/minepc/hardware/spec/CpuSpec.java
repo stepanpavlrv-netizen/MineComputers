@@ -1,6 +1,7 @@
 package com.strikerr212.minepc.hardware.spec;
 
 import com.strikerr212.minepc.hardware.CpuData;
+import com.strikerr212.minepc.hardware.GpuData;
 import com.strikerr212.minepc.hardware.HardwareType;
 import com.strikerr212.minepc.hardware.Perf;
 import com.strikerr212.minepc.hardware.Units;
@@ -13,13 +14,15 @@ import static com.strikerr212.minepc.hardware.spec.Param.Unit.*;
 
 /**
  * Процессор.
- * Страница 0 «Кристалл»: сокет, ядра, частота, техпроцесс, кэш.
+ * Страница 0 «Кристалл»: сокет, ядра, частота, техпроцесс, кэш, видеоядро.
  * Страница 1 «Корпус»: крышка, её размер и цвет, цвет подложки, цвет логотипа.
  */
 public class CpuSpec extends PartSpec {
 
     public static final int SOCKET = 0, CORES = 1, CLOCK = 2, PROCESS = 3, CACHE = 4,
-            LID = 5, LID_SIZE = 6, LID_COLOR = 7, SUBSTRATE = 8, LOGO = 9;
+            LID = 5, LID_SIZE = 6, LID_COLOR = 7, SUBSTRATE = 8, LOGO = 9, IGPU = 10;
+    /** Сколько тепла добавляет видеоядро, Вт (нет, слабое, среднее, сильное). */
+    private static final int[] IGPU_TDP = {0, 4, 9, 18};
 
     /** Чем тоньше техпроцесс, тем меньше нагрев на ядро и гигагерц. */
     private static final int[] PROCESS_NM = {90, 65, 45, 32, 22, 14, 10, 7, 5, 3};
@@ -38,15 +41,17 @@ public class CpuSpec extends PartSpec {
                 Param.option("cpu.lid_size", 1, 1, 1, 1),
                 Param.metal("cpu.lid_color", 1),
                 Param.pcb("cpu.substrate", 1),
-                Param.led("cpu.logo", 1)
-        ), 0, 0, 0, 0, 0, 2, 1, 0, 0, 0);
+                Param.led("cpu.logo", 1),
+                Param.option("cpu.igpu", 0, 1, 1, 2, 3)
+        ), 0, 0, 0, 0, 0, 2, 1, 0, 0, 0, 0);
     }
 
     public CpuData derive(List<Integer> v) {
         int cores = val(v, CORES), clock = val(v, CLOCK);
         float factor = HEAT_FACTOR[idx(v, PROCESS)];
-        int tdp = Math.round(cores * clock / 1000f * factor) + 5;
-        return new CpuData(tier(v), val(v, SOCKET), cores, clock, val(v, PROCESS), val(v, CACHE), tdp);
+        int igpu = idx(v, IGPU);
+        int tdp = Math.round(cores * clock / 1000f * factor) + 5 + IGPU_TDP[igpu];
+        return new CpuData(tier(v), val(v, SOCKET), cores, clock, val(v, PROCESS), val(v, CACHE), tdp, igpu);
     }
 
     @Override
@@ -77,6 +82,12 @@ public class CpuSpec extends PartSpec {
         lines.add(line("tooltip.minepc.clock", Units.frequency(d.clockMhz())));
         lines.add(paramLine(v, PROCESS));
         lines.add(paramLine(v, CACHE));
+        if (d.igpu() > 0) {
+            GpuData g = Perf.integratedGpu(d, Integer.MAX_VALUE);
+            int[] screen = Perf.screenSize(g.tier());
+            lines.add(paramLine(v, IGPU));
+            lines.add(perfLine("tooltip.minepc.igpu_perf", Units.tflops(Perf.gpuTflops(g)), screen[0] + "×" + screen[1]));
+        }
         lines.add(line("tooltip.minepc.heat", Units.watts(d.tdp())));
         double gips = Perf.cpuGips(d);
         lines.add(perfLine("tooltip.minepc.perf_speed", Units.ops(gips), Units.level(Perf.level(gips, Perf.STOCK_CPU_GIPS))));
@@ -108,5 +119,6 @@ public class CpuSpec extends PartSpec {
     protected void baseCost(List<Integer> v, Cost cost) {
         cost.add(Items.QUARTZ, 2).add(Items.COPPER_INGOT, 1).add(Items.REDSTONE, 2 + idx(v, CORES));
         if (idx(v, LID) > 0) cost.add(Items.IRON_INGOT, 1);
+        if (idx(v, IGPU) > 0) cost.add(Items.GLOWSTONE_DUST, idx(v, IGPU));   // видеоядро
     }
 }

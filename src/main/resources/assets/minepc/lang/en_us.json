@@ -572,5 +572,14 @@
   "subtitles.minepc.lan.plug_in": "Cable plugged in",
   "subtitles.minepc.lan.plug_out": "Cable unplugged",
   "subtitles.minepc.lan.relay": "Switch clicks",
-  "subtitles.minepc.lan.radio": "Radio crackles"
+  "subtitles.minepc.lan.radio": "Radio crackles",
+  "param.minepc.cpu.igpu": "Integrated graphics",
+  "param.minepc.cpu.igpu.0": "None",
+  "param.minepc.cpu.igpu.1": "Basic",
+  "param.minepc.cpu.igpu.2": "Mid",
+  "param.minepc.cpu.igpu.3": "Strong",
+  "tooltip.minepc.igpu_perf": "Integrated graphics: %s, screen up to %s (without a graphics card)",
+  "message.minepc.status.igpu": "Integrated graphics: %s (%s)",
+  "message.minepc.note.integrated_gpu": "The CPU's integrated graphics drives the screen: %s of RAM is reserved for it",
+  "gui.minepc.row.igpu": "iGPU in CPU"
 }

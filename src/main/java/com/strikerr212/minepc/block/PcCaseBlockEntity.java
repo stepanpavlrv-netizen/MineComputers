@@ -533,6 +533,9 @@ public class PcCaseBlockEntity extends BlockEntity implements com.strikerr212.mi
         if (in.gpu() != null) {
             out.add(perf("message.minepc.status.gpu", r.gpuThrottle() < 1,
                     Units.tflops(r.gpuTflops()), Units.level(r.gpuLevel())));
+        } else if (in.integrated() != null) {
+            out.add(perf("message.minepc.status.igpu", r.gpuThrottle() < 1,
+                    Units.tflops(r.gpuTflops()), Units.level(r.gpuLevel())));
         }
         if (r.ramMb() > 0) {
             MutableComponent line = perf("message.minepc.status.ram", r.channels() < (in.board() != null ? in.board().channels() : 1),
@@ -599,6 +602,7 @@ public class PcCaseBlockEntity extends BlockEntity implements com.strikerr212.mi
             case PSU_OVERLOAD, PSU_HIGH -> Component.translatable(key, Math.round(n.a()));
             case RAM_LIMITED -> Component.translatable(key, Units.frequency((int) n.a()));
             case SLOW_BOOT -> Component.translatable(key, Units.seconds(n.a()));
+            case INTEGRATED_GPU -> Component.translatable(key, Units.size((int) n.a()));
             default -> Component.translatable(key);
         };
     }

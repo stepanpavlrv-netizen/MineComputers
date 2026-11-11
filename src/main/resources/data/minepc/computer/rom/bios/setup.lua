@@ -74,7 +74,7 @@ local function buildPages(info, cfg, dev, state)
       { kind = "info", label = "Серийный номер", value = info.serial or "" },
       { kind = "info", label = "Процессор", value = info.cpu },
       { kind = "info", label = "Память", value = string.format("%d КБ", info.ram) },
-      { kind = "info", label = "Видеокарта", value = info.gpu },
+      { kind = "info", label = "Графика", value = info.gpu },
       { kind = "info", label = "День / время", value = "день " .. tostring(info.day or "?") .. ", " .. tostring(info.time or "") },
       { kind = "info", label = "Имя компьютера", value = os.getComputerLabel and os.getComputerLabel() or "" },
     } },

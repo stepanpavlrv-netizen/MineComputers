@@ -120,6 +120,35 @@ public final class Perf {
         return gpuTflops(d) * throttle(d.tdp(), d.hasCooler() ? d.coolingW() : PASSIVE_COOLING) * gpuMemoryFactor(d);
     }
 
+    // ===================== Видеоядро процессора =====================
+
+    private static final int[] IGPU_SHADERS = {0, 128, 384, 768};
+    private static final int[] IGPU_CLOCK = {0, 1000, 1100, 1300};
+    /** Какому уровню видеокарты соответствует экран видеоядра. */
+    private static final int[] IGPU_TIER = {0, 1, 1, 2};
+    /** Сколько оперативной памяти видеоядро забирает под экран (но не больше четверти памяти). */
+    private static final int[] IGPU_VRAM_MB = {0, 256, 512, 1024};
+    /** Видеоядру достаётся половина полосы оперативной памяти — остальное нужно процессору. */
+    private static final double IGPU_RAM_SHARE = 0.5;
+
+    /**
+     * Видеоядро как «видеокарта»: уровень экрана, скорость чипа и видеопамять из оперативной.
+     * Тепла своего нет — оно уже в тепле процессора. null — видеоядра нет.
+     */
+    public static GpuData integratedGpu(CpuData cpu, int ramMb) {
+        if (cpu == null || cpu.igpu() <= 0) return null;
+        int l = Math.min(3, cpu.igpu());
+        int vram = (int) Math.min(IGPU_VRAM_MB[l], Math.max(64, ramMb / 4L));
+        return new GpuData(IGPU_TIER[l], IGPU_SHADERS[l], IGPU_CLOCK[l], 0, vram, 0, 0, 0);
+    }
+
+    /** Скорость видеоядра: греется вместе с процессором и кормится из оперативной памяти. */
+    public static double integratedTflops(GpuData igpu, double ramGbs, double cpuThrottle) {
+        double t = gpuTflops(igpu) * cpuThrottle;
+        if (t <= 0) return 0;
+        return t * memoryFactor(ramGbs * IGPU_RAM_SHARE / (t * VRAM_PER_TFLOPS));
+    }
+
     // ===================== Нагрев =====================
 
     /** Сколько тепла чип рассеивает сам, без радиатора и вентилятора. */

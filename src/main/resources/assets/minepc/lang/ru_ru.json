@@ -572,5 +572,14 @@
   "subtitles.minepc.lan.plug_in": "Кабель подключён",
   "subtitles.minepc.lan.plug_out": "Кабель отключён",
   "subtitles.minepc.lan.relay": "Щёлкает коммутатор",
-  "subtitles.minepc.lan.radio": "Трещит радиосвязь"
+  "subtitles.minepc.lan.radio": "Трещит радиосвязь",
+  "param.minepc.cpu.igpu": "Видеоядро",
+  "param.minepc.cpu.igpu.0": "Нет",
+  "param.minepc.cpu.igpu.1": "Слабое",
+  "param.minepc.cpu.igpu.2": "Среднее",
+  "param.minepc.cpu.igpu.3": "Сильное",
+  "tooltip.minepc.igpu_perf": "Видеоядро: %s, экран до %s (без видеокарты)",
+  "message.minepc.status.igpu": "Видеоядро: %s (%s)",
+  "message.minepc.note.integrated_gpu": "Изображение даёт видеоядро процессора: под экран отдано %s оперативной памяти",
+  "gui.minepc.row.igpu": "Видеоядро в ЦП"
 }

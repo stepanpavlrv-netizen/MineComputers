@@ -566,9 +566,10 @@ public final class CaseComputer implements Computer.Host {
     public static Computer.Limits limitsFor(SystemModel.Input in, SystemModel.Report report, double speed) {
         int opsPerSecond = (int) Math.min(500_000_000L, Math.round(Perf.gameOpsPerSecond(report.cpuGips()) * speed));
         int cores = in.cpu() == null ? 1 : Math.max(1, Math.min(in.cpu().cores(), com.strikerr212.minepc.MineConfig.maxCores()));
+        // Видеоядро забирает часть оперативной памяти под экран
         long memory = Math.min((long) com.strikerr212.minepc.MineConfig.maxMemoryMb() << 20,
-                Math.round(Perf.gameMemoryKb(report.ramMb()) * 1024L * com.strikerr212.minepc.MineConfig.memory()));
-        GpuData gpu = in.gpu();
+                Math.round(Perf.gameMemoryKb(Math.max(0, report.ramMb() - in.sharedVramMb())) * 1024L * com.strikerr212.minepc.MineConfig.memory()));
+        GpuData gpu = in.graphics();
         int tier = gpu == null ? 0 : gpu.tier();
         int cells = (int) Math.max(100, Perf.gpuCellsPerSecond(tier) * com.strikerr212.minepc.MineConfig.gpu() / Computer.TICKS_PER_SECOND);
         int boot = com.strikerr212.minepc.MineConfig.bootTime() ? Perf.gameBootTicks(report.bootSeconds()) : 0;
@@ -597,8 +598,8 @@ public final class CaseComputer implements Computer.Host {
         computer.setLimits(limits);
         int opsPerSecond = limits.opsPerTick() * Computer.TICKS_PER_SECOND;
 
-        // Экран: без видеокарты — монохромный текст, дальше больше и в цвете (самый большой — на стене мониторов)
-        GpuData gpu = in.gpu();
+        // Экран: без видеокарты и видеоядра — монохромный текст, дальше больше и в цвете (самый большой — на стене мониторов)
+        GpuData gpu = in.graphics();
         gpuTier = gpu == null ? 0 : gpu.tier();
         int[] size = maxScreen();
         int w = size[0], h = size[1];
@@ -610,14 +611,17 @@ public final class CaseComputer implements Computer.Host {
         String cpuLabel = cpuStack.getItem() instanceof HardwareItem ? HardwareItem.label(cpuStack) : "";
         String cpuName = (cpuLabel.isEmpty() ? "Процессор ур. " + cpu.tier() : cpuLabel)
                 + ", ядер: " + cpu.cores() + ", " + cpu.clockMhz() + " МГц";
-        String gpuName = gpu == null ? "" : "Видеокарта ур. " + gpu.tier() + ", до " + Perf.screenSize(gpuTier)[0] + "×" + Perf.screenSize(gpuTier)[1];
+        String gpuName = gpu == null ? "" : (in.gpu() == null ? "Видеоядро процессора" : "Видеокарта ур. " + gpu.tier())
+                + ", до " + Perf.screenSize(gpuTier)[0] + "×" + Perf.screenSize(gpuTier)[1];
         computer.setInfo(new Computer.Info(cpuName, cpu.cores(), cpu.clockMhz(), "Lua",
                 (int) (limits.memoryBytes() / 1024), opsPerSecond, gpuName, report.score()));
         // Тепло и питание: температура в диспетчере задач и в BIOS считается по этим деталям
         int cpuCooling = in.cooler() != null ? in.cooler().coolingW() : Perf.PASSIVE_COOLING;
-        int gpuCooling = gpu == null ? 0 : gpu.hasCooler() ? gpu.coolingW() : Perf.PASSIVE_COOLING;
-        computer.setThermal(new Computer.Thermal(cpu.tdp(), cpuCooling, gpu == null ? 0 : gpu.tdp(), gpuCooling,
-                gpu != null, in.powerDraw(), in.psu() == null ? 0 : in.psu().wattage(), in.cooler() != null));
+        // (тепло видеоядра уже входит в тепло процессора)
+        GpuData card = in.gpu();
+        int gpuCooling = card == null ? 0 : card.hasCooler() ? card.coolingW() : Perf.PASSIVE_COOLING;
+        computer.setThermal(new Computer.Thermal(cpu.tdp(), cpuCooling, card == null ? 0 : card.tdp(), gpuCooling,
+                card != null, in.powerDraw(), in.psu() == null ? 0 : in.psu().wattage(), in.cooler() != null));
 
         // Накопители: системный — самый быстрый (M.2, потом SATA SSD, потом жёсткий диск)
         var fs = computer.fileSystem();

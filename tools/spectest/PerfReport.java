@@ -104,6 +104,32 @@ public class PerfReport {
             if (t == 3) check(Math.abs(r.score() - 1000) < 30, "заводская ур.3 должна давать ≈1000, а даёт " + r.score());
         }
 
+        System.err.println("=== Видеоядро вместо видеокарты (заводская сборка ур.3, процессор с видеоядром) ===");
+        double prevIgpu = 0;
+        for (int l = 1; l <= 3; l++) {
+            for (int sticks : new int[]{1, 2}) {
+                SystemModel.Input base = stock(3, false, true, 3, sticks);
+                int[] v = StockTables.CPU[2].clone();
+                int[] v2 = java.util.Arrays.copyOf(v, 11);
+                v2[10] = l;
+                CpuData cpu = Specs.CPU.derive(L(v2));
+                SystemModel.Input in = new SystemModel.Input(base.board(), cpu, base.cooler(), base.ram(), null, base.psu(),
+                        base.hdds(), base.ssds(), base.powerDraw() + cpu.tdp() - base.cpu().tdp());
+                SystemModel.Report r = SystemModel.evaluate(in);
+                System.err.printf(Locale.ROOT, "видеоядро %d, планок %d, экран ур.%d, под экран %d МБ: %s%n", l, sticks,
+                        in.graphics().tier(), in.sharedVramMb(), fmt(r));
+                check(r.bootable(), "сборка с видеоядром должна запускаться");
+                check(r.notes().stream().noneMatch(n -> n.issue() == SystemModel.Issue.NO_GPU), "с видеоядром нет NO_GPU");
+                check(r.gpuLevel() < 2.3, "видеоядро не сильнее видеокарты ур.2");
+                if (sticks == 2) {
+                    check(r.gpuTflops() > prevIgpu, "видеоядро сильнее с уровнем");
+                    prevIgpu = r.gpuTflops();
+                }
+            }
+        }
+        SystemModel.Input withCard = stock(3, false, false, 3, 2);
+        check(withCard.integrated() == null && withCard.sharedVramMb() == 0, "с видеокартой видеоядро не работает");
+
         System.err.println("=== Неудачные сборки ===");
         System.err.println("ур.5 с боксовым кулером:      " + fmt(SystemModel.evaluate(stock(5, false, false, 1, 4))));
         System.err.println("ур.5 без кулера:              " + fmt(SystemModel.evaluate(stock(5, false, false, 0, 4))));

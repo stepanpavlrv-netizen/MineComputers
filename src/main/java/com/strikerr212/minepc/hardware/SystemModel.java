@@ -18,6 +18,29 @@ public final class SystemModel {
     /** Что установлено в корпусе. Пустой слот — null (или пустой список). */
     public record Input(MotherboardData board, CpuData cpu, CoolerData cooler, List<RamData> ram, GpuData gpu,
                         PsuData psu, List<HddData> hdds, List<SsdData> ssds, int powerDraw) {
+
+        /** Сколько всего оперативной памяти, МБ. */
+        public int ramMb() {
+            int mb = 0;
+            if (ram != null) for (RamData r : ram) mb += r.capacityMb();
+            return mb;
+        }
+
+        /** Видеоядро процессора — работает, только если нет отдельной видеокарты. null — не работает. */
+        public GpuData integrated() {
+            return gpu == null ? Perf.integratedGpu(cpu, ramMb()) : null;
+        }
+
+        /** Что выводит изображение: видеокарта, а без неё — видеоядро (null — ничего, только простой текст). */
+        public GpuData graphics() {
+            return gpu != null ? gpu : integrated();
+        }
+
+        /** Сколько оперативной памяти забрало видеоядро под экран, МБ. */
+        public int sharedVramMb() {
+            GpuData i = integrated();
+            return i == null ? 0 : i.vramMb();
+        }
     }
 
     public enum Issue {
@@ -33,6 +56,8 @@ public final class SystemModel {
         /** a = во сколько раз медленнее работает чужая память, если планки разные */
         MIXED_RAM(false),
         NO_GPU(false),
+        /** a = сколько МБ оперативной памяти отдано видеоядру */
+        INTEGRATED_GPU(false),
         /** a = уровень процессора, b = уровень видеокарты */
         CPU_BOTTLENECK(false),
         /** a = уровень видеокарты, b = уровень процессора */
@@ -151,6 +176,12 @@ public final class SystemModel {
             gpuThrottle = Perf.throttle(in.gpu().tdp(), in.gpu().hasCooler() ? in.gpu().coolingW() : Perf.PASSIVE_COOLING);
             gpuTflops = Perf.gpuEffectiveTflops(in.gpu());
             gpuLevel = Perf.level(gpuTflops, Perf.STOCK_GPU_TFLOPS);
+        } else if (in.integrated() != null) {
+            // Видеоядро: греется вместе с процессором, видеопамять и полоса — из оперативной памяти
+            gpuThrottle = cpuThrottle;
+            gpuTflops = Perf.integratedTflops(in.integrated(), ramGbs, cpuThrottle);
+            gpuLevel = Perf.level(gpuTflops, Perf.STOCK_GPU_TFLOPS);
+            notes.add(new Note(Issue.INTEGRATED_GPU, in.sharedVramMb(), 0));
         } else {
             notes.add(new Note(Issue.NO_GPU, 0, 0));
         }
@@ -182,7 +213,7 @@ public final class SystemModel {
         boolean bootable = notes.stream().noneMatch(n -> n.issue().critical);
         int score = 0;
         if (in.cpu() != null && ramGbs > 0) {
-            double gpu = in.gpu() != null ? gpuTflops : NO_GPU_TFLOPS;
+            double gpu = gpuTflops > 0 ? gpuTflops : NO_GPU_TFLOPS;
             double s = 1000
                     * Math.pow(cpuGips / REF_CPU, 0.45)
                     * Math.pow(gpu / REF_GPU, 0.35)

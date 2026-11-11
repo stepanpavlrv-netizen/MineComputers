@@ -77,6 +77,27 @@ public class ComputerGameTests {
                 .thenSucceed();
     }
 
+    @GameTest(template = "empty", timeoutTicks = 800)
+    public static void integratedGraphicsDrivesScreen(GameTestHelper h) {
+        // Без видеокарты, но процессор с сильным видеоядром: экран как у видеокарты ур. 2
+        PcCaseBlockEntity be = buildComputer(h, 3);
+        install(be, PcCaseBlockEntity.SLOT_GPU, ItemStack.EMPTY);
+        ItemStack apu = HardwarePresets.customExamples().stream()
+                .filter(s -> s.getItem() instanceof com.strikerr212.minepc.item.CpuItem
+                        && com.strikerr212.minepc.item.CpuItem.data(s).igpu() > 0).findFirst().orElseThrow();
+        install(be, PcCaseBlockEntity.SLOT_CPU, apu);
+        h.startSequence()
+                .thenExecute(() -> {
+                    be.togglePower();
+                    if (be.computerState() != 1) h.fail("Компьютер с видеоядром не включился");
+                })
+                .thenWaitUntil(() -> h.assertTrue(be.screenText().contains("/>"), "Нет командной строки:\n" + be.screenText()))
+                .thenExecute(() -> type(be, "info"))
+                .thenWaitUntil(() -> h.assertTrue(be.screenText().contains("Видеоядро процессора, до 100×30"),
+                        "info не показал видеоядро:\n" + be.screenText()))
+                .thenSucceed();
+    }
+
     @GameTest(template = "empty", timeoutTicks = 100)
     public static void computerWithoutStorageDoesNotBoot(GameTestHelper h) {
         PcCaseBlockEntity be = buildComputer(h, 1);
