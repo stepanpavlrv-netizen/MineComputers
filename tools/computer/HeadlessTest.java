@@ -123,7 +123,7 @@ public class HeadlessTest {
         show("редактор");
         expect("подсветка: ключевое слово на экране", screen().contains("for i = 1, 3 do"));
         key("s", true);
-        ticks(5);
+        for (int i = 0; i < 40 && !screen().contains("Сохранено"); i++) ticks(1);
         expect("файл сохранён", screen().contains("Сохранено"));
         key("q", true);
         ticks(10);
