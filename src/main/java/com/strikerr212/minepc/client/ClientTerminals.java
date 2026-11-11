@@ -39,10 +39,12 @@ public final class ClientTerminals {
     }
 
     /** Сколько кадров пришло (для проверки скорости в CI). */
-    public static long received;
+    public static long received, receivedAt;
+    public static BlockPos countAt;
 
     public static void update(BlockPos pos, byte[] data, boolean keyboard) {
         received++;
+        if (pos.equals(countAt)) receivedAt++;
         KEYBOARD.put(pos, keyboard);
         if (data.length == 0) {          // компьютер выключен
             FRAMES.remove(pos);

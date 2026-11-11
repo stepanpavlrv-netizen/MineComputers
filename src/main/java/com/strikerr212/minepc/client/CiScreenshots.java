@@ -382,17 +382,20 @@ public class CiScreenshots {
     private static BlockPos netA = BlockPos.ZERO, netB = BlockPos.ZERO, netC = BlockPos.ZERO, netD = BlockPos.ZERO,
             netRouter = BlockPos.ZERO;
 
-    private static long perfSent, perfGot, perfAt;
+    private static long perfSent, perfGot, perfAt, perfOne;
 
     /** Скорость экрана: сколько кадров отправил сервер, сколько получил клиент и сколько кадров в секунду рисует игра. */
     private static void perf(Minecraft mc, boolean start, net.minecraft.core.BlockPos at) {
         long sent = com.strikerr212.minepc.block.CaseComputer.FRAMES_SENT.get(), got = ClientTerminals.received;
         long now = System.nanoTime();
+        ClientTerminals.countAt = at;
         if (!start) {
             double sec = (now - perfAt) / 1e9;
             com.strikerr212.minepc.MineComputers.LOGGER.info("CI экран: за {} с отправлено {} кадров ({}/с), получено {} ({}/с), игра рисует {} кадров/с",
                     String.format("%.1f", sec), sent - perfSent, String.format("%.1f", (sent - perfSent) / sec),
                     got - perfGot, String.format("%.1f", (got - perfGot) / sec), mc.getFps());
+            com.strikerr212.minepc.MineComputers.LOGGER.info("CI экран: из них от компьютера с игрой {} ({}/с)",
+                    ClientTerminals.receivedAt - perfOne, String.format("%.1f", (ClientTerminals.receivedAt - perfOne) / sec));
             ClientTerminals.Snapshot sn = at == null ? null : ClientTerminals.get(at);
             if (sn != null) {
                 String last = new String(sn.chars(), (sn.height() - 2) * sn.width(), sn.width()).trim().replaceAll(" +", " ");
@@ -402,6 +405,7 @@ public class CiScreenshots {
         perfSent = sent;
         perfGot = got;
         perfAt = now;
+        perfOne = ClientTerminals.receivedAt;
     }
 
     /** Сообщить скрипту CI, где окно игры: он запишет видео этой области (ffmpeg, 11 секунд). */
