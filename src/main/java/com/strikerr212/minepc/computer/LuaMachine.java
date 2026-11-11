@@ -62,7 +62,8 @@ final class LuaMachine {
     private LuaState state;
     private LuaThread mainRoutine;
     private volatile boolean pauseRequested, abortRequested, killRequested;
-    private boolean started, paused;
+    private boolean started;
+    private volatile boolean paused, inSlice;
     private volatile boolean finished;
     private long deadline;
     private String filter;
@@ -97,6 +98,11 @@ final class LuaMachine {
         opsMark = t;
     }
     long budget() { return budget.get(); }
+
+    /** Программа ничего не делает, а ждёт событие: её кадр дорисован (для отправки экрана). */
+    boolean waitingForEvent() {
+        return finished || (started && !inSlice && !paused && events.isEmpty());
+    }
 
     /** Состояние для списка процессов. */
     String status() {
@@ -407,9 +413,11 @@ final class LuaMachine {
                 long a = allocated();
                 if (a >= 0) allocMark = a;
                 deadline = System.nanoTime() + ComputerExecutor.sliceNanos();
+                inSlice = true;
                 while (!killRequested && budget.get() > 0 && !computer.mustWait() && System.nanoTime() < deadline) {
                     if (!resume()) break;     // нечего делать или замерли
                 }
+                inSlice = false;
                 if (finished) {
                     state = null;
                     mainRoutine = null;
@@ -417,8 +425,10 @@ final class LuaMachine {
                     computer.machineDone(this, true, null);
                 }
             } catch (Crash crash) {
+                inSlice = false;
                 finishWithError(crash.getMessage());
             } catch (Throwable t) {
+                inSlice = false;
                 finishWithError("Внутренняя ошибка: " + t);
             }
         }

@@ -548,6 +548,12 @@ public final class Computer {
         opsThisSecond.addAndGet(ops);
     }
 
+    /** Все программы ждут событий — значит, кадр на экране дорисован целиком. */
+    public boolean idle() {
+        for (LuaMachine m : machines) if (!m.waitingForEvent()) return false;
+        return true;
+    }
+
     /** Программы должны подождать: видеокарта или накопитель не успевают. */
     boolean mustWait() {
         return gpuBudget.get() < 0 || ioWait || netBudget.get() < 0;
