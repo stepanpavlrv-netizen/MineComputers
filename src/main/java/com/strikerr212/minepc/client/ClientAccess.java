@@ -17,6 +17,14 @@ public final class ClientAccess {
         Minecraft.getInstance().setScreen(new TerminalScreen(casePos));
     }
 
+    public static void onSound(com.strikerr212.minepc.network.SoundPayload payload) {
+        ComputerAudio.receive(payload.pos(), payload.startMs(), payload.nowMs(), payload.commands());
+    }
+
+    public static void onHum(com.strikerr212.minepc.network.HumPayload payload) {
+        HumSounds.update(payload.pos(), payload.fan(), payload.hdd());
+    }
+
     public static void onTerminal(TerminalPayload payload) {
         ClientTerminals.update(payload.casePos(), payload.data(), payload.keyboard());
     }

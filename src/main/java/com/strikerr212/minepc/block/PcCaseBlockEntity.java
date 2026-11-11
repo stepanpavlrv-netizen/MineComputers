@@ -204,12 +204,16 @@ public class PcCaseBlockEntity extends BlockEntity implements com.strikerr212.mi
     /** Кнопка питания. Возвращает сообщение для игрока или null. */
     public Component togglePower() {
         if (!(level instanceof ServerLevel server)) return null;
-        if (pc.stateCode() == 1) {
+        boolean off = pc.stateCode() == 1;
+        server.playSound(null, worldPosition, (off ? com.strikerr212.minepc.registry.ModSounds.POWER_OFF
+                : com.strikerr212.minepc.registry.ModSounds.POWER_ON).get(), net.minecraft.sounds.SoundSource.BLOCKS, 0.8f, 1f);
+        if (off) {
             pc.powerOff();
             return Component.translatable("message.minepc.power_off").withStyle(ChatFormatting.GRAY);
         }
         List<SystemModel.Note> reasons = pc.powerOn(server);
         if (reasons == null) return Component.translatable("message.minepc.power_on").withStyle(ChatFormatting.GREEN);
+        pc.errorBeeps(reasons);
         MutableComponent msg = Component.translatable("message.minepc.status.no_boot").withStyle(ChatFormatting.RED);
         for (SystemModel.Note n : reasons) msg.append(" ").append(noteText(n));
         return msg;
@@ -222,6 +226,11 @@ public class PcCaseBlockEntity extends BlockEntity implements com.strikerr212.mi
 
     public boolean hasKeyboard() {
         return pc.hasKeyboard();
+    }
+
+    /** Игрок нажал клавишу — стук для остальных. */
+    public void keyClick(net.minecraft.world.entity.player.Player player) {
+        pc.keyClick(player);
     }
 
     // ======================= Сеть =======================
@@ -296,8 +305,20 @@ public class PcCaseBlockEntity extends BlockEntity implements com.strikerr212.mi
         if (level instanceof ServerLevel server) pc.redstone(server, powered);
     }
 
+    private long lastPartSound = -1;
+
     private void slotChanged(int slot) {
         if (level == null || level.isClientSide) return;
+        if (level.getGameTime() != lastPartSound) {
+            // Деталь поставили или сняли — щелчок защёлки (флешка в USB — щелчок разъёма)
+            lastPartSound = level.getGameTime();
+            boolean empty = getStack(slot).isEmpty();
+            var sound = slot >= SLOT_USB
+                    ? (empty ? com.strikerr212.minepc.registry.ModSounds.LAN_PLUG_OUT : com.strikerr212.minepc.registry.ModSounds.LAN_PLUG_IN)
+                    : (empty ? com.strikerr212.minepc.registry.ModSounds.PART_REMOVE : com.strikerr212.minepc.registry.ModSounds.PART_INSTALL);
+            level.playSound(null, worldPosition, sound.get(), net.minecraft.sounds.SoundSource.BLOCKS, 0.8f,
+                    0.95f + level.random.nextFloat() * 0.1f);
+        }
         if (slot == SLOT_MOTHERBOARD) com.strikerr212.minepc.lan.LanManager.updateDevice(level, worldPosition);
         if (slot >= SLOT_USB) {
             if (level instanceof ServerLevel server) pc.updateRemovable(server, true);

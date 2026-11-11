@@ -556,5 +556,21 @@
   "page.minepc.ram.0": "Параметры",
   "page.minepc.psu.0": "Параметры",
   "page.minepc.hdd.0": "Параметры",
-  "page.minepc.ssd.0": "Параметры"
+  "page.minepc.ssd.0": "Параметры",
+  "subtitles.minepc.computer.fan": "Гудит вентилятор",
+  "subtitles.minepc.computer.hdd_spin": "Шумит жёсткий диск",
+  "subtitles.minepc.computer.hdd_spinup": "Раскручивается жёсткий диск",
+  "subtitles.minepc.computer.hdd_seek": "Трещит жёсткий диск",
+  "subtitles.minepc.computer.floppy": "Скрежещет дисковод",
+  "subtitles.minepc.computer.disk_insert": "Вставлен диск",
+  "subtitles.minepc.computer.disk_eject": "Извлечён диск",
+  "subtitles.minepc.computer.key": "Стучат клавиши",
+  "subtitles.minepc.computer.power_on": "Кнопка питания",
+  "subtitles.minepc.computer.power_off": "Кнопка питания",
+  "subtitles.minepc.computer.part_install": "Деталь установлена",
+  "subtitles.minepc.computer.part_remove": "Деталь снята",
+  "subtitles.minepc.lan.plug_in": "Кабель подключён",
+  "subtitles.minepc.lan.plug_out": "Кабель отключён",
+  "subtitles.minepc.lan.relay": "Щёлкает коммутатор",
+  "subtitles.minepc.lan.radio": "Трещит радиосвязь"
 }

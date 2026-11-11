@@ -556,5 +556,21 @@
   "page.minepc.ram.0": "Parameters",
   "page.minepc.psu.0": "Parameters",
   "page.minepc.hdd.0": "Parameters",
-  "page.minepc.ssd.0": "Parameters"
+  "page.minepc.ssd.0": "Parameters",
+  "subtitles.minepc.computer.fan": "Computer fan hums",
+  "subtitles.minepc.computer.hdd_spin": "Hard drive spins",
+  "subtitles.minepc.computer.hdd_spinup": "Hard drive spins up",
+  "subtitles.minepc.computer.hdd_seek": "Hard drive clicks",
+  "subtitles.minepc.computer.floppy": "Floppy drive grinds",
+  "subtitles.minepc.computer.disk_insert": "Disk inserted",
+  "subtitles.minepc.computer.disk_eject": "Disk ejected",
+  "subtitles.minepc.computer.key": "Keys clack",
+  "subtitles.minepc.computer.power_on": "Power button",
+  "subtitles.minepc.computer.power_off": "Power button",
+  "subtitles.minepc.computer.part_install": "Part installed",
+  "subtitles.minepc.computer.part_remove": "Part removed",
+  "subtitles.minepc.lan.plug_in": "Cable plugged in",
+  "subtitles.minepc.lan.plug_out": "Cable unplugged",
+  "subtitles.minepc.lan.relay": "Switch clicks",
+  "subtitles.minepc.lan.radio": "Radio crackles"
 }

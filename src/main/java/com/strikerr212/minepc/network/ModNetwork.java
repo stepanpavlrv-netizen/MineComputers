@@ -29,6 +29,12 @@ public class ModNetwork {
         registrar.playToClient(TerminalPayload.TYPE, TerminalPayload.STREAM_CODEC, (payload, context) ->
                 context.enqueueWork(() -> ClientAccess.onTerminal(payload)));
 
+        // Звук компьютера (пищалка, звуковой чип) и гул вентиляторов: сервер → игроки рядом
+        registrar.playToClient(SoundPayload.TYPE, SoundPayload.STREAM_CODEC, (payload, context) ->
+                ClientAccess.onSound(payload));
+        registrar.playToClient(HumPayload.TYPE, HumPayload.STREAM_CODEC, (payload, context) ->
+                context.enqueueWork(() -> ClientAccess.onHum(payload)));
+
         // Клавиатура: игрок → сервер. Проверяем, что игрок рядом и клавиатура подключена
         registrar.playToServer(TerminalInputPayload.TYPE, TerminalInputPayload.STREAM_CODEC, (payload, context) ->
                 context.enqueueWork(() -> {
@@ -50,6 +56,8 @@ public class ModNetwork {
                         return;
                     }
                     if (!pc.hasKeyboard()) return;
+                    // Стук клавиши слышат другие игроки рядом (сам игрок уже услышал его у себя)
+                    if ((payload.flags() & TerminalInputPayload.FLAG_CLICK) != 0) pc.keyClick(player);
                     pc.input(payload.kind(), payload.text(), (payload.flags() & 1) != 0, (payload.flags() & 2) != 0);
                 }));
 

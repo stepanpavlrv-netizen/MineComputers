@@ -62,7 +62,7 @@ local function refresh()
 
   add({ type = "computer", address = computer.address(),
         start = function() return false end, stop = function() computer.shutdown() end,
-        isRunning = function() return true end, beep = function() end,
+        isRunning = function() return true end, beep = function(...) return computer.beep(...) end,
         getDeviceInfo = function() return {} end })
   local gpu = keepGpu or computer.gpu()
   add(gpu)
@@ -90,6 +90,12 @@ local function refresh()
           maxPacketSize = function() return net.maxPacket() end,
           getStrength = function() return 0 end, setStrength = function() return 0 end,
           getWakeMessage = function() return nil end, setWakeMessage = function() return nil end })
+  end
+  -- Звуковой чип платы — как звуковая карта Computronics
+  if sound and sound.channels() > 0 then
+    local p = { type = "sound", address = computer.componentAddress("sound") }
+    for k, v in pairs(sound) do p[k] = v end
+    add(p)
   end
   add({ type = "eeprom", address = computer.componentAddress("eeprom"),
         get = function() return "" end, set = function() end, getLabel = function() return "MineComputers BIOS" end,

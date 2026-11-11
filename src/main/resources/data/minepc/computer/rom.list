@@ -31,6 +31,7 @@ programs/label.lua
 programs/ls.lua
 programs/lua.lua
 programs/mkdir.lua
+programs/music.lua
 programs/mv.lua
 programs/peers.lua
 programs/ping.lua

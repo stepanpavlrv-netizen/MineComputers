@@ -78,6 +78,15 @@ public final class Computer {
         /** Перед каждой загрузкой (и при перезагрузке из программы): применить новые настройки BIOS. */
         default void beforeBoot() { }
 
+        /** Сколько каналов у звукового чипа платы (0 — нет чипа). */
+        default int soundChannels() { return 8; }
+
+        /** Отправить игрокам рядом команды звука (начало и «сейчас» — мс по часам компьютера, начало -1 — сразу). */
+        default void audio(long startMs, long nowMs, byte[] commands) { }
+
+        /** С накопителем работали (для звука жёсткого диска и дисковода). Вызывается из потока программы. */
+        default void diskActivity(com.strikerr212.minepc.computer.fs.Mount mount, boolean write) { }
+
         /** Настройки BIOS для программ (без самих паролей); null — хранить в памяти компьютера (тесты). */
         default java.util.Map<String, Object> biosSettings() { return null; }
 
@@ -284,6 +293,7 @@ public final class Computer {
             ioWait = false;
         }
         gpu.reset();
+        audio = new com.strikerr212.minepc.computer.audio.Audio(host.soundChannels());
         gpuBudget.set(limits.gpuCellsPerTick());
         openPorts.clear();
         netBudget.set(0);
@@ -324,6 +334,8 @@ public final class Computer {
             bootRemaining = 0;
         }
         ComputerClock.unregister(this);
+        if (audio.queued() > 0 || audio.pending(clockMillis()) > 0) audio.stop(clockMillis(), audioOut);
+        audio.reset();
         for (LuaMachine m : list) m.kill();
         for (LuaMachine m : list) m.closeLocked();
         gpu.reset();
@@ -564,6 +576,18 @@ public final class Computer {
 
     public Host host() { return host; }
 
+    // ======================= Звук =======================
+
+    private volatile com.strikerr212.minepc.computer.audio.Audio audio = new com.strikerr212.minepc.computer.audio.Audio(0);
+    private final com.strikerr212.minepc.computer.audio.Audio.Output audioOut = (start, now, data) -> this.host().audio(start, now, data);
+
+    public com.strikerr212.minepc.computer.audio.Audio audio() { return audio; }
+
+    public com.strikerr212.minepc.computer.audio.Audio.Output audioOut() { return audioOut; }
+
+    /** Время для звука, мс по часам компьютера. */
+    public long audioNow() { return clockMillis(); }
+
     public boolean openPort(int port) { return openPorts.add(port); }
     public boolean closePort(int port) { return openPorts.remove(port); }
     public boolean isPortOpen(int port) { return openPorts.contains(port); }
@@ -739,6 +763,7 @@ public final class Computer {
     // ======================= Накопители =======================
 
     private void chargeIo(Mount mount, long bytes, boolean write) {
+        if (bytes > 0) host.diskActivity(mount, write);
         synchronized (diskStats) {
             long[] d = diskStats.computeIfAbsent(mount, k -> new long[6]);
             d[write ? 1 : 0] += bytes;

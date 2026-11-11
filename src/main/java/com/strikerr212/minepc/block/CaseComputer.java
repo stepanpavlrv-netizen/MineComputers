@@ -26,6 +26,7 @@ import net.minecraft.world.level.ChunkPos;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -534,6 +535,7 @@ public final class CaseComputer implements Computer.Host {
         computer.turnOn();
         wantOn = true;
         be.setChanged();
+        startSounds(level, in, report);
         return null;
     }
 
@@ -621,6 +623,7 @@ public final class CaseComputer implements Computer.Host {
         var fs = computer.fileSystem();
         for (String m : fs.mounts().keySet()) fs.unmount(m);
         removable.clear();
+        soundMounts.clear();
         fs.mount("rom", ComputerRom.mount());
         // Системный диск — первый по порядку загрузки в BIOS (по умолчанию: M.2, SATA SSD, жёсткий диск)
         List<int[]> kinds = new ArrayList<>();
@@ -659,6 +662,7 @@ public final class CaseComputer implements Computer.Host {
             }
             Mount mount = DriveStorage.mount(level.getServer(), stack, capacity, name)
                     .withSpeed(Math.round(speed * com.strikerr212.minepc.MineConfig.disk()), opBytes);
+            if (stack.getItem() instanceof HddItem) soundMounts.put(mount, be.getBlockPos().immutable());   // жёсткий диск трещит
             String kind = stack.getItem() instanceof SsdItem ? (SsdItem.data(stack).isNvme() ? "nvme" : "sata") : "hdd";
             if (!root) {
                 fs.mount("", mount);
@@ -709,6 +713,7 @@ public final class CaseComputer implements Computer.Host {
             lastState = state;
         }
         syncScreen(level, pos);
+        tickSounds(level, pos);
     }
 
     long lastTickNanos() { return lastTickNanos; }
@@ -752,6 +757,7 @@ public final class CaseComputer implements Computer.Host {
         monitors.addAll(found);
         hasKeyboard = DeviceBlock.hasKeyboard(level, pos)
                 || level.getBlockState(pos).getBlock() instanceof PcCaseBlock b && b.hasKeyboard();
+        keyboardPos = DeviceBlock.keyboardPos(level, pos);
         if (computer != null && computer.isOn()) updateRemovable(level, true);
     }
 
@@ -759,10 +765,12 @@ public final class CaseComputer implements Computer.Host {
     void updateRemovable(ServerLevel level, boolean notify) {
         if (computer == null || !computer.isOn() && notify) return;
         Map<String, ItemStack> wanted = new LinkedHashMap<>();
+        Map<String, BlockPos> drivePos = new HashMap<>();
         int disks = 0;
         for (Direction d : Direction.values()) {
             BlockPos n = be.getBlockPos().relative(d);
             if (level.getBlockEntity(n) instanceof DiskDriveBlockEntity drive && !drive.disk().isEmpty()) {
+                drivePos.put(disks == 0 ? "disk" : "disk" + (disks + 1), n.immutable());
                 wanted.put(disks == 0 ? "disk" : "disk" + (disks + 1), drive.disk());
                 disks++;
             }
@@ -797,10 +805,138 @@ public final class CaseComputer implements Computer.Host {
             boolean floppy = drive.kind() == DriveItem.Kind.FLOPPY;
             String label = floppy ? "Дискета" : "Флешка";
             long speed = Math.round((floppy ? 128 * 1024 : 4 * 1024 * 1024) * com.strikerr212.minepc.MineConfig.disk());
-            fs.mount(e.getKey(), DriveStorage.mount(level.getServer(), stack, drive.capacity(), label)
-                    .withSpeed(speed, floppy ? 256 : 32));
+            Mount mount = DriveStorage.mount(level.getServer(), stack, drive.capacity(), label).withSpeed(speed, floppy ? 256 : 32);
+            fs.mount(e.getKey(), mount);
+            if (floppy && drivePos.containsKey(e.getKey())) soundMounts.put(mount, drivePos.get(e.getKey()));   // дисковод скрежещет
             removable.put(e.getKey(), DriveItem.id(stack));
             if (notify) computer.queueEvent("disk", "/" + e.getKey());
+        }
+    }
+
+    // ======================= Звук =======================
+
+    /** Накопители, которые слышно: жёсткий диск (звучит из корпуса) и дискеты (из своего дисковода). */
+    private final Map<Mount, BlockPos> soundMounts = new java.util.concurrent.ConcurrentHashMap<>();
+    /** Где недавно работали с диском (заполняют потоки программ, разбирает тик). */
+    private final java.util.Set<BlockPos> diskBusy = java.util.concurrent.ConcurrentHashMap.newKeySet();
+    private final Map<BlockPos, Long> lastDiskSound = new HashMap<>();
+    private int lastHum = -1;
+    private long lastHumTick;
+    private boolean hasHdd;
+    private volatile BlockPos keyboardPos;
+    private long lastKeyClickNanos;
+
+    /** Звуковой чип платы: каналов больше на платах дороже. */
+    @Override
+    public int soundChannels() {
+        var board = be.motherboard();
+        if (board == null) return 0;
+        return switch (board.tier()) {
+            case 1 -> 2;
+            case 2 -> 4;
+            case 3 -> 6;
+            default -> 8;
+        };
+    }
+
+    /** Команды звука — игрокам рядом (из потока программы: список зрителей обновляет тик). */
+    @Override
+    public void audio(long startMs, long nowMs, byte[] commands) {
+        BlockPos p = be.getBlockPos();
+        var payload = new com.strikerr212.minepc.network.SoundPayload(p, startMs, nowMs, commands);
+        for (net.minecraft.server.level.ServerPlayer player : viewers) {
+            if (player.distanceToSqr(p.getX() + 0.5, p.getY() + 0.5, p.getZ() + 0.5) < 48 * 48) {
+                PacketDistributor.sendToPlayer(player, payload);
+            }
+        }
+    }
+
+    @Override
+    public void diskActivity(Mount mount, boolean write) {
+        BlockPos p = soundMounts.get(mount);
+        if (p != null) diskBusy.add(p);
+    }
+
+    /** Кнопка питания, раскрутка диска и писк самотеста. */
+    private void startSounds(ServerLevel level, SystemModel.Input in, SystemModel.Report report) {
+        hasHdd = false;
+        for (int i = 0; i < PcCaseBlockEntity.HDD_SLOTS; i++) {
+            if (be.getStack(PcCaseBlockEntity.SLOT_HDD + i).getItem() instanceof HddItem) hasHdd = true;
+        }
+        if (hasHdd) level.playSound(null, be.getBlockPos(), com.strikerr212.minepc.registry.ModSounds.HDD_SPINUP.get(),
+                net.minecraft.sounds.SoundSource.BLOCKS, 0.5f, 1f);
+        // Самотест прошёл — один короткий писк; без видеокарты — длинный и два коротких, как у настоящих плат
+        boolean noGpu = report.notes().stream().anyMatch(n -> n.issue() == SystemModel.Issue.NO_GPU);
+        double[] f = noGpu ? new double[]{900, 900, 900} : new double[]{1000};
+        double[] d = noGpu ? new double[]{0.6, 0.15, 0.15} : new double[]{0.12};
+        audio(700, 0, com.strikerr212.minepc.computer.audio.Audio.beepCommands(f, d, 0.12));
+        lastHum = -1;
+    }
+
+    /** Компьютер не включился: коды ошибок писком (нет памяти — три длинных, нет диска — один короткий). */
+    void errorBeeps(List<SystemModel.Note> reasons) {
+        boolean ram = false, storage = false;
+        for (SystemModel.Note n : reasons) {
+            if (n.issue() == SystemModel.Issue.NO_RAM) ram = true;
+            if (n.issue() == SystemModel.Issue.NO_STORAGE) storage = true;
+        }
+        // Без платы, процессора или питания пищать нечему
+        for (SystemModel.Note n : reasons) {
+            switch (n.issue()) {
+                case NO_BOARD, NO_CPU, NO_PSU, PSU_OVERLOAD -> {
+                    return;
+                }
+                default -> {
+                }
+            }
+        }
+        if (ram) audio(-1, 0, com.strikerr212.minepc.computer.audio.Audio.beepCommands(
+                new double[]{700, 700, 700}, new double[]{0.5, 0.5, 0.5}, 0.25));
+        else if (storage) audio(-1, 0, com.strikerr212.minepc.computer.audio.Audio.beepCommands(
+                new double[]{1000}, new double[]{0.12}, 0));
+    }
+
+    /** Игрок нажал клавишу: стук слышат остальные рядом (сам он уже слышал его у себя). */
+    void keyClick(net.minecraft.world.entity.player.Player player) {
+        long now = System.nanoTime();
+        if (now - lastKeyClickNanos < 30_000_000L || !(be.getLevel() instanceof ServerLevel level)) return;
+        lastKeyClickNanos = now;
+        BlockPos at = keyboardPos != null ? keyboardPos : be.getBlockPos();
+        level.playSound(player, at, com.strikerr212.minepc.registry.ModSounds.KEY.get(), net.minecraft.sounds.SoundSource.BLOCKS,
+                0.4f, 0.9f + level.random.nextFloat() * 0.2f);
+    }
+
+    /** Каждый тик: треск дисков (не чаще, чем успевает головка) и гул вентиляторов для игроков рядом. */
+    private void tickSounds(ServerLevel level, BlockPos pos) {
+        if (!diskBusy.isEmpty()) {
+            for (BlockPos p : new ArrayList<>(diskBusy)) {
+                diskBusy.remove(p);
+                boolean floppy = !p.equals(pos);
+                long gap = floppy ? 12 : 3 + level.random.nextInt(5);
+                Long last = lastDiskSound.get(p);
+                if (last != null && age - last < gap) continue;
+                lastDiskSound.put(p, age);
+                level.playSound(null, p, (floppy ? com.strikerr212.minepc.registry.ModSounds.FLOPPY
+                                : com.strikerr212.minepc.registry.ModSounds.HDD_SEEK).get(), net.minecraft.sounds.SoundSource.BLOCKS,
+                        floppy ? 0.7f : 0.4f, 0.92f + level.random.nextFloat() * 0.16f);
+            }
+        }
+        int fan = 0;
+        if (computer != null && computer.isOn()) {
+            int rpm = computer.fanRpm();
+            // без кулера на процессоре всё равно крутится вентилятор блока питания
+            fan = rpm <= 0 ? 15 : (int) Math.round(15 + 85 * Math.max(0, Math.min(1, (rpm - 600) / 1600.0)));
+        }
+        boolean changed = lastHum < 0 || Math.abs(fan - lastHum) >= 8 || (fan == 0) != (lastHum == 0);
+        if (changed || (fan > 0 && age - lastHumTick >= 40)) {
+            lastHum = fan;
+            lastHumTick = age;
+            var payload = new com.strikerr212.minepc.network.HumPayload(pos, fan, fan > 0 && hasHdd);
+            for (net.minecraft.server.level.ServerPlayer player : viewers) {
+                if (player.distanceToSqr(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5) < 32 * 32) {
+                    PacketDistributor.sendToPlayer(player, payload);
+                }
+            }
         }
     }
 

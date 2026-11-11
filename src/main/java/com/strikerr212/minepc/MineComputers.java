@@ -31,8 +31,11 @@ public class MineComputers {
         ModBlockEntities.register(modEventBus);   // "умные" блоки с инвентарём
         ModMenus.register(modEventBus);           // окна с интерфейсом (сборочный стол)
         ModCreativeTabs.register(modEventBus);    // вкладка в творческом режиме
+        com.strikerr212.minepc.registry.ModSounds.register(modEventBus);  // звуки
         // Настройки сервера: скорость, память, потоки для компьютеров
         modContainer.registerConfig(net.neoforged.fml.config.ModConfig.Type.SERVER, MineConfig.SPEC);
+        // Настройки игрока: громкость звуков
+        modContainer.registerConfig(net.neoforged.fml.config.ModConfig.Type.CLIENT, MineClientConfig.SPEC);
 
         // Сеть: доставка сообщений в тике мира
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener((net.neoforged.neoforge.event.tick.LevelTickEvent.Post e) -> {

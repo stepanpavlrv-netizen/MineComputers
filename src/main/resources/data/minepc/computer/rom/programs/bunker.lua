@@ -30,6 +30,20 @@ if not cv then
 end
 local HALF = CH / 2
 
+---------------------------------------------------------------- звук (звуковой чип платы; без него игра идёт молча)
+-- Каналы: 1 — выстрел, 2 — роботы, 3 — подбор и сообщения, 4 — шаги
+local snd = (sound and sound.channels and sound.channels() >= 4) and sound or nil
+local function sfx(ch, freq, sec, vol, wave, to)
+  if snd then pcall(snd.play, ch, freq, sec, vol, wave, to) end
+end
+if snd then
+  snd.setADSR(1, 1, 110, 0.15, 60)
+  snd.setADSR(2, 3, 80, 0.5, 90)
+  snd.setADSR(3, 2, 60, 0.7, 60)
+  snd.setADSR(4, 1, 25, 0, 20)
+  snd.process()
+end
+
 ---------------------------------------------------------------- текстуры (рисуем сами, без файлов)
 local TS = 32
 local rnd = math.random
@@ -344,9 +358,15 @@ end
 local keys = {}
 local function shoot(t)
   if fireT > t - 0.1 then return end
-  if bullets <= 0 then say("Нет патронов!") return end
+  if bullets <= 0 then
+    say("Нет патронов!")
+    fireT = t + 0.3
+    sfx(1, 1500, 0.03, 0.4, "square")                 -- щелчок пустого магазина
+    return
+  end
   bullets = bullets - 1
   fireT = t + 0.12
+  sfx(1, 2400, 0.16, 1.0, "noise", 250)               -- выстрел: шум, уходящий вниз
   -- Попали в ближайшего робота, который под прицелом и не за стеной
   local best
   for _, th in ipairs(things) do
@@ -362,6 +382,16 @@ local function shoot(t)
       best.dead = true
       score = score + 1
       say(score == total and "Все роботы уничтожены!" or "Робот уничтожен")
+      sfx(2, 520, 0.45, 0.9, "sawtooth", 45)          -- робот ломается
+      if score == total and snd then                  -- победа: арпеджио по очереди
+        for i, n in ipairs({ "C5", "E5", "G5", "C6" }) do
+          snd.setWave(3, snd.modes.square) snd.setVolume(3, 0.6) snd.setFrequency(3, n)
+          snd.open(3) snd.delay(i == 4 and 400 or 110) snd.close(3) snd.delay(20)
+        end
+        snd.process()
+      end
+    else
+      sfx(2, 330, 0.08, 0.7, "square", 180)           -- попадание
     end
   end
 end
@@ -386,7 +416,9 @@ local function update(t, dt)
   local sp = 3.0 * dt
   if fwd ~= 0 or side ~= 0 then
     move((dirX * fwd - dirY * side) * sp, (dirY * fwd + dirX * side) * sp)
+    local step = floor(bob / pi)
     bob = bob + dt * 9
+    if floor(bob / pi) ~= step then sfx(4, 160, 0.05, 0.5, "noise", 70) end   -- шаг
   end
   if keys.space or keys.ctrl then shoot(t) end
   -- Враги идут к игроку, если видят, и бьют вблизи
@@ -405,13 +437,14 @@ local function update(t, dt)
           th.atk = t + 0.9
           hp = max(0, hp - 8)
           hurt = t + 0.2
+          sfx(2, 140, 0.18, 0.9, "sawtooth", 70)          -- робот бьёт
         end
       end
     elseif not th.gone and (th.kind == "medkit" or th.kind == "ammo") then
       if abs(th.x - px) < 0.6 and abs(th.y - py) < 0.6 then
         th.gone = true
-        if th.kind == "medkit" then hp = min(100, hp + 30); say("Аптечка: +30")
-        else bullets = bullets + 15; say("Патроны: +15") end
+        if th.kind == "medkit" then hp = min(100, hp + 30); say("Аптечка: +30"); sfx(3, 440, 0.25, 0.6, "triangle", 880)
+        else bullets = bullets + 15; say("Патроны: +15"); sfx(3, 700, 0.12, 0.6, "square", 1400) end
       end
     end
   end
@@ -540,4 +573,5 @@ while not quit do
     timer = os.startTimer(max(0, TARGET - (uptime() - t)))
   end
 end
+if snd then snd.stop() end
 finish(string.format("Счёт: %d из %d роботов", score, total))

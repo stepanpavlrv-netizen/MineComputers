@@ -75,6 +75,23 @@ public abstract class DeviceBlock extends BaseEntityBlock {
     }
 
     /** Есть ли клавиатура рядом с системным блоком или с одним из его мониторов. */
+    /** Где стоит клавиатура компьютера (null — нет; клавиатура в самом корпусе-моноблоке — тоже null). */
+    public static BlockPos keyboardPos(Level level, BlockPos casePos) {
+        for (Direction d : Direction.values()) {
+            BlockPos n = casePos.relative(d);
+            if (providesKeyboard(level.getBlockState(n))) return n.immutable();
+            if (level.getBlockEntity(n) instanceof MonitorBlockEntity) {
+                for (BlockPos m : MonitorGroup.of(level, n).blocks()) {
+                    if (providesKeyboard(level.getBlockState(m))) return m.immutable();
+                    for (Direction d2 : Direction.values()) {
+                        if (providesKeyboard(level.getBlockState(m.relative(d2)))) return m.relative(d2).immutable();
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
     public static boolean hasKeyboard(Level level, BlockPos casePos) {
         for (Direction d : Direction.values()) {
             BlockPos n = casePos.relative(d);

@@ -24,6 +24,8 @@ public record TerminalInputPayload(BlockPos casePos, int kind, String text, int 
     public static final int CHAR = 0, KEY = 1, KEY_UP = 2, PASTE = 3, TERMINATE = 4, POWER = 5, REFRESH = 6,
             MOUSE_DOWN = 7, MOUSE_DRAG = 8, MOUSE_UP = 9, MOUSE_SCROLL = 10;
     public static final int MAX_TEXT = 32000;
+    /** В flags: клавишу нажали (не автоповтор) — пусть другие услышат стук. */
+    public static final int FLAG_CLICK = 8;
 
     public static final Type<TerminalInputPayload> TYPE =
             new Type<>(ResourceLocation.fromNamespaceAndPath(MineComputers.MODID, "terminal_input"));

@@ -1,0 +1,166 @@
+{
+  "computer.fan": {
+    "subtitle": "subtitles.minepc.computer.fan",
+    "sounds": [
+      {
+        "name": "minepc:fan"
+      }
+    ]
+  },
+  "computer.hdd_spin": {
+    "subtitle": "subtitles.minepc.computer.hdd_spin",
+    "sounds": [
+      {
+        "name": "minepc:hdd_spin"
+      }
+    ]
+  },
+  "computer.hdd_spinup": {
+    "subtitle": "subtitles.minepc.computer.hdd_spinup",
+    "sounds": [
+      {
+        "name": "minepc:hdd_spinup"
+      }
+    ]
+  },
+  "computer.hdd_seek": {
+    "subtitle": "subtitles.minepc.computer.hdd_seek",
+    "sounds": [
+      {
+        "name": "minepc:hdd_seek1"
+      },
+      {
+        "name": "minepc:hdd_seek2"
+      },
+      {
+        "name": "minepc:hdd_seek3"
+      },
+      {
+        "name": "minepc:hdd_seek4"
+      }
+    ]
+  },
+  "computer.floppy": {
+    "subtitle": "subtitles.minepc.computer.floppy",
+    "sounds": [
+      {
+        "name": "minepc:floppy_seek1"
+      },
+      {
+        "name": "minepc:floppy_seek2"
+      },
+      {
+        "name": "minepc:floppy_seek3"
+      }
+    ]
+  },
+  "computer.disk_insert": {
+    "subtitle": "subtitles.minepc.computer.disk_insert",
+    "sounds": [
+      {
+        "name": "minepc:disk_insert"
+      }
+    ]
+  },
+  "computer.disk_eject": {
+    "subtitle": "subtitles.minepc.computer.disk_eject",
+    "sounds": [
+      {
+        "name": "minepc:disk_eject"
+      }
+    ]
+  },
+  "computer.key": {
+    "subtitle": "subtitles.minepc.computer.key",
+    "sounds": [
+      {
+        "name": "minepc:key1"
+      },
+      {
+        "name": "minepc:key2"
+      },
+      {
+        "name": "minepc:key3"
+      },
+      {
+        "name": "minepc:key4"
+      },
+      {
+        "name": "minepc:key5"
+      }
+    ]
+  },
+  "computer.power_on": {
+    "subtitle": "subtitles.minepc.computer.power_on",
+    "sounds": [
+      {
+        "name": "minepc:power_on"
+      }
+    ]
+  },
+  "computer.power_off": {
+    "subtitle": "subtitles.minepc.computer.power_off",
+    "sounds": [
+      {
+        "name": "minepc:power_off"
+      }
+    ]
+  },
+  "computer.part_install": {
+    "subtitle": "subtitles.minepc.computer.part_install",
+    "sounds": [
+      {
+        "name": "minepc:part_install"
+      }
+    ]
+  },
+  "computer.part_remove": {
+    "subtitle": "subtitles.minepc.computer.part_remove",
+    "sounds": [
+      {
+        "name": "minepc:part_remove"
+      }
+    ]
+  },
+  "lan.plug_in": {
+    "subtitle": "subtitles.minepc.lan.plug_in",
+    "sounds": [
+      {
+        "name": "minepc:plug_in"
+      }
+    ]
+  },
+  "lan.plug_out": {
+    "subtitle": "subtitles.minepc.lan.plug_out",
+    "sounds": [
+      {
+        "name": "minepc:plug_out"
+      }
+    ]
+  },
+  "lan.relay": {
+    "subtitle": "subtitles.minepc.lan.relay",
+    "sounds": [
+      {
+        "name": "minepc:relay1"
+      },
+      {
+        "name": "minepc:relay2"
+      }
+    ]
+  },
+  "lan.radio": {
+    "subtitle": "subtitles.minepc.lan.radio",
+    "sounds": [
+      {
+        "name": "minepc:radio1"
+      },
+      {
+        "name": "minepc:radio2"
+      },
+      {
+        "name": "minepc:radio3"
+      }
+    ]
+  }
+}

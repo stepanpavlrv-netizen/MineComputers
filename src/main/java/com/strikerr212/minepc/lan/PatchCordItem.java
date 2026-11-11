@@ -85,6 +85,7 @@ public class PatchCordItem extends Item {
                 CordList.refresh(server, c.a().equals(pos) ? c.b() : c.a());
             }
             CordList.refresh(server, pos);
+            if (!removed.isEmpty()) level.playSound(null, pos, com.strikerr212.minepc.registry.ModSounds.LAN_PLUG_OUT.get(), SoundSource.BLOCKS, 0.9f, 1.0f);
             if (player != null) player.displayClientMessage(Component.translatable("message.minepc.cord.removed", removed.size()), true);
             return InteractionResult.CONSUME;
         }
@@ -101,7 +102,7 @@ public class PatchCordItem extends Item {
             t.putString("cord_dim", level.dimension().location().toString());
             stack.set(DataComponents.CUSTOM_DATA, CustomData.of(t));
             if (player != null) player.displayClientMessage(Component.translatable("message.minepc.cord.first"), true);
-            level.playSound(null, pos, SoundEvents.WOOL_PLACE, SoundSource.BLOCKS, 0.6f, 1.6f);
+            level.playSound(null, pos, com.strikerr212.minepc.registry.ModSounds.LAN_PLUG_IN.get(), SoundSource.BLOCKS, 0.7f, 1.0f);
             return InteractionResult.CONSUME;
         }
         BlockPos a = BlockPos.of(first.getLong("cord_pos"));
@@ -127,7 +128,7 @@ public class PatchCordItem extends Item {
         data.addCord(new LanData.Cord(a.immutable(), portA, pos.immutable(), port, color));
         CordList.refresh(server, a);
         CordList.refresh(server, pos);
-        level.playSound(null, pos, SoundEvents.WOOL_PLACE, SoundSource.BLOCKS, 0.8f, 1.3f);
+        level.playSound(null, pos, com.strikerr212.minepc.registry.ModSounds.LAN_PLUG_IN.get(), SoundSource.BLOCKS, 0.9f, 0.95f);
         if (player == null || !player.getAbilities().instabuild) stack.shrink(1);
         if (player != null) player.displayClientMessage(Component.translatable("message.minepc.cord.done"), true);
         return InteractionResult.CONSUME;

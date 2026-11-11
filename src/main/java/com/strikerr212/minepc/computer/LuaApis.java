@@ -149,6 +149,7 @@ final class LuaApis {
         g.rawset("unicode", OcApis.unicode());
         g.rawset("data", OcApis.data(m));
         g.rawset("net", net(c));
+        g.rawset("sound", SoundApis.sound(c));
         g.rawset("switch", switchApi(c));
         g.rawset("bios", biosApi(c));
         g.rawset("_HOST", str("MineComputers 0.11 (Lua 5.2 / Cobalt)"));
@@ -765,7 +766,7 @@ final class LuaApis {
                     return t;
                 }),
                 RegisteredFunction.ofV("isRobot", (s, a) -> Constants.FALSE),
-                RegisteredFunction.ofV("beep", (s, a) -> Constants.NONE),
+                RegisteredFunction.ofV("beep", (s, a) -> SoundApis.beep(c, a)),
                 RegisteredFunction.ofV("users", (s, a) -> Constants.NONE),
                 RegisteredFunction.ofV("tmpAddress", (s, a) -> Constants.NIL),
                 RegisteredFunction.ofV("pushSignal", (s, a) -> {

@@ -84,6 +84,8 @@ public final class ClientTerminals {
 
     public static void clear() {
         PixelLayer.releaseAll();
+        ComputerAudio.clear();
+        HumSounds.clear();
         FRAMES.clear();
         SCREENS.clear();
         KEYBOARD.clear();

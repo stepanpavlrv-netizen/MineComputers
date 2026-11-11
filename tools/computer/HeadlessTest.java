@@ -50,6 +50,10 @@ public class HeadlessTest {
         return b.toString();
     }
 
+    static String flat() {
+        return screen().replaceAll("\\s+", " ");
+    }
+
     static void show(String title) {
         System.out.println("┌── " + title + " ──");
         for (String l : screen().split("\n")) System.out.println("│" + l);
@@ -57,6 +61,24 @@ public class HeadlessTest {
     }
 
     static Path root;
+    static final java.util.List<Object[]> AUDIO = new java.util.concurrent.CopyOnWriteArrayList<>();
+
+    /** Собрать звук из пакетов, как у игрока, и найти основную частоту и громкость. */
+    static double[] renderAudio(int ms) {
+        var synth = new com.strikerr212.minepc.computer.audio.Synth();
+        var tl = new com.strikerr212.minepc.computer.audio.Timeline(synth);
+        for (Object[] p : AUDIO) tl.receive((Long) p[0], (Long) p[1], (byte[]) p[2]);
+        float[] out = new float[ms * 44100 / 1000];
+        synth.render(out, out.length);
+        double rms = 0;
+        int cross = 0, first = -1, last = -1;
+        for (int i = 1; i < out.length; i++) {
+            rms += out[i] * out[i];
+            if (out[i - 1] < 0 && out[i] >= 0) { cross++; if (first < 0) first = i; last = i; }
+        }
+        double freq = cross > 1 ? (cross - 1) * 44100.0 / (last - first) : 0;
+        return new double[]{Math.sqrt(rms / out.length), freq};
+    }
 
     static void expect(String what, boolean ok) {
         System.out.println((ok ? "  ✔ " : "  ✘ ") + what);
@@ -66,7 +88,11 @@ public class HeadlessTest {
     public static void main(String[] args) throws Exception {
         Path dir = Files.createTempDirectory("minepc_drive");
         root = dir;
-        pc = new Computer(new Computer.Host() { });
+        pc = new Computer(new Computer.Host() {
+            @Override public void audio(long startMs, long nowMs, byte[] commands) {
+                AUDIO.add(new Object[]{startMs, nowMs, commands});
+            }
+        });
         pc.setInfo(new Computer.Info("Тестовый процессор", 4, 2800, "Lua", 2048, 2_000_000, "Видеокарта", 1000));
         pc.setOpsPerTick(Integer.parseInt(args.length > 0 ? args[0] : "100000"));
         pc.fileSystem().mount("rom", ComputerRom.mount());
@@ -618,6 +644,56 @@ public class HeadlessTest {
         expect("кадровый буфер: стена с текстурой, спрайт за стеной скрыт",
                 cvs.contains("CANVAS 16711680 255 16776960 true"));
         expect("кадровый буфер: вывод полублоками", pc.terminal().line(0).startsWith("\u2580\u2580"));
+
+        // Звук: пищалка и звуковой чип отправляют команды, синтезатор у игрока собирает звук
+        command("clear");
+        AUDIO.clear();
+        command("lua");
+        command("print('BEEP', computer.beep(440, 0.3), sound.channels(), sound.note('A4'))");
+        command("exit()");
+        show("пищалка");
+        double[] beep = renderAudio(400);
+        System.out.println("  пищалка: пакетов " + AUDIO.size() + ", громкость " + beep[0] + ", частота " + beep[1]);
+        expect("computer.beep: пакет ушёл, звучит ~440 Гц", flat().contains("BEEP true 8 440") && AUDIO.size() == 1
+                && beep[0] > 0.05 && Math.abs(beep[1] - 440) < 5);
+        AUDIO.clear();
+        command("lua");
+        command("sound.setWave(1, sound.modes.sine) sound.setFrequency(1, 'E5') sound.setVolume(1, 0.8) sound.open(1) sound.delay(300) sound.close(1) print('SND', sound.process(), sound.pending() > 0.2, pcall(sound.open, 9))");
+        command("exit()");
+        show("звуковой чип");
+        double[] chip = renderAudio(350);
+        System.out.println("  чип: громкость " + chip[0] + ", частота " + chip[1]);
+        expect("sound: очередь отправлена одним пакетом, синус ~659 Гц", flat().contains("SND true true false") && AUDIO.size() == 1
+                && chip[0] > 0.05 && Math.abs(chip[1] - 659.3) < 5);
+        expect("sound: понятная ошибка про несуществующий канал", flat().contains("Нет канала 9"));
+        AUDIO.clear();
+        command("lua");
+        command("for i = 1, 4 do sound.open(1) sound.delay(1000) sound.close(1) end print('LONG', sound.delay(1500), sound.process(), sound.process())");
+        command("exit()");
+        show("очередь звука");
+        expect("sound: пакет не длиннее 5 с, очередь вперёд не больше 6 с", flat().contains("LONG false true"));
+        command("lua");
+        command("for i = 1, 4 do sound.delay(1000) end local p1 = sound.process() for i = 1, 4 do sound.delay(1000) end print('FULL', p1, sound.process()) sound.clear() sound.stop()");
+        command("exit()");
+        expect("sound: переполненная очередь отказывает", flat().contains("FULL true false"));
+
+        // Проигрыватель: мелодия уходит пакетами, Q останавливает; библиотека note считает частоты
+        command("clear");
+        AUDIO.clear();
+        realLine("music korobeiniki", 50);
+        key("q", false);
+        ticks(10);
+        show("music");
+        double[] mus = renderAudio(2500);
+        System.out.println("  music: пакетов " + AUDIO.size() + ", громкость " + mus[0]);
+        expect("music: играет мелодию (пакеты звука) и останавливается по Q", flat().contains("Коробейники") && AUDIO.size() >= 2
+                && mus[0] > 0.03 && flat().trim().endsWith("/>"));
+        command("music nosuch");
+        expect("music: понятное сообщение о неизвестной мелодии", flat().contains("Нет такой мелодии или файла: nosuch"));
+        command("lua");
+        command("local n = require('note') print('NOTE', n.freq('A4'), n.midi('C4'), n.name(69))");
+        command("exit()");
+        expect("note: частоты и названия нот", flat().contains("NOTE 440.0 60 A4") || flat().contains("NOTE 440 60 A4"));
 
         // 3D-игра на кадровом буфере: замер рисует кадры и печатает скорость
         command("clear");

@@ -63,7 +63,7 @@ public class DiskDriveBlock extends DeviceBlock {
                 player.displayClientMessage(Component.translatable("message.minepc.drive.busy").withStyle(ChatFormatting.YELLOW), true);
             } else {
                 be.setDisk(stack.split(1));
-                level.playSound(null, pos, SoundEvents.ITEM_FRAME_ADD_ITEM, SoundSource.BLOCKS, 0.8f, 1.3f);
+                level.playSound(null, pos, com.strikerr212.minepc.registry.ModSounds.DISK_INSERT.get(), SoundSource.BLOCKS, 0.9f, 1.0f);
             }
         }
         return ItemInteractionResult.sidedSuccess(level.isClientSide);
@@ -75,7 +75,7 @@ public class DiskDriveBlock extends DeviceBlock {
             ItemStack disk = be.disk();
             be.setDisk(ItemStack.EMPTY);
             if (!player.getInventory().add(disk)) player.drop(disk, false);
-            level.playSound(null, pos, SoundEvents.ITEM_FRAME_REMOVE_ITEM, SoundSource.BLOCKS, 0.8f, 1.3f);
+            level.playSound(null, pos, com.strikerr212.minepc.registry.ModSounds.DISK_EJECT.get(), SoundSource.BLOCKS, 0.9f, 1.0f);
         }
         return InteractionResult.sidedSuccess(level.isClientSide);
     }

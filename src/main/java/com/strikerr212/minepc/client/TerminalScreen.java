@@ -285,12 +285,32 @@ public class TerminalScreen extends Screen {
             return true;
         }
         String name = keyName(keyCode);
-        if (name != null) send(TerminalInputPayload.KEY, name, flags(modifiers));
+        // Стук клавиши: только когда её нажали, а не на автоповторе
+        boolean click = held.add(keyCode);
+        if (click) playKey(keyCode);
+        if (name != null) send(TerminalInputPayload.KEY, name, flags(modifiers) | (click ? TerminalInputPayload.FLAG_CLICK : 0));
         return true;
+    }
+
+    private final java.util.Set<Integer> held = new java.util.HashSet<>();
+
+    private void playKey(int keyCode) {
+        if (minecraft == null || minecraft.level == null) return;
+        float vol = com.strikerr212.minepc.MineClientConfig.keys();
+        if (vol <= 0) return;
+        // Пробел и Enter — ниже и громче
+        boolean big = keyCode == GLFW.GLFW_KEY_SPACE || keyCode == GLFW.GLFW_KEY_ENTER || keyCode == GLFW.GLFW_KEY_BACKSPACE;
+        float pitch = (big ? 0.82f : 0.95f) + minecraft.level.random.nextFloat() * 0.1f;
+        minecraft.getSoundManager().play(new ModSoundsClient.Local(
+                com.strikerr212.minepc.registry.ModSounds.KEY.get().getLocation(), net.minecraft.sounds.SoundSource.BLOCKS,
+                (big ? 0.55f : 0.4f) * vol, pitch, minecraft.level.random, false, 0,
+                net.minecraft.client.resources.sounds.SoundInstance.Attenuation.LINEAR,
+                casePos.getX() + 0.5, casePos.getY() + 0.5, casePos.getZ() + 0.5, false));
     }
 
     @Override
     public boolean keyReleased(int keyCode, int scanCode, int modifiers) {
+        held.remove(keyCode);
         if (ClientTerminals.keyboard(casePos)) {
             String name = keyName(keyCode);
             if (name != null) send(TerminalInputPayload.KEY_UP, name, flags(modifiers));

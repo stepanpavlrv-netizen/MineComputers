@@ -441,12 +441,41 @@ public final class LanManager {
         return name != null && !name.isEmpty() && name.equalsIgnoreCase(target);
     }
 
+    /** Когда последний раз щёлкал коммутатор или трещала мачта (чтобы не сливалось в шум). */
+    private final Map<BlockPos, Long> lastSound = new HashMap<>();
+    private long soundTick;
+    private int soundsThisTick;
+
+    /** Сообщение пошло по сети: щёлкают коммутаторы и роутеры на пути, трещат радиомачты. */
+    private void networkSounds(ServerLevel level, BlockPos from, long now) {
+        if (now != soundTick) {
+            soundTick = now;
+            soundsThisTick = 0;
+            if (lastSound.size() > 512) lastSound.values().removeIf(t -> now - t > 200);
+        }
+        LanData data = LanData.get(level);
+        for (BlockPos p : result(level, from).switches()) {
+            if (soundsThisTick >= 6) return;
+            LanData.Device d = data.device(p);
+            if (d == null || !level.isLoaded(p)) continue;
+            boolean radio = d.type() == LanData.RADIO;
+            Long last = lastSound.get(p);
+            if (last != null && now - last < (radio ? 30 : 5)) continue;
+            lastSound.put(p, now);
+            soundsThisTick++;
+            level.playSound(null, p, (radio ? com.strikerr212.minepc.registry.ModSounds.LAN_RADIO
+                            : com.strikerr212.minepc.registry.ModSounds.LAN_RELAY).get(), net.minecraft.sounds.SoundSource.BLOCKS,
+                    radio ? 0.6f : 0.25f, 0.9f + level.random.nextFloat() * 0.2f);
+        }
+    }
+
     public void tick(ServerLevel level) {
         long now = level.getGameTime();
         Outgoing o;
         while ((o = outbox.poll()) != null) {
             if (!level.isLoaded(o.from) || !(level.getBlockEntity(o.from) instanceof PcCaseBlockEntity src)) continue;
             String fromAddr = src.address();
+            networkSounds(level, o.from, now);
             for (Reach r : reach(level, o.from)) {
                 // Компьютер в незагруженном чанке выключен — ему некому ответить (провода по дороге — неважно)
                 if (!level.isLoaded(r.pos) || !(level.getBlockEntity(r.pos) instanceof PcCaseBlockEntity dst)) continue;
