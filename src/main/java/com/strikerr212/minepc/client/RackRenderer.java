@@ -35,7 +35,7 @@ public class RackRenderer implements BlockEntityRenderer<RackBlockEntity> {
 
     /** Плавное выдвижение: насколько выдвинут модуль сейчас (0..1) — у игрока, по каждому блоку стойки. */
     private static final Map<Long, float[]> PROGRESS = new HashMap<>();
-    private static long lastNanos = System.nanoTime();
+    private static final java.util.Map<Long, Long> LAST = new java.util.HashMap<>();
 
     public RackRenderer(BlockEntityRendererProvider.Context context) {
     }
@@ -51,11 +51,16 @@ public class RackRenderer implements BlockEntityRenderer<RackBlockEntity> {
         Direction facing = be.getBlockState().hasProperty(RackBlock.FACING) ? be.getBlockState().getValue(RackBlock.FACING) : Direction.NORTH;
         // Свет перед стойкой — выдвинутый модуль освещён как то, что перед ней
         int frontLight = LevelRenderer.getLightColor(be.getLevel(), be.getBlockPos().relative(facing));
-        float[] prog = PROGRESS.computeIfAbsent(be.getBlockPos().asLong(), k -> new float[RackBlockEntity.SLOTS]);
+        // Анимация салазок — своя у каждой стойки (и свои часы: стоек в кадре может быть несколько)
+        long key = be.getBlockPos().asLong();
+        float[] prog = PROGRESS.computeIfAbsent(key, k -> new float[RackBlockEntity.SLOTS]);
         long now = System.nanoTime();
-        float dt = Math.min(0.1f, (now - lastNanos) / 1e9f);
-        lastNanos = now;
-        if (PROGRESS.size() > 512) PROGRESS.clear();
+        Long last = LAST.put(key, now);
+        float dt = Math.min(0.1f, (now - (last == null ? now : last)) / 1e9f);
+        if (PROGRESS.size() > 512) {
+            PROGRESS.clear();
+            LAST.clear();
+        }
 
         VertexConsumer vc = buffers.getBuffer(RenderType.entityCutoutNoCull(WHITE));
         pose.pushPose();

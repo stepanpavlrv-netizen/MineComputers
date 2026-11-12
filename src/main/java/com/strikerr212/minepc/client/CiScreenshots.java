@@ -369,13 +369,19 @@ public class CiScreenshots {
                 if (level.getBlockEntity(rackPos) instanceof com.strikerr212.minepc.block.RackBlockEntity r) {
                     com.strikerr212.minepc.block.RackBlock.retract(level, rackPos, level.getBlockState(rackPos), r);
                 }
+                // Сначала отойти: перед стойкой должно быть свободно
+                server.getPlayerList().getPlayers().get(0).teleportTo(level,
+                        rackPos.getX() + 0.5, rackPos.getY() + 1.6, rackPos.getZ() - 2.6, 0f, 45f);
+            });
+            case 2631 -> server.execute(() -> {
+                ServerLevel level = server.overworld();
                 BlockPos up = rackPos.above();
                 if (level.getBlockEntity(up) instanceof com.strikerr212.minepc.block.RackBlockEntity r) {
                     com.strikerr212.minepc.block.RackBlock.extend(level, up, level.getBlockState(up), r, 0, null);
                 }
-                server.getPlayerList().getPlayers().get(0).teleportTo(level,
-                        rackPos.getX() + 0.5, rackPos.getY() + 1.75, rackPos.getZ() - 1.05, 0f, 72f);
             });
+            case 2633 -> server.execute(() -> server.getPlayerList().getPlayers().get(0).teleportTo(server.overworld(),
+                    rackPos.getX() + 0.5, rackPos.getY() + 1.75, rackPos.getZ() - 1.3, 0f, 70f));
             case 2640 -> shot(mc, "rack_board_top_8");
             case 2645 -> mc.stop();
             default -> {

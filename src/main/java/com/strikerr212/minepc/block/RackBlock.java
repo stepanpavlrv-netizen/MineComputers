@@ -48,7 +48,7 @@ public class RackBlock extends HorizontalDirectionalBlock implements EntityBlock
 
     public static final MapCodec<RackBlock> CODEC = simpleCodec(RackBlock::new);
     /** Насколько выдвигается модуль, пикселей. */
-    public static final int TRAVEL = 11;
+    public static final int TRAVEL = 14;
 
     public RackBlock(Properties properties) {
         super(properties);
