@@ -357,8 +357,27 @@ public class CiScreenshots {
             case 2602 -> shot(mc, "rack_terminal");
             case 2605 -> mc.setScreen(new ConsoleScreen(rackPos));
             case 2612 -> shot(mc, "rack_console");
-            case 2615 -> mc.setScreen(null);
-            case 2625 -> mc.stop();
+            case 2615 -> {
+                mc.setScreen(null);
+                // Сверху на выдвинутый сервер: видно серверную плату целиком
+                server.execute(() -> server.getPlayerList().getPlayers().get(0).teleportTo(server.overworld(),
+                        rackPos.getX() + 0.5, rackPos.getY() + 0.75, rackPos.getZ() - 1.05, 0f, 72f));
+            }
+            case 2626 -> shot(mc, "rack_board_top");
+            case 2628 -> server.execute(() -> {
+                ServerLevel level = server.overworld();
+                if (level.getBlockEntity(rackPos) instanceof com.strikerr212.minepc.block.RackBlockEntity r) {
+                    com.strikerr212.minepc.block.RackBlock.retract(level, rackPos, level.getBlockState(rackPos), r);
+                }
+                BlockPos up = rackPos.above();
+                if (level.getBlockEntity(up) instanceof com.strikerr212.minepc.block.RackBlockEntity r) {
+                    com.strikerr212.minepc.block.RackBlock.extend(level, up, level.getBlockState(up), r, 0, null);
+                }
+                server.getPlayerList().getPlayers().get(0).teleportTo(level,
+                        rackPos.getX() + 0.5, rackPos.getY() + 1.75, rackPos.getZ() - 1.05, 0f, 72f);
+            });
+            case 2640 -> shot(mc, "rack_board_top_8");
+            case 2645 -> mc.stop();
             default -> {
             }
         }
