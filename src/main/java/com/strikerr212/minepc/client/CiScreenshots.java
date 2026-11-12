@@ -144,6 +144,13 @@ public class CiScreenshots {
             case 1045 -> typeAt(netB, "и тебе привет, A");
             case 1050 -> typeAt(netC, "ping office-1 3");
             case 1065 -> shot(mc, "world_network");
+            // Вблизи: вилки в гнёздах коммутатора и роутера
+            case 1066 -> server.execute(() -> {
+                ServerPlayer p = server.getPlayerList().getPlayers().get(0);
+                BlockPos sw = netA.east(3).south(2);
+                p.teleportTo(p.serverLevel(), sw.getX() + 1.6, sw.getY() + 1.1, sw.getZ() - 1.4, 45f, 45f);
+            });
+            case 1069 -> shot(mc, "world_ports");
             case 1070 -> {
                 mc.options.hideGui = false;
                 mc.setScreen(new TerminalScreen(netB));
@@ -164,7 +171,14 @@ public class CiScreenshots {
                 mc.setScreen(null);
                 typeAt(netC, "ping server 2");
                 server.execute(CiScreenshots::logNetwork);
+                // Подъём по кирпичной стенке: внутренний угол, стенка, поверху, вниз
+                server.execute(() -> {
+                    ServerPlayer p = server.getPlayerList().getPlayers().get(0);
+                    BlockPos w = netA.east(3).north(2);
+                    p.teleportTo(p.serverLevel(), w.getX() + 3.2, w.getY() + 1.9, w.getZ() + 0.5, 90f, 30f);
+                });
             }
+            case 1118 -> shot(mc, "world_climb");
             case 1160 -> mc.setScreen(new TerminalScreen(netC));
             case 1175 -> shot(mc, "terminal_ping");
             case 1180 -> {
