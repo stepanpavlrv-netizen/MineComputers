@@ -27,6 +27,9 @@ public class ModBlockEntities {
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<com.strikerr212.minepc.lan.TrayBlockEntity>> TRAY =
             BLOCK_ENTITIES.register("cable_tray", () ->
                     BlockEntityType.Builder.of(com.strikerr212.minepc.lan.TrayBlockEntity::new, ModBlocks.TRAY.get()).build(null));
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<com.strikerr212.minepc.block.RackBlockEntity>> RACK =
+            BLOCK_ENTITIES.register("server_rack", () ->
+                    BlockEntityType.Builder.of(com.strikerr212.minepc.block.RackBlockEntity::new, ModBlocks.SERVER_RACK.get()).build(null));
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<com.strikerr212.minepc.lan.LanBlockEntity>> LAN =
             BLOCK_ENTITIES.register("lan_device", () ->
                     BlockEntityType.Builder.of(com.strikerr212.minepc.lan.LanBlockEntity::new, ModBlocks.NETWORK_SWITCH.get(),

@@ -120,9 +120,39 @@ public class PcCaseBlockEntity extends BlockEntity implements com.strikerr212.mi
 
     private final CaseInventory inventory = new CaseInventory(this);
     private final CaseComputer pc = new CaseComputer(this);
+    /** Модуль серверной стойки: не стоит в мире сам, живёт внутри {@link RackBlockEntity}; slot — место в стойке. */
+    private final boolean module;
+    private final int rackSlot;
 
     public PcCaseBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.PC_CASE.get(), pos, state);
+        this.module = false;
+        this.rackSlot = 0;
+    }
+
+    /** Сервер в стойке на месте slot (0 — нижний модуль). */
+    public PcCaseBlockEntity(BlockPos rackPos, BlockState state, int slot) {
+        super(ModBlockEntities.PC_CASE.get(), rackPos, state);
+        this.module = true;
+        this.rackSlot = slot;
+    }
+
+    public boolean isModule() {
+        return module;
+    }
+
+    public int moduleSlot() {
+        return rackSlot;
+    }
+
+    /** Кто это в сети, на экране и в меню: блок и место в нём. */
+    public com.strikerr212.minepc.computer.HostRef hostRef() {
+        return new com.strikerr212.minepc.computer.HostRef(worldPosition, rackSlot);
+    }
+
+    /** Модуль стойки: вызывать вместо выгрузки чанка или удаления блока. */
+    public void unloadModule() {
+        pc.unload();
     }
 
     public ItemStack getStack(int slot) {
@@ -150,8 +180,9 @@ public class PcCaseBlockEntity extends BlockEntity implements com.strikerr212.mi
     public boolean canPlace(int slot, ItemStack stack) {
         if (stack.isEmpty()) return false;
         if (slot >= SLOT_USB && slot < SLOT_USB + USB_SLOTS) {
+            // В сервере в стойке Wi-Fi не нужен (и не поймает сквозь железо) — только флешки
             return stack.getItem() instanceof DriveItem d && d.kind() == DriveItem.Kind.FLASH
-                    || stack.getItem() instanceof com.strikerr212.minepc.lan.WifiAdapterItem;
+                    || !module && stack.getItem() instanceof com.strikerr212.minepc.lan.WifiAdapterItem;
         }
         if (!(stack.getItem() instanceof HardwareItem hw)) return false;
         HardwareType type = hw.getHardwareType();
@@ -264,6 +295,7 @@ public class PcCaseBlockEntity extends BlockEntity implements com.strikerr212.mi
 
     /** Тематика корпуса (оформление окна). */
     public CaseStyle style() {
+        if (module) return CaseStyle.SERVER;
         return getBlockState().getBlock() instanceof PcCaseBlock b ? b.style() : CaseStyle.CLASSIC;
     }
 
@@ -357,6 +389,7 @@ public class PcCaseBlockEntity extends BlockEntity implements com.strikerr212.mi
 
     @Override
     public Component getDisplayName() {
+        if (module) return Component.translatable("gui.minepc.server_module", rackSlot + 1);
         return Component.translatable("block.minepc.pc_case");
     }
 
@@ -693,8 +726,19 @@ public class PcCaseBlockEntity extends BlockEntity implements com.strikerr212.mi
     void markUpdated() {
         setChanged();
         if (level != null && !level.isClientSide) {
-            level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), Block.UPDATE_CLIENTS);
+            BlockState here = module ? level.getBlockState(worldPosition) : getBlockState();
+            level.sendBlockUpdated(getBlockPos(), here, here, Block.UPDATE_CLIENTS);
         }
+    }
+
+    /** Модуль стойки: сохранить изменения в стойке (у самой стойки — свой блок-сущность). */
+    @Override
+    public void setChanged() {
+        if (module) {
+            if (level != null) level.blockEntityChanged(worldPosition);
+            return;
+        }
+        super.setChanged();
     }
 
     @Override

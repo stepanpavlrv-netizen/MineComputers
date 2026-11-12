@@ -1,0 +1,19 @@
+{
+ "variants": {
+  "facing=north": {
+   "model": "minepc:block/server_rack"
+  },
+  "facing=east": {
+   "model": "minepc:block/server_rack",
+   "y": 90
+  },
+  "facing=south": {
+   "model": "minepc:block/server_rack",
+   "y": 180
+  },
+  "facing=west": {
+   "model": "minepc:block/server_rack",
+   "y": 270
+  }
+ }
+}

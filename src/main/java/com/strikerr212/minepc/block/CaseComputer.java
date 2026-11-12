@@ -151,7 +151,7 @@ public final class CaseComputer implements Computer.Host {
     @Override
     public boolean netSend(String target, int port, Object[] payload, int bytes) {
         if (linkCode == 0 || !(be.getLevel() instanceof ServerLevel level)) return false;
-        com.strikerr212.minepc.lan.LanManager.get(level).post(be.getBlockPos(), target, port, payload, bytes);
+        com.strikerr212.minepc.lan.LanManager.get(level).post(be.hostRef(), target, port, payload, bytes);
         return true;
     }
 
@@ -175,20 +175,22 @@ public final class CaseComputer implements Computer.Host {
     int netKbReceived() { return computer == null ? 0 : (int) Math.min(Integer.MAX_VALUE, computer.netReceived() / 1024); }
 
     private void refreshNetwork(ServerLevel level, BlockPos pos) {
-        if (age % 20 == 3) refreshWifi(level, pos);
+        if (age % 20 == 3 && !be.isModule()) refreshWifi(level, pos);
         var lan = com.strikerr212.minepc.lan.LanManager.get(level);
         net.minecraft.world.level.block.state.BlockState state = level.getBlockState(pos);
         long wired = !bios().lan() ? 0
+                : be.isModule() ? RackBlock.moduleBits(be)
                 : state.getBlock() instanceof com.strikerr212.minepc.lan.LanDevice d ? d.lanBitsPerSecond(level, pos, state) : 0;
-        boolean cable = wired > 0 && lan.linked(level, pos);
+        boolean cable = wired > 0 && lan.linked(level, be.hostRef());
         Computer.WifiStatus ws = wifiStatus;
         boolean wifi = ws != null && ws.connected();
         long bits = Math.max(cable ? wired : 0, wifi ? ws.mbit() * 1_000_000L : 0);
         boolean linked = cable || wifi;
         List<Computer.Peer> list = new java.util.ArrayList<>();
         if (linked) {
-            for (var r : lan.reach(level, pos)) {
-                if (level.isLoaded(r.pos()) && level.getBlockEntity(r.pos()) instanceof PcCaseBlockEntity other && other.computerState() == 1) {
+            for (var r : lan.reach(level, be.hostRef())) {
+                PcCaseBlockEntity other = level.isLoaded(r.pos()) ? Hosts.get(level, r.pos(), r.slot()) : null;
+                if (other != null && other.computerState() == 1) {
                     list.add(new Computer.Peer(other.address(), other.label(), r.hops()));
                 }
             }
@@ -322,7 +324,7 @@ public final class CaseComputer implements Computer.Host {
     }
 
     private BlockPos switchById(ServerLevel level, String id) {
-        for (BlockPos p : com.strikerr212.minepc.lan.LanManager.get(level).switches(level, be.getBlockPos())) {
+        for (BlockPos p : com.strikerr212.minepc.lan.LanManager.get(level).switches(level, be.hostRef())) {
             if (com.strikerr212.minepc.lan.SwitchPorts.id(p).equalsIgnoreCase(id)) return p;
         }
         return null;
@@ -334,7 +336,7 @@ public final class CaseComputer implements Computer.Host {
             var data = com.strikerr212.minepc.lan.LanData.get(level);
             List<Map<String, Object>> out = new ArrayList<>();
             if (linkCode == 0) return out;
-            for (BlockPos p : com.strikerr212.minepc.lan.LanManager.get(level).switches(level, be.getBlockPos())) {
+            for (BlockPos p : com.strikerr212.minepc.lan.LanManager.get(level).switches(level, be.hostRef())) {
                 var d = data.device(p);
                 if (d == null) continue;
                 Map<String, Object> m = new LinkedHashMap<>();
@@ -555,7 +557,7 @@ public final class CaseComputer implements Computer.Host {
 
     void unload() {
         if (computer != null) computer.unload();
-        if (be.getLevel() instanceof ServerLevel level) com.strikerr212.minepc.lan.LanData.get(level).removeWifi(be.getBlockPos());
+        if (be.getLevel() instanceof ServerLevel level && !be.isModule()) com.strikerr212.minepc.lan.LanData.get(level).removeWifi(be.getBlockPos());
     }
 
     /** Сколько блоков в ширину и высоту у подключённого монитора (по нему считается размер экрана). */
@@ -729,6 +731,13 @@ public final class CaseComputer implements Computer.Host {
     long lastTickNanos() { return lastTickNanos; }
 
     private void scanDevices(ServerLevel level, BlockPos pos) {
+        if (be.isModule()) {
+            // Сервер в стойке: экрана рядом нет, клавиатура — консоль в той же стойке
+            hasKeyboard = RackBlock.hasConsole(level, pos);
+            keyboardPos = null;
+            if (computer != null && computer.isOn()) updateRemovable(level, true);
+            return;
+        }
         // Монитор рядом с корпусом — и все блоки большого монитора, в который он входит
         java.util.Set<BlockPos> found = new java.util.HashSet<>();
         int cols = 1, rows = 1;
@@ -765,8 +774,8 @@ public final class CaseComputer implements Computer.Host {
         }
         monitors.clear();
         monitors.addAll(found);
-        hasKeyboard = DeviceBlock.hasKeyboard(level, pos)
-                || level.getBlockState(pos).getBlock() instanceof PcCaseBlock b && b.hasKeyboard();
+        hasKeyboard = be.isModule() ? RackBlock.hasConsole(level, pos)
+                : DeviceBlock.hasKeyboard(level, pos) || level.getBlockState(pos).getBlock() instanceof PcCaseBlock b && b.hasKeyboard();
         keyboardPos = DeviceBlock.keyboardPos(level, pos);
         if (computer != null && computer.isOn()) updateRemovable(level, true);
     }
@@ -854,7 +863,7 @@ public final class CaseComputer implements Computer.Host {
     @Override
     public void audio(long startMs, long nowMs, byte[] commands) {
         BlockPos p = be.getBlockPos();
-        var payload = new com.strikerr212.minepc.network.SoundPayload(p, startMs, nowMs, commands);
+        var payload = new com.strikerr212.minepc.network.SoundPayload(be.hostRef(), startMs, nowMs, commands);
         for (net.minecraft.server.level.ServerPlayer player : viewers) {
             if (player.distanceToSqr(p.getX() + 0.5, p.getY() + 0.5, p.getZ() + 0.5) < 48 * 48) {
                 PacketDistributor.sendToPlayer(player, payload);
@@ -943,7 +952,7 @@ public final class CaseComputer implements Computer.Host {
         if (changed || (fan > 0 && age - lastHumTick >= 40)) {
             lastHum = fan;
             lastHumTick = age;
-            var payload = new com.strikerr212.minepc.network.HumPayload(pos, fan, fan > 0 && hasHdd, humStart);
+            var payload = new com.strikerr212.minepc.network.HumPayload(be.hostRef(), fan, fan > 0 && hasHdd, humStart);
             humStart = false;
             for (net.minecraft.server.level.ServerPlayer player : viewers) {
                 if (player.distanceToSqr(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5) < 32 * 32) {
@@ -1007,7 +1016,7 @@ public final class CaseComputer implements Computer.Host {
                 data = new byte[0];
                 lastFrame = null;
             }
-            TerminalPayload payload = new TerminalPayload(be.getBlockPos(), data, hasKeyboard);
+            TerminalPayload payload = new TerminalPayload(be.hostRef(), data, hasKeyboard);
             for (net.minecraft.server.level.ServerPlayer p : viewers) {
                 PacketDistributor.sendToPlayer(p, payload);
             }

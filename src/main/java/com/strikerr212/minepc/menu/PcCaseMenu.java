@@ -50,12 +50,19 @@ public class PcCaseMenu extends AbstractContainerMenu {
 
     /** Клиент: позиция корпуса приходит с сервера. */
     public PcCaseMenu(int id, Inventory inventory, RegistryFriendlyByteBuf buf) {
-        this(id, inventory, blockEntity(inventory, buf.readBlockPos()));
+        this(id, inventory, blockEntity(inventory, buf.readBlockPos(), buf.isReadable() ? buf.readVarInt() : 0));
     }
 
-    private static PcCaseBlockEntity blockEntity(Inventory inventory, BlockPos pos) {
-        return inventory.player.level().getBlockEntity(pos) instanceof PcCaseBlockEntity pc ? pc : null;
+    /** Системный блок или модуль серверной стойки (slot — место в стойке). */
+    private static PcCaseBlockEntity blockEntity(Inventory inventory, BlockPos pos, int slot) {
+        return com.strikerr212.minepc.block.Hosts.get(inventory.player.level(), pos, slot);
     }
+
+    /** Сервер в стойке (у него в окне есть кнопка «Терминал»). */
+    public boolean isModule() {
+        return be != null && be.isModule();
+    }
+
 
     public PcCaseMenu(int id, Inventory inventory, PcCaseBlockEntity be) {
         super(ModMenus.PC_CASE.get(), id);
@@ -159,7 +166,8 @@ public class PcCaseMenu extends AbstractContainerMenu {
     @Override
     public boolean stillValid(Player player) {
         if (be == null || be.isRemoved()) return false;
-        return access.evaluate((level, pos) -> level.getBlockState(pos).getBlock() instanceof com.strikerr212.minepc.block.PcCaseBlock
+        return access.evaluate((level, pos) -> (level.getBlockState(pos).getBlock() instanceof com.strikerr212.minepc.block.PcCaseBlock
+                || be.isModule() && com.strikerr212.minepc.block.Hosts.get(level, pos, be.moduleSlot()) == be)
                 && player.distanceToSqr(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5) <= 64.0, true);
     }
 

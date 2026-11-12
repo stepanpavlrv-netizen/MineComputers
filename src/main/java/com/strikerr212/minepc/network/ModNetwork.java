@@ -60,9 +60,10 @@ public class ModNetwork {
         registrar.playToServer(TerminalInputPayload.TYPE, TerminalInputPayload.STREAM_CODEC, (payload, context) ->
                 context.enqueueWork(() -> {
                     Player player = context.player();
-                    BlockPos pos = payload.casePos();
+                    BlockPos pos = payload.host().pos();
                     if (player.distanceToSqr(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5) > 24 * 24) return;
-                    if (!(player.level().getBlockEntity(pos) instanceof PcCaseBlockEntity pc)) return;
+                    PcCaseBlockEntity pc = com.strikerr212.minepc.block.Hosts.get(player.level(), payload.host());
+                    if (pc == null) return;
                     if (payload.kind() == TerminalInputPayload.REFRESH) {
                         pc.requestFullFrame();
                         return;
@@ -86,9 +87,10 @@ public class ModNetwork {
         registrar.playToServer(FileUploadPayload.TYPE, FileUploadPayload.STREAM_CODEC, (payload, context) ->
                 context.enqueueWork(() -> {
                     Player player = context.player();
-                    BlockPos pos = payload.casePos();
+                    BlockPos pos = payload.host().pos();
                     if (player.distanceToSqr(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5) > 24 * 24) return;
-                    if (!(player.level().getBlockEntity(pos) instanceof PcCaseBlockEntity pc)) return;
+                    PcCaseBlockEntity pc = com.strikerr212.minepc.block.Hosts.get(player.level(), payload.host());
+                    if (pc == null) return;
                     var msg = pc.upload(payload.name(), payload.offset(), payload.total(), payload.data());
                     if (msg != null) player.displayClientMessage(msg, false);
                 }));

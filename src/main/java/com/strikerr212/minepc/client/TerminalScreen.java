@@ -23,24 +23,31 @@ public class TerminalScreen extends Screen {
     private static final int BEZEL = 0xFF1B1D22, BEZEL_LIGHT = 0xFF2C3038, TEXT_DIM = 0xFF8A9099;
 
     private final BlockPos casePos;
+    /** Какой компьютер на экране (у модуля стойки — его место в стойке). */
+    private final com.strikerr212.minepc.computer.HostRef host;
     private Button powerButton;
     private int termX, termY;
     private float scale = 1;
 
     public TerminalScreen(BlockPos casePos) {
+        this(com.strikerr212.minepc.computer.HostRef.of(casePos));
+    }
+
+    public TerminalScreen(com.strikerr212.minepc.computer.HostRef host) {
         super(Component.translatable("gui.minepc.terminal"));
-        this.casePos = casePos;
+        this.host = host;
+        this.casePos = host.pos();
     }
 
     @Override
     protected void init() {
-        ClientTerminals.requestFull(casePos);
+        ClientTerminals.requestFull(host);
         powerButton = addRenderableWidget(Button.builder(Component.translatable("gui.minepc.power"),
                 b -> send(TerminalInputPayload.POWER, "", 0)).bounds(width - 66, 6, 60, 16).build());
     }
 
     private void send(int kind, String text, int flags) {
-        PacketDistributor.sendToServer(new TerminalInputPayload(casePos, kind, text, flags, 0, 0));
+        PacketDistributor.sendToServer(new TerminalInputPayload(host, kind, text, flags, 0, 0));
     }
 
     @Override
@@ -53,7 +60,7 @@ public class TerminalScreen extends Screen {
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         super.render(g, mouseX, mouseY, partialTick);   // фон и кнопка питания
-        ClientTerminals.Snapshot s = ClientTerminals.get(casePos);
+        ClientTerminals.Snapshot s = ClientTerminals.get(host);
         int tw = (s != null ? s.width() : 50) * CELL_W, th = (s != null ? s.height() : 16) * CELL_H;
         // Масштаб: экран занимает как можно больше места (большие экраны — почти во всё окно)
         scale = Math.min(2f, Math.min((width - 12f) / tw, (height - 56f) / th));
@@ -78,7 +85,7 @@ public class TerminalScreen extends Screen {
             g.pose().popPose();
         }
 
-        boolean keyboard = ClientTerminals.keyboard(casePos);
+        boolean keyboard = ClientTerminals.keyboard(host);
         Component hint = keyboard ? Component.translatable("gui.minepc.terminal.hint2")
                 : Component.translatable("gui.minepc.terminal.no_keyboard");
         g.drawCenteredString(font, hint, width / 2, termY + sh + 14, keyboard ? TEXT_DIM : 0xFFE0A040);
@@ -152,7 +159,7 @@ public class TerminalScreen extends Screen {
 
     /** Клетка экрана под мышью (с 1) или null, если мышь вне экрана. */
     private int[] cellAt(double mx, double my) {
-        ClientTerminals.Snapshot s = ClientTerminals.get(casePos);
+        ClientTerminals.Snapshot s = ClientTerminals.get(host);
         if (s == null) return null;
         int x = (int) Math.floor((mx - termX) / (CELL_W * scale)), y = (int) Math.floor((my - termY) / (CELL_H * scale));
         if (x < 0 || y < 0 || x >= s.width() || y >= s.height()) return null;
@@ -160,7 +167,7 @@ public class TerminalScreen extends Screen {
     }
 
     private void sendMouse(int kind, int flags, int[] cell) {
-        PacketDistributor.sendToServer(new TerminalInputPayload(casePos, kind, "", flags, cell[0], cell[1]));
+        PacketDistributor.sendToServer(new TerminalInputPayload(host, kind, "", flags, cell[0], cell[1]));
     }
 
     @Override
@@ -224,7 +231,7 @@ public class TerminalScreen extends Screen {
                 int chunk = com.strikerr212.minepc.network.FileUploadPayload.CHUNK;
                 for (int off = 0; off < data.length || off == 0; off += chunk) {
                     byte[] part = java.util.Arrays.copyOfRange(data, off, Math.min(data.length, off + chunk));
-                    PacketDistributor.sendToServer(new com.strikerr212.minepc.network.FileUploadPayload(casePos, name, off, data.length, part));
+                    PacketDistributor.sendToServer(new com.strikerr212.minepc.network.FileUploadPayload(host, name, off, data.length, part));
                     if (data.length == 0) break;
                 }
             } catch (java.io.IOException e) {
@@ -272,7 +279,7 @@ public class TerminalScreen extends Screen {
             onClose();
             return true;
         }
-        if (!ClientTerminals.keyboard(casePos)) return super.keyPressed(keyCode, scanCode, modifiers);
+        if (!ClientTerminals.keyboard(host)) return super.keyPressed(keyCode, scanCode, modifiers);
         boolean ctrl = (modifiers & GLFW.GLFW_MOD_CONTROL) != 0;
         if (ctrl && keyCode == GLFW.GLFW_KEY_V && minecraft != null) {
             String clip = minecraft.keyboardHandler.getClipboard();
@@ -311,7 +318,7 @@ public class TerminalScreen extends Screen {
     @Override
     public boolean keyReleased(int keyCode, int scanCode, int modifiers) {
         held.remove(keyCode);
-        if (ClientTerminals.keyboard(casePos)) {
+        if (ClientTerminals.keyboard(host)) {
             String name = keyName(keyCode);
             if (name != null) send(TerminalInputPayload.KEY_UP, name, flags(modifiers));
         }
@@ -320,7 +327,7 @@ public class TerminalScreen extends Screen {
 
     @Override
     public boolean charTyped(char codePoint, int modifiers) {
-        if (!ClientTerminals.keyboard(casePos)) return false;
+        if (!ClientTerminals.keyboard(host)) return false;
         if ((modifiers & GLFW.GLFW_MOD_CONTROL) != 0) return true;   // Ctrl+буква — это команда, а не текст
         if (Text.supports(codePoint)) send(TerminalInputPayload.CHAR, String.valueOf(codePoint), 0);
         return true;

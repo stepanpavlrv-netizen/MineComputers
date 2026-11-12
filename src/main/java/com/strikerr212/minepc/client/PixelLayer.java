@@ -17,15 +17,15 @@ import java.util.Map;
  */
 final class PixelLayer {
 
-    private static final Map<BlockPos, PixelLayer> LAYERS = new HashMap<>();
+    private static final Map<com.strikerr212.minepc.computer.HostRef, PixelLayer> LAYERS = new HashMap<>();
 
     private final ResourceLocation id;
     private DynamicTexture texture;
     private int w, h;
     private ClientTerminals.Snapshot source;
 
-    private PixelLayer(BlockPos pos) {
-        id = ResourceLocation.fromNamespaceAndPath("minepc", "screen/" + Long.toHexString(pos.asLong()));
+    private PixelLayer(com.strikerr212.minepc.computer.HostRef host) {
+        id = ResourceLocation.fromNamespaceAndPath("minepc", "screen/" + Long.toHexString(host.pos().asLong()) + "_" + host.slot());
     }
 
     /** Клетка целиком нарисована текстурой (не нужны ни прямоугольники, ни буква). */
@@ -35,12 +35,12 @@ final class PixelLayer {
 
     /** Текстура для кадра (обновляется, если кадр новый). */
     static ResourceLocation of(ClientTerminals.Snapshot s) {
-        PixelLayer layer = LAYERS.computeIfAbsent(s.pos(), PixelLayer::new);
+        PixelLayer layer = LAYERS.computeIfAbsent(s.host(), PixelLayer::new);
         layer.update(s);
         return layer.id;
     }
 
-    static void release(BlockPos pos) {
+    static void release(com.strikerr212.minepc.computer.HostRef pos) {
         PixelLayer l = LAYERS.remove(pos);
         if (l != null) l.close();
     }

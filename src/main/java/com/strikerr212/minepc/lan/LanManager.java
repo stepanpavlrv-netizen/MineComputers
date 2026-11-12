@@ -2,6 +2,7 @@ package com.strikerr212.minepc.lan;
 
 import com.strikerr212.minepc.block.PcCaseBlockEntity;
 import com.strikerr212.minepc.computer.Computer;
+import com.strikerr212.minepc.computer.HostRef;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
@@ -51,7 +52,10 @@ public final class LanManager {
     }
 
     /** До кого можно достучаться: компьютер → переходов и самая медленная связь на пути (бит/с). */
-    public record Reach(BlockPos pos, int hops, long bits) {
+    public record Reach(BlockPos pos, int slot, int hops, long bits) {
+        public HostRef host() {
+            return new HostRef(pos, slot);
+        }
     }
 
     /** Что видно из компьютера: компьютеры и коммутаторы (роутеры, радиомодемы) на пути. */
@@ -63,15 +67,15 @@ public final class LanManager {
     public record Segment(int port, Set<LanData.Plug> plugs, boolean ok, int length) {
     }
 
-    private record Outgoing(BlockPos from, String target, int port, Object[] payload, int bytes) {
+    private record Outgoing(HostRef from, String target, int port, Object[] payload, int bytes) {
     }
 
-    private record Delivery(long tick, BlockPos to, String from, int port, int hops, Object[] payload, int bytes) {
+    private record Delivery(long tick, HostRef to, String from, int port, int hops, Object[] payload, int bytes) {
     }
 
     private volatile long version;
     private long cachedVersion = -1;
-    private final Map<BlockPos, Result> reachCache = new HashMap<>();
+    private final Map<HostRef, Result> reachCache = new HashMap<>();
     private final ConcurrentLinkedQueue<Outgoing> outbox = new ConcurrentLinkedQueue<>();
     private final PriorityQueue<Delivery> pending = new PriorityQueue<>((a, b) -> Long.compare(a.tick, b.tick));
 
@@ -102,26 +106,48 @@ public final class LanManager {
 
     /** Все компьютеры, до которых можно дойти из корпуса casePos (сам он не входит). Чанки грузить не нужно. */
     public List<Reach> reach(ServerLevel level, BlockPos casePos) {
-        return result(level, casePos).computers();
+        return reach(level, HostRef.of(casePos));
+    }
+
+    public List<Reach> reach(ServerLevel level, HostRef host) {
+        return result(level, host).computers();
     }
 
     /** Коммутаторы, роутеры и радиомодемы, через которые проходит связь компьютера (для программы switch). */
-    public List<BlockPos> switches(ServerLevel level, BlockPos casePos) {
-        return result(level, casePos).switches();
+    public List<BlockPos> switches(ServerLevel level, HostRef host) {
+        return result(level, host).switches();
     }
 
-    private Result result(ServerLevel level, BlockPos casePos) {
+    private Result result(ServerLevel level, HostRef host) {
         if (cachedVersion != version) {
             reachCache.clear();
             cachedVersion = version;
         }
-        return reachCache.computeIfAbsent(casePos.immutable(), p -> computeReach(LanData.get(level), p));
+        return reachCache.computeIfAbsent(host, h -> computeReach(LanData.get(level), h));
     }
 
-    /** Порт корпуса подключён (хотя бы к одному работающему отрезку). */
-    public boolean linked(ServerLevel level, BlockPos casePos) {
-        for (Segment s : segmentsAt(LanData.get(level), casePos)) if (s.ok()) return true;
+    /** Порт компьютера подключён (хотя бы к одному работающему отрезку). */
+    public boolean linked(ServerLevel level, HostRef host) {
+        for (Segment s : hostSegments(LanData.get(level), host)) if (s.ok()) return true;
         return false;
+    }
+
+    /**
+     * Порт компьютера — в каком гнезде он в схеме: у системного блока — любое его гнездо, у серверной стойки —
+     * гнездо своего модуля (номер гнезда = номер модуля).
+     */
+    public static int hostSlot(LanData.Device d, int port) {
+        return d != null && d.type() == LanData.RACK && port < LanData.CABLE_PORTS ? port : 0;
+    }
+
+    /** Отрезки, к которым подключён компьютер. */
+    static List<Segment> hostSegments(LanData data, HostRef host) {
+        LanData.Device d = data.device(host.pos());
+        List<Segment> all = segmentsAt(data, host.pos());
+        if (d == null || d.type() != LanData.RACK) return all;
+        List<Segment> out = new ArrayList<>();
+        for (Segment s : all) if (s.port() == host.slot()) out.add(s);
+        return out;
     }
 
     private record Node(BlockPos pos, int hops, long bits, int vlan) {
@@ -130,21 +156,22 @@ public final class LanManager {
     private record VKey(BlockPos pos, int vlan) {
     }
 
-    static Result computeReach(LanData data, BlockPos start) {
-        LanData.Device self = data.device(start);
+    static Result computeReach(LanData data, HostRef start) {
+        LanData.Device self = data.device(start.pos());
         if (self == null) return Result.EMPTY;
-        Map<BlockPos, Reach> best = new HashMap<>();
+        Map<HostRef, Reach> best = new HashMap<>();
         Set<VKey> visited = new HashSet<>();
         List<BlockPos> switches = new ArrayList<>();
         ArrayDeque<Node> queue = new ArrayDeque<>();
         Visitor v = new Visitor(data, start, best, visited, switches, queue);
-        if (self.kbit() > 0) {
-            for (Segment s : segmentsAt(data, start)) {
-                if (s.ok()) for (LanData.Plug p : s.plugs()) v.plug(p, 0, self.bits());
+        long selfBits = self.bitsFor(start.slot());
+        if (selfBits > 0) {
+            for (Segment s : hostSegments(data, start)) {
+                if (s.ok()) for (LanData.Plug p : s.plugs()) v.plug(p, 0, selfBits);
             }
         }
         // По Wi-Fi: роутер — как коммутатор, к которому мы подключены (общий VLAN)
-        LanData.WifiLink own = data.wifiOf(start);
+        LanData.WifiLink own = start.slot() == 0 ? data.wifiOf(start.pos()) : null;
         if (own != null) v.enter(own.router(), 0, 1, own.bits());
         while (!queue.isEmpty()) {
             Node cur = queue.poll();
@@ -152,7 +179,7 @@ public final class LanManager {
             if (dev == null) continue;
             if (dev.type() == LanData.ROUTER) {
                 for (LanData.WifiLink l : data.wifiClients(cur.pos)) {
-                    if (!l.computer().equals(start)) v.computer(l.computer(), cur.hops, Math.min(cur.bits, l.bits()));
+                    if (!HostRef.of(l.computer()).equals(start)) v.computer(HostRef.of(l.computer()), cur.hops, Math.min(cur.bits, l.bits()));
                 }
             }
             if (dev.type() == LanData.RADIO) {
@@ -172,27 +199,28 @@ public final class LanManager {
     }
 
     /** Обход: что делать с найденным портом устройства. */
-    private record Visitor(LanData data, BlockPos start, Map<BlockPos, Reach> best, Set<VKey> visited,
+    private record Visitor(LanData data, HostRef start, Map<HostRef, Reach> best, Set<VKey> visited,
                            List<BlockPos> switches, ArrayDeque<Node> queue) {
 
         void plug(LanData.Plug p, int hops, long bits) {
-            if (p.pos().equals(start)) return;
             LanData.Device d = data.device(p.pos());
             if (d == null) return;
-            long b = Math.min(bits, d.bits());
+            HostRef host = new HostRef(p.pos(), hostSlot(d, p.port()));
+            if (d.computer() && host.equals(start)) return;
+            long b = Math.min(bits, d.computer() ? d.bitsFor(host.slot()) : d.bits());
             if (b <= 0) return;
             if (d.computer()) {
-                computer(p.pos(), hops, b);
+                computer(host, hops, b);
             } else {
                 int cfg = data.portConfig(p.pos(), p.port());
                 if (LanData.portEnabled(cfg)) enter(p.pos(), LanData.portVlan(cfg), hops + 1, b);
             }
         }
 
-        void computer(BlockPos pos, int hops, long bits) {
-            Reach r = new Reach(pos, hops, bits);
-            Reach old = best.get(pos);
-            if (old == null || r.hops < old.hops || (r.hops == old.hops && r.bits > old.bits)) best.put(pos, r);
+        void computer(HostRef host, int hops, long bits) {
+            Reach r = new Reach(host.pos(), host.slot(), hops, bits);
+            Reach old = best.get(host);
+            if (old == null || r.hops < old.hops || (r.hops == old.hops && r.bits > old.bits)) best.put(host, r);
         }
 
         void enter(BlockPos sw, int vlan, int hops, long bits) {
@@ -431,8 +459,8 @@ public final class LanManager {
     // ======================= Сообщения =======================
 
     /** Из потока программы: поставить сообщение в очередь (доставит тик сервера). */
-    public void post(BlockPos from, String target, int port, Object[] payload, int bytes) {
-        outbox.add(new Outgoing(from.immutable(), target, port, payload, bytes));
+    public void post(HostRef from, String target, int port, Object[] payload, int bytes) {
+        outbox.add(new Outgoing(from, target, port, payload, bytes));
     }
 
     /** Подходит ли компьютер под адрес: полный адрес, его начало (от 4 знаков) или имя. */
@@ -456,7 +484,7 @@ public final class LanManager {
     private int soundsThisTick;
 
     /** Сообщение пошло по сети: щёлкают коммутаторы и роутеры на пути, трещат радиомачты. */
-    private void networkSounds(ServerLevel level, BlockPos from, long now) {
+    private void networkSounds(ServerLevel level, HostRef from, long now) {
         if (now != soundTick) {
             soundTick = now;
             soundsThisTick = 0;
@@ -490,22 +518,25 @@ public final class LanManager {
         if (now % 40 == 0) CordGuard.check(level);
         Outgoing o;
         while ((o = outbox.poll()) != null) {
-            if (!level.isLoaded(o.from) || !(level.getBlockEntity(o.from) instanceof PcCaseBlockEntity src)) continue;
+            PcCaseBlockEntity src = level.isLoaded(o.from.pos()) ? com.strikerr212.minepc.block.Hosts.get(level, o.from) : null;
+            if (src == null) continue;
             String fromAddr = src.address();
             networkSounds(level, o.from, now);
             for (Reach r : reach(level, o.from)) {
                 // Компьютер в незагруженном чанке выключен — ему некому ответить (провода по дороге — неважно)
-                if (!level.isLoaded(r.pos) || !(level.getBlockEntity(r.pos) instanceof PcCaseBlockEntity dst)) continue;
+                PcCaseBlockEntity dst = level.isLoaded(r.pos) ? com.strikerr212.minepc.block.Hosts.get(level, r.host()) : null;
+                if (dst == null) continue;
                 if (!matches(o.target, dst.address(), dst.label())) continue;
                 // Задержка: по тику на коммутатор, плюс время передачи по самой медленной связи
                 long bytesPerTick = Math.max(1, r.bits / 800 / Computer.TICKS_PER_SECOND);
                 long delay = r.hops + o.bytes / bytesPerTick;
-                pending.add(new Delivery(now + delay, r.pos, fromAddr, o.port, r.hops, o.payload, o.bytes));
+                pending.add(new Delivery(now + delay, r.host(), fromAddr, o.port, r.hops, o.payload, o.bytes));
             }
         }
         while (!pending.isEmpty() && pending.peek().tick <= now) {
             Delivery d = pending.poll();
-            if (level.isLoaded(d.to) && level.getBlockEntity(d.to) instanceof PcCaseBlockEntity dst) {
+            PcCaseBlockEntity dst = level.isLoaded(d.to.pos()) ? com.strikerr212.minepc.block.Hosts.get(level, d.to) : null;
+            if (dst != null) {
                 dst.netReceive(d.from, d.port, d.hops, d.payload, d.bytes);
             }
         }

@@ -1,0 +1,21 @@
+{
+ "type": "minecraft:crafting_shaped",
+ "category": "redstone",
+ "pattern": [
+  "I I",
+  "IBI",
+  "I I"
+ ],
+ "key": {
+  "I": {
+   "item": "minecraft:iron_ingot"
+  },
+  "B": {
+   "item": "minecraft:iron_bars"
+  }
+ },
+ "result": {
+  "id": "minepc:server_rack",
+  "count": 1
+ }
+}

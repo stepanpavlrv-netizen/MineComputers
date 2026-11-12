@@ -312,10 +312,111 @@ public class CiScreenshots {
                 mc.resizeDisplay();
                 mc.setScreen(null);
             }
-            case 2340 -> mc.stop();
+            // Серверная стойка: две стойки друг на друге, три сервера и консоль; один сервер выдвинут
+            case 2342 -> server.execute(CiScreenshots::placeRack);
+            case 2395 -> {
+                typeHost(new com.strikerr212.minepc.computer.HostRef(rackPos, 0), "hostname srv-a");
+                typeHost(new com.strikerr212.minepc.computer.HostRef(rackPos, 1), "hostname srv-b");
+                typeHost(new com.strikerr212.minepc.computer.HostRef(rackPos.above(), 0), "hostname srv-c");
+            }
+            case 2402 -> typeHost(new com.strikerr212.minepc.computer.HostRef(rackPos, 0), "ping srv-b 2");
+            case 2425 -> shot(mc, "world_server_rack");
+            case 2428 -> server.execute(() -> {
+                ServerPlayer p = server.getPlayerList().getPlayers().get(0);
+                if (p.serverLevel().getBlockEntity(rackPos) instanceof com.strikerr212.minepc.block.RackBlockEntity r && r.server(1) != null) {
+                    p.openMenu(r.server(1), buf -> {
+                        buf.writeBlockPos(rackPos);
+                        buf.writeVarInt(1);
+                    });
+                }
+                var lan = com.strikerr212.minepc.lan.LanManager.get(p.serverLevel());
+                StringBuilder sb = new StringBuilder("[CI-RACK] srv-a ->");
+                for (var r : lan.reach(p.serverLevel(), new com.strikerr212.minepc.computer.HostRef(rackPos, 0))) {
+                    sb.append(' ').append(r.pos().toShortString()).append('#').append(r.slot()).append(" hops=").append(r.hops());
+                }
+                com.mojang.logging.LogUtils.getLogger().info(sb.toString());
+            });
+            case 2436 -> shot(mc, "rack_server_gui");
+            case 2440 -> mc.setScreen(new TerminalScreen(new com.strikerr212.minepc.computer.HostRef(rackPos, 0)));
+            case 2452 -> shot(mc, "rack_terminal");
+            case 2455 -> mc.setScreen(new ConsoleScreen(rackPos));
+            case 2462 -> shot(mc, "rack_console");
+            case 2465 -> mc.setScreen(null);
+            case 2475 -> mc.stop();
             default -> {
             }
         }
+    }
+
+    private static BlockPos rackPos = BlockPos.ZERO;
+
+    /** Ввод в компьютер (и в модуль стойки) из CI. */
+    private static void typeHost(com.strikerr212.minepc.computer.HostRef host, String line) {
+        var server = Minecraft.getInstance().getSingleplayerServer();
+        server.execute(() -> {
+            PcCaseBlockEntity be = com.strikerr212.minepc.block.Hosts.get(server.overworld(), host);
+            if (be != null) {
+                for (char c : line.toCharArray()) be.input(TerminalInputPayload.CHAR, String.valueOf(c), false, false);
+                be.input(TerminalInputPayload.KEY, "enter", false, false);
+            }
+        });
+    }
+
+    /** Две стойки друг на друге: внизу два сервера и консоль, вверху сервер; сзади кабели в коммутатор. */
+    private static void placeRack() {
+        var server = Minecraft.getInstance().getSingleplayerServer();
+        ServerPlayer p = server.getPlayerList().getPlayers().get(0);
+        ServerLevel level = p.serverLevel();
+        BlockPos rk = casePos.east().south(26).west(14);
+        rackPos = rk;
+        for (int dx = -4; dx <= 4; dx++) {
+            for (int dz = -5; dz <= 5; dz++) {
+                level.setBlockAndUpdate(rk.offset(dx, -1, dz), net.minecraft.world.level.block.Blocks.SMOOTH_STONE.defaultBlockState());
+                for (int dy = 0; dy <= 3; dy++) level.setBlockAndUpdate(rk.offset(dx, dy, dz), net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
+            }
+        }
+        BlockState rackState = ModBlocks.SERVER_RACK.get().defaultBlockState().setValue(com.strikerr212.minepc.block.RackBlock.FACING, Direction.NORTH);
+        level.setBlockAndUpdate(rk, rackState);
+        level.setBlockAndUpdate(rk.above(), rackState);
+        if (level.getBlockEntity(rk) instanceof com.strikerr212.minepc.block.RackBlockEntity r) {
+            r.insert(0, new ItemStack(com.strikerr212.minepc.registry.ModItems.SERVER_MODULE.get()));
+            r.insert(1, new ItemStack(com.strikerr212.minepc.registry.ModItems.SERVER_MODULE.get()));
+            r.insert(2, new ItemStack(com.strikerr212.minepc.registry.ModItems.CONSOLE_MODULE.get()));
+            fillModule(r.server(0), 3);
+            fillModule(r.server(1), 4);
+        }
+        if (level.getBlockEntity(rk.above()) instanceof com.strikerr212.minepc.block.RackBlockEntity r) {
+            r.insert(0, new ItemStack(com.strikerr212.minepc.registry.ModItems.SERVER_MODULE.get()));
+            fillModule(r.server(0), 2);
+        }
+        // Сзади: два провода из гнёзд модулей 1 и 2 в коммутатор
+        BlockPos sw = rk.south(3);
+        level.setBlockAndUpdate(sw, ModBlocks.NETWORK_SWITCH.get().defaultBlockState().setValue(com.strikerr212.minepc.lan.SwitchBlock.FACING, Direction.NORTH));
+        int blue = net.minecraft.world.item.DyeColor.BLUE.getId(), orange = net.minecraft.world.item.DyeColor.ORANGE.getId();
+        for (int dz = 1; dz <= 2; dz++) {
+            wire(level, rk.south(dz), blue, 2, 0);
+            wire(level, rk.south(dz), orange, 4, 2);
+        }
+        reconnectArea(level, rk.offset(-2, 0, -1), rk.offset(2, 1, 4));
+        if (level.getBlockEntity(rk) instanceof com.strikerr212.minepc.block.RackBlockEntity r) {
+            com.strikerr212.minepc.block.RackBlock.extend(level, rk, rackState, r, 1, null);
+        }
+        p.teleportTo(level, rk.getX() + 2.7, rk.getY() + 1.8, rk.getZ() - 2.3, 45f, 28f);
+    }
+
+    private static void fillModule(PcCaseBlockEntity be, int tier) {
+        if (be == null) return;
+        var inv = (IItemHandlerModifiable) be.inventory();
+        inv.setStackInSlot(PcCaseBlockEntity.SLOT_MOTHERBOARD, HardwarePresets.motherboard(tier));
+        inv.setStackInSlot(PcCaseBlockEntity.SLOT_CPU, HardwarePresets.cpu(tier));
+        inv.setStackInSlot(PcCaseBlockEntity.SLOT_COOLER, HardwarePresets.cooler(tier));
+        inv.setStackInSlot(PcCaseBlockEntity.SLOT_RAM, HardwarePresets.ram(tier));
+        inv.setStackInSlot(PcCaseBlockEntity.SLOT_RAM + 1, HardwarePresets.ram(tier));
+        inv.setStackInSlot(PcCaseBlockEntity.SLOT_RAM + 2, HardwarePresets.ram(tier));
+        inv.setStackInSlot(PcCaseBlockEntity.SLOT_PSU, HardwarePresets.psu(tier));
+        inv.setStackInSlot(PcCaseBlockEntity.SLOT_HDD, HardwarePresets.hdd(2));
+        inv.setStackInSlot(PcCaseBlockEntity.SLOT_HDD + 1, HardwarePresets.hdd(2));
+        be.togglePower();
     }
 
     /** Переключить вкладку открытого сборочного стола, как будто игрок щёлкнул по ней. */

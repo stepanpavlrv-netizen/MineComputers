@@ -120,6 +120,7 @@ public class ClientEvents {
         event.registerBlockEntityRenderer(ModBlockEntities.MONITOR.get(), MonitorRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.LAN.get(), CordRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.ROUTER.get(), CordRenderer::new);
+        event.registerBlockEntityRenderer(ModBlockEntities.RACK.get(), RackRenderer::new);
     }
 
     @SubscribeEvent

@@ -18,24 +18,26 @@ import java.util.Map;
  */
 public final class HumSounds {
 
-    private static final Map<BlockPos, Hum> FANS = new HashMap<>();
-    private static final Map<BlockPos, Hum> DISKS = new HashMap<>();
+    private static final Map<com.strikerr212.minepc.computer.HostRef, Hum> FANS = new HashMap<>();
+    private static final Map<com.strikerr212.minepc.computer.HostRef, Hum> DISKS = new HashMap<>();
 
     private HumSounds() {
     }
 
     /** Главный поток: пришли обороты от сервера. */
-    public static void update(BlockPos pos, int fan, boolean hdd, boolean start) {
-        set(FANS, pos, fan / 100f, false, start);
-        set(DISKS, pos, hdd ? 1f : 0f, true, start);
+    public static void update(com.strikerr212.minepc.computer.HostRef host, int fan, boolean hdd, boolean start) {
+        set(FANS, host, fan / 100f, false, start);
+        set(DISKS, host, hdd ? 1f : 0f, true, start);
     }
 
-    private static void set(Map<BlockPos, Hum> map, BlockPos pos, float target, boolean disk, boolean start) {
+    private static void set(Map<com.strikerr212.minepc.computer.HostRef, Hum> map, com.strikerr212.minepc.computer.HostRef host,
+                            float target, boolean disk, boolean start) {
+        BlockPos pos = host.pos();
         Minecraft mc = Minecraft.getInstance();
         if (mc.level == null) return;
-        Hum h = map.get(pos);
+        Hum h = map.get(host);
         if (h != null && h.isStopped()) {
-            map.remove(pos);
+            map.remove(host);
             h = null;
         }
         if (h == null) {
@@ -43,7 +45,7 @@ public final class HumSounds {
             h = new Hum(disk ? ModSounds.HDD_SPIN.get() : ModSounds.FAN.get(), pos, disk);
             // Компьютер уже работал (игрок подошёл) — сразу на нужных оборотах, без раскрутки
             if (!start) h.level = target;
-            map.put(pos.immutable(), h);
+            map.put(host, h);
             mc.getSoundManager().play(h);
         }
         h.target(target);

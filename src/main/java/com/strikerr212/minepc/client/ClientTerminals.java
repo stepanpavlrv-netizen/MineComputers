@@ -2,6 +2,7 @@ package com.strikerr212.minepc.client;
 
 import com.strikerr212.minepc.computer.TerminalCodec;
 import com.strikerr212.minepc.network.TerminalInputPayload;
+import com.strikerr212.minepc.computer.HostRef;
 import net.minecraft.core.BlockPos;
 import net.neoforged.neoforge.network.PacketDistributor;
 
@@ -12,10 +13,10 @@ import java.util.Map;
 public final class ClientTerminals {
 
     /** Разобранный кадр: символы и цвета (RGB) каждой клетки. */
-    public record Snapshot(BlockPos pos, int width, int height, int cursorX, int cursorY, boolean blink, int depth,
+    public record Snapshot(HostRef host, int width, int height, int cursorX, int cursorY, boolean blink, int depth,
                            char[] chars, int[] fg, int[] bg) {
 
-        static Snapshot parse(BlockPos pos, byte[] f) {
+        static Snapshot parse(HostRef pos, byte[] f) {
             int w = TerminalCodec.width(f), h = TerminalCodec.height(f), n = w * h;
             if (w == 0 || h == 0 || f.length < TerminalCodec.HEADER + TerminalCodec.CELL * n) return null;
             char[] c = new char[n];
@@ -30,10 +31,10 @@ public final class ClientTerminals {
         }
     }
 
-    private static final Map<BlockPos, byte[]> FRAMES = new HashMap<>();
-    private static final Map<BlockPos, Snapshot> SCREENS = new HashMap<>();
-    private static final Map<BlockPos, Boolean> KEYBOARD = new HashMap<>();
-    private static final Map<BlockPos, Long> LAST_REQUEST = new HashMap<>();
+    private static final Map<HostRef, byte[]> FRAMES = new HashMap<>();
+    private static final Map<HostRef, Snapshot> SCREENS = new HashMap<>();
+    private static final Map<HostRef, Boolean> KEYBOARD = new HashMap<>();
+    private static final Map<HostRef, Long> LAST_REQUEST = new HashMap<>();
 
     private ClientTerminals() {
     }
@@ -42,44 +43,49 @@ public final class ClientTerminals {
     public static long received, receivedAt;
     public static BlockPos countAt;
 
-    public static void update(BlockPos pos, byte[] data, boolean keyboard) {
+    public static void update(HostRef host, byte[] data, boolean keyboard) {
         received++;
-        if (pos.equals(countAt)) receivedAt++;
-        KEYBOARD.put(pos, keyboard);
+        if (host.pos().equals(countAt)) receivedAt++;
+        KEYBOARD.put(host, keyboard);
         if (data.length == 0) {          // компьютер выключен
-            FRAMES.remove(pos);
-            SCREENS.remove(pos);
-            PixelLayer.release(pos);
+            FRAMES.remove(host);
+            SCREENS.remove(host);
+            PixelLayer.release(host);
             return;
         }
-        byte[] frame = TerminalCodec.apply(FRAMES.get(pos), data);
+        byte[] frame = TerminalCodec.apply(FRAMES.get(host), data);
         if (frame == null) {
             // Пришли изменения, а основы нет (игрок только подошёл) — просим весь кадр
-            requestFull(pos);
+            requestFull(host);
             return;
         }
-        Snapshot s = Snapshot.parse(pos, frame);
+        Snapshot s = Snapshot.parse(host, frame);
         if (s == null) return;
-        FRAMES.put(pos, frame);
-        SCREENS.put(pos, s);
+        FRAMES.put(host, frame);
+        SCREENS.put(host, s);
     }
 
     /** Попросить сервер прислать экран целиком (не чаще раза в секунду). */
-    public static void requestFull(BlockPos pos) {
+    public static void requestFull(HostRef host) {
         long now = System.currentTimeMillis();
-        Long last = LAST_REQUEST.get(pos);
+        Long last = LAST_REQUEST.get(host);
         if (last != null && now - last < 1000) return;
-        LAST_REQUEST.put(pos, now);
-        PacketDistributor.sendToServer(new TerminalInputPayload(pos, TerminalInputPayload.REFRESH, "", 0, 0, 0));
+        LAST_REQUEST.put(host, now);
+        PacketDistributor.sendToServer(new TerminalInputPayload(host, TerminalInputPayload.REFRESH, "", 0, 0, 0));
     }
 
-    /** Экран компьютера или null, если он выключен. */
+    /** Экран компьютера в системном блоке pos или null, если он выключен. */
     public static Snapshot get(BlockPos pos) {
-        return pos == null ? null : SCREENS.get(pos);
+        return pos == null ? null : SCREENS.get(HostRef.of(pos));
     }
 
-    public static boolean keyboard(BlockPos pos) {
-        return KEYBOARD.getOrDefault(pos, false);
+    /** Экран любого компьютера (и модуля стойки) или null. */
+    public static Snapshot get(HostRef host) {
+        return host == null ? null : SCREENS.get(host);
+    }
+
+    public static boolean keyboard(HostRef host) {
+        return KEYBOARD.getOrDefault(host, false);
     }
 
     public static void clear() {

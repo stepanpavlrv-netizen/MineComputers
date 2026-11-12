@@ -131,6 +131,16 @@ public class PcCaseScreen extends AbstractContainerScreen<PcCaseMenu> {
     protected void init() {
         super.init();
         refresh();
+        // Сервер в стойке: своего монитора у него нет — экран открывается отсюда (или с консоли стойки)
+        if (menu.isModule() && menu.blockEntity() != null) {
+            var host = menu.blockEntity().hostRef();
+            addRenderableWidget(net.minecraft.client.gui.components.Button.builder(Component.translatable("gui.minepc.open_terminal"), b -> {
+                if (minecraft != null && minecraft.player != null) {
+                    minecraft.player.closeContainer();
+                    minecraft.setScreen(new TerminalScreen(host));
+                }
+            }).bounds(leftPos + imageWidth - 80, Math.max(2, topPos - 20), 80, 16).build());
+        }
     }
 
     /** Для CI: сразу применить ciTheme/ciTab. */

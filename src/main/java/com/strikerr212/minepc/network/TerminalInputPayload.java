@@ -19,7 +19,7 @@ import net.minecraft.resources.ResourceLocation;
  * @param x     клетка экрана по горизонтали (для мыши, с 1)
  * @param y     клетка экрана по вертикали (для мыши, с 1)
  */
-public record TerminalInputPayload(BlockPos casePos, int kind, String text, int flags, int x, int y) implements CustomPacketPayload {
+public record TerminalInputPayload(com.strikerr212.minepc.computer.HostRef host, int kind, String text, int flags, int x, int y) implements CustomPacketPayload {
 
     public static final int CHAR = 0, KEY = 1, KEY_UP = 2, PASTE = 3, TERMINATE = 4, POWER = 5, REFRESH = 6,
             MOUSE_DOWN = 7, MOUSE_DRAG = 8, MOUSE_UP = 9, MOUSE_SCROLL = 10;
@@ -31,7 +31,7 @@ public record TerminalInputPayload(BlockPos casePos, int kind, String text, int 
             new Type<>(ResourceLocation.fromNamespaceAndPath(MineComputers.MODID, "terminal_input"));
 
     public static final StreamCodec<ByteBuf, TerminalInputPayload> STREAM_CODEC = StreamCodec.composite(
-            BlockPos.STREAM_CODEC, TerminalInputPayload::casePos,
+            com.strikerr212.minepc.computer.HostRef.STREAM_CODEC, TerminalInputPayload::host,
             ByteBufCodecs.VAR_INT, TerminalInputPayload::kind,
             ByteBufCodecs.stringUtf8(MAX_TEXT), TerminalInputPayload::text,
             ByteBufCodecs.VAR_INT, TerminalInputPayload::flags,

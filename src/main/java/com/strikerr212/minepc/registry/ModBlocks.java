@@ -126,6 +126,13 @@ public class ModBlocks {
     public static final DeferredBlock<com.strikerr212.minepc.lan.TrayBlock> TRAY = BLOCKS.register("cable_tray",
             () -> new com.strikerr212.minepc.lan.TrayBlock(BlockBehaviour.Properties.of()
                     .mapColor(MapColor.METAL).strength(1.0f).sound(SoundType.CHAIN).noOcclusion()));
+    public static final DeferredBlock<com.strikerr212.minepc.block.RackBlock> SERVER_RACK = BLOCKS.register("server_rack",
+            () -> new com.strikerr212.minepc.block.RackBlock(BlockBehaviour.Properties.of()
+                    .mapColor(MapColor.COLOR_BLACK).strength(2.5f, 6.0f).sound(SoundType.METAL).noOcclusion()));
+    public static final DeferredBlock<com.strikerr212.minepc.block.RackDrawerBlock> RACK_DRAWER = BLOCKS.register("server_rack_drawer",
+            () -> new com.strikerr212.minepc.block.RackDrawerBlock(BlockBehaviour.Properties.of()
+                    .mapColor(MapColor.COLOR_BLACK).strength(2.5f, 6.0f).sound(SoundType.METAL).noOcclusion().noLootTable()
+                    .pushReaction(net.minecraft.world.level.material.PushReaction.BLOCK)));
     public static final DeferredBlock<com.strikerr212.minepc.lan.BracketBlock> BRACKET = BLOCKS.register("cable_bracket",
             () -> new com.strikerr212.minepc.lan.BracketBlock(BlockBehaviour.Properties.of()
                     .mapColor(MapColor.METAL).strength(1.0f).sound(SoundType.METAL).noOcclusion()));

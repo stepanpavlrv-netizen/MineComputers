@@ -23,7 +23,7 @@ import java.util.Map;
  */
 public final class LanData extends SavedData {
 
-    public static final int COMPUTER = 0, DESK_SWITCH = 1, RACK_SWITCH = 2, ROUTER = 3, PANEL = 4, RADIO = 5, BRACKET = 6;
+    public static final int COMPUTER = 0, DESK_SWITCH = 1, RACK_SWITCH = 2, ROUTER = 3, PANEL = 4, RADIO = 5, BRACKET = 6, RACK = 7;
 
     /** Портов у устройства: 16 под кабели (гнёзда по порядку, {@link LanDevice#sockets}) и 8 под патч-корды. */
     public static final int CABLE_PORTS = 16, CORD_PORTS = 8, PORTS = CABLE_PORTS + CORD_PORTS;
@@ -37,8 +37,18 @@ public final class LanData extends SavedData {
             return kbit * 1000L;
         }
 
+        /** Компьютер или серверная стойка (в стойке — несколько компьютеров, по одному на гнездо). */
         public boolean computer() {
-            return type == COMPUTER;
+            return type == COMPUTER || type == RACK;
+        }
+
+        /**
+         * Скорость порта компьютера в месте slot, бит/с. У серверной стойки у каждого модуля своя плата:
+         * extra — по 8 бит на модуль, скорость в сотнях Мбит/с (0 — нет платы).
+         */
+        public long bitsFor(int slot) {
+            if (type != RACK) return bits();
+            return ((extra >>> (8 * Math.max(0, Math.min(3, slot)))) & 255) * 100_000_000L;
         }
 
         /** Пассивное устройство: сигнал проходит насквозь (патч-панель, кронштейн воздушной линии). */

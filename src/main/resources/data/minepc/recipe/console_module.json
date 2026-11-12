@@ -1,0 +1,22 @@
+{
+ "type": "minecraft:crafting_shapeless",
+ "category": "redstone",
+ "ingredients": [
+  {
+   "item": "minecraft:iron_ingot"
+  },
+  {
+   "item": "minecraft:glass_pane"
+  },
+  {
+   "item": "minepc:keyboard"
+  },
+  {
+   "item": "minecraft:redstone"
+  }
+ ],
+ "result": {
+  "id": "minepc:console_module",
+  "count": 1
+ }
+}

@@ -18,11 +18,11 @@ public final class ClientAccess {
     }
 
     public static void onSound(com.strikerr212.minepc.network.SoundPayload payload) {
-        ComputerAudio.receive(payload.pos(), payload.startMs(), payload.nowMs(), payload.commands());
+        ComputerAudio.receive(payload.host(), payload.startMs(), payload.nowMs(), payload.commands());
     }
 
     public static void onHum(com.strikerr212.minepc.network.HumPayload payload) {
-        HumSounds.update(payload.pos(), payload.fan(), payload.hdd(), payload.start());
+        HumSounds.update(payload.host(), payload.fan(), payload.hdd(), payload.start());
     }
 
     public static void onPortsInfo(com.strikerr212.minepc.network.PortsInfoPayload payload) {
@@ -34,7 +34,12 @@ public final class ClientAccess {
     }
 
     public static void onTerminal(TerminalPayload payload) {
-        ClientTerminals.update(payload.casePos(), payload.data(), payload.keyboard());
+        ClientTerminals.update(payload.host(), payload.data(), payload.keyboard());
+    }
+
+    /** Консоль стойки: выбрать сервер и открыть его экран. */
+    public static void openConsole(BlockPos rackPos) {
+        Minecraft.getInstance().setScreen(new ConsoleScreen(rackPos));
     }
 
     /** Окно роутера: открыть или (если уже открыто) обновить список подключённых. */

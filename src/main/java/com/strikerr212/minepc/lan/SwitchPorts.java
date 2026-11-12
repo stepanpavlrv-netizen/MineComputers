@@ -94,7 +94,9 @@ public final class SwitchPorts {
             String name;
             if (d.computer()) {
                 name = "pc";
-                if (level.isLoaded(p.pos()) && level.getBlockEntity(p.pos()) instanceof PcCaseBlockEntity pc) {
+                PcCaseBlockEntity pc = level.isLoaded(p.pos())
+                        ? com.strikerr212.minepc.block.Hosts.get(level, p.pos(), LanManager.hostSlot(d, p.port())) : null;
+                if (pc != null) {
                     name = pc.label().isEmpty() ? pc.address().substring(0, 8) : pc.label();
                 }
                 name = "@" + name;

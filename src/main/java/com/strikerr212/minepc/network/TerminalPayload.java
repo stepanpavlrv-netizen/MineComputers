@@ -11,17 +11,17 @@ import net.minecraft.resources.ResourceLocation;
 /**
  * Снимок экрана компьютера (сервер → игроки рядом). Пустые данные — компьютер выключен.
  *
- * @param casePos  системный блок, чей это экран
+ * @param host     компьютер, чей это экран (блок и место в нём)
  * @param data     сжатый кадр или изменения ({@link com.strikerr212.minepc.computer.TerminalCodec})
  * @param keyboard подключена ли клавиатура (можно ли печатать)
  */
-public record TerminalPayload(BlockPos casePos, byte[] data, boolean keyboard) implements CustomPacketPayload {
+public record TerminalPayload(com.strikerr212.minepc.computer.HostRef host, byte[] data, boolean keyboard) implements CustomPacketPayload {
 
     public static final Type<TerminalPayload> TYPE =
             new Type<>(ResourceLocation.fromNamespaceAndPath(MineComputers.MODID, "terminal"));
 
     public static final StreamCodec<ByteBuf, TerminalPayload> STREAM_CODEC = StreamCodec.composite(
-            BlockPos.STREAM_CODEC, TerminalPayload::casePos,
+            com.strikerr212.minepc.computer.HostRef.STREAM_CODEC, TerminalPayload::host,
             ByteBufCodecs.byteArray(1_000_000), TerminalPayload::data,
             ByteBufCodecs.BOOL, TerminalPayload::keyboard,
             TerminalPayload::new);
