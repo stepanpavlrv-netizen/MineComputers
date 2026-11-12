@@ -21,6 +21,8 @@ public class MotherboardSpec extends PartSpec {
     public static final int SOCKET = 0, CHIPSET = 1, RAM_SLOTS = 2, CHANNELS = 3, RAM_SPEED = 4, M2 = 5, SATA = 6,
             STYLE = 7, PCB = 8, COLOR = 9, LED_ON = 10, LED_COLOR = 11,
             FORM = 12, SRV_SLOTS = 13, SRV_CHANNELS = 14;
+    /** Вид модели серверной платы (обычные — 0..4 по оформлению). */
+    public static final int SERVER_LOOK = 5;
     /** Серверная плата потребляет больше: второй сокет, много каналов, BMC и сетевые на 10 Гбит. */
     private static final int SERVER_EXTRA_W = 25;
 
@@ -64,7 +66,7 @@ public class MotherboardSpec extends PartSpec {
     public boolean isShown(int param, List<Integer> v) {
         boolean server = isServer(v);
         return switch (param) {
-            case SOCKET, RAM_SLOTS, CHANNELS -> !server;
+            case SOCKET, RAM_SLOTS, CHANNELS, STYLE, LED_ON, LED_COLOR -> !server;   // у серверной свой вид, без подсветки
             case SRV_SLOTS, SRV_CHANNELS -> server;
             default -> true;
         };
@@ -77,7 +79,7 @@ public class MotherboardSpec extends PartSpec {
     }
 
     private boolean isLedOn(List<Integer> v) {
-        return idx(v, LED_ON) == 1 && idx(v, STYLE) >= 3;
+        return !isServer(v) && idx(v, LED_ON) == 1 && idx(v, STYLE) >= 3;
     }
 
     @Override
@@ -85,7 +87,7 @@ public class MotherboardSpec extends PartSpec {
         return switch (param) {
             case LED_ON -> idx(v, STYLE) >= 3;            // подсветка есть только у игровых и премиальных
             case LED_COLOR -> isLedOn(v);
-            case COLOR -> idx(v, STYLE) >= 1;             // у бюджетной нет радиаторов
+            case COLOR -> isServer(v) || idx(v, STYLE) >= 1;   // у бюджетной нет радиаторов, у серверной — радиаторы питания
             default -> true;
         };
     }
@@ -124,8 +126,8 @@ public class MotherboardSpec extends PartSpec {
     @Override
     public int visual(List<Integer> v, int dim) {
         return switch (dim) {
-            case 0 -> idx(v, STYLE);
-            case 1 -> isServer(v) ? 1 : idx(v, RAM_SLOTS);   // у серверной на модели — 4 слота (все не помещаются)
+            case 0 -> isServer(v) ? SERVER_LOOK : idx(v, STYLE);
+            case 1 -> idx(v, isServer(v) ? SRV_SLOTS : RAM_SLOTS);   // серверная: 8, 12 или 16 слотов на модели
             case 2 -> idx(v, M2);
             default -> 0;
         };
@@ -150,7 +152,7 @@ public class MotherboardSpec extends PartSpec {
     protected void baseCost(List<Integer> v, Cost cost) {
         cost.add(Items.COPPER_INGOT, 4).add(Items.REDSTONE, 6).add(Items.IRON_INGOT, 1)
                 .add(Items.QUARTZ, 1 + idx(v, CHIPSET)).add(Items.GREEN_DYE, 1);
-        if (idx(v, STYLE) >= 1) cost.add(Items.IRON_INGOT, idx(v, STYLE));
+        if (!isServer(v) && idx(v, STYLE) >= 1) cost.add(Items.IRON_INGOT, idx(v, STYLE));
         if (isServer(v)) cost.add(Items.COPPER_INGOT, 4).add(Items.REDSTONE, 6).add(Items.QUARTZ, 2);
     }
 }

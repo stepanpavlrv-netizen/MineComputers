@@ -111,6 +111,8 @@ def aio(m, rad):
 
 # ================================================================ материнская плата
 def motherboard(style, slots, m2):
+    if style == SERVER_LOOK:
+        return server_board(slots, m2)
     m = Model()
     m.box((4.3, 4.5, 6.2), (BX, 14.8, 14.9), PCB, 3, faces={"east": ("minepc:item/mobo/face", 3, "full")})
     m.box((BX, SY - .9, SZ - .9), (4.48, SY + .9, SZ + .9), "socket", faces={"east": ("socket", None, "full")})
@@ -169,6 +171,74 @@ def motherboard(style, slots, m2):
         m.box((BX, yy, 6.22), (4.8, yy + .3, 6.5), "plastic")
     for z in (8.2, 9.6, 11.0):
         m.box((BX, 4.6, z), (4.62, 4.78, z + .9), "plastic")
+    return m
+
+
+# ================================================================ серверная плата
+SERVER_LOOK = 5                      # MotherboardSpec.SERVER_LOOK
+SRV_SOCKETS = (7.2, 12.2)            # центры сокетов по y (оба на одной высоте)
+SRV_SZ = 9.75                        # центр сокетов по z
+SRV_DIMM_Z = (7.3, 12.2)             # слоты памяти вдоль потока воздуха: спереди назад
+SRV_PITCH = .3
+
+
+def server_dimm_y(slots):
+    """Центры слотов памяти по y: по ряду с каждой стороны от каждого сокета, от сокета наружу."""
+    per = [2, 3, 4][slots]
+    out = []
+    for c in SRV_SOCKETS:
+        for side in (-1, 1):
+            edge = c + side * 1.05
+            out += [edge + side * (.15 + .1 + SRV_PITCH * k) for k in range(per)]
+    return out
+
+
+def server_board(slots, m2):
+    """Серверная плата (EEB): два больших сокета MS-S рядом, память рядами по бокам от каждого и вдоль потока
+    воздуха, радиаторы питания за сокетами, сзади — две клетки SFP+, порт и чип BMC, VGA; спереди — M.2 и SATA.
+    Без подсветки и кожухов: только текстолит и радиаторы (цвет слоя 1)."""
+    m = Model()
+    m.box((4.3, 4.5, 6.2), (BX, 14.8, 14.9), PCB, 3)
+    z0, z1 = SRV_DIMM_Z
+    # ----- память -----
+    for k, y in enumerate(server_dimm_y(slots)):
+        m.box((BX, y - .1, z0), (4.65, y + .1, z1), "slot" if (k // 2) % 2 == 0 else "slot_gray")
+        for (a, b) in ((z0 - .16, z0), (z1, z1 + .16)):                       # защёлки
+            m.box((BX, y - .1, a), (4.72, y + .1, b), "plastic_light")
+    # ----- сокеты MS-S: большие, с рамкой и четырьмя винтами крепления радиатора -----
+    for cy in SRV_SOCKETS:
+        a0, a1, b0, b1 = cy - 1.0, cy + 1.0, SRV_SZ - 1.25, SRV_SZ + 1.25
+        m.box((BX, a0, b0), (4.5, a1, b1), "socket", faces={"east": ("socket", None, "full")})
+        for (f, t) in (((a0 - .08, b0 - .08), (a1 + .08, b0)), ((a0 - .08, b1), (a1 + .08, b1 + .08)),
+                       ((a0 - .08, b0), (a0, b1)), ((a1, b0), (a1 + .08, b1))):
+            m.box((BX, f[0], f[1]), (4.56, t[0], t[1]), "nickel")
+        m.box((BX, a0 - .2, b0 + .3), (4.6, a0 - .1, b1 - .3), "silver")          # рычаг
+        for (y, z) in ((a0 + .2, b0 - .22), (a1 - .2, b0 - .22), (a0 + .2, b1 + .22), (a1 - .2, b1 + .22)):
+            octagon(m, "x", BX, 4.62, y, z, .1, "metal_dark")
+        # радиатор питания за сокетом
+        m.box((BX, cy - .95, 11.48), (5.0, cy + .95, z1), "fins_v", 1, faces={"east": ("vrm_top", 1, "full")})
+        for i in range(4):
+            m.box((BX, cy - .5 + i * .3, 11.34), (4.62, cy - .3 + i * .3, 11.46), "choke")
+    # ----- сзади: SFP+, BMC, VGA, питание -----
+    for y0 in (4.85, 6.15):                                                        # две клетки SFP+ (10 Гбит/с)
+        m.box((BX, y0, 13.3), (5.05, y0 + 1.05, 14.9), "metal", faces={"south": ("metal_dark", None)})
+        m.box((5.05, y0 + .15, 14.6), (5.07, y0 + .35, 14.8), "led", 2)
+    m.box((BX, 7.5, 13.6), (4.95, 8.35, 14.9), "plastic", faces={"south": ("connectors", None, "full")})   # порт BMC
+    m.box((BX, 8.7, 12.6), (4.58, 9.55, 13.45), "chip")                             # чип BMC
+    m.box((4.58, 8.85, 12.75), (4.6, 9.4, 13.3), "label")
+    m.box((BX, 9.85, 12.55), (4.95, 11.65, 13.8), "metal", 1, faces={"east": ("chipset_cover", 1, "full")})  # чипсет
+    m.box((BX, 11.95, 14.25), (4.85, 13.15, 14.9), "connectors")                     # VGA
+    m.box((BX, 13.35, 12.6), (4.98, 14.55, 13.55), "plastic", faces={"east": ("pin24", None, "full")})     # питание
+    for y in (12.0, 12.55):                                                          # 8-pin процессоров
+        m.box((BX, y, 12.55), (4.9, y + .45, 13.05), "plastic")
+    # ----- спереди: M.2 поперёк платы, разъёмы SATA -----
+    for k in range(m2):
+        ya = 9.0 if k == 0 else 5.0
+        m.box((BX, ya, 6.35), (4.56, ya + .2, 7.1), "slot")
+        m.box((BX, ya + 2.75, 6.65), (4.52, ya + 2.9, 6.8), "gold")                 # стойка винта
+    for k in range(4):
+        y = 12.35 + k * .58
+        m.box((BX, y, 6.3), (4.78, y + .42, 6.75), "plastic", faces={"north": ("pin24", None, "full")})
     return m
 
 

@@ -88,8 +88,46 @@ def outline_all(icon, color=None):
                         break
 
 # ================================================================ материнская плата
+def server_board(slots, m2, tints):
+    """Серверная плата сверху: сзади (вверху) SFP+ и порты, два сокета рядом, память рядами вдоль потока воздуха."""
+    main, pcb = mul(METAL, tints[0]), mul((230, 232, 228), tints[2])
+    i = Icon()
+    i.panel(1, 1, 14, 14, pcb)
+    for x, y in ((7, 12), (8, 12), (4, 10), (11, 10)):                   # дорожки
+        i.px(x, y, sh(pcb, 1.2))
+    # сзади: две клетки SFP+, порт BMC, VGA
+    i.rect(2, 1, 3, 2, (196, 200, 206)); i.rect(4, 1, 5, 2, (176, 180, 186)); i.px(2, 1, GOLD); i.px(4, 1, GOLD)
+    i.rect(6, 1, 6, 2, (40, 42, 46))
+    i.rect(10, 1, 11, 1, (60, 90, 150))
+    i.rect(12, 2, 13, 3, (40, 42, 46))                                   # питание
+    # радиаторы питания за сокетами
+    for x0 in (4, 9):
+        i.rect(x0, 3, x0 + 2, 3, main)
+    # сокеты MS-S
+    for x0 in (4, 9):
+        i.panel(x0, 5, x0 + 2, 8, (200, 202, 206))
+        i.rect(x0 + 1, 6, x0 + 1, 7, (120, 124, 130)); i.px(x0 + 1, 6, GOLD)
+    # память: ряды по бокам от каждого сокета (8 слотов — по одному, 12–16 — двойные крайние)
+    cols = (3, 7, 8, 12) if slots == 0 else (2, 3, 7, 8, 12, 13)
+    for x in cols:
+        i.rect(x, 4, x, 10, (52, 54, 60) if x in (2, 7, 12) or (slots == 0 and x == 3) else (160, 164, 170))
+        i.px(x, 4, (240, 240, 240)); i.px(x, 10, (240, 240, 240))
+    # чип BMC и чипсет
+    i.rect(5, 10, 5, 10, CHIP)
+    i.panel(9, 11, 12, 12, main)
+    # спереди: M.2 и SATA
+    for k in range(m2):
+        y = 12 + k
+        i.rect(3, y, 6, y, (70, 72, 78)); i.px(7 if k == 0 else 2, y, GOLD)
+    for x in (9, 11):
+        i.rect(x, 13, x + 1, 13, (40, 42, 46))
+    return i.im
+
+
 def motherboard(vis, tints):
     style, slots, m2 = vis
+    if style == 5:
+        return server_board(slots, m2, tints)
     main, acc, pcb = mul(METAL, tints[0]), rgb(tints[1]), mul((230, 232, 228), tints[2])
     i = Icon()
     i.panel(1, 1, 14, 14, pcb)
