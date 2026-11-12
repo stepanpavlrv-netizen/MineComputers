@@ -60,6 +60,20 @@ public final class Computer {
         /** Кто ещё в сети: {адрес, имя, переходов}. */
         default java.util.List<Peer> netPeers() { return java.util.List.of(); }
 
+        // ----- BMC (управление сервером по сети) -----
+
+        /**
+         * Команда BMC другого сервера (по имени или адресу сервера, или адресу его BMC): {ok, сообщение, данные}.
+         * null — нет проводной сети. Вызывается из потока программы и ждёт ответа.
+         */
+        default Object[] bmc(String target, String password, String command, String arg) { return null; }
+
+        /** Свой BMC: адрес, пароль по умолчанию ли, сколько записей в журнале; null — платы с BMC нет. */
+        default java.util.Map<String, Object> bmcLocal() { return null; }
+
+        /** Сменить пароль своего BMC. false — BMC нет или пароль не подходит. */
+        default boolean bmcSetPassword(String password) { return false; }
+
         // ----- Wi-Fi -----
 
         /** Wi-Fi адаптер и подключение; null — адаптера нет. */
@@ -259,7 +273,7 @@ public final class Computer {
         this.label = label == null ? "" : label;
     }
 
-    double uptimeSeconds() {
+    public double uptimeSeconds() {
         synchronized (timers) {
             return clockNanos / 1e9;
         }

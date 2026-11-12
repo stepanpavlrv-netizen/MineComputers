@@ -189,7 +189,11 @@ public class RackBlockEntity extends BlockEntity {
 
     @Override
     public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
-        return saveWithoutMetadata(registries);
+        CompoundTag tag = saveWithoutMetadata(registries);
+        for (int i = 0; i < SLOTS; i++) {
+            if (tag.contains("server" + i)) PcCaseBlockEntity.clientView(tag.getCompound("server" + i));
+        }
+        return tag;
     }
 
     @Override

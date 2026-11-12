@@ -204,6 +204,15 @@ final class LuaApis {
                     return id < 0 ? Constants.NIL : valueOf(id);
                 }),
                 RegisteredFunction.ofV("address", (s, a) -> str(c.address())),
+                // BMC: net.bmc(сервер, пароль, команда [, аргумент]) → ok, сообщение, данные (ждёт ответа)
+                RegisteredFunction.ofV("bmc", (s, a) -> {
+                    Object[] r = c.host().bmc(text(a.arg(1).checkLuaString()), a.arg(2).isNil() ? "" : text(a.arg(2).checkLuaString()),
+                            text(a.arg(3).checkLuaString()), a.arg(4).isNil() ? "" : text(a.arg(4).checkLuaString()));
+                    if (r == null) return varargsOf(new LuaValue[]{Constants.FALSE, str("Нет проводной сети")});
+                    return varargsOf(new LuaValue[]{toLua(r[0]), toLua(r[1]), toLua(r[2])});
+                }),
+                RegisteredFunction.ofV("bmcInfo", (s, a) -> toLua(c.host().bmcLocal())),
+                RegisteredFunction.ofV("bmcPassword", (s, a) -> valueOf(c.host().bmcSetPassword(text(a.arg(1).checkLuaString())))),
                 RegisteredFunction.ofV("hostname", (s, a) -> {
                     if (!a.arg(1).isNil()) {
                         // Имя видят другие компьютеры сети и окно корпуса — сообщаем корпусу (как label)

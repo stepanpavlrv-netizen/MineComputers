@@ -383,7 +383,29 @@ public class CiScreenshots {
             case 2633 -> server.execute(() -> server.getPlayerList().getPlayers().get(0).teleportTo(server.overworld(),
                     rackPos.getX() + 0.5, rackPos.getY() + 1.75, rackPos.getZ() - 1.3, 0f, 70f));
             case 2640 -> shot(mc, "rack_board_top_8");
-            case 2645 -> mc.stop();
+            // BMC: с srv-a (обычный компьютер) управлять srv-b по сети
+            case 2645 -> {
+                mc.setScreen(null);
+                typeHost(new com.strikerr212.minepc.block.HostRef(rackPos, 0), "clear");
+                typeHost(new com.strikerr212.minepc.block.HostRef(rackPos, 0), "bmc -p admin srv-b status");
+            }
+            case 2652 -> typeHost(new com.strikerr212.minepc.block.HostRef(rackPos, 0), "bmc -p admin srv-b log 5");
+            case 2656 -> mc.setScreen(new TerminalScreen(new com.strikerr212.minepc.block.HostRef(rackPos, 0)));
+            case 2668 -> shot(mc, "bmc_status");
+            case 2670 -> {
+                typeHost(new com.strikerr212.minepc.block.HostRef(rackPos, 0), "clear");
+                typeHost(new com.strikerr212.minepc.block.HostRef(rackPos, 0), "bmc -p admin srv-b power off");
+            }
+            case 2675 -> typeHost(new com.strikerr212.minepc.block.HostRef(rackPos, 0), "bmc -p wrong srv-b status");
+            case 2680 -> typeHost(new com.strikerr212.minepc.block.HostRef(rackPos, 0), "bmc -p admin srv-b status");
+            case 2692 -> shot(mc, "bmc_power");
+            case 2694 -> typeHost(new com.strikerr212.minepc.block.HostRef(rackPos, 0), "bmc -p admin srv-b power on");
+            case 2706 -> server.execute(() -> {
+                PcCaseBlockEntity b = com.strikerr212.minepc.block.Hosts.get(server.overworld(), rackPos, 1);
+                com.mojang.logging.LogUtils.getLogger().info("[CI-BMC] srv-b state={} log={}", b == null ? -1 : b.computerState(),
+                        b == null ? "" : String.join(" | ", b.bmc().entries()));
+            });
+            case 2710 -> mc.stop();
             default -> {
             }
         }

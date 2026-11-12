@@ -7,6 +7,7 @@ import com.strikerr212.minepc.computer.fs.Mount;
 import com.strikerr212.minepc.hardware.CpuData;
 import com.strikerr212.minepc.hardware.GpuData;
 import com.strikerr212.minepc.hardware.HddData;
+import com.strikerr212.minepc.hardware.MotherboardData;
 import com.strikerr212.minepc.hardware.Perf;
 import com.strikerr212.minepc.hardware.SsdData;
 import com.strikerr212.minepc.hardware.SystemModel;
@@ -710,10 +711,16 @@ public final class CaseComputer implements Computer.Host {
      * (событие power_supply с числом блоков), иначе выключается.
      */
     void hotSwap(ServerLevel level, int slot) {
+        boolean psuSlot = slot == PcCaseBlockEntity.SLOT_PSU || slot == PcCaseBlockEntity.SLOT_PSU2;
+        boolean empty = be.getStack(slot).isEmpty();
+        // Журнал BMC пишется всегда, даже у выключенного сервера (BMC работает от дежурного питания)
+        if (psuSlot) be.bmc().log("блок питания " + (slot == PcCaseBlockEntity.SLOT_PSU ? 1 : 2) + (empty ? " вынут" : " вставлен"));
+        else be.bmc().log("диск в отсеке " + (slot - PcCaseBlockEntity.SLOT_HDD + 1) + (empty ? " извлечён" : " вставлен"));
         if (computer == null || !computer.isOn()) return;
-        if (slot == PcCaseBlockEntity.SLOT_PSU || slot == PcCaseBlockEntity.SLOT_PSU2) {
+        if (psuSlot) {
             var psu = be.activePsu();
             if (psu == null || psu.wattage() < be.collectInput().powerDraw()) {
+                be.bmc().log("питания не хватило — сервер выключился");
                 partsChanged();
                 return;
             }
@@ -725,6 +732,7 @@ public final class CaseComputer implements Computer.Host {
         ItemStack now = be.getStack(slot);
         if (was != null) {
             if (was.isEmpty()) {          // системный диск вынули — работать не на чем
+                be.bmc().log("вынут системный диск — сервер упал");
                 partsChanged();
                 return;
             }
@@ -742,12 +750,75 @@ public final class CaseComputer implements Computer.Host {
         }
     }
 
+    private long lastOverheatLog = -100000;
+
+    // ======================= BMC =======================
+
+    private String myName() {
+        return label.isEmpty() ? be.address().substring(0, Math.min(8, be.address().length())) : label;
+    }
+
+    @Override
+    public Object[] bmc(String target, String password, String command, String arg) {
+        return onServer(level -> {
+            if ((linkCode & 1) == 0) return null;   // BMC отвечает только по проводу
+            String t = target.toLowerCase(java.util.Locale.ROOT);
+            PcCaseBlockEntity found = null;
+            for (var r : com.strikerr212.minepc.lan.LanManager.get(level).reach(level, be.hostRef())) {
+                PcCaseBlockEntity o = level.isLoaded(r.pos()) ? Hosts.get(level, r.pos(), r.slot()) : null;
+                if (o == null) continue;
+                if (o.label().equalsIgnoreCase(target) || !t.isEmpty() && (o.address().startsWith(t) || o.bmc().address().startsWith(t))) {
+                    found = o;
+                    break;
+                }
+            }
+            if (found == null) return new Object[]{false, "«" + target + "» в сети не найден", null};
+            MotherboardData board = found.motherboard();
+            if (board == null || !board.server()) return new Object[]{false, "У «" + target + "» нет BMC (обычная плата)", null};
+            if (!found.bmc().present()) return new Object[]{false, "Нет ответа: у сервера нет питания", null};
+            if (!found.bmc().checkPassword(password)) {
+                found.bmc().log("неверный пароль BMC (" + myName() + ")");
+                return new Object[]{false, "Неверный пароль BMC", null};
+            }
+            return found.bmc().command(level, command, arg, myName());
+        }, new Object[]{false, "Нет ответа", null});
+    }
+
+    @Override
+    public Map<String, Object> bmcLocal() {
+        return onServer(level -> {
+            if (!be.bmc().present()) return null;
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("address", be.bmc().address());
+            m.put("server", be.address());
+            m.put("defaultPassword", be.bmc().defaultPassword());
+            m.put("log", be.bmc().entries().size());
+            return m;
+        }, null);
+    }
+
+    @Override
+    public boolean bmcSetPassword(String password) {
+        if (password == null || password.length() < 4 || password.length() > 32) return false;
+        return onServer(level -> {
+            if (!be.bmc().present()) return false;
+            be.bmc().setPassword(password);
+            be.bmc().log("пароль BMC изменён (с самого сервера)");
+            return true;
+        }, false);
+    }
+
     // ======================= Каждый тик =======================
 
     void tick(ServerLevel level, BlockPos pos) {
         age++;
         Runnable task;
         while ((task = serverTasks.poll()) != null) task.run();
+        // BMC следит за температурой: перегрев — в журнал (не чаще раза в минуту)
+        if (age % 100 == 7 && computer != null && computer.isOn() && computer.cpuTemp() >= 90 && age - lastOverheatLog > 1200) {
+            lastOverheatLog = age;
+            be.bmc().log("перегрев процессора: " + Math.round(computer.cpuTemp()) + " °C");
+        }
         if (age == 1 && (computer == null || !computer.isOn())) {
             // Мир загрузился («питание вернулось»): по настройке BIOS — как было, включиться или остаться выключенным
             int mode = bios().powerLoss();

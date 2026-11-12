@@ -148,6 +148,7 @@ public class PcCaseBlockEntity extends BlockEntity implements com.strikerr212.mi
 
     private final CaseInventory inventory = new CaseInventory(this);
     private final CaseComputer pc = new CaseComputer(this);
+    private final Bmc bmc = new Bmc(this);
     /** Модуль серверной стойки: не стоит в мире сам, живёт внутри {@link RackBlockEntity}; slot — место в стойке. */
     private final boolean module;
     private final int rackSlot;
@@ -163,6 +164,15 @@ public class PcCaseBlockEntity extends BlockEntity implements com.strikerr212.mi
         super(ModBlockEntities.PC_CASE.get(), rackPos, state);
         this.module = true;
         this.rackSlot = slot;
+    }
+
+    /** BMC серверной платы (у обычной платы он есть как объект, но не работает: {@link Bmc#present()}). */
+    public Bmc bmc() {
+        return bmc;
+    }
+
+    CaseComputer caseComputer() {
+        return pc;
     }
 
     public boolean isModule() {
@@ -356,13 +366,18 @@ public class PcCaseBlockEntity extends BlockEntity implements com.strikerr212.mi
                 : com.strikerr212.minepc.registry.ModSounds.POWER_ON).get(), net.minecraft.sounds.SoundSource.BLOCKS, 0.8f, 1f);
         if (off) {
             pc.powerOff();
+            bmc.log("питание выключено");
             return Component.translatable("message.minepc.power_off").withStyle(ChatFormatting.GRAY);
         }
         List<SystemModel.Note> reasons = pc.powerOn(server);
-        if (reasons == null) return Component.translatable("message.minepc.power_on").withStyle(ChatFormatting.GREEN);
+        if (reasons == null) {
+            bmc.log("питание включено");
+            return Component.translatable("message.minepc.power_on").withStyle(ChatFormatting.GREEN);
+        }
         pc.errorBeeps(reasons);
         MutableComponent msg = Component.translatable("message.minepc.status.no_boot").withStyle(ChatFormatting.RED);
         for (SystemModel.Note n : reasons) msg.append(" ").append(noteText(n));
+        bmc.log("не запустился:" + msg.getString().substring(msg.getString().indexOf(':') + 1));
         return msg;
     }
 
@@ -924,6 +939,7 @@ public class PcCaseBlockEntity extends BlockEntity implements com.strikerr212.mi
         tag.putString("address", pc.getAddress());
         tag.putInt("state", pc.stateCode());
         cords.save(tag);
+        bmc.save(tag);
         if (!pc.wifiSsid().isEmpty()) {
             tag.putString("wifi_ssid", pc.wifiSsid());
             tag.putString("wifi_password", pc.wifiPassword());
@@ -950,6 +966,7 @@ public class PcCaseBlockEntity extends BlockEntity implements com.strikerr212.mi
         pc.setWifi(tag.getString("wifi_ssid"), tag.getString("wifi_password"));
         clientState = tag.getInt("state");
         cords.load(tag);
+        bmc.load(tag);
         if (!sameLayout && !prefix) {
             // Сохранение из старой версии мода: раскладываем детали по новым слотам
             for (int i = 0; i < saved.getSlots(); i++) {
@@ -987,7 +1004,14 @@ public class PcCaseBlockEntity extends BlockEntity implements com.strikerr212.mi
     // Эти два метода отправляют содержимое на клиент, чтобы его можно было нарисовать
     @Override
     public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
-        return saveWithoutMetadata(registries);
+        return clientView(saveWithoutMetadata(registries));
+    }
+
+    /** То, что уходит игрокам: без пароля и журнала BMC (их видно только через сам BMC). */
+    public static CompoundTag clientView(CompoundTag tag) {
+        tag.remove("bmc_password");
+        tag.remove("bmc_log");
+        return tag;
     }
 
     @Override

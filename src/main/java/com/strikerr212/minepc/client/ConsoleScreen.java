@@ -66,7 +66,14 @@ public class ConsoleScreen extends Screen {
             Component text = Component.translatable("gui.minepc.console.entry", e.rack + 1, e.host.slot() + 1, name, status);
             addRenderableWidget(Button.builder(text, b -> {
                 if (minecraft != null) minecraft.setScreen(new TerminalScreen(e.host));
-            }).bounds(x, y, w, 20).build());
+            }).bounds(x, y, w - 24, 20).build());
+            // Кнопка питания сервера — прямо с консоли, не выдвигая модуль
+            Button power = Button.builder(Component.literal("⏻"), b -> net.neoforged.neoforge.network.PacketDistributor.sendToServer(
+                    new com.strikerr212.minepc.network.TerminalInputPayload(e.host, com.strikerr212.minepc.network.TerminalInputPayload.POWER, "", 0, 0, 0)))
+                    .bounds(x + w - 20, y, 20, 20).build();
+            power.setTooltip(net.minecraft.client.gui.components.Tooltip.create(Component.translatable(
+                    state == 1 ? "gui.minepc.power_tip.on" : "gui.minepc.power_tip.off")));
+            addRenderableWidget(power);
             y += 22;
         }
         if (list.isEmpty()) {
@@ -91,6 +98,15 @@ public class ConsoleScreen extends Screen {
         g.drawString(font, title, panelX + 8, panelY + 6, 0xFF6EE08A, false);
         g.drawString(font, font.plainSubstrByWidth(Component.translatable("gui.minepc.console.hint").getString(), panelW - 16),
                 panelX + 8, panelY + 18, 0xFF8A96A0, false);
+    }
+
+    private int age;
+
+    /** Состояние серверов меняется (кнопка питания, BMC) — раз в секунду перестроить список. */
+    @Override
+    public void tick() {
+        super.tick();
+        if (++age % 20 == 0) rebuildWidgets();
     }
 
     @Override

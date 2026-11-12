@@ -403,6 +403,12 @@ public class PcCaseScreen extends AbstractContainerScreen<PcCaseMenu> {
         out.add(name.isEmpty() ? Row.of("cpu", tr("gui.minepc.net.noname"), th.dim)
                 : Row.of("cpu", Component.literal(name), th.fg));
         com.strikerr212.minepc.hardware.MotherboardData board = be.motherboard();
+        if (board != null && board.server()) {
+            // BMC: свой адрес, работает от дежурного питания
+            String bmc = be.bmc().address();
+            out.add(Row.of("cpu", tr("gui.minepc.net.bmc", bmc.substring(0, 8)), be.psuCount() > 0 ? th.fg : th.dim)
+                    .tip(tr("gui.minepc.net.bmc_tip"), Component.literal(bmc).withStyle(ChatFormatting.GRAY)));
+        }
         if (board == null) {
             out.add(Row.of("warn", tr("gui.minepc.why.no_board"), th.bad));
         } else if (menu.netLink() == 0) {

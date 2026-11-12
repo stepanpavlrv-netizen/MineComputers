@@ -756,5 +756,7 @@
   "gui.minepc.slot.psu2": "Second PSU for redundancy: pull one and the server runs on the other",
   "item.minepc.motherboard_server": "Server Motherboard",
   "item.minepc.cpu_server": "Server CPU",
-  "item.minepc.ram_ecc": "ECC Memory"
+  "item.minepc.ram_ecc": "ECC Memory",
+  "gui.minepc.net.bmc": "BMC %s",
+  "gui.minepc.net.bmc_tip": "The BMC is a separate computer on the server board. It runs on standby power even while the server is off. From another computer on the network: bmc name status, power on|off|reset, log, screen. The default password is admin; change it on the server itself: bmc password new"
 }

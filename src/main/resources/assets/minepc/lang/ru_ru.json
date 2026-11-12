@@ -756,5 +756,7 @@
   "gui.minepc.slot.psu2": "Второй блок питания — резерв: вынули один, сервер работает на другом",
   "item.minepc.motherboard_server": "Серверная плата",
   "item.minepc.cpu_server": "Серверный процессор",
-  "item.minepc.ram_ecc": "Память ECC"
+  "item.minepc.ram_ecc": "Память ECC",
+  "gui.minepc.net.bmc": "BMC %s",
+  "gui.minepc.net.bmc_tip": "BMC — отдельный компьютер на серверной плате. Работает от дежурного питания, даже когда сервер выключен. С другого компьютера сети: bmc имя status, power on|off|reset, log, screen. Пароль по умолчанию admin — смените на самом сервере: bmc password новый"
 }
