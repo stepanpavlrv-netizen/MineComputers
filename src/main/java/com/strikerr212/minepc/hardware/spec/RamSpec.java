@@ -14,7 +14,7 @@ import static com.strikerr212.minepc.hardware.spec.Param.Unit.*;
 /** Модуль памяти: чипы, их объём, частота, цвет платы, радиатор и его цвет, подсветка. */
 public class RamSpec extends PartSpec {
 
-    public static final int CHIPS = 0, CHIP_MB = 1, SPEED = 2, HEATSINK = 3, PCB = 4, COLOR = 5, LED_ON = 6, LED_COLOR = 7;
+    public static final int CHIPS = 0, CHIP_MB = 1, SPEED = 2, HEATSINK = 3, PCB = 4, COLOR = 5, LED_ON = 6, LED_COLOR = 7, ECC = 8;
 
     public RamSpec() {
         super(HardwareType.RAM, List.of(
@@ -26,12 +26,22 @@ public class RamSpec extends PartSpec {
                 Param.pcb("ram.pcb", 0),
                 Param.metal("ram.color", 0),
                 Param.toggle("ram.led", 0),
-                Param.led("ram.led_color", 0)
-        ), 0, 0, 0, 0, 0, 0, 0, 0);
+                Param.led("ram.led_color", 0),
+                Param.option("ram.ecc", 0, 1, 3)
+        ), 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    }
+
+    public static boolean isEcc(List<Integer> v) {
+        return v.size() > ECC && v.get(ECC) == 1;
     }
 
     public RamData derive(List<Integer> v) {
-        return new RamData(tier(v), val(v, CHIPS), val(v, CHIP_MB), val(v, SPEED));
+        return new RamData(tier(v), val(v, CHIPS), val(v, CHIP_MB), val(v, SPEED), isEcc(v));
+    }
+
+    @Override
+    public int[] order() {
+        return new int[]{ECC, CHIPS, CHIP_MB, SPEED, HEATSINK, PCB, COLOR, LED_ON, LED_COLOR};
     }
 
     private boolean hasHeatsink(List<Integer> v) {
@@ -64,6 +74,7 @@ public class RamSpec extends PartSpec {
     @Override
     public void describe(List<Integer> v, List<Component> lines) {
         RamData d = derive(v);
+        if (d.ecc()) lines.add(paramLine(v, ECC));
         lines.add(line("tooltip.minepc.capacity", Units.gameSize(d.capacityMb())));
         lines.add(line("tooltip.minepc.chips",
                 Component.translatable("tooltip.minepc.chips_value", d.chips(), Units.gameSize(d.chipMb()))));
@@ -99,6 +110,7 @@ public class RamSpec extends PartSpec {
     @Override
     protected void baseCost(List<Integer> v, Cost cost) {
         cost.add(Items.COPPER_INGOT, 1).add(Items.REDSTONE, val(v, CHIPS) / 2).add(Items.QUARTZ, 1);
+        if (isEcc(v)) cost.add(Items.REDSTONE, Math.max(1, val(v, CHIPS) / 8)).add(Items.QUARTZ, 1);   // проверочные чипы и регистр
         if (hasHeatsink(v)) cost.add(Items.IRON_INGOT, idx(v, HEATSINK));
     }
 }

@@ -84,13 +84,28 @@ public abstract class PartSpec {
         return true;
     }
 
+    /**
+     * Показывать ли параметр в сборочном столе. Скрываются параметры другого вида детали: у серверной платы —
+     * обычные слоты памяти, у обычной — серверные. Скрытый параметр и в уровень не считается.
+     */
+    public boolean isShown(int param, List<Integer> v) {
+        return true;
+    }
+
+    /** Порядок параметров в сборочном столе (новые параметры дописываются в конец списка, а показать их бывает нужно выше). */
+    public int[] order() {
+        int[] o = new int[params.size()];
+        for (int i = 0; i < o.length; i++) o[i] = i;
+        return o;
+    }
+
     // ---------- Характеристики ----------
 
     /** Уровень технологии = уровень самого продвинутого выбранного варианта. */
     public int tier(List<Integer> v) {
         int tier = 1;
         for (int i = 0; i < params.size(); i++) {
-            if (isActive(i, v)) tier = Math.max(tier, params.get(i).tierAt(idx(v, i)));
+            if (isActive(i, v) && isShown(i, v)) tier = Math.max(tier, params.get(i).tierAt(idx(v, i)));
         }
         return tier;
     }

@@ -249,7 +249,7 @@ public class RackBlock extends HorizontalDirectionalBlock implements EntityBlock
     /** Скорость сетевого порта сервера по его плате, бит/с (0 — платы нет). */
     public static long moduleBits(PcCaseBlockEntity be) {
         var board = be.motherboard();
-        return board == null ? 0 : PcCaseBlock.portBits(board.tier());
+        return board == null ? 0 : PcCaseBlock.portBits(board);
     }
 
     @Override

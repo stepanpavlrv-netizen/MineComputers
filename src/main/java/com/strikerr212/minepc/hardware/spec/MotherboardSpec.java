@@ -19,7 +19,10 @@ import static com.strikerr212.minepc.hardware.spec.Param.Unit.*;
 public class MotherboardSpec extends PartSpec {
 
     public static final int SOCKET = 0, CHIPSET = 1, RAM_SLOTS = 2, CHANNELS = 3, RAM_SPEED = 4, M2 = 5, SATA = 6,
-            STYLE = 7, PCB = 8, COLOR = 9, LED_ON = 10, LED_COLOR = 11;
+            STYLE = 7, PCB = 8, COLOR = 9, LED_ON = 10, LED_COLOR = 11,
+            FORM = 12, SRV_SLOTS = 13, SRV_CHANNELS = 14;
+    /** Серверная плата потребляет больше: второй сокет, много каналов, BMC и сетевые на 10 Гбит. */
+    private static final int SERVER_EXTRA_W = 25;
 
     public MotherboardSpec() {
         super(HardwareType.MOTHERBOARD, List.of(
@@ -35,16 +38,41 @@ public class MotherboardSpec extends PartSpec {
                 Param.pcb("mobo.pcb", 1),
                 Param.metal("mobo.color", 1),
                 Param.toggle("mobo.led", 1),
-                Param.led("mobo.led_color", 1)
-        ), 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+                Param.led("mobo.led_color", 1),
+                Param.option("mobo.form", 0, 1, 3),
+                Param.number("mobo.srv_slots", 0, NONE, new int[]{8, 12, 16}, new int[]{3, 4, 5}),
+                Param.number("mobo.srv_channels", 0, NONE, new int[]{4, 6, 8}, new int[]{3, 4, 5})
+        ), 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    }
+
+    public static boolean isServer(List<Integer> v) {
+        return v.size() > FORM && v.get(FORM) == 1;
     }
 
     public MotherboardData derive(List<Integer> v) {
-        int slots = val(v, RAM_SLOTS);
-        int channels = Math.min(val(v, CHANNELS), slots);   // каналов не больше, чем слотов
+        boolean server = isServer(v);
+        int slots = val(v, server ? SRV_SLOTS : RAM_SLOTS);
+        int channels = Math.min(val(v, server ? SRV_CHANNELS : CHANNELS), slots);   // каналов не больше, чем слотов
         int chipset = idx(v, CHIPSET);
-        return new MotherboardData(tier(v), val(v, SOCKET), chipset, chipset + 1, slots, channels,
-                val(v, RAM_SPEED), val(v, M2), val(v, SATA), 10 + (chipset + 1) * 5);
+        return new MotherboardData(tier(v), server ? MotherboardData.SOCKET_SERVER : val(v, SOCKET), chipset, chipset + 1,
+                slots, channels, val(v, RAM_SPEED), val(v, M2), val(v, SATA) + (server ? 2 : 0),
+                10 + (chipset + 1) * 5 + (server ? SERVER_EXTRA_W : 0), server ? 2 : 1, server);
+    }
+
+    @Override
+    public boolean isShown(int param, List<Integer> v) {
+        boolean server = isServer(v);
+        return switch (param) {
+            case SOCKET, RAM_SLOTS, CHANNELS -> !server;
+            case SRV_SLOTS, SRV_CHANNELS -> server;
+            default -> true;
+        };
+    }
+
+    @Override
+    public int[] order() {
+        return new int[]{FORM, SOCKET, CHIPSET, RAM_SLOTS, SRV_SLOTS, CHANNELS, SRV_CHANNELS, RAM_SPEED, M2, SATA,
+                STYLE, PCB, COLOR, LED_ON, LED_COLOR};
     }
 
     private boolean isLedOn(List<Integer> v) {
@@ -74,7 +102,14 @@ public class MotherboardSpec extends PartSpec {
     @Override
     public void describe(List<Integer> v, List<Component> lines) {
         MotherboardData d = derive(v);
-        lines.add(paramLine(v, SOCKET));
+        if (d.server()) {
+            lines.add(paramLine(v, FORM));
+            lines.add(line("tooltip.minepc.socket_server", d.cpuSockets()));
+            lines.add(line("tooltip.minepc.server_board", "ECC"));
+            lines.add(line("tooltip.minepc.server_net", "2 × 10"));
+        } else {
+            lines.add(paramLine(v, SOCKET));
+        }
         lines.add(paramLine(v, CHIPSET));
         lines.add(line("tooltip.minepc.cpu_support", d.maxCpuTier()));
         lines.add(line("tooltip.minepc.ram_slots", d.ramSlots()));
@@ -89,7 +124,7 @@ public class MotherboardSpec extends PartSpec {
     public int visual(List<Integer> v, int dim) {
         return switch (dim) {
             case 0 -> idx(v, STYLE);
-            case 1 -> idx(v, RAM_SLOTS);
+            case 1 -> isServer(v) ? 1 : idx(v, RAM_SLOTS);   // у серверной на модели — 4 слота (все не помещаются)
             case 2 -> idx(v, M2);
             default -> 0;
         };
@@ -115,5 +150,6 @@ public class MotherboardSpec extends PartSpec {
         cost.add(Items.COPPER_INGOT, 4).add(Items.REDSTONE, 6).add(Items.IRON_INGOT, 1)
                 .add(Items.QUARTZ, 1 + idx(v, CHIPSET)).add(Items.GREEN_DYE, 1);
         if (idx(v, STYLE) >= 1) cost.add(Items.IRON_INGOT, idx(v, STYLE));
+        if (isServer(v)) cost.add(Items.COPPER_INGOT, 4).add(Items.REDSTONE, 6).add(Items.QUARTZ, 2);
     }
 }

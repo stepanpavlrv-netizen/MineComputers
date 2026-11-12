@@ -1,6 +1,8 @@
 package com.strikerr212.minepc.block;
 
+import com.strikerr212.minepc.hardware.CoolerData;
 import com.strikerr212.minepc.hardware.CpuData;
+import com.strikerr212.minepc.hardware.PsuData;
 import com.strikerr212.minepc.hardware.GpuData;
 import com.strikerr212.minepc.hardware.HardwareType;
 import com.strikerr212.minepc.hardware.HddData;
@@ -71,14 +73,40 @@ public class PcCaseBlockEntity extends BlockEntity implements com.strikerr212.mi
     public static final int M2_SLOTS = 2;
     public static final int SLOT_USB = 15;         // 15..16 — USB-порты на передней панели
     public static final int USB_SLOTS = 2;
-    public static final int SLOT_COUNT = 17;
+    // ----- Серверное шасси (модуль стойки, серверный корпус) — в конце, чтобы старые номера не сдвинулись -----
+    public static final int SLOT_CPU2 = 17;        // второй сокет серверной платы
+    public static final int SLOT_PSU2 = 18;        // второй блок питания (резерв)
+    public static final int SLOT_RAM_EXTRA = 19;   // 19..30 — слоты памяти 5–16 серверной платы
+    public static final int RAM_EXTRA_SLOTS = 12;
+    /** Всего слотов памяти (4 обычных + 12 серверных). */
+    public static final int MAX_RAM_SLOTS = RAM_SLOTS + RAM_EXTRA_SLOTS;
+    public static final int SLOT_COUNT = 31;
+    /** Охлаждение серверного шасси без кулера: стена вентиляторов поперёк корпуса, Вт отвода на процессор. */
+    public static final int FAN_WALL_W = 260;
+
+    /** Номер слота i-й планки памяти (0..15). */
+    public static int ramSlot(int i) {
+        return i < RAM_SLOTS ? SLOT_RAM + i : SLOT_RAM_EXTRA + i - RAM_SLOTS;
+    }
+
+    /** Номер планки (0..15) для слота или -1. */
+    public static int ramIndex(int slot) {
+        if (slot >= SLOT_RAM && slot < SLOT_RAM + RAM_SLOTS) return slot - SLOT_RAM;
+        if (slot >= SLOT_RAM_EXTRA && slot < SLOT_RAM_EXTRA + RAM_EXTRA_SLOTS) return slot - SLOT_RAM_EXTRA + RAM_SLOTS;
+        return -1;
+    }
+
+    public static boolean isDriveBay(int slot) {
+        return slot >= SLOT_HDD && slot < SLOT_SATA_SSD + SATA_SSD_SLOTS;
+    }
 
     /** Версия раскладки: если сохранение старое, детали раскладываются заново. */
-    private static final int LAYOUT_VERSION = 3;
+    private static final int LAYOUT_VERSION = 4;
 
     /** Порядок снятия: как в жизни, плата и блок питания — последними. */
     private static final int[] REMOVE_ORDER = {
-            16, 15, SLOT_GPU, 14, 13, 12, 11, 10, 9, 6, 5, 4, 3, SLOT_COOLER, SLOT_CPU, SLOT_PSU, SLOT_MOTHERBOARD};
+            16, 15, SLOT_GPU, 14, 13, 12, 11, 10, 9, 30, 29, 28, 27, 26, 25, 24, 23, 22, 21, 20, 19, 6, 5, 4, 3,
+            SLOT_COOLER, SLOT_CPU2, SLOT_CPU, SLOT_PSU2, SLOT_PSU, SLOT_MOTHERBOARD};
 
     /** Инвентарь корпуса: по одной детали в слоте. */
     private static class CaseInventory extends ItemStackHandler {
@@ -176,36 +204,107 @@ public class PcCaseBlockEntity extends BlockEntity implements com.strikerr212.mi
         return false;
     }
 
+    /**
+     * Серверное шасси: модуль стойки или серверный корпус. Только в него встаёт серверная плата и второй блок питания;
+     * без кулера процессоры охлаждает стена вентиляторов; диски и блоки питания меняются на ходу.
+     */
+    public boolean serverChassis() {
+        return module || style() == CaseStyle.SERVER;
+    }
+
+    private boolean running() {
+        return displayState() == 1;
+    }
+
+    /**
+     * Слот закрыт, пока сервер работает: плату, процессоры, память, видеокарту и M.2 меняют только у выключенного.
+     * Диски в отсеках, блоки питания (если второй держит нагрузку) и флешки — на ходу.
+     * У обычного компьютера слоты не закрываются: замена детали его просто выключает.
+     */
+    public boolean lockedWhileRunning(int slot) {
+        if (!serverChassis() || !running()) return false;
+        if (slot >= SLOT_USB && slot < SLOT_USB + USB_SLOTS) return false;
+        if (isDriveBay(slot)) return false;
+        if (slot == SLOT_PSU || slot == SLOT_PSU2) return false;
+        return true;
+    }
+
     /** Можно ли положить предмет в этот слот: подходит ли вид детали и совместимость. */
     public boolean canPlace(int slot, ItemStack stack) {
-        if (stack.isEmpty()) return false;
+        return placeError(slot, stack) == null;
+    }
+
+    /** Почему предмет не встаёт в слот (ключ перевода, без аргументов) или null — встаёт. */
+    public String placeError(int slot, ItemStack stack) {
+        if (stack.isEmpty()) return "message.minepc.not_hardware";
+        if (lockedWhileRunning(slot)) return "message.minepc.server_running";
         if (slot >= SLOT_USB && slot < SLOT_USB + USB_SLOTS) {
             // В сервере в стойке Wi-Fi не нужен (и не поймает сквозь железо) — только флешки
             return stack.getItem() instanceof DriveItem d && d.kind() == DriveItem.Kind.FLASH
-                    || !module && stack.getItem() instanceof com.strikerr212.minepc.lan.WifiAdapterItem;
+                    || !module && stack.getItem() instanceof com.strikerr212.minepc.lan.WifiAdapterItem ? null : "message.minepc.no_slot";
         }
-        if (!(stack.getItem() instanceof HardwareItem hw)) return false;
+        if (!(stack.getItem() instanceof HardwareItem hw)) return "message.minepc.not_hardware";
         HardwareType type = hw.getHardwareType();
-        if (slot == SLOT_PSU) return type == HardwareType.PSU;
-        if (slot == SLOT_MOTHERBOARD) return type == HardwareType.MOTHERBOARD;
-        MotherboardData board = motherboard();
-        if (board == null) return false;
-        if (slot == SLOT_CPU) {
-            if (type != HardwareType.CPU) return false;
-            CpuData cpu = CpuItem.data(stack);
-            return cpu.socket() == board.socket() && cpu.tier() <= board.maxCpuTier();
+        if (slot == SLOT_PSU) return type == HardwareType.PSU ? null : "message.minepc.no_slot";
+        if (slot == SLOT_PSU2) {
+            if (type != HardwareType.PSU) return "message.minepc.no_slot";
+            return serverChassis() ? null : "message.minepc.need_server_chassis";
         }
-        if (slot == SLOT_COOLER) return type == HardwareType.COOLER && !getStack(SLOT_CPU).isEmpty();
-        if (slot >= SLOT_RAM && slot < SLOT_RAM + RAM_SLOTS) return type == HardwareType.RAM && slot - SLOT_RAM < board.ramSlots();
-        if (slot == SLOT_GPU) return type == HardwareType.GPU;
-        if (slot >= SLOT_HDD && slot < SLOT_HDD + HDD_SLOTS) return type == HardwareType.HDD && sataFreeFor(board, slot);
+        if (slot == SLOT_MOTHERBOARD) {
+            if (type != HardwareType.MOTHERBOARD) return "message.minepc.no_slot";
+            return MotherboardItem.data(stack).server() && !serverChassis() ? "message.minepc.need_server_chassis" : null;
+        }
+        MotherboardData board = motherboard();
+        if (board == null) return "message.minepc.need_motherboard";
+        if (slot == SLOT_CPU || slot == SLOT_CPU2) {
+            if (type != HardwareType.CPU) return "message.minepc.no_slot";
+            CpuData cpu = CpuItem.data(stack);
+            if (cpu.socket() != board.socket()) return "message.minepc.wrong_socket_short";
+            if (cpu.tier() > board.maxCpuTier()) return "message.minepc.cpu_unsupported_short";
+            if (slot == SLOT_CPU2) {
+                if (board.cpuSockets() < 2) return "message.minepc.one_socket";
+                ItemStack first = getStack(SLOT_CPU);
+                if (first.isEmpty()) return "message.minepc.need_cpu1";
+                if (!sameDesign(first, stack)) return "message.minepc.cpu_mismatch";
+            }
+            return null;
+        }
+        if (slot == SLOT_COOLER) {
+            if (type != HardwareType.COOLER) return "message.minepc.no_slot";
+            if (module) return "message.minepc.no_cooler_1u";   // в 1U башня не влезет — там стена вентиляторов
+            return getStack(SLOT_CPU).isEmpty() ? "message.minepc.need_cpu" : null;
+        }
+        int ram = ramIndex(slot);
+        if (ram >= 0) {
+            if (type != HardwareType.RAM) return "message.minepc.no_slot";
+            if (ram >= board.ramSlots()) return "message.minepc.no_slot";
+            RamData r = RamItem.data(stack);
+            if (board.server() && !r.ecc()) return "message.minepc.need_ecc";
+            if (!board.server() && r.ecc()) return "message.minepc.ecc_server_only";
+            return null;
+        }
+        if (slot == SLOT_GPU) return type == HardwareType.GPU ? null : "message.minepc.no_slot";
+        if (slot >= SLOT_HDD && slot < SLOT_HDD + HDD_SLOTS) {
+            if (type != HardwareType.HDD) return "message.minepc.no_slot";
+            return sataFreeFor(board, slot) ? null : "message.minepc.no_sata_short";
+        }
         if (slot >= SLOT_SATA_SSD && slot < SLOT_SATA_SSD + SATA_SSD_SLOTS) {
-            return type == HardwareType.SSD && !SsdItem.data(stack).isNvme() && sataFreeFor(board, slot);
+            if (type != HardwareType.SSD || SsdItem.data(stack).isNvme()) return "message.minepc.no_slot";
+            return sataFreeFor(board, slot) ? null : "message.minepc.no_sata_short";
         }
         if (slot >= SLOT_M2 && slot < SLOT_M2 + M2_SLOTS) {
-            return type == HardwareType.SSD && SsdItem.data(stack).isNvme() && slot - SLOT_M2 < board.m2Slots();
+            if (type != HardwareType.SSD || !SsdItem.data(stack).isNvme()) return "message.minepc.no_slot";
+            return slot - SLOT_M2 < board.m2Slots() ? null : "message.minepc.no_m2";
         }
-        return false;
+        return "message.minepc.no_slot";
+    }
+
+    /** Одинаковые ли детали по устройству (надпись не важна): два процессора сервера должны совпадать. */
+    private static boolean sameDesign(ItemStack a, ItemStack b) {
+        var da = a.get(com.strikerr212.minepc.registry.ModDataComponents.DESIGN.get());
+        var db = b.get(com.strikerr212.minepc.registry.ModDataComponents.DESIGN.get());
+        if (da == null || db == null) return da == db && a.getItem() == b.getItem();
+        return da.values().equals(db.values());
     }
 
     /** Свободен ли порт SATA для устройства в слоте slot (сам слот не считаем). */
@@ -218,12 +317,29 @@ public class PcCaseBlockEntity extends BlockEntity implements com.strikerr212.mi
 
     /** Можно ли вынуть деталь: плату — только когда на ней ничего нет, процессор — без кулера. */
     public boolean canTake(int slot) {
+        return takeError(slot) == null;
+    }
+
+    /** Почему деталь не вынуть (ключ перевода) или null. */
+    public String takeError(int slot) {
+        if (lockedWhileRunning(slot)) return "message.minepc.server_running";
         if (slot == SLOT_MOTHERBOARD) {
-            return getStack(SLOT_CPU).isEmpty() && getStack(SLOT_GPU).isEmpty() && !anyIn(SLOT_RAM, RAM_SLOTS, -1)
+            boolean free = getStack(SLOT_CPU).isEmpty() && getStack(SLOT_CPU2).isEmpty() && getStack(SLOT_GPU).isEmpty()
+                    && !anyIn(SLOT_RAM, RAM_SLOTS, -1) && !anyIn(SLOT_RAM_EXTRA, RAM_EXTRA_SLOTS, -1)
                     && !anyIn(SLOT_HDD, HDD_SLOTS + SATA_SSD_SLOTS + M2_SLOTS, -1);
+            return free ? null : "message.minepc.board_busy";
         }
-        if (slot == SLOT_CPU) return getStack(SLOT_COOLER).isEmpty();
-        return true;
+        if (slot == SLOT_CPU) {
+            if (!getStack(SLOT_COOLER).isEmpty()) return "message.minepc.cpu_under_cooler";
+            if (!getStack(SLOT_CPU2).isEmpty()) return "message.minepc.cpu2_first";
+        }
+        // Работающий сервер: блок питания вынимается, только если второй тянет нагрузку
+        if ((slot == SLOT_PSU || slot == SLOT_PSU2) && serverChassis() && running()) {
+            int other = slot == SLOT_PSU ? SLOT_PSU2 : SLOT_PSU;
+            ItemStack o = getStack(other);
+            if (!(o.getItem() instanceof PsuItem) || PsuItem.data(o).wattage() < collectInput().powerDraw()) return "message.minepc.psu_last";
+        }
+        return null;
     }
 
     // ======================= Компьютер =======================
@@ -339,21 +455,28 @@ public class PcCaseBlockEntity extends BlockEntity implements com.strikerr212.mi
 
     private long lastPartSound = -1;
 
+    public static boolean isUsb(int slot) {
+        return slot >= SLOT_USB && slot < SLOT_USB + USB_SLOTS;
+    }
+
     private void slotChanged(int slot) {
         if (level == null || level.isClientSide) return;
         if (level.getGameTime() != lastPartSound) {
             // Деталь поставили или сняли — щелчок защёлки (флешка в USB — щелчок разъёма)
             lastPartSound = level.getGameTime();
             boolean empty = getStack(slot).isEmpty();
-            var sound = slot >= SLOT_USB
+            var sound = isUsb(slot)
                     ? (empty ? com.strikerr212.minepc.registry.ModSounds.LAN_PLUG_OUT : com.strikerr212.minepc.registry.ModSounds.LAN_PLUG_IN)
                     : (empty ? com.strikerr212.minepc.registry.ModSounds.PART_REMOVE : com.strikerr212.minepc.registry.ModSounds.PART_INSTALL);
             level.playSound(null, worldPosition, sound.get(), net.minecraft.sounds.SoundSource.BLOCKS, 0.8f,
                     0.95f + level.random.nextFloat() * 0.1f);
         }
         if (slot == SLOT_MOTHERBOARD) com.strikerr212.minepc.lan.LanManager.updateDevice(level, worldPosition);
-        if (slot >= SLOT_USB) {
+        if (isUsb(slot)) {
             if (level instanceof ServerLevel server) pc.updateRemovable(server, true);
+        } else if (serverChassis() && (isDriveBay(slot) || slot == SLOT_PSU || slot == SLOT_PSU2)) {
+            // Сервер: диски в отсеках и блоки питания меняются на ходу
+            if (level instanceof ServerLevel server) pc.hotSwap(server, slot);
         } else {
             pc.partsChanged();
         }
@@ -421,6 +544,9 @@ public class PcCaseBlockEntity extends BlockEntity implements com.strikerr212.mi
         if (type == HardwareType.COOLER && getStack(SLOT_CPU).isEmpty()) {
             return error("message.minepc.need_cpu");
         }
+        if (type == HardwareType.MOTHERBOARD && MotherboardItem.data(held).server() && !serverChassis()) {
+            return error("message.minepc.need_server_chassis");
+        }
         if (type == HardwareType.CPU) {
             CpuData cpu = CpuItem.data(held);
             if (cpu.socket() != board.socket()) {
@@ -433,18 +559,32 @@ public class PcCaseBlockEntity extends BlockEntity implements com.strikerr212.mi
             }
         }
 
-        int slot = switch (type) {
-            case MOTHERBOARD -> freeSlot(SLOT_MOTHERBOARD, 1);
-            case CPU -> freeSlot(SLOT_CPU, 1);
-            case COOLER -> freeSlot(SLOT_COOLER, 1);
-            case RAM -> freeSlot(SLOT_RAM, Math.min(RAM_SLOTS, board.ramSlots()));
-            case GPU -> freeSlot(SLOT_GPU, 1);
-            case PSU -> freeSlot(SLOT_PSU, 1);
-            case HDD -> sataPortFree(board) ? freeSlot(SLOT_HDD, HDD_SLOTS) : -2;
-            case SSD -> SsdItem.data(held).isNvme()
-                    ? (board.m2Slots() == 0 ? -3 : freeSlot(SLOT_M2, Math.min(M2_SLOTS, board.m2Slots())))
-                    : (sataPortFree(board) ? freeSlot(SLOT_SATA_SSD, SATA_SSD_SLOTS) : -2);
+        int[] candidates = switch (type) {
+            case MOTHERBOARD -> new int[]{SLOT_MOTHERBOARD};
+            case CPU -> new int[]{SLOT_CPU, SLOT_CPU2};
+            case COOLER -> new int[]{SLOT_COOLER};
+            case RAM -> java.util.stream.IntStream.range(0, MAX_RAM_SLOTS).map(PcCaseBlockEntity::ramSlot).toArray();
+            case GPU -> new int[]{SLOT_GPU};
+            case PSU -> new int[]{SLOT_PSU, SLOT_PSU2};
+            case HDD -> new int[]{SLOT_HDD, SLOT_HDD + 1};
+            case SSD -> SsdItem.data(held).isNvme() ? new int[]{SLOT_M2, SLOT_M2 + 1} : new int[]{SLOT_SATA_SSD, SLOT_SATA_SSD + 1};
         };
+        // Первое свободное место, куда деталь встаёт; иначе — причина с первого свободного места
+        int slot = -1;
+        String why = null;
+        for (int c : candidates) {
+            if (!getStack(c).isEmpty()) continue;
+            String err = placeError(c, held);
+            if (err == null) {
+                slot = c;
+                break;
+            }
+            if (why == null) why = err;
+        }
+        if (slot < 0 && why != null) {
+            if (why.equals("message.minepc.no_sata_short")) return error("message.minepc.no_sata", board.sataPorts());
+            return error(why);
+        }
         if (slot == -2) {
             return error("message.minepc.no_sata", board.sataPorts());
         }
@@ -519,14 +659,47 @@ public class PcCaseBlockEntity extends BlockEntity implements com.strikerr212.mi
             if (stack.getItem() instanceof HddItem) hdds.add(HddItem.data(stack));
             if (stack.getItem() instanceof SsdItem) ssds.add(SsdItem.data(stack));
         }
-        ItemStack cpu = getStack(SLOT_CPU), cooler = getStack(SLOT_COOLER), gpu = getStack(SLOT_GPU), psu = getStack(SLOT_PSU);
-        return new SystemModel.Input(motherboard(),
-                cpu.getItem() instanceof CpuItem ? CpuItem.data(cpu) : null,
-                cooler.getItem() instanceof CoolerItem ? CoolerItem.data(cooler) : null,
-                ram,
+        ItemStack cpu = getStack(SLOT_CPU), cpu2 = getStack(SLOT_CPU2), cooler = getStack(SLOT_COOLER), gpu = getStack(SLOT_GPU);
+        CpuData cpuData = cpu.getItem() instanceof CpuItem ? CpuItem.data(cpu) : null;
+        int sockets = 1;
+        if (cpuData != null && cpu2.getItem() instanceof CpuItem) {
+            // Два одинаковых процессора работают как один с удвоенным числом ядер (и теплом)
+            CpuData b = CpuItem.data(cpu2);
+            cpuData = new CpuData(cpuData.tier(), cpuData.socket(), cpuData.cores() + b.cores(), cpuData.clockKhz(),
+                    cpuData.boostPct(), cpuData.processNm(), cpuData.cacheKb() + b.cacheKb(), cpuData.tdp() + b.tdp(), cpuData.igpu());
+            sockets = 2;
+        }
+        CoolerData coolerData = cooler.getItem() instanceof CoolerItem ? CoolerItem.data(cooler) : null;
+        if (serverChassis()) {
+            // Стена вентиляторов гонит воздух через радиаторы всех процессоров; кулер (в напольном корпусе) — в помощь
+            int wall = FAN_WALL_W * sockets;
+            if (coolerData == null || coolerData.coolingW() < wall) {
+                coolerData = new CoolerData(coolerData == null ? 3 : coolerData.tier(), CoolerData.FAN_WALL, wall, 6 * sockets);
+            }
+        } else if (coolerData != null && sockets == 2) {
+            coolerData = new CoolerData(coolerData.tier(), coolerData.kind(), coolerData.coolingW() * 2, coolerData.powerDraw());
+        }
+        return new SystemModel.Input(motherboard(), cpuData, coolerData, ram,
                 gpu.getItem() instanceof GpuItem ? GpuItem.data(gpu) : null,
-                psu.getItem() instanceof PsuItem ? PsuItem.data(psu) : null,
-                hdds, ssds, power);
+                activePsu(), hdds, ssds, power);
+    }
+
+    /**
+     * Блок питания, который считается в сборке. С двумя блоками каждый должен один тянуть весь сервер,
+     * поэтому считаем по более слабому.
+     */
+    public PsuData activePsu() {
+        ItemStack a = getStack(SLOT_PSU), b = getStack(SLOT_PSU2);
+        PsuData pa = a.getItem() instanceof PsuItem ? PsuItem.data(a) : null;
+        PsuData pb = b.getItem() instanceof PsuItem ? PsuItem.data(b) : null;
+        if (pa == null) return pb;
+        if (pb == null) return pa;
+        return pa.wattage() <= pb.wattage() ? pa : pb;
+    }
+
+    /** Сколько блоков питания стоит (у сервера с одним — нет резерва). */
+    public int psuCount() {
+        return (getStack(SLOT_PSU).isEmpty() ? 0 : 1) + (getStack(SLOT_PSU2).isEmpty() ? 0 : 1);
     }
 
     public void sendStatus(Player player) {
@@ -764,8 +937,8 @@ public class PcCaseBlockEntity extends BlockEntity implements com.strikerr212.mi
         saved.deserializeNBT(registries, tag.getCompound("inventory"));
         int layout = tag.getInt("layout");
         boolean sameLayout = layout == LAYOUT_VERSION && saved.getSlots() == SLOT_COUNT;
-        // Версия 2 отличалась только отсутствием USB-портов в конце
-        boolean prefix = layout == 2 && saved.getSlots() == 15;
+        // Версия 2 отличалась только отсутствием USB-портов в конце, версия 3 — серверных слотов в конце
+        boolean prefix = layout == 2 && saved.getSlots() == 15 || layout == 3 && saved.getSlots() == 17;
 
         for (int slot = 0; slot < SLOT_COUNT; slot++) {
             boolean keep = sameLayout || (prefix && slot < saved.getSlots());

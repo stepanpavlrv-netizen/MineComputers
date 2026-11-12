@@ -94,59 +94,61 @@ public class RackRenderer implements BlockEntityRenderer<RackBlockEntity> {
         box(vc, pose, 0, y + 0.2f, dz, 16, y + 3.8f, dz + 1, FRONT, light);
         box(vc, pose, 0, y + 0.8f, dz - 0.6f, 0.8f, y + 3.2f, dz, EAR, light);
         box(vc, pose, 15.2f, y + 0.8f, dz - 0.6f, 16, y + 3.2f, dz, EAR, light);
-        int drives = s == null ? 0 : drives(s);
+        // Отсеки дисков: отсек i — слот диска i (два под жёсткие диски, два под SATA SSD)
         for (int i = 0; i < 4; i++) {
             float x = 2 + i * 3;
-            box(vc, pose, x, y + 0.9f, dz - 0.1f, x + 2.4f, y + 3.1f, dz + 0.2f, i < drives ? 0x5A5E66 : BAY, light);
-            boolean busy = state == 1 && i < drives && ((time / 3 + i * 7 + slot) % 9 < 2);
-            int led = i >= drives ? OFF : state == 1 ? (busy ? LED_A : LED_G) : OFF;
+            boolean has = s != null && !s.getStack(PcCaseBlockEntity.SLOT_HDD + i).isEmpty();
+            box(vc, pose, x, y + 0.9f, dz - 0.1f, x + 2.4f, y + 3.1f, dz + 0.2f, has ? 0x5A5E66 : BAY, light);
+            boolean busy = state == 1 && has && ((time / 3 + i * 7 + slot) % 9 < 2);
+            int led = !has ? OFF : state == 1 ? (busy ? LED_A : LED_G) : OFF;
             glow(vc, pose, x + 1.9f, y + 2.5f, dz - 0.2f, 0.35f, led);
         }
         glow(vc, pose, 14.3f, y + 2.6f, dz - 0.2f, 0.4f, state == 1 ? LED_B : state == 2 ? LED_R : OFF);
+        // Лампа питания: жёлтая, если у работающего сервера нет второго блока (резерва)
+        boolean noSpare = s != null && s.psuCount() < 2;
+        glow(vc, pose, 14.3f, y + 1.4f, dz - 0.2f, 0.3f, state == 1 ? (noSpare ? LED_A : LED_G) : OFF);
         if (!open || s == null) return;
         // ----- Начинка (вид сверху) -----
         float b = y + 0.6f;
-        if (!s.getStack(PcCaseBlockEntity.SLOT_MOTHERBOARD).isEmpty()) box(vc, pose, 2, b, dz + 6, 14, b + 0.25f, dz + 15.5f, PCB, light);
+        if (!s.getStack(PcCaseBlockEntity.SLOT_MOTHERBOARD).isEmpty()) box(vc, pose, 1.6f, b, dz + 6, 14.4f, b + 0.25f, dz + 15.5f, PCB, light);
         // Диски в отсеках
-        for (int i = 0; i < Math.min(4, drives); i++) box(vc, pose, 2 + i * 3, b, dz + 1, 4.4f + i * 3, b + 2, dz + 4.5f, 0x7E828A, light);
+        for (int i = 0; i < 4; i++) {
+            if (!s.getStack(PcCaseBlockEntity.SLOT_HDD + i).isEmpty()) box(vc, pose, 2 + i * 3, b, dz + 1, 4.4f + i * 3, b + 2, dz + 4.5f, 0x7E828A, light);
+        }
         // Стена вентиляторов
         for (int i = 0; i < 6; i++) {
             float x = 2 + i * 2;
             box(vc, pose, x, b, dz + 5, x + 1.8f, b + 2.6f, dz + 5.8f, i % 2 == 0 ? 0x26272B : 0x3A3C42, light);
             box(vc, pose, x + 0.6f, b + 0.9f, dz + 4.9f, x + 1.2f, b + 1.5f, dz + 5, 0x6A6E74, light);
         }
-        // Процессор: радиатор (если кулер) или крышка процессора
-        if (!s.getStack(PcCaseBlockEntity.SLOT_CPU).isEmpty()) {
-            boolean cooler = !s.getStack(PcCaseBlockEntity.SLOT_COOLER).isEmpty();
-            if (cooler) {
-                for (int i = 0; i < 6; i++) {
-                    box(vc, pose, 4.5f + i * 0.6f, b + 0.25f, dz + 7, 4.9f + i * 0.6f, b + 2.2f, dz + 10.5f, i % 2 == 0 ? STEEL : STEEL_D, light);
-                }
-            } else {
-                box(vc, pose, 5, b + 0.25f, dz + 7.5f, 7.5f, b + 0.7f, dz + 10, 0xB8BCC2, light);
+        // Процессоры: пассивные радиаторы (воздух гонит стена вентиляторов); у обычной платы — один
+        float[] cpuX = {3.5f, 10.1f};
+        int[] cpuSlot = {PcCaseBlockEntity.SLOT_CPU, PcCaseBlockEntity.SLOT_CPU2};
+        for (int c = 0; c < 2; c++) {
+            if (s.getStack(cpuSlot[c]).isEmpty()) continue;
+            for (int i = 0; i < 5; i++) {
+                float x = cpuX[c] + i * 0.5f;
+                box(vc, pose, x, b + 0.25f, dz + 7, x + 0.3f, b + 2.2f, dz + 10.5f, i % 2 == 0 ? STEEL : STEEL_D, light);
             }
         }
-        // Память: планки вдоль потока воздуха по бокам от процессора
-        for (int i = 0; i < PcCaseBlockEntity.RAM_SLOTS; i++) {
-            if (s.getStack(PcCaseBlockEntity.SLOT_RAM + i).isEmpty()) continue;
-            float x = i < 2 ? 2.6f + i * 0.9f : 9f + (i - 2) * 0.9f;
-            box(vc, pose, x, b + 0.25f, dz + 6.5f, x + 0.5f, b + 2.3f, dz + 11.5f, RAM, light);
-            box(vc, pose, x, b + 2.3f, dz + 6.5f, x + 0.5f, b + 2.5f, dz + 11.5f, GOLD, light);
+        // Память: четыре ряда по четыре планки — по бокам от каждого процессора
+        float[] bankX = {1.7f, 6.0f, 8.3f, 12.6f};
+        for (int i = 0; i < PcCaseBlockEntity.MAX_RAM_SLOTS; i++) {
+            if (s.getStack(PcCaseBlockEntity.ramSlot(i)).isEmpty()) continue;
+            float x = bankX[i / 4] + (i % 4) * 0.45f;
+            box(vc, pose, x, b + 0.25f, dz + 6.5f, x + 0.32f, b + 2.3f, dz + 11.5f, RAM, light);
+            box(vc, pose, x, b + 2.3f, dz + 6.5f, x + 0.32f, b + 2.45f, dz + 11.5f, GOLD, light);
         }
         // Видеокарта (низкопрофильная) — если стоит
         if (!s.getStack(PcCaseBlockEntity.SLOT_GPU).isEmpty()) box(vc, pose, 2, b + 0.25f, dz + 12, 8, b + 1.2f, dz + 15.3f, 0x2E3138, light);
-        // Блок питания сзади справа
-        if (!s.getStack(PcCaseBlockEntity.SLOT_PSU).isEmpty()) {
-            box(vc, pose, 9, b, dz + 12, 14, b + 2.6f, dz + 15.8f, 0x55585F, light);
-            glow(vc, pose, 13.4f, b + 2.0f, dz + 11.9f, 0.3f, state == 1 ? LED_G : OFF);
+        // Два блока питания сзади справа: вынули один — на оставшемся жёлтая лампа
+        int[] psuSlot = {PcCaseBlockEntity.SLOT_PSU, PcCaseBlockEntity.SLOT_PSU2};
+        for (int k = 0; k < 2; k++) {
+            if (s.getStack(psuSlot[k]).isEmpty()) continue;
+            float x = 8.8f + k * 3;
+            box(vc, pose, x, b, dz + 12, x + 2.8f, b + 2.6f, dz + 15.8f, 0x55585F, light);
+            glow(vc, pose, x + 2.3f, b + 2.0f, dz + 11.9f, 0.3f, state == 1 ? (noSpare ? LED_A : LED_G) : OFF);
         }
-    }
-
-    /** Сколько дисков в сервере (для отсеков на лице). */
-    private static int drives(PcCaseBlockEntity s) {
-        int n = 0;
-        for (int i = PcCaseBlockEntity.SLOT_HDD; i < PcCaseBlockEntity.SLOT_M2; i++) if (!s.getStack(i).isEmpty()) n++;
-        return n;
     }
 
     private static void console(VertexConsumer vc, PoseStack pose, float y, float dz, float ease, int light) {

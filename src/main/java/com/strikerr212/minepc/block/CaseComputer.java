@@ -616,7 +616,8 @@ public final class CaseComputer implements Computer.Host {
         ItemStack cpuStack = be.getStack(PcCaseBlockEntity.SLOT_CPU);
         String cpuLabel = cpuStack.getItem() instanceof HardwareItem ? HardwareItem.label(cpuStack) : "";
         String mhz = String.format(java.util.Locale.ROOT, cpu.clockKhz() % 1000 == 0 ? "%.0f" : "%.1f", cpu.clockKhz() / 1000.0);
-        String cpuName = (cpuLabel.isEmpty() ? "Процессор ур. " + cpu.tier() : cpuLabel)
+        String cpuName = (be.getStack(PcCaseBlockEntity.SLOT_CPU2).isEmpty() ? "" : "2 × ")
+                + (cpuLabel.isEmpty() ? "Процессор ур. " + cpu.tier() : cpuLabel)
                 + ", ядер: " + cpu.cores() + ", " + mhz + " МГц";
         String gpuName = gpu == null ? "" : (in.gpu() == null ? "Видеоядро процессора" : "Видеокарта ур. " + gpu.tier())
                 + ", до " + Perf.screenSize(gpuTier)[0] + "×" + Perf.screenSize(gpuTier)[1];
@@ -649,46 +650,96 @@ public final class CaseComputer implements Computer.Host {
         }
         int[] order = kinds.stream().flatMapToInt(java.util.Arrays::stream).toArray();
         bootPaths.keySet().removeAll(List.of("nvme", "sata", "hdd"));
-        int data = 0;
+        bays.clear();
         boolean root = false;
         for (int slot : order) {
             ItemStack stack = be.getStack(slot);
-            long capacity;
-            String name;
-            long speed;
-            int opBytes;
-            if (stack.getItem() instanceof SsdItem) {
-                SsdData d = SsdItem.data(stack);
-                capacity = Perf.gameStorageBytes(d.capacityMb());
-                name = d.isNvme() ? "NVMe SSD" : "SATA SSD";
-                speed = Perf.gameDiskBytesPerSecond(d.speedMbs());
-                opBytes = 32;
-            } else if (stack.getItem() instanceof HddItem) {
-                HddData d = HddItem.data(stack);
-                capacity = Perf.gameStorageBytes(d.capacityMb());
-                name = "Жёсткий диск";
-                speed = Perf.gameDiskBytesPerSecond(d.speedMbs());
-                opBytes = 512;          // головке диска нужно время, чтобы найти файл
-            } else {
-                continue;
-            }
-            Mount mount = DriveStorage.mount(level.getServer(), stack, capacity, name)
-                    .withSpeed(Math.round(speed * com.strikerr212.minepc.MineConfig.disk()), opBytes);
-            if (stack.getItem() instanceof HddItem) soundMounts.put(mount, be.getBlockPos().immutable());   // жёсткий диск трещит
+            Mount mount = internalMount(level, stack);
+            if (mount == null) continue;
             String kind = stack.getItem() instanceof SsdItem ? (SsdItem.data(stack).isNvme() ? "nvme" : "sata") : "hdd";
-            if (!root) {
-                fs.mount("", mount);
-                root = true;
-                bootPaths.putIfAbsent(kind, "/");
-            } else {
-                String at = data == 0 ? "data" : "data" + (data + 1);
-                fs.mount(at, mount);
-                bootPaths.putIfAbsent(kind, "/" + at);
-                data++;
-            }
+            String at = root ? freeDataPath() : "";
+            fs.mount(at, mount);
+            bays.put(slot, at);
+            bootPaths.putIfAbsent(kind, "/" + at);
+            root = true;
         }
         be.setChanged();   // накопители могли получить номера
         updateRemovable(level, false);
+    }
+
+    /** Какой накопитель где смонтирован: слот корпуса → путь ("" — системный диск). */
+    private final Map<Integer, String> bays = new HashMap<>();
+
+    /** Первое свободное имя для диска данных: data, data2, data3… */
+    private String freeDataPath() {
+        for (int n = 1; ; n++) {
+            String at = n == 1 ? "data" : "data" + n;
+            if (!bays.containsValue(at)) return at;
+        }
+    }
+
+    /** Файловая система внутреннего накопителя (жёсткий диск или SSD) или null. */
+    private Mount internalMount(ServerLevel level, ItemStack stack) {
+        long capacity, speed;
+        String name;
+        int opBytes;
+        if (stack.getItem() instanceof SsdItem) {
+            SsdData d = SsdItem.data(stack);
+            capacity = Perf.gameStorageBytes(d.capacityMb());
+            name = d.isNvme() ? "NVMe SSD" : "SATA SSD";
+            speed = Perf.gameDiskBytesPerSecond(d.speedMbs());
+            opBytes = 32;
+        } else if (stack.getItem() instanceof HddItem) {
+            HddData d = HddItem.data(stack);
+            capacity = Perf.gameStorageBytes(d.capacityMb());
+            name = "Жёсткий диск";
+            speed = Perf.gameDiskBytesPerSecond(d.speedMbs());
+            opBytes = 512;          // головке диска нужно время, чтобы найти файл
+        } else {
+            return null;
+        }
+        Mount mount = DriveStorage.mount(level.getServer(), stack, capacity, name)
+                .withSpeed(Math.round(speed * com.strikerr212.minepc.MineConfig.disk()), opBytes);
+        if (stack.getItem() instanceof HddItem) soundMounts.put(mount, be.getBlockPos().immutable());   // жёсткий диск трещит
+        return mount;
+    }
+
+    /**
+     * Сервер: диск в отсеке или блок питания поменяли на ходу. Диск данных отключается и подключается с событиями
+     * disk_eject / disk; вынули системный — сервер падает. Блок питания: пока оставшийся тянет нагрузку, сервер работает
+     * (событие power_supply с числом блоков), иначе выключается.
+     */
+    void hotSwap(ServerLevel level, int slot) {
+        if (computer == null || !computer.isOn()) return;
+        if (slot == PcCaseBlockEntity.SLOT_PSU || slot == PcCaseBlockEntity.SLOT_PSU2) {
+            var psu = be.activePsu();
+            if (psu == null || psu.wattage() < be.collectInput().powerDraw()) {
+                partsChanged();
+                return;
+            }
+            computer.queueEvent("power_supply", be.psuCount());
+            return;
+        }
+        var fs = computer.fileSystem();
+        String was = bays.get(slot);
+        ItemStack now = be.getStack(slot);
+        if (was != null) {
+            if (was.isEmpty()) {          // системный диск вынули — работать не на чем
+                partsChanged();
+                return;
+            }
+            fs.unmount(was);
+            bays.remove(slot);
+            computer.queueEvent("disk_eject", "/" + was);
+        }
+        Mount mount = internalMount(level, now);
+        if (mount != null) {
+            String at = freeDataPath();
+            fs.mount(at, mount);
+            bays.put(slot, at);
+            computer.queueEvent("disk", "/" + at);
+            be.setChanged();   // новый диск мог получить номер
+        }
     }
 
     // ======================= Каждый тик =======================

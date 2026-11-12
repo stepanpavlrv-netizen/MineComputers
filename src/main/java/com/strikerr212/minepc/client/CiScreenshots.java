@@ -307,21 +307,37 @@ public class CiScreenshots {
             case 2315 -> shot(mc, "assembly_cpu_big");
             case 2318 -> assemblyTab(mc, 2);
             case 2326 -> shot(mc, "assembly_cooler_big");
+            // Серверные детали на сборочном столе: плата «серверная», процессор MS-S
             case 2330 -> {
+                assemblyTab(mc, 0);
+                assemblySet(mc, com.strikerr212.minepc.hardware.spec.MotherboardSpec.FORM, 1);
+            }
+            case 2338 -> shot(mc, "assembly_server_board");
+            case 2340 -> {
+                assemblyTab(mc, 1);
+                assemblySet(mc, com.strikerr212.minepc.hardware.spec.CpuSpec.SOCKET, 3);
+            }
+            case 2348 -> shot(mc, "assembly_server_cpu");
+            case 2352 -> {
                 mc.options.guiScale().set(0);
                 mc.resizeDisplay();
                 mc.setScreen(null);
             }
-            // Серверная стойка: две стойки друг на друге, три сервера и консоль; один сервер выдвинут
-            case 2342 -> server.execute(CiScreenshots::placeRack);
-            case 2500 -> {
+            // Серверная стойка: две стойки друг на друге, три сервера и консоль; выдвинут сервер на серверных деталях
+            case 2372 -> server.execute(CiScreenshots::placeRack);
+            case 2530 -> {
                 typeHost(new com.strikerr212.minepc.block.HostRef(rackPos, 0), "hostname srv-a");
                 typeHost(new com.strikerr212.minepc.block.HostRef(rackPos, 1), "hostname srv-b");
                 typeHost(new com.strikerr212.minepc.block.HostRef(rackPos.above(), 0), "hostname srv-c");
             }
-            case 2512 -> typeHost(new com.strikerr212.minepc.block.HostRef(rackPos, 0), "ping srv-b 2");
-            case 2540 -> shot(mc, "world_server_rack");
-            case 2543 -> server.execute(() -> {
+            case 2542 -> typeHost(new com.strikerr212.minepc.block.HostRef(rackPos, 0), "ping srv-b 2");
+            // Горячая замена на srv-b: вынуть второй блок питания и диск данных, проверить, что сервер работает
+            case 2550 -> server.execute(() -> hotSwapTest(server.overworld(), false));
+            case 2554 -> typeHost(new com.strikerr212.minepc.block.HostRef(rackPos, 1), "ls /");
+            case 2560 -> server.execute(() -> hotSwapTest(server.overworld(), true));
+            case 2564 -> typeHost(new com.strikerr212.minepc.block.HostRef(rackPos, 1), "ls /");
+            case 2575 -> shot(mc, "world_server_rack");
+            case 2578 -> server.execute(() -> {
                 ServerPlayer p = server.getPlayerList().getPlayers().get(0);
                 if (p.serverLevel().getBlockEntity(rackPos) instanceof com.strikerr212.minepc.block.RackBlockEntity r && r.server(1) != null) {
                     p.openMenu(r.server(1), buf -> {
@@ -335,27 +351,14 @@ public class CiScreenshots {
                     sb.append(' ').append(r.pos().toShortString()).append('#').append(r.slot()).append(" hops=").append(r.hops());
                 }
                 com.mojang.logging.LogUtils.getLogger().info(sb.toString());
-                var data = com.strikerr212.minepc.lan.LanData.get(p.serverLevel());
-                StringBuilder sg = new StringBuilder("[CI-RACK] устройство ").append(data.device(rackPos)).append(" отрезки:");
-                for (var seg : com.strikerr212.minepc.lan.LanManager.segmentsAt(data, rackPos)) {
-                    sg.append(" порт ").append(seg.port()).append(seg.ok() ? " ok" : " нет").append(" вилок ").append(seg.plugs().size());
-                }
-                if (p.serverLevel().getBlockEntity(rackPos) instanceof com.strikerr212.minepc.block.RackBlockEntity r) {
-                    for (int i = 0; i < 4; i++) {
-                        var s = r.server(i);
-                        if (s != null) sg.append(" | место ").append(i).append(" link=").append(s.netLinkCode())
-                                .append(" linked=").append(lan.linked(p.serverLevel(), s.hostRef()));
-                    }
-                }
-                com.mojang.logging.LogUtils.getLogger().info(sg.toString());
             });
-            case 2551 -> shot(mc, "rack_server_gui");
-            case 2555 -> mc.setScreen(new TerminalScreen(new com.strikerr212.minepc.block.HostRef(rackPos, 0)));
-            case 2567 -> shot(mc, "rack_terminal");
-            case 2570 -> mc.setScreen(new ConsoleScreen(rackPos));
-            case 2577 -> shot(mc, "rack_console");
-            case 2580 -> mc.setScreen(null);
-            case 2590 -> mc.stop();
+            case 2586 -> shot(mc, "rack_server_gui");
+            case 2590 -> mc.setScreen(new TerminalScreen(new com.strikerr212.minepc.block.HostRef(rackPos, 1)));
+            case 2602 -> shot(mc, "rack_terminal");
+            case 2605 -> mc.setScreen(new ConsoleScreen(rackPos));
+            case 2612 -> shot(mc, "rack_console");
+            case 2615 -> mc.setScreen(null);
+            case 2625 -> mc.stop();
             default -> {
             }
         }
@@ -396,11 +399,11 @@ public class CiScreenshots {
             r.insert(1, new ItemStack(com.strikerr212.minepc.registry.ModItems.SERVER_MODULE.get()));
             r.insert(2, new ItemStack(com.strikerr212.minepc.registry.ModItems.CONSOLE_MODULE.get()));
             fillModule(r.server(0), 3);
-            fillModule(r.server(1), 4);
+            fillServer(r.server(1), 12, 2);
         }
         if (level.getBlockEntity(rk.above()) instanceof com.strikerr212.minepc.block.RackBlockEntity r) {
             r.insert(0, new ItemStack(com.strikerr212.minepc.registry.ModItems.SERVER_MODULE.get()));
-            fillModule(r.server(0), 2);
+            fillServer(r.server(0), 8, 1);
         }
         // Сзади: два провода из гнёзд модулей 1 и 2 в коммутатор
         BlockPos sw = rk.south(3);
@@ -417,19 +420,73 @@ public class CiScreenshots {
         p.teleportTo(level, rk.getX() + 2.7, rk.getY() + 1.8, rk.getZ() - 2.3, 45f, 28f);
     }
 
+    /** Обычные детали без кулера (в 1U он не влезет), один блок питания. */
     private static void fillModule(PcCaseBlockEntity be, int tier) {
         if (be == null) return;
         var inv = (IItemHandlerModifiable) be.inventory();
         inv.setStackInSlot(PcCaseBlockEntity.SLOT_MOTHERBOARD, HardwarePresets.motherboard(tier));
         inv.setStackInSlot(PcCaseBlockEntity.SLOT_CPU, HardwarePresets.cpu(tier));
-        inv.setStackInSlot(PcCaseBlockEntity.SLOT_COOLER, HardwarePresets.cooler(tier));
         inv.setStackInSlot(PcCaseBlockEntity.SLOT_RAM, HardwarePresets.ram(tier));
         inv.setStackInSlot(PcCaseBlockEntity.SLOT_RAM + 1, HardwarePresets.ram(tier));
-        inv.setStackInSlot(PcCaseBlockEntity.SLOT_RAM + 2, HardwarePresets.ram(tier));
         inv.setStackInSlot(PcCaseBlockEntity.SLOT_PSU, HardwarePresets.psu(tier));
         inv.setStackInSlot(PcCaseBlockEntity.SLOT_HDD, HardwarePresets.hdd(2));
         inv.setStackInSlot(PcCaseBlockEntity.SLOT_HDD + 1, HardwarePresets.hdd(2));
         be.togglePower();
+    }
+
+    /** Серверные детали: плата на два MS-S, два одинаковых процессора, ram планок ECC, блоков питания psus. */
+    private static void fillServer(PcCaseBlockEntity be, int ram, int psus) {
+        if (be == null) return;
+        var inv = (IItemHandlerModifiable) be.inventory();
+        inv.setStackInSlot(PcCaseBlockEntity.SLOT_MOTHERBOARD, HardwarePresets.server(com.strikerr212.minepc.hardware.HardwareType.MOTHERBOARD));
+        inv.setStackInSlot(PcCaseBlockEntity.SLOT_CPU, HardwarePresets.server(com.strikerr212.minepc.hardware.HardwareType.CPU));
+        inv.setStackInSlot(PcCaseBlockEntity.SLOT_CPU2, HardwarePresets.server(com.strikerr212.minepc.hardware.HardwareType.CPU));
+        for (int i = 0; i < ram; i++) {
+            inv.setStackInSlot(PcCaseBlockEntity.ramSlot(i), HardwarePresets.server(com.strikerr212.minepc.hardware.HardwareType.RAM));
+        }
+        inv.setStackInSlot(PcCaseBlockEntity.SLOT_PSU, HardwarePresets.psu(4));
+        if (psus > 1) inv.setStackInSlot(PcCaseBlockEntity.SLOT_PSU2, HardwarePresets.psu(4));
+        ItemStack ssd = HardwarePresets.ssd(3);
+        inv.setStackInSlot(com.strikerr212.minepc.item.SsdItem.data(ssd).isNvme() ? PcCaseBlockEntity.SLOT_M2 : PcCaseBlockEntity.SLOT_SATA_SSD, ssd);
+        inv.setStackInSlot(PcCaseBlockEntity.SLOT_HDD, HardwarePresets.server(com.strikerr212.minepc.hardware.HardwareType.HDD));
+        inv.setStackInSlot(PcCaseBlockEntity.SLOT_HDD + 1, HardwarePresets.server(com.strikerr212.minepc.hardware.HardwareType.HDD));
+        be.togglePower();
+    }
+
+    private static ItemStack psuOut = ItemStack.EMPTY, diskOut = ItemStack.EMPTY;
+
+    /** srv-b: вынуть (back = false) или вернуть второй блок питания и второй диск, как игрок через окно. */
+    private static void hotSwapTest(ServerLevel level, boolean back) {
+        PcCaseBlockEntity be = com.strikerr212.minepc.block.Hosts.get(level, rackPos, 1);
+        if (be == null) return;
+        var inv = be.inventory();
+        int disk = PcCaseBlockEntity.SLOT_HDD + 1;
+        StringBuilder sb = new StringBuilder("[CI-HOTSWAP] ");
+        if (!back) {
+            sb.append("до: state=").append(be.displayState()).append(" psu=").append(be.psuCount());
+            psuOut = inv.extractItem(PcCaseBlockEntity.SLOT_PSU2, 1, false);
+            diskOut = inv.extractItem(disk, 1, false);
+            ItemStack cpu = inv.extractItem(PcCaseBlockEntity.SLOT_CPU2, 1, false);
+            ItemStack ram = inv.extractItem(PcCaseBlockEntity.ramSlot(5), 1, false);
+            ItemStack lastPsu = inv.extractItem(PcCaseBlockEntity.SLOT_PSU, 1, false);
+            sb.append(" | вынут БП2=").append(!psuOut.isEmpty()).append(" диск=").append(!diskOut.isEmpty())
+                    .append(" ЦП2=").append(!cpu.isEmpty()).append(" ОЗУ=").append(!ram.isEmpty()).append(" последний БП=").append(!lastPsu.isEmpty())
+                    .append(" | после: state=").append(be.displayState()).append(" psu=").append(be.psuCount());
+        } else {
+            ItemStack r1 = inv.insertItem(PcCaseBlockEntity.SLOT_PSU2, psuOut, false);
+            ItemStack r2 = inv.insertItem(disk, diskOut, false);
+            sb.append("вернули БП2=").append(r1.isEmpty()).append(" диск=").append(r2.isEmpty())
+                    .append(" | state=").append(be.displayState()).append(" psu=").append(be.psuCount());
+        }
+        com.mojang.logging.LogUtils.getLogger().info(sb.toString());
+    }
+
+    /** Выбрать вариант параметра на открытом сборочном столе, как щелчком. */
+    private static void assemblySet(Minecraft mc, int param, int option) {
+        if (mc.player != null && mc.gameMode != null && mc.player.containerMenu instanceof com.strikerr212.minepc.menu.AssemblyMenu m) {
+            mc.gameMode.handleInventoryButtonClick(m.containerId, com.strikerr212.minepc.menu.AssemblyMenu.BTN_SET
+                    + param * com.strikerr212.minepc.menu.AssemblyMenu.SET_STRIDE + option);
+        }
     }
 
     /** Переключить вкладку открытого сборочного стола, как будто игрок щёлкнул по ней. */

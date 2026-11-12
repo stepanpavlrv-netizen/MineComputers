@@ -218,7 +218,12 @@ public class PcCaseBlock extends BaseEntityBlock implements com.strikerr212.mine
         if (!(level.getBlockEntity(pos) instanceof PcCaseBlockEntity pc)) return 0;
         com.strikerr212.minepc.hardware.MotherboardData board = pc.motherboard();
         if (board == null) return 0;
-        return portBits(board.tier());
+        return portBits(board);
+    }
+
+    /** Скорость сетевой платы: у серверной — 10 Гбит/с (SFP+), у обычной — по уровню. */
+    public static long portBits(com.strikerr212.minepc.hardware.MotherboardData board) {
+        return board.server() ? 10_000_000_000L : portBits(board.tier());
     }
 
     public static long portBits(int boardTier) {

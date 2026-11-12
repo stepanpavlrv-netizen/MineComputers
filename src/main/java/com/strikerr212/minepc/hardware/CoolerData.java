@@ -8,4 +8,6 @@ public record CoolerData(int tier, int kind, int coolingW, int powerDraw) {
     public static final int TOWER = 2;
     public static final int DUAL_TOWER = 3;
     public static final int AIO = 4;
+    /** Не деталь: стена вентиляторов серверного шасси. */
+    public static final int FAN_WALL = 5;
 }

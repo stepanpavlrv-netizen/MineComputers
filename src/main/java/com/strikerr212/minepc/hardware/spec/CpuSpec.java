@@ -20,7 +20,7 @@ import static com.strikerr212.minepc.hardware.spec.Param.Unit.*;
 public class CpuSpec extends PartSpec {
 
     public static final int SOCKET = 0, CORES = 1, CLOCK = 2, PROCESS = 3, CACHE = 4,
-            LID = 5, LID_SIZE = 6, LID_COLOR = 7, SUBSTRATE = 8, LOGO = 9, IGPU = 10;
+            LID = 5, LID_SIZE = 6, LID_COLOR = 7, SUBSTRATE = 8, LOGO = 9, IGPU = 10, SRV_CORES = 11;
     /** Сколько тепла добавляет видеоядро, Вт (нет, слабое, среднее, сильное). */
     private static final int[] IGPU_TDP = {0, 4, 9, 18};
 
@@ -33,7 +33,7 @@ public class CpuSpec extends PartSpec {
 
     public CpuSpec() {
         super(HardwareType.CPU, List.of(
-                Param.option("cpu.socket", 0, 1, 1, 1),
+                Param.option("cpu.socket", 0, 1, 1, 1, 3),
                 Param.number("cpu.cores", 0, NONE, new int[]{1, 2, 4, 6, 8, 12, 16, 24, 32},
                         new int[]{1, 1, 2, 3, 3, 4, 4, 5, 5}),
                 Param.number("cpu.clock", 0, KHZ, CLOCK_KHZ,
@@ -45,14 +45,36 @@ public class CpuSpec extends PartSpec {
                 Param.metal("cpu.lid_color", 1),
                 Param.pcb("cpu.substrate", 1),
                 Param.led("cpu.logo", 1),
-                Param.option("cpu.igpu", 0, 1, 1, 2, 3)
-        ), 0, 0, 0, 0, 0, 2, 1, 0, 0, 0, 0);
+                Param.option("cpu.igpu", 0, 1, 1, 2, 3),
+                Param.number("cpu.srv_cores", 0, NONE, new int[]{16, 24, 32, 48, 64, 96, 128}, new int[]{3, 3, 4, 4, 5, 5, 5})
+        ), 0, 0, 0, 0, 0, 2, 1, 0, 0, 0, 0, 0);
+    }
+
+    /** Серверный процессор (сокет MS-S): 16–128 ядер, без видеоядра, на плату ставятся два. */
+    public static boolean isServer(List<Integer> v) {
+        return !v.isEmpty() && v.get(SOCKET) == com.strikerr212.minepc.hardware.MotherboardData.SOCKET_SERVER;
+    }
+
+    @Override
+    public boolean isShown(int param, List<Integer> v) {
+        boolean server = isServer(v);
+        return switch (param) {
+            case CORES, IGPU -> !server;
+            case SRV_CORES -> server;
+            default -> true;
+        };
+    }
+
+    @Override
+    public int[] order() {
+        return new int[]{SOCKET, CORES, SRV_CORES, CLOCK, PROCESS, CACHE, IGPU, LID, LID_SIZE, LID_COLOR, SUBSTRATE, LOGO};
     }
 
     public CpuData derive(List<Integer> v) {
-        int cores = val(v, CORES), clock = val(v, CLOCK);
+        boolean server = isServer(v);
+        int cores = val(v, server ? SRV_CORES : CORES), clock = val(v, CLOCK);
         float factor = HEAT_FACTOR[idx(v, PROCESS)];
-        int igpu = idx(v, IGPU);
+        int igpu = server ? 0 : idx(v, IGPU);
         int tdp = Math.round(cores * clock / 1000f * factor * 0.75f) + 5 + IGPU_TDP[igpu];
         return new CpuData(tier(v), val(v, SOCKET), cores, clock, BOOST_PCT[idx(v, PROCESS)], val(v, PROCESS), val(v, CACHE), tdp, igpu);
     }
@@ -126,8 +148,8 @@ public class CpuSpec extends PartSpec {
 
     @Override
     protected void baseCost(List<Integer> v, Cost cost) {
-        cost.add(Items.QUARTZ, 2).add(Items.COPPER_INGOT, 1).add(Items.REDSTONE, 2 + idx(v, CORES));
+        cost.add(Items.QUARTZ, 2).add(Items.COPPER_INGOT, 1).add(Items.REDSTONE, 2 + (isServer(v) ? 6 + 2 * idx(v, SRV_CORES) : idx(v, CORES)));
         if (idx(v, LID) > 0) cost.add(Items.IRON_INGOT, 1);
-        if (idx(v, IGPU) > 0) cost.add(Items.GLOWSTONE_DUST, idx(v, IGPU));   // видеоядро
+        if (!isServer(v) && idx(v, IGPU) > 0) cost.add(Items.GLOWSTONE_DUST, idx(v, IGPU));   // видеоядро
     }
 }

@@ -79,9 +79,12 @@ public class PcCaseScreen extends AbstractContainerScreen<PcCaseMenu> {
             "gui.minepc.slot.ram", "gui.minepc.slot.ram", "gui.minepc.slot.ram", "gui.minepc.slot.ram",
             "gui.minepc.slot.gpu", "gui.minepc.slot.psu", "gui.minepc.slot.hdd", "gui.minepc.slot.hdd",
             "gui.minepc.slot.sata", "gui.minepc.slot.sata", "gui.minepc.slot.m2", "gui.minepc.slot.m2",
-            "gui.minepc.slot.usb", "gui.minepc.slot.usb"};
+            "gui.minepc.slot.usb", "gui.minepc.slot.usb", "gui.minepc.slot.cpu2", "gui.minepc.slot.psu2",
+            "gui.minepc.slot.ram", "gui.minepc.slot.ram", "gui.minepc.slot.ram", "gui.minepc.slot.ram", "gui.minepc.slot.ram", "gui.minepc.slot.ram",
+            "gui.minepc.slot.ram", "gui.minepc.slot.ram", "gui.minepc.slot.ram", "gui.minepc.slot.ram", "gui.minepc.slot.ram", "gui.minepc.slot.ram"};
     private static final String[] GHOSTS = {"motherboard", "cpu", "cooler", "ram", "ram", "ram", "ram", "gpu", "psu",
-            "hdd", "hdd", "sata", "sata", "m2", "m2", "usb", "usb"};
+            "hdd", "hdd", "sata", "sata", "m2", "m2", "usb", "usb", "cpu", "psu",
+            "ram", "ram", "ram", "ram", "ram", "ram", "ram", "ram", "ram", "ram", "ram", "ram"};
 
     /** Дорожки на плате: всегда один и тот же рисунок. */
     private static final List<int[]> TRACES = new ArrayList<>();
@@ -283,11 +286,22 @@ public class PcCaseScreen extends AbstractContainerScreen<PcCaseMenu> {
                 .bar((float) Math.min(1, f), color);
     }
 
+    /** Тепло процессоров (у сервера — обоих). */
     private int cpuHeat() {
-        return stack(PcCaseBlockEntity.SLOT_CPU).getItem() instanceof HardwareItem h ? h.getHeat(stack(PcCaseBlockEntity.SLOT_CPU)) : 0;
+        int w = 0;
+        for (int slot : new int[]{PcCaseBlockEntity.SLOT_CPU, PcCaseBlockEntity.SLOT_CPU2}) {
+            if (stack(slot).getItem() instanceof HardwareItem h) w += h.getHeat(stack(slot));
+        }
+        return w;
     }
 
+    /** Отвод тепла: кулер, у серверного шасси — стена вентиляторов (как считает сам корпус). */
     private int cpuCooling() {
+        PcCaseBlockEntity be = menu.blockEntity();
+        if (be != null) {
+            var c = be.collectInput().cooler();
+            if (c != null) return c.coolingW();
+        }
         ItemStack cooler = stack(PcCaseBlockEntity.SLOT_COOLER);
         return cooler.getItem() instanceof CoolerItem ? CoolerItem.data(cooler).coolingW() : Perf.PASSIVE_COOLING;
     }
@@ -306,9 +320,11 @@ public class PcCaseScreen extends AbstractContainerScreen<PcCaseMenu> {
     }
 
     private void powerRows(List<Row> out, SystemModel.Input in) {
-        out.add(Row.of("cpu", tr("gui.minepc.row.part_w", tr("gui.minepc.part.cpu"), power(PcCaseBlockEntity.SLOT_CPU, 2)), th.fg));
+        out.add(Row.of("cpu", tr("gui.minepc.row.part_w", tr("gui.minepc.part.cpu"),
+                power(PcCaseBlockEntity.SLOT_CPU, 2) + power(PcCaseBlockEntity.SLOT_CPU2, 1)), th.fg));
         out.add(Row.of("gpu", tr("gui.minepc.row.part_w", tr("gui.minepc.part.gpu"), power(PcCaseBlockEntity.SLOT_GPU, 1)), th.fg));
-        out.add(Row.of("ram", tr("gui.minepc.row.part_w", tr("gui.minepc.part.ram"), power(PcCaseBlockEntity.SLOT_RAM, PcCaseBlockEntity.RAM_SLOTS)), th.fg));
+        out.add(Row.of("ram", tr("gui.minepc.row.part_w", tr("gui.minepc.part.ram"), power(PcCaseBlockEntity.SLOT_RAM, PcCaseBlockEntity.RAM_SLOTS)
+                + power(PcCaseBlockEntity.SLOT_RAM_EXTRA, PcCaseBlockEntity.RAM_EXTRA_SLOTS)), th.fg));
         int drives = power(PcCaseBlockEntity.SLOT_HDD, PcCaseBlockEntity.HDD_SLOTS) + power(PcCaseBlockEntity.SLOT_SATA_SSD, PcCaseBlockEntity.SATA_SSD_SLOTS)
                 + power(PcCaseBlockEntity.SLOT_M2, PcCaseBlockEntity.M2_SLOTS);
         out.add(Row.of("disk", tr("gui.minepc.row.part_w", tr("gui.minepc.part.drives"), drives), th.fg));
@@ -394,7 +410,7 @@ public class PcCaseScreen extends AbstractContainerScreen<PcCaseMenu> {
                     .tip(tr("gui.minepc.net.unplugged_tip")));
         } else {
             if ((menu.netLink() & 1) != 0) {
-                long bits = com.strikerr212.minepc.block.PcCaseBlock.portBits(board.tier());
+                long bits = com.strikerr212.minepc.block.PcCaseBlock.portBits(board);
                 out.add(Row.of("plug", bitsText(bits), th.fg)
                         .tip(tr("gui.minepc.net.speed_tip", bytes(bits / 800))));
             }
@@ -415,13 +431,15 @@ public class PcCaseScreen extends AbstractContainerScreen<PcCaseMenu> {
         PcCaseBlockEntity be = menu.blockEntity();
         if (be == null) return false;
         MotherboardData board = be.motherboard();
-        if (slot == PcCaseBlockEntity.SLOT_MOTHERBOARD || slot == PcCaseBlockEntity.SLOT_PSU || slot >= PcCaseBlockEntity.SLOT_USB) {
+        if (slot == PcCaseBlockEntity.SLOT_MOTHERBOARD || slot == PcCaseBlockEntity.SLOT_PSU || slot == PcCaseBlockEntity.SLOT_PSU2
+                || PcCaseBlockEntity.isUsb(slot)) {
             return false;
         }
+        if (slot == PcCaseBlockEntity.SLOT_COOLER && be.isModule()) return true;   // в 1U кулер не влезет
         if (board == null) return true;
-        if (slot >= PcCaseBlockEntity.SLOT_RAM && slot < PcCaseBlockEntity.SLOT_RAM + PcCaseBlockEntity.RAM_SLOTS) {
-            return slot - PcCaseBlockEntity.SLOT_RAM >= board.ramSlots();
-        }
+        if (slot == PcCaseBlockEntity.SLOT_CPU2) return board.cpuSockets() < 2;
+        int ram = PcCaseBlockEntity.ramIndex(slot);
+        if (ram >= 0) return ram >= board.ramSlots();
         if (slot >= PcCaseBlockEntity.SLOT_M2 && slot < PcCaseBlockEntity.SLOT_M2 + PcCaseBlockEntity.M2_SLOTS) {
             return slot - PcCaseBlockEntity.SLOT_M2 >= board.m2Slots();
         }
@@ -551,14 +569,19 @@ public class PcCaseScreen extends AbstractContainerScreen<PcCaseMenu> {
         outline(g, BX0, BY0, BX1, BY1, CaseTheme.sh(th.pcb, 0.6));
         int trace = CaseTheme.sh(th.pcb, 1.18);
         for (int[] t : TRACES) rect(g, t[0], t[1], t[2], t[3], trace);
-        // слот PCIe под видеокартой
-        rect(g, BX0 + 4, 86, BX0 + 100, 88, CaseTheme.rgb(40, 42, 46));
-        rect(g, BX0 + 4, 86, BX0 + 100, 86, CaseTheme.rgb(70, 72, 78));
-        for (int x = BX0 + 6; x < BX0 + 100; x += 3) px(g, x, 87, CaseTheme.rgb(200, 170, 70));
+        if (!menu.serverLayout()) {
+            // слот PCIe под видеокартой
+            rect(g, BX0 + 4, 86, BX0 + 100, 88, CaseTheme.rgb(40, 42, 46));
+            rect(g, BX0 + 4, 86, BX0 + 100, 86, CaseTheme.rgb(70, 72, 78));
+            for (int x = BX0 + 6; x < BX0 + 100; x += 3) px(g, x, 87, CaseTheme.rgb(200, 170, 70));
+        } else {
+            // серверная плата: разводка двух сокетов и отсек дисков с салазками
+            for (int k = 0; k < 2; k++) outline(g, 12 + k * 18, 40, 31 + k * 18, 59, CaseTheme.rgb(200, 170, 70));
+        }
         // ----- слоты корпуса -----
         for (int i = 0; i < PcCaseBlockEntity.SLOT_COUNT; i++) {
-            if (i >= PcCaseBlockEntity.SLOT_USB) continue;   // USB — на передней панели, рисуются после неё
-            slotFrame(g, PcCaseMenu.SLOT_POS[i][0], PcCaseMenu.SLOT_POS[i][1]);
+            if (PcCaseBlockEntity.isUsb(i) || !menu.slotShown(i)) continue;   // USB — на передней панели, рисуются после неё
+            slotFrame(g, menu.slotX(i), menu.slotY(i));
         }
         // ----- экран состояния -----
         rect(g, SX0, SY0, SX1, SY1, th.bezel);
@@ -601,8 +624,8 @@ public class PcCaseScreen extends AbstractContainerScreen<PcCaseMenu> {
         if (th.deco == CaseTheme.Deco.GAMING) {
             for (int x = PX0 + 1; x < PX1; x++) px(g, x, PY1, CaseTheme.rgbAt((double) (x - PX0) / (PX1 - PX0)));
         }
-        for (int i = PcCaseBlockEntity.SLOT_USB; i < PcCaseBlockEntity.SLOT_COUNT; i++) {
-            slotFrame(g, PcCaseMenu.SLOT_POS[i][0], PcCaseMenu.SLOT_POS[i][1]);
+        for (int i = PcCaseBlockEntity.SLOT_USB; i < PcCaseBlockEntity.SLOT_USB + PcCaseBlockEntity.USB_SLOTS; i++) {
+            slotFrame(g, menu.slotX(i), menu.slotY(i));
         }
         rect(g, GX0, GY0, GX1, GY1, th.graphBg);
         for (int x = GX0 + 1; x < GX1; x += 2) px(g, x, (GY0 + GY1) / 2, CaseTheme.sh(th.graphBg, th.graphBg == CaseTheme.rgb(240, 244, 250) ? 0.9 : 1.8));
@@ -644,8 +667,8 @@ public class PcCaseScreen extends AbstractContainerScreen<PcCaseMenu> {
         float a = ((th.ghost >>> 24) & 255) / 255f, r = ((th.ghost >> 16) & 255) / 255f,
                 gr = ((th.ghost >> 8) & 255) / 255f, b = (th.ghost & 255) / 255f;
         for (int i = 0; i < PcCaseBlockEntity.SLOT_COUNT; i++) {
-            if (menu.slots.get(i).hasItem()) continue;
-            int x = PcCaseMenu.SLOT_POS[i][0], y = PcCaseMenu.SLOT_POS[i][1];
+            if (menu.slots.get(i).hasItem() || !menu.slotShown(i)) continue;
+            int x = menu.slotX(i), y = menu.slotY(i);
             if (disabled(i)) continue;
             RenderSystem.setShaderColor(r, gr, b, a);
             g.blit(ResourceLocation.fromNamespaceAndPath(MineComputers.MODID, "textures/gui/ghost/" + GHOSTS[i] + ".png"),
@@ -655,8 +678,8 @@ public class PcCaseScreen extends AbstractContainerScreen<PcCaseMenu> {
         RenderSystem.disableBlend();
         // Разъёма нет на этой плате — слот перечёркнут
         for (int i = 0; i < PcCaseBlockEntity.SLOT_COUNT; i++) {
-            if (menu.slots.get(i).hasItem() || !disabled(i)) continue;
-            int x = PcCaseMenu.SLOT_POS[i][0], y = PcCaseMenu.SLOT_POS[i][1];
+            if (menu.slots.get(i).hasItem() || !disabled(i) || !menu.slotShown(i)) continue;
+            int x = menu.slotX(i), y = menu.slotY(i);
             g.fill(x + 1, y + 1, x + 17, y + 17, 0x40A02020);
             for (int k = 0; k < 8; k++) {
                 px(g, x + 5 + k, y + 5 + k, 0xA0802020);
@@ -681,11 +704,21 @@ public class PcCaseScreen extends AbstractContainerScreen<PcCaseMenu> {
             }
         }
         int shadow = th.labelShadow;
-        text(g, tr("gui.minepc.group.cpu"), 18, 21, th.labelColor, 36, shadow);
-        text(g, tr("gui.minepc.group.memory"), 62, 21, th.labelColor, 54, shadow);
-        text(g, tr("gui.minepc.group.video"), 18, 55, th.labelColor, 40, shadow);
-        text(g, tr("gui.minepc.group.m2"), 62, 55, th.labelColor, 36, shadow);
-        text(g, tr("gui.minepc.group.board"), 38, 103, th.labelColor, 60, shadow);
+        if (menu.serverLayout()) {
+            text(g, tr("gui.minepc.group.board"), 33, 110, th.labelColor, 60, shadow);
+            // Резерв питания: два блока — зелёная лампа, один — жёлтая
+            PcCaseBlockEntity be = menu.blockEntity();
+            if (be != null && be.psuCount() > 0) {
+                int lamp = be.psuCount() >= 2 ? CaseTheme.rgb(60, 220, 110) : CaseTheme.rgb(240, 190, 40);
+                rect(g, 151, 22, 152, 23, lamp);
+            }
+        } else {
+            text(g, tr("gui.minepc.group.cpu"), 18, 21, th.labelColor, 36, shadow);
+            text(g, tr("gui.minepc.group.memory"), 62, 21, th.labelColor, 54, shadow);
+            text(g, tr("gui.minepc.group.video"), 18, 55, th.labelColor, 40, shadow);
+            text(g, tr("gui.minepc.group.m2"), 62, 55, th.labelColor, 36, shadow);
+            text(g, tr("gui.minepc.group.board"), 38, 103, th.labelColor, 60, shadow);
+        }
         // экран состояния
         int state = menu.computerState();
         Component stateText = tr(state == 1 ? "gui.minepc.state.on" : state == 2 ? "gui.minepc.state.crashed" : "gui.minepc.state.off");
@@ -784,12 +817,23 @@ public class PcCaseScreen extends AbstractContainerScreen<PcCaseMenu> {
         if (!menu.getCarried().isEmpty()) return;
         int mx = mouseX - leftPos, my = mouseY - topPos;
         // Пустой слот: что сюда ставить
+        PcCaseBlockEntity hoverBe = menu.blockEntity();
         for (int i = 0; i < PcCaseBlockEntity.SLOT_COUNT; i++) {
-            int sx = PcCaseMenu.SLOT_POS[i][0], sy = PcCaseMenu.SLOT_POS[i][1];
+            if (!menu.slotShown(i)) continue;
+            int sx = menu.slotX(i), sy = menu.slotY(i);
+            if (mx >= sx && mx < sx + 18 && my >= sy && my < sy + 18 && hoverBe != null && hoverBe.lockedWhileRunning(i)
+                    && menu.slots.get(i).hasItem()) {
+                // Работающий сервер: деталь видно, но не вынуть
+                List<Component> tip = new ArrayList<>(getTooltipFromContainerItem(menu.slots.get(i).getItem()));
+                tip.add(tr("message.minepc.server_running").withStyle(ChatFormatting.GOLD));
+                g.renderComponentTooltip(font, tip, mouseX, mouseY);
+                return;
+            }
             if (mx >= sx && mx < sx + 18 && my >= sy && my < sy + 18 && !menu.slots.get(i).hasItem()) {
                 List<Component> tip = new ArrayList<>();
                 tip.add(tr(SLOT_HINTS[i]));
                 if (disabled(i)) tip.add(tr("gui.minepc.slot.unavailable").withStyle(ChatFormatting.RED));
+                else if (hoverBe != null && hoverBe.lockedWhileRunning(i)) tip.add(tr("message.minepc.server_running").withStyle(ChatFormatting.GOLD));
                 g.renderComponentTooltip(font, tip, mouseX, mouseY);
                 return;
             }

@@ -189,9 +189,9 @@ public class AssemblyScreen extends AbstractContainerScreen<AssemblyMenu> {
                 rows.add(new Row(ROW_HEADER, page, y, 14, List.of()));
                 y += 14;
             }
-            for (int i = 0; i < spec.params().size(); i++) {
+            for (int i : spec.order()) {
                 Param p = spec.params().get(i);
-                if (p.page() != page) continue;
+                if (p.page() != page || !spec.isShown(i, values)) continue;
                 List<Chip> chips = new ArrayList<>();
                 int cx = chipsX, cy = 0;
                 int selected = values.get(i);

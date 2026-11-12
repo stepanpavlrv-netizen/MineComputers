@@ -30,6 +30,9 @@ public class PcCaseMenu extends AbstractContainerMenu {
      * Слоты стоят там, где детали стоят в настоящем компьютере: процессор и кулер у сокета,
      * память справа, видеокарта над PCIe, M.2 рядом, плата снизу; справа отсек — БП и диски.
      */
+    /** Слот, которого в этой раскладке нет: стоит далеко за окном. */
+    public static final int HIDDEN = -10000;
+
     public static final int[][] SLOT_POS = {
             {18, 98},                                   // плата
             {18, 30},                                   // процессор
@@ -41,11 +44,44 @@ public class PcCaseMenu extends AbstractContainerMenu {
             {133, 81}, {133, 99},                       // SATA SSD
             {62, 64}, {80, 64},                         // M.2
             {180, 150}, {200, 150},                     // USB (передняя панель)
+            {HIDDEN, HIDDEN}, {HIDDEN, HIDDEN},         // второй процессор и блок питания — только у сервера
+            {HIDDEN, HIDDEN}, {HIDDEN, HIDDEN}, {HIDDEN, HIDDEN}, {HIDDEN, HIDDEN}, {HIDDEN, HIDDEN}, {HIDDEN, HIDDEN},
+            {HIDDEN, HIDDEN}, {HIDDEN, HIDDEN}, {HIDDEN, HIDDEN}, {HIDDEN, HIDDEN}, {HIDDEN, HIDDEN}, {HIDDEN, HIDDEN},
+    };
+
+    /**
+     * Раскладка серверного шасси: память в три ряда вокруг двух сокетов, справа два блока питания и четыре отсека дисков.
+     *
+     *   ОЗУ ОЗУ ОЗУ ОЗУ ОЗУ ОЗУ   │ БП1
+     *   ЦП1 ЦП2 кул  ·  M.2 M.2   │ БП2
+     *   ОЗУ ОЗУ ОЗУ ОЗУ ОЗУ ОЗУ   │ диск
+     *   ОЗУ ОЗУ ОЗУ ОЗУ  ·  Видео │ диск
+     *   Плата                     │ диск
+     *                             │ диск
+     */
+    public static final int[][] SERVER_POS = {
+            {13, 105},                                  // плата
+            {13, 41},                                   // процессор 1
+            {49, 41},                                   // кулер (в модуле 1U не встаёт)
+            {13, 21}, {31, 21}, {49, 21}, {67, 21},     // память 1–4
+            {103, 81},                                  // видеокарта
+            {133, 19},                                  // блок питания 1
+            {133, 57}, {133, 75},                       // отсеки: жёсткие диски
+            {133, 93}, {133, 111},                      // отсеки: SATA SSD
+            {85, 41}, {103, 41},                        // M.2
+            {180, 150}, {200, 150},                     // USB
+            {31, 41},                                   // процессор 2
+            {133, 37},                                  // блок питания 2
+            {85, 21}, {103, 21},                        // память 5–6
+            {13, 61}, {31, 61}, {49, 61}, {67, 61}, {85, 61}, {103, 61},   // память 7–12
+            {13, 81}, {31, 81}, {49, 81}, {67, 81},     // память 13–16
     };
     public static final int INV_X = 8, INV_Y = 140;
 
     private final PcCaseBlockEntity be;
     private final ContainerLevelAccess access;
+    /** Окно серверного шасси (своя раскладка слотов). */
+    private final boolean serverLayout;
     private final ContainerData data;
 
     /** Клиент: позиция корпуса приходит с сервера. */
@@ -69,8 +105,9 @@ public class PcCaseMenu extends AbstractContainerMenu {
         this.be = be;
         this.access = be != null && be.getLevel() != null ? ContainerLevelAccess.create(be.getLevel(), be.getBlockPos()) : ContainerLevelAccess.NULL;
         IItemHandler handler = be != null ? be.inventory() : new ItemStackHandler(PcCaseBlockEntity.SLOT_COUNT);
+        this.serverLayout = be != null && be.serverChassis();
         for (int i = 0; i < PcCaseBlockEntity.SLOT_COUNT; i++) {
-            addSlot(new CaseSlot(handler, i, SLOT_POS[i][0] + 1, SLOT_POS[i][1] + 1));
+            addSlot(new CaseSlot(handler, i, slotX(i) + 1, slotY(i) + 1));
         }
         for (int row = 0; row < 3; row++) {
             for (int col = 0; col < 9; col++) {
@@ -106,6 +143,23 @@ public class PcCaseMenu extends AbstractContainerMenu {
             }
         } : new SimpleContainerData(8);
         addDataSlots(data);
+    }
+
+    public boolean serverLayout() {
+        return serverLayout;
+    }
+
+    /** Рамка слота корпуса в окне (HIDDEN — слота в этой раскладке нет). */
+    public int slotX(int slot) {
+        return (serverLayout ? SERVER_POS : SLOT_POS)[slot][0];
+    }
+
+    public int slotY(int slot) {
+        return (serverLayout ? SERVER_POS : SLOT_POS)[slot][1];
+    }
+
+    public boolean slotShown(int slot) {
+        return slotX(slot) != HIDDEN;
     }
 
     public PcCaseBlockEntity blockEntity() {
