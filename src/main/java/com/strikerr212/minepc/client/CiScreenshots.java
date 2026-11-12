@@ -335,6 +335,19 @@ public class CiScreenshots {
                     sb.append(' ').append(r.pos().toShortString()).append('#').append(r.slot()).append(" hops=").append(r.hops());
                 }
                 com.mojang.logging.LogUtils.getLogger().info(sb.toString());
+                var data = com.strikerr212.minepc.lan.LanData.get(p.serverLevel());
+                StringBuilder sg = new StringBuilder("[CI-RACK] устройство ").append(data.device(rackPos)).append(" отрезки:");
+                for (var seg : com.strikerr212.minepc.lan.LanManager.segmentsAt(data, rackPos)) {
+                    sg.append(" порт ").append(seg.port()).append(seg.ok() ? " ok" : " нет").append(" вилок ").append(seg.plugs().size());
+                }
+                if (p.serverLevel().getBlockEntity(rackPos) instanceof com.strikerr212.minepc.block.RackBlockEntity r) {
+                    for (int i = 0; i < 4; i++) {
+                        var s = r.server(i);
+                        if (s != null) sg.append(" | место ").append(i).append(" link=").append(s.netLinkCode())
+                                .append(" linked=").append(lan.linked(p.serverLevel(), s.hostRef()));
+                    }
+                }
+                com.mojang.logging.LogUtils.getLogger().info(sg.toString());
             });
             case 2551 -> shot(mc, "rack_server_gui");
             case 2555 -> mc.setScreen(new TerminalScreen(new com.strikerr212.minepc.block.HostRef(rackPos, 0)));
