@@ -22,7 +22,7 @@ public final class SwitchPorts {
     }
 
     /** Порт: номер, сторона (F/B/L/R спереди/сзади/слева/справа, C — патч-корд), номер на стороне, есть связь, кто там, вкл, VLAN. */
-    public record Port(int port, char side, int number, boolean link, String device, boolean enabled, int vlan) {
+    public record Port(int port, char side, int number, boolean link, String device, boolean enabled, int vlan, int length) {
     }
 
     /** Короткий постоянный номер коммутатора для программ (по координатам). */
@@ -79,7 +79,8 @@ public final class SwitchPorts {
             if (seg != null && !seg.ok()) device = "!";
             else if (link) device = describe(level, data, seg);
             int cfg = data.portConfig(pos, port);
-            out.add(new Port(port, side, number, link, device, LanData.portEnabled(cfg), LanData.portVlan(cfg)));
+            out.add(new Port(port, side, number, link, device, LanData.portEnabled(cfg), LanData.portVlan(cfg),
+                    seg == null ? 0 : seg.length()));
         }
         return out;
     }
@@ -104,6 +105,19 @@ public final class SwitchPorts {
         }
         if (first == null) return "";
         return seg.plugs().size() > 1 ? first + " +" + (seg.plugs().size() - 1) : first;
+    }
+
+    /** Порты для подсказки при взгляде на гнездо: те же поля, что в окне коммутатора, и длина кабеля. */
+    public static com.strikerr212.minepc.network.PortsInfoPayload infoPayload(ServerLevel level, BlockPos pos) {
+        StringBuilder b = new StringBuilder();
+        for (Port p : ports(level, pos)) {
+            if (b.length() > 0) b.append('\n');
+            b.append(p.port()).append('\t').append(p.link() ? 1 : 0).append('\t')
+                    .append(p.device().replace('\t', ' ').replace('\n', ' ')).append('\t')
+                    .append(p.enabled() ? 1 : 0).append('\t').append(p.vlan()).append('\t').append(p.length());
+        }
+        LanData.Device d = LanData.get(level).device(pos);
+        return new com.strikerr212.minepc.network.PortsInfoPayload(pos, d == null ? 0 : d.kbit(), b.toString());
     }
 
     public static SwitchOpenPayload openPayload(ServerLevel level, BlockPos pos) {

@@ -41,6 +41,8 @@ public class ModCreativeTabs {
                         output.accept(ModItems.NETWORK_SWITCH.get());
                         output.accept(ModItems.RACK_SWITCH.get());
                         output.accept(ModItems.PATCH_CORD.get());
+                        output.accept(ModItems.BRACKET.get());
+                        output.accept(ModItems.CUTTERS.get());
                         output.accept(ModItems.PATCH_PANEL.get());
                         output.accept(ModItems.ROUTER.get());
                         output.accept(ModItems.WIFI_G.get());

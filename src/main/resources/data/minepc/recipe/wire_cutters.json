@@ -1,0 +1,19 @@
+{
+ "type": "minecraft:crafting_shapeless",
+ "category": "tools",
+ "ingredients": [
+  {
+   "item": "minecraft:shears"
+  },
+  {
+   "item": "minecraft:copper_ingot"
+  },
+  {
+   "item": "minecraft:red_dye"
+  }
+ ],
+ "result": {
+  "id": "minepc:wire_cutters",
+  "count": 1
+ }
+}

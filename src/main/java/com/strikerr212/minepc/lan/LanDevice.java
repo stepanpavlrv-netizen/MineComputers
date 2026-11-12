@@ -20,7 +20,8 @@ public interface LanDevice {
      * Гнездо на модели устройства. Координаты — в пикселях самого блока, как он стоит в мире:
      * face — сторона блока; along — где гнездо вдоль этой стороны (x у северной и южной стороны, z у западной и
      * восточной; начало полоски шириной 1); height — высота (начало полоски); depth — насколько лицевая плоскость
-     * устройства утоплена от края блока (у настольного коммутатора 4: он не во весь блок).
+     * устройства утоплена от края блока (у настольного коммутатора 4: он не во весь блок). У гнезда на верхней или
+     * нижней стороне along — x, height — z.
      */
     record Socket(Direction face, float along, float height, float depth, boolean copper, boolean fiber) {
         public boolean accepts(boolean fiberWire) {
@@ -29,6 +30,15 @@ public interface LanDevice {
     }
 
     Kind lanKind();
+
+    /**
+     * Оси плоскости стороны блока, по которым считаются «вдоль» и «высота» гнезда: у боковых сторон — горизонталь
+     * вдоль стороны и Y, у верхней и нижней — X и Z.
+     */
+    static Direction.Axis[] faceAxes(Direction face) {
+        if (face.getAxis() == Direction.Axis.Y) return new Direction.Axis[]{Direction.Axis.X, Direction.Axis.Z};
+        return new Direction.Axis[]{face.getAxis() == Direction.Axis.X ? Direction.Axis.Z : Direction.Axis.X, Direction.Axis.Y};
+    }
 
     /** Есть ли гнездо на этой стороне блока (face — сторона устройства, к которой подходит кабель). */
     boolean acceptsCable(BlockState state, Direction face);

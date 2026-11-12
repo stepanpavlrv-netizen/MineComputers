@@ -59,8 +59,8 @@ public final class LanManager {
         static final Result EMPTY = new Result(List.of(), List.of());
     }
 
-    /** Отрезок у порта устройства: порты других устройств на нём; ok — не длиннее предела. */
-    public record Segment(int port, Set<LanData.Plug> plugs, boolean ok) {
+    /** Отрезок у порта устройства: порты других устройств на нём; ok — не длиннее предела; length — блоков. */
+    public record Segment(int port, Set<LanData.Plug> plugs, boolean ok, int length) {
     }
 
     private record Outgoing(BlockPos from, String target, int port, Object[] payload, int bytes) {
@@ -89,8 +89,9 @@ public final class LanManager {
         } else {
             // Устройства больше нет: патч-корды — в добычу, у других концов — убрать
             for (LanData.Cord c : data.removeCords(pos)) {
-                net.minecraft.world.level.block.Block.popResource(level, pos,
-                        new net.minecraft.world.item.ItemStack(com.strikerr212.minepc.registry.ModItems.PATCH_CORD.get()));
+                net.minecraft.world.level.block.Block.popResource(level, pos, c.length() > 4
+                        ? new net.minecraft.world.item.ItemStack(com.strikerr212.minepc.registry.ModItems.CABLE.get(), c.length())
+                        : new net.minecraft.world.item.ItemStack(com.strikerr212.minepc.registry.ModItems.PATCH_CORD.get()));
                 CordList.refresh(server, c.a().equals(pos) ? c.b() : c.a());
             }
             data.removeDevice(pos);
@@ -260,7 +261,7 @@ public final class LanManager {
     /** Все провода, воткнутые в устройство (из клеток кабеля по четырём сторонам). */
     private static List<PlugWire> plugWires(LanData data, BlockPos dev) {
         List<PlugWire> out = new ArrayList<>();
-        for (Direction face : Direction.Plane.HORIZONTAL) {
+        for (Direction face : Direction.values()) {
             BlockPos cell = dev.relative(face);
             long[] here = data.cable(cell.asLong());
             if (here == null) continue;
@@ -288,7 +289,7 @@ public final class LanManager {
     }
 
     /** Куда ведёт соединение провода w клетки p в сторону i: клетка и грань провода на том конце (null — никуда). */
-    static Object[] target(BlockPos p, Wire w, int i) {
+    public static Object[] target(BlockPos p, Wire w, int i) {
         Direction d = w.dirs()[i];
         return switch (w.conn[i]) {
             case Wire.FLAT -> new Object[]{p.relative(d), w.face};
@@ -321,7 +322,7 @@ public final class LanManager {
                 long[] cur = trayq.poll();
                 BlockPos p = BlockPos.of(cur[0]);
                 cells.add(cur[0]);
-                if (cells.size() + cordCells[0] > MAX_FIBER + 1) return new Segment(port, out, false);
+                if (cells.size() + cordCells[0] > MAX_FIBER + 1) return new Segment(port, out, false, cells.size() + cordCells[0]);
                 int tw = (int) cur[1];
                 if ((tw & 16) == 0) copper[0] = true;
                 for (Direction d : Direction.values()) {
@@ -347,7 +348,7 @@ public final class LanManager {
                 long[] cur = wires.poll();
                 BlockPos p = BlockPos.of(cur[0]);
                 cells.add(cur[0]);
-                if (cells.size() + cordCells[0] > MAX_FIBER + 1) return new Segment(port, out, false);
+                if (cells.size() + cordCells[0] > MAX_FIBER + 1) return new Segment(port, out, false, cells.size() + cordCells[0]);
                 long[] here = data.cable(cur[0]);
                 if (here == null || cur[1] >= here.length) continue;
                 Wire w = Wire.unpack(here[(int) cur[1]]);
@@ -388,9 +389,16 @@ public final class LanManager {
                 LanData.Device d = data.device(pl.pos());
                 if (d == null) continue;
                 if (d.passive()) {
-                    // Патч-панель: гнездо k спереди = гнездо k сзади = корд k — идём дальше насквозь
-                    int ch = pl.port() < LanData.CABLE_PORTS ? pl.port() % PatchPanelBlock.CHANNELS : pl.port() - LanData.CABLE_PORTS;
-                    for (int side : new int[]{ch, PatchPanelBlock.CHANNELS + ch, LanData.CABLE_PORTS + ch}) {
+                    // Патч-панель: гнездо k спереди = гнездо k сзади = корд k; кронштейн — все гнёзда и линии вместе
+                    int[] sides;
+                    if (d.type() == LanData.BRACKET) {
+                        sides = new int[LanData.PORTS];
+                        for (int k = 0; k < sides.length; k++) sides[k] = k;
+                    } else {
+                        int ch = pl.port() < LanData.CABLE_PORTS ? pl.port() % PatchPanelBlock.CHANNELS : pl.port() - LanData.CABLE_PORTS;
+                        sides = new int[]{ch, PatchPanelBlock.CHANNELS + ch, LanData.CABLE_PORTS + ch};
+                    }
+                    for (int side : sides) {
                         LanData.Plug other = new LanData.Plug(pl.pos(), side);
                         if (seenPlugs.add(other)) seed(data, pl.pos(), side, wires, plugs, done, cordCells);
                     }
@@ -400,7 +408,7 @@ public final class LanManager {
             }
         }
         int length = cells.size() + cordCells[0];
-        return new Segment(port, out, length <= (copper[0] ? MAX_SEGMENT : MAX_FIBER));
+        return new Segment(port, out, length <= (copper[0] ? MAX_SEGMENT : MAX_FIBER), length);
     }
 
     /** Что воткнуто в порт: провода с вилкой в этот порт и патч-корды. */
@@ -415,7 +423,7 @@ public final class LanManager {
             LanData.Plug other = c.other(dev, port);
             if (other != null) {
                 plugs.add(other);
-                cordCells[0] += 2;
+                cordCells[0] += c.length();
             }
         }
     }
@@ -438,6 +446,12 @@ public final class LanManager {
 
     /** Когда последний раз щёлкал коммутатор или трещала мачта (чтобы не сливалось в шум). */
     private final Map<BlockPos, Long> lastSound = new HashMap<>();
+    private final Map<BlockPos, Long> blinks = new HashMap<>();
+
+    private Long lastBlink(BlockPos p) {
+        if (blinks.size() > 512) blinks.clear();
+        return blinks.get(p);
+    }
     private long soundTick;
     private int soundsThisTick;
 
@@ -454,6 +468,13 @@ public final class LanManager {
             LanData.Device d = data.device(p);
             if (d == null || !level.isLoaded(p)) continue;
             boolean radio = d.type() == LanData.RADIO;
+            // Лампочки гнёзд мигают у всех, кто рядом (не чаще раза в 3 тика на устройство)
+            Long lastBlink = lastBlink(p);
+            if (lastBlink == null || now - lastBlink >= 3) {
+                blinks.put(p, now);
+                net.neoforged.neoforge.network.PacketDistributor.sendToPlayersNear(level, null, p.getX() + 0.5, p.getY() + 0.5,
+                        p.getZ() + 0.5, 32, new com.strikerr212.minepc.network.LanActivityPayload(p));
+            }
             Long last = lastSound.get(p);
             if (last != null && now - last < (radio ? 30 : 5)) continue;
             lastSound.put(p, now);

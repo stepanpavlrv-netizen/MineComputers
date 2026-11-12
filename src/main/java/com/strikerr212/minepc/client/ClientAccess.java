@@ -25,6 +25,14 @@ public final class ClientAccess {
         HumSounds.update(payload.pos(), payload.fan(), payload.hdd(), payload.start());
     }
 
+    public static void onPortsInfo(com.strikerr212.minepc.network.PortsInfoPayload payload) {
+        NetHud.onPortsInfo(payload);
+    }
+
+    public static void onLanActivity(com.strikerr212.minepc.network.LanActivityPayload payload) {
+        NetHud.activity(payload.pos());
+    }
+
     public static void onTerminal(TerminalPayload payload) {
         ClientTerminals.update(payload.casePos(), payload.data(), payload.keyboard());
     }

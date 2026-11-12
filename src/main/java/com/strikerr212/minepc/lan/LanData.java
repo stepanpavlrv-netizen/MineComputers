@@ -23,7 +23,7 @@ import java.util.Map;
  */
 public final class LanData extends SavedData {
 
-    public static final int COMPUTER = 0, DESK_SWITCH = 1, RACK_SWITCH = 2, ROUTER = 3, PANEL = 4, RADIO = 5;
+    public static final int COMPUTER = 0, DESK_SWITCH = 1, RACK_SWITCH = 2, ROUTER = 3, PANEL = 4, RADIO = 5, BRACKET = 6;
 
     /** Портов у устройства: 16 под кабели (гнёзда по порядку, {@link LanDevice#sockets}) и 8 под патч-корды. */
     public static final int CABLE_PORTS = 16, CORD_PORTS = 8, PORTS = CABLE_PORTS + CORD_PORTS;
@@ -41,9 +41,9 @@ public final class LanData extends SavedData {
             return type == COMPUTER;
         }
 
-        /** Пассивное устройство: сигнал проходит насквозь (патч-панель). */
+        /** Пассивное устройство: сигнал проходит насквозь (патч-панель, кронштейн воздушной линии). */
         public boolean passive() {
-            return type == PANEL;
+            return type == PANEL || type == BRACKET;
         }
     }
 
@@ -58,6 +58,11 @@ public final class LanData extends SavedData {
     public record Cord(BlockPos a, int portA, BlockPos b, int portB, int color) {
         public boolean touches(BlockPos p) {
             return a.equals(p) || b.equals(p);
+        }
+
+        /** Длина в блоках (патч-корд считается за 2, воздушная линия — по расстоянию). */
+        public int length() {
+            return Math.max(2, (int) Math.ceil(Math.sqrt(a.distSqr(b))));
         }
 
         /** Другой конец: {устройство, порт}. */

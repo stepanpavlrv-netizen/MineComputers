@@ -70,8 +70,7 @@ def switch(body=(52, 56, 62), ports=6):
         x = 2 + i * 2
         m.v[(x, 1, F)] = (14, 14, 16)                         # гнездо RJ-45
         pass
-        on = i not in (3,)
-        m.v[(x, 2, F)] = glow((80, 255, 120) if i % 3 else (255, 170, 40)) if on else (40, 44, 48)
+        m.v[(x, 2, F)] = (40, 44, 48)                         # лампочка порта (горит — рисует игра)
     m.paint(lambda x, y, z: y == 3 and z == 6 and 3 <= x <= 12, sh(body, 1.3))   # шов крышки
     m.v[(14, 2, F)] = glow((90, 160, 255))
     return m
@@ -88,7 +87,7 @@ def rack_switch():
         for x in range(2, 14):
             m.v[(x, unit_y + 1, F)] = (96, 100, 108)
             m.v[(x, unit_y, F)] = (18, 18, 20) if x % 2 == 0 else (96, 100, 108)
-            m.v[(x, unit_y + 2, F)] = glow((80, 255, 120)) if x % 2 == 0 and r.random() < 0.8 else (60, 64, 70)
+            m.v[(x, unit_y + 2, F)] = (60, 64, 70)              # лампочки портов (горят — рисует игра)
     for y in range(1, 5):                                       # блок питания снизу
         for x in range(2, 14):
             m.v[(x, y, F)] = (30, 32, 36) if (x + y) % 2 else (54, 58, 64)

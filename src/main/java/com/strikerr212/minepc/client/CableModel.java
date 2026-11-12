@@ -99,8 +99,8 @@ public class CableModel extends BakedModelWrapper<BakedModel> {
     private static void plugPath(List<BakedQuad> out, Wire w, Direction d, int socket, TextureAtlasSprite wire, TextureAtlasSprite plug) {
         int ax = d.getAxis().ordinal();
         boolean pos = d.getAxisDirection() == Direction.AxisDirection.POSITIVE;
-        Direction.Axis alongAxis = d.getAxis() == Direction.Axis.X ? Direction.Axis.Z : Direction.Axis.X;
-        int al = alongAxis.ordinal(), y = 1;
+        Direction.Axis[] fa = com.strikerr212.minepc.lan.LanDevice.faceAxes(d);
+        int al = fa[0].ordinal(), y = fa[1].ordinal();
         // Где сейчас провод (поперёк направления к устройству)
         float[][] cur = new float[3][];
         for (Direction.Axis a : Direction.Axis.values()) {

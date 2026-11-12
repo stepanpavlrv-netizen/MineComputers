@@ -262,7 +262,7 @@ public class CableBlockEntity extends BlockEntity {
                     unknown[i] = true;       // сосед не загружен — оставляем как было
                     conn[i] = w.conn[i];
                     plug[i] = w.plug[i];
-                } else if (d.getAxis().isHorizontal() && level.getBlockState(n).getBlock() instanceof LanDevice) {
+                } else if (level.getBlockState(n).getBlock() instanceof LanDevice) {
                     device[i] = true;
                 } else if (level.getBlockEntity(n) instanceof TrayBlockEntity tray) {
                     if (tray.has(w)) conn[i] = Wire.FLAT;
@@ -322,8 +322,8 @@ public class CableBlockEntity extends BlockEntity {
         int old = w.port(i);
         if (old >= 0 && old < sockets.size() && !taken[old] && fits(sockets.get(old), d, w)) return old + 1;
         // Где провод подходит к стороне устройства: по оси вдоль стороны и по высоте
-        Direction.Axis along = d.getAxis() == Direction.Axis.X ? Direction.Axis.Z : Direction.Axis.X;
-        float wa = across(w, along)[0], wy = across(w, Direction.Axis.Y)[0];
+        Direction.Axis[] fa = LanDevice.faceAxes(d);
+        float wa = across(w, fa[0])[0], wy = across(w, fa[1])[0];
         int best = -1;
         float bestD = Float.MAX_VALUE;
         for (int s = 0; s < sockets.size(); s++) {

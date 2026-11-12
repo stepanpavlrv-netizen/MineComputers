@@ -126,6 +126,9 @@ public class ModBlocks {
     public static final DeferredBlock<com.strikerr212.minepc.lan.TrayBlock> TRAY = BLOCKS.register("cable_tray",
             () -> new com.strikerr212.minepc.lan.TrayBlock(BlockBehaviour.Properties.of()
                     .mapColor(MapColor.METAL).strength(1.0f).sound(SoundType.CHAIN).noOcclusion()));
+    public static final DeferredBlock<com.strikerr212.minepc.lan.BracketBlock> BRACKET = BLOCKS.register("cable_bracket",
+            () -> new com.strikerr212.minepc.lan.BracketBlock(BlockBehaviour.Properties.of()
+                    .mapColor(MapColor.METAL).strength(1.0f).sound(SoundType.METAL).noOcclusion()));
     public static final DeferredBlock<com.strikerr212.minepc.lan.PatchPanelBlock> PATCH_PANEL = BLOCKS.register("patch_panel",
             () -> new com.strikerr212.minepc.lan.PatchPanelBlock(BlockBehaviour.Properties.of()
                     .mapColor(MapColor.COLOR_BLACK).strength(2.0f, 6.0f).sound(SoundType.METAL)));

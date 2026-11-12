@@ -31,6 +31,20 @@ public class ModNetwork {
                     }
                 }));
 
+        // Подсказка у гнезда: игрок смотрит на устройство — сервер присылает, что в его портах
+        registrar.playToServer(PortsRequestPayload.TYPE, PortsRequestPayload.STREAM_CODEC, (payload, context) ->
+                context.enqueueWork(() -> {
+                    if (context.player() instanceof net.minecraft.server.level.ServerPlayer sp
+                            && sp.blockPosition().distSqr(payload.pos()) < 16 * 16 && sp.serverLevel().isLoaded(payload.pos())) {
+                        net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(sp,
+                                com.strikerr212.minepc.lan.SwitchPorts.infoPayload(sp.serverLevel(), payload.pos()));
+                    }
+                }));
+        registrar.playToClient(PortsInfoPayload.TYPE, PortsInfoPayload.STREAM_CODEC, (payload, context) ->
+                context.enqueueWork(() -> ClientAccess.onPortsInfo(payload)));
+        registrar.playToClient(LanActivityPayload.TYPE, LanActivityPayload.STREAM_CODEC, (payload, context) ->
+                context.enqueueWork(() -> ClientAccess.onLanActivity(payload)));
+
         // Экран компьютера: сервер → игроки рядом
         registrar.playToClient(TerminalPayload.TYPE, TerminalPayload.STREAM_CODEC, (payload, context) ->
                 context.enqueueWork(() -> ClientAccess.onTerminal(payload)));

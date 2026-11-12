@@ -77,6 +77,9 @@ public class ModItems {
     public static final DeferredItem<BlockItem> ROUTER = ITEMS.registerSimpleBlockItem("wifi_router", ModBlocks.ROUTER);
     public static final DeferredItem<BlockItem> TRAY = ITEMS.registerSimpleBlockItem("cable_tray", ModBlocks.TRAY);
     public static final DeferredItem<BlockItem> PATCH_PANEL = ITEMS.registerSimpleBlockItem("patch_panel", ModBlocks.PATCH_PANEL);
+    public static final DeferredItem<BlockItem> BRACKET = ITEMS.registerSimpleBlockItem("cable_bracket", ModBlocks.BRACKET);
+    public static final DeferredItem<com.strikerr212.minepc.lan.CuttersItem> CUTTERS = ITEMS.register("wire_cutters",
+            () -> new com.strikerr212.minepc.lan.CuttersItem(new Item.Properties().stacksTo(1).durability(512)));
     public static final DeferredItem<BlockItem> RADIO = ITEMS.registerSimpleBlockItem("radio_modem", ModBlocks.RADIO);
     public static final DeferredItem<BlockItem> MAST = ITEMS.registerSimpleBlockItem("radio_mast", ModBlocks.MAST);
     public static final DeferredItem<com.strikerr212.minepc.lan.PatchCordItem> PATCH_CORD = ITEMS.register("patch_cord",
