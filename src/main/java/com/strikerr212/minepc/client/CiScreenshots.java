@@ -314,14 +314,14 @@ public class CiScreenshots {
             }
             // Серверная стойка: две стойки друг на друге, три сервера и консоль; один сервер выдвинут
             case 2342 -> server.execute(CiScreenshots::placeRack);
-            case 2395 -> {
+            case 2500 -> {
                 typeHost(new com.strikerr212.minepc.block.HostRef(rackPos, 0), "hostname srv-a");
                 typeHost(new com.strikerr212.minepc.block.HostRef(rackPos, 1), "hostname srv-b");
                 typeHost(new com.strikerr212.minepc.block.HostRef(rackPos.above(), 0), "hostname srv-c");
             }
-            case 2402 -> typeHost(new com.strikerr212.minepc.block.HostRef(rackPos, 0), "ping srv-b 2");
-            case 2425 -> shot(mc, "world_server_rack");
-            case 2428 -> server.execute(() -> {
+            case 2512 -> typeHost(new com.strikerr212.minepc.block.HostRef(rackPos, 0), "ping srv-b 2");
+            case 2540 -> shot(mc, "world_server_rack");
+            case 2543 -> server.execute(() -> {
                 ServerPlayer p = server.getPlayerList().getPlayers().get(0);
                 if (p.serverLevel().getBlockEntity(rackPos) instanceof com.strikerr212.minepc.block.RackBlockEntity r && r.server(1) != null) {
                     p.openMenu(r.server(1), buf -> {
@@ -336,13 +336,13 @@ public class CiScreenshots {
                 }
                 com.mojang.logging.LogUtils.getLogger().info(sb.toString());
             });
-            case 2436 -> shot(mc, "rack_server_gui");
-            case 2440 -> mc.setScreen(new TerminalScreen(new com.strikerr212.minepc.block.HostRef(rackPos, 0)));
-            case 2452 -> shot(mc, "rack_terminal");
-            case 2455 -> mc.setScreen(new ConsoleScreen(rackPos));
-            case 2462 -> shot(mc, "rack_console");
-            case 2465 -> mc.setScreen(null);
-            case 2475 -> mc.stop();
+            case 2551 -> shot(mc, "rack_server_gui");
+            case 2555 -> mc.setScreen(new TerminalScreen(new com.strikerr212.minepc.block.HostRef(rackPos, 0)));
+            case 2567 -> shot(mc, "rack_terminal");
+            case 2570 -> mc.setScreen(new ConsoleScreen(rackPos));
+            case 2577 -> shot(mc, "rack_console");
+            case 2580 -> mc.setScreen(null);
+            case 2590 -> mc.stop();
             default -> {
             }
         }

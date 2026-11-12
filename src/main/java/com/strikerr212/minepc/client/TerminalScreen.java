@@ -89,7 +89,18 @@ public class TerminalScreen extends Screen {
         Component hint = keyboard ? Component.translatable("gui.minepc.terminal.hint2")
                 : Component.translatable("gui.minepc.terminal.no_keyboard");
         g.drawCenteredString(font, hint, width / 2, termY + sh + 14, keyboard ? TEXT_DIM : 0xFFE0A040);
-        g.drawString(font, title, 8, 10, 0xFFE6E8EB, false);
+        g.drawString(font, heading(), 8, 10, 0xFFE6E8EB, false);
+    }
+
+    /** Заголовок: у сервера в стойке — его имя или место. */
+    private Component heading() {
+        var level = net.minecraft.client.Minecraft.getInstance().level;
+        if (level != null && level.getBlockEntity(casePos) instanceof com.strikerr212.minepc.block.RackBlockEntity) {
+            var pc = com.strikerr212.minepc.block.Hosts.get(level, host);
+            if (pc != null && !pc.label().isEmpty()) return Component.literal(pc.label());
+            return Component.translatable("gui.minepc.server_module", host.slot() + 1);
+        }
+        return title;
     }
 
     /** Нарисовать сетку символов (общая для окна и, в упрощённом виде, для монитора в мире). */

@@ -48,10 +48,17 @@ public class ConsoleScreen extends Screen {
         return out;
     }
 
+    private int panelX, panelY, panelW, panelH;
+
     @Override
     protected void init() {
         List<Entry> list = entries();
-        int w = 220, x = width / 2 - w / 2, y = Math.max(30, height / 2 - list.size() * 11);
+        int rows = Math.max(1, list.size());
+        panelW = Math.min(width - 16, 260);
+        panelH = 44 + rows * 22 + 6;
+        panelX = width / 2 - panelW / 2;
+        panelY = Math.max(8, height / 2 - panelH / 2);
+        int x = panelX + 8, w = panelW - 16, y = panelY + 40;
         for (Entry e : list) {
             String name = e.server.label().isEmpty() ? e.server.address().substring(0, Math.min(8, e.server.address().length())) : e.server.label();
             int state = e.server.displayState();
@@ -69,10 +76,21 @@ public class ConsoleScreen extends Screen {
     }
 
     @Override
+    public void renderBackground(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+        super.renderBackground(g, mouseX, mouseY, partialTick);
+        // Панель консоли: тёмный экран в стальной рамке
+        g.fill(panelX - 2, panelY - 2, panelX + panelW + 2, panelY + panelH + 2, 0xFF5A6068);
+        g.fill(panelX, panelY, panelX + panelW, panelY + panelH, 0xF0101418);
+        g.fill(panelX, panelY, panelX + panelW, panelY + 30, 0xFF161C22);
+        g.fill(panelX, panelY + 30, panelX + panelW, panelY + 31, 0xFF2A323A);
+    }
+
+    @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         super.render(g, mouseX, mouseY, partialTick);
-        g.drawCenteredString(font, title, width / 2, 12, 0xFFFFFF);
-        g.drawCenteredString(font, Component.translatable("gui.minepc.console.hint"), width / 2, 24, 0x9097A1);
+        g.drawString(font, title, panelX + 8, panelY + 6, 0xFF6EE08A, false);
+        g.drawString(font, font.plainSubstrByWidth(Component.translatable("gui.minepc.console.hint").getString(), panelW - 16),
+                panelX + 8, panelY + 18, 0xFF8A96A0, false);
     }
 
     @Override
