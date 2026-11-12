@@ -99,8 +99,8 @@ public class AssemblyScreen extends AbstractContainerScreen<AssemblyMenu> {
         imageHeight = h;
         super.init();
 
-        pvW = clamp(Math.round(w * 0.22f), 84, 130);
-        resW = clamp(Math.round(w * 0.27f), 100, 170);
+        pvW = clamp(Math.round(w * 0.2f), 80, 130);
+        resW = clamp(Math.round(w * 0.31f), 110, 180);
         parX = 6;
         parW = w - 12 - pvW - resW - 12;
         pvX = parX + parW + 6;
@@ -359,7 +359,10 @@ public class AssemblyScreen extends AbstractContainerScreen<AssemblyMenu> {
         // Надпись
         int ly = topPos + contentBottom - 25;
         if (ly > y + 9) g.drawString(font, Component.translatable("gui.minepc.label"), bx, ly, TEXT_DIM, false);
-        if (inside(mouseX, mouseY, bx, by, pvW, pvH) && !dragging) {
+        // «?» в углу превью — как вращать (подсказка не закрывает саму деталь, пока не наведёшь на знак)
+        boolean helpHover = inside(mouseX, mouseY, bx + pvW - 10, by + 1, 9, 10);
+        g.drawString(font, "?", bx + pvW - 8, by + 3, helpHover ? ACCENT : TEXT_OFF, false);
+        if (helpHover) {
             tooltipLater = () -> g.renderTooltip(font, font.split(Component.translatable("gui.minepc.rotate_hint"), 200), mouseX, mouseY);
         }
     }

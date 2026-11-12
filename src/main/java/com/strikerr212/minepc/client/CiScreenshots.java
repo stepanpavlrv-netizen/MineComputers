@@ -266,7 +266,8 @@ public class CiScreenshots {
             }
             case 2280 -> assemblyTab(mc, 1);
             case 2290 -> shot(mc, "assembly_cpu");
-            case 2292 -> { assemblyTab(mc, 4); AssemblyScreen.ciTemplates = true; }
+            case 2292 -> assemblyTab(mc, 4);
+            case 2297 -> AssemblyScreen.ciTemplates = true;
             case 2302 -> shot(mc, "assembly_gpu_templates");
             case 2305 -> {
                 AssemblyScreen.ciTemplates = false;
