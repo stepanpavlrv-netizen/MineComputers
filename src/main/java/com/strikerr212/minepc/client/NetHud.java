@@ -302,7 +302,7 @@ public final class NetHud {
             Vec3 a = Vec3.atCenterOf(from), b = Vec3.atCenterOf(target);
             for (int i = 0; i <= 16; i++) {
                 double t = i / 16.0;
-                ghost.add(a.lerp(b, t).add(0, -(0.25 + 0.05 * dist) * 4 * t * (1 - t), 0));
+                ghost.add(a.lerp(b, t).add(0, -(0.1 + 0.025 * dist) * 4 * t * (1 - t), 0));
             }
             return;
         }

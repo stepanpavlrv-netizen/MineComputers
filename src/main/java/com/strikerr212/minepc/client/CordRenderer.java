@@ -139,7 +139,7 @@ public class CordRenderer<T extends BlockEntity & CordList.Holder> implements Bl
             Vec3 b = anchor(level, e.other(), pos).subtract(pos.getX(), pos.getY(), pos.getZ());
             double dist = a.distanceTo(b);
             // Патч-корд висит петлёй, воздушная линия натянута — провисает меньше
-            double sag = dist > 5 ? 0.25 + 0.04 * dist : 0.2 + 0.12 * dist;
+            double sag = dist > 5 ? 0.1 + 0.025 * dist : 0.2 + 0.12 * dist;
             int rgb = DyeColor.byId(e.color()).getTextureDiffuseColor();
             int r = (rgb >> 16) & 255, g = (rgb >> 8) & 255, bl = rgb & 255;
             BlockPos mid = BlockPos.containing(pos.getX() + (a.x + b.x) / 2, pos.getY() + Math.min(a.y, b.y), pos.getZ() + (a.z + b.z) / 2);
