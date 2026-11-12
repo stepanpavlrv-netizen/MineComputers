@@ -27,7 +27,7 @@ public class ModNetwork {
         registrar.playToServer(AssemblyValuesPayload.TYPE, AssemblyValuesPayload.STREAM_CODEC, (payload, context) ->
                 context.enqueueWork(() -> {
                     if (context.player().containerMenu instanceof AssemblyMenu menu) {
-                        menu.applyValues(payload.type(), payload.values());
+                        menu.applyValues(payload.tab(), payload.values());
                     }
                 }));
 

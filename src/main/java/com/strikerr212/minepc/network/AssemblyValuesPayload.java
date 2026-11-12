@@ -10,13 +10,13 @@ import net.minecraft.resources.ResourceLocation;
 import java.util.List;
 
 /** Пакет «применить шаблон на сборочном столе»: все варианты вкладки разом (клиент → сервер). */
-public record AssemblyValuesPayload(int type, List<Integer> values) implements CustomPacketPayload {
+public record AssemblyValuesPayload(int tab, List<Integer> values) implements CustomPacketPayload {
 
     public static final Type<AssemblyValuesPayload> TYPE =
             new Type<>(ResourceLocation.fromNamespaceAndPath(MineComputers.MODID, "assembly_values"));
 
     public static final StreamCodec<ByteBuf, AssemblyValuesPayload> STREAM_CODEC = StreamCodec.composite(
-            ByteBufCodecs.VAR_INT, AssemblyValuesPayload::type,
+            ByteBufCodecs.VAR_INT, AssemblyValuesPayload::tab,
             ByteBufCodecs.VAR_INT.apply(ByteBufCodecs.list(32)), AssemblyValuesPayload::values,
             AssemblyValuesPayload::new);
 

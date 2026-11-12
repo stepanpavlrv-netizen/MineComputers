@@ -345,7 +345,7 @@ public class AssemblyScreen extends AbstractContainerScreen<AssemblyMenu> {
 
         // Название и уровень под превью
         int y = by + pvH + 4;
-        List<FormattedCharSequence> name = font.split(result.getStyledHoverName(), pvW);
+        List<FormattedCharSequence> name = font.split(result.getHoverName().copy().withStyle(result.getRarity().color()), pvW);
         for (int i = 0; i < Math.min(2, name.size()); i++) {
             g.drawString(font, name.get(i), bx, y, TEXT, false);
             y += 10;
