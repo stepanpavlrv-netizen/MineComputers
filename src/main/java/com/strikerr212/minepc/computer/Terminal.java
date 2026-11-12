@@ -299,14 +299,6 @@ public final class Terminal {
         version++;
     }
 
-    /** Текст строки y без пробелов в конце (для BMC: экран сервера по сети). */
-    public synchronized String line(int y) {
-        if (y < 0 || y >= height) return "";
-        int end = (y + 1) * width;
-        while (end > y * width && chars[end - 1] == ' ') end--;
-        return new String(chars, y * width, end - y * width);
-    }
-
     /** Символ и цвета клетки: [символ, цвет текста, цвет фона] или null вне экрана. */
     public synchronized int[] get(int x, int y) {
         if (x < 0 || y < 0 || x >= width || y >= height) return null;

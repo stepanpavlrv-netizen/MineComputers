@@ -102,7 +102,7 @@ public final class Bmc {
         return switch (cmd.toLowerCase(Locale.ROOT)) {
             case "status" -> status();
             case "sensors" -> sensors();
-            case "log" -> log(arg);
+            case "log" -> logCommand(arg);
             case "screen" -> screen();
             case "power" -> power(level, arg, from);
             case "password" -> password(arg, from);
@@ -225,7 +225,7 @@ public final class Bmc {
         return reply(true, text, d);
     }
 
-    private Object[] log(String arg) {
+    private Object[] logCommand(String arg) {
         if ("clear".equalsIgnoreCase(arg)) {
             log.clear();
             log("журнал очищен");
@@ -250,7 +250,7 @@ public final class Bmc {
         if (c == null || be.computerState() != 1) return reply(false, "Сервер выключен — экрана нет", null);
         var t = c.terminal();
         List<String> lines = new ArrayList<>();
-        for (int y = 0; y < t.height(); y++) lines.add(t.line(y));
+        for (int y = 0; y < t.height(); y++) lines.add(t.line(y).stripTrailing());
         while (!lines.isEmpty() && lines.get(lines.size() - 1).isEmpty()) lines.remove(lines.size() - 1);
         Map<Object, Object> d = new LinkedHashMap<>();
         for (int i = 0; i < lines.size(); i++) d.put(i + 1, lines.get(i));
