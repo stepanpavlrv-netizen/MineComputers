@@ -94,10 +94,18 @@ public class RouterBlock extends BaseEntityBlock implements LanDevice {
         return LanData.ROUTER;
     }
 
-    /** Гнёзда сзади и по бокам; спереди лампочки. */
+    /** Гнёзда сзади (синий WAN и 4 жёлтых LAN), спереди лампочки. */
     @Override
     public boolean acceptsCable(BlockState state, Direction face) {
-        return face.getAxis().isHorizontal() && face != state.getValue(FACING);
+        return face == state.getValue(FACING).getOpposite();
+    }
+
+    @Override
+    public java.util.List<Socket> sockets(BlockState state) {
+        Direction f = state.getValue(FACING);
+        java.util.List<Socket> out = new java.util.ArrayList<>();
+        for (int x : new int[]{11, 9, 7, 5, 3}) out.add(LanDevice.local(f, true, x, 0, 5, true, false));
+        return out;
     }
 
     @Override

@@ -83,10 +83,7 @@ public final class LanManager {
         LanData data = LanData.get(server);
         BlockState s = level.getBlockState(pos);
         if (s.getBlock() instanceof LanDevice d) {
-            int mask = 0;
-            for (Direction face : Direction.Plane.HORIZONTAL) {
-                if (d.acceptsCable(s, face) || d.acceptsFiber(s, face)) mask |= Wire.bit(face);
-            }
+            int mask = Math.min(LanData.CABLE_PORTS, d.sockets(s).size());   // сколько гнёзд
             int kbit = (int) Math.min(Integer.MAX_VALUE, d.lanBitsPerSecond(level, pos, s) / 1000L);
             data.putDevice(pos, new LanData.Device(d.lanType(s), kbit, mask, d.lanExtra(level, pos, s)));
         } else {
@@ -247,15 +244,6 @@ public final class LanManager {
 
     // ======================= Порты и отрезки =======================
 
-    /** Порт под кабель: сторона устройства (0..3 = юг, запад, север, восток) × 4 + дорожка. */
-    public static int cablePort(Direction face, int lane) {
-        return face.get2DDataValue() * 4 + lane;
-    }
-
-    public static Direction portFace(int port) {
-        return Direction.from2DDataValue(port / 4);
-    }
-
     /** Отрезки на всех занятых портах устройства. */
     public static List<Segment> segmentsAt(LanData data, BlockPos dev) {
         List<Segment> out = new ArrayList<>();
@@ -265,40 +253,54 @@ public final class LanManager {
         return out;
     }
 
-    /** Порты, в которые что-то воткнуто: кабель на этой дорожке этой стороны или патч-корд. */
+    /** Провод с вилкой в устройство dev: клетка кабеля, номер провода в ней, порт. */
+    private record PlugWire(BlockPos cell, int index, int port) {
+    }
+
+    /** Все провода, воткнутые в устройство (из клеток кабеля по четырём сторонам). */
+    private static List<PlugWire> plugWires(LanData data, BlockPos dev) {
+        List<PlugWire> out = new ArrayList<>();
+        for (Direction face : Direction.Plane.HORIZONTAL) {
+            BlockPos cell = dev.relative(face);
+            long[] here = data.cable(cell.asLong());
+            if (here == null) continue;
+            Direction toward = face.getOpposite();
+            for (int j = 0; j < here.length; j++) {
+                Wire w = Wire.unpack(here[j]);
+                int k = w.index(toward);
+                if (k >= 0 && w.port(k) >= 0) out.add(new PlugWire(cell.immutable(), j, w.port(k)));
+            }
+        }
+        return out;
+    }
+
+    /** Порты, в которые что-то воткнуто: кабель с вилкой или патч-корд. */
     public static List<Integer> usedPorts(LanData data, BlockPos dev, LanData.Device d) {
         List<Integer> out = new ArrayList<>();
-        for (Direction face : Direction.Plane.HORIZONTAL) {
-            if ((d.mask() & Wire.bit(face)) == 0) continue;
-            int[] wires = data.cable(dev.relative(face).asLong());
-            if (wires == null) continue;
-            boolean[] lanes = new boolean[4];
-            for (int packed : wires) {
-                Wire w = Wire.unpack(packed);
-                if ((w.plugs & Wire.bit(face.getOpposite())) != 0) lanes[w.laneToward(face)] = true;
-            }
-            for (int lane = 0; lane < 4; lane++) if (lanes[lane]) out.add(cablePort(face, lane));
-        }
+        for (PlugWire pw : plugWires(data, dev)) if (pw.port() < LanData.CABLE_PORTS && !out.contains(pw.port())) out.add(pw.port());
         for (int port = LanData.CABLE_PORTS; port < LanData.PORTS; port++) if (data.cordAt(dev, port)) out.add(port);
+        java.util.Collections.sort(out);
         return out;
     }
 
     private static long key(BlockPos p, int wire) {
-        return p.asLong() * 4 + wire;
+        return p.asLong() * 64 + wire;
     }
 
-    /** Куда ведёт провод в сторону d: в соседний блок, на блок выше (подъём по стенке) или ниже (спуск). */
-    static BlockPos next(BlockPos p, Wire w, Direction d) {
-        int bit = Wire.bit(d);
-        BlockPos n = p.relative(d);
-        if ((w.ups & bit) != 0) return n.above();
-        if ((w.downs & bit) != 0) return n.below();
-        return n;
+    /** Куда ведёт соединение провода w клетки p в сторону i: клетка и грань провода на том конце (null — никуда). */
+    static Object[] target(BlockPos p, Wire w, int i) {
+        Direction d = w.dirs()[i];
+        return switch (w.conn[i]) {
+            case Wire.FLAT -> new Object[]{p.relative(d), w.face};
+            case Wire.INNER -> new Object[]{p, d};
+            case Wire.OUTER -> new Object[]{p.relative(d).relative(w.face), d.getOpposite()};
+            default -> null;
+        };
     }
 
     /**
-     * Пройти от порта устройства по проводам, патч-кордам и сквозь патч-панели; собрать порты других устройств.
-     * Длина — блоки кабеля (корд считается за 2): для меди до 100, для чистой оптики до 2000.
+     * Пройти от порта устройства по проводам, лоткам, патч-кордам и сквозь патч-панели; собрать порты других устройств.
+     * Длина — клетки кабеля (корд считается за 2): для меди до 100, для чистой оптики до 2000.
      */
     public static Segment explore(LanData data, BlockPos dev, int port) {
         Set<LanData.Plug> out = new HashSet<>();
@@ -315,7 +317,7 @@ public final class LanManager {
         seed(data, dev, port, wires, plugs, done, cordCells);
         while (!wires.isEmpty() || !plugs.isEmpty() || !trayq.isEmpty()) {
             while (!trayq.isEmpty()) {
-                // Провод в лотке: соседние лотки во все стороны и провода на полу того же цвета
+                // Провод в лотке: соседние лотки во все стороны и провода, которые входят в лоток
                 long[] cur = trayq.poll();
                 BlockPos p = BlockPos.of(cur[0]);
                 cells.add(cur[0]);
@@ -329,12 +331,12 @@ public final class LanManager {
                         for (int t : tray) if (t == tw && trayDone.add(n.asLong() * 32 + t)) trayq.add(new long[]{n.asLong(), t});
                         continue;
                     }
-                    if (!d.getAxis().isHorizontal()) continue;
-                    int[] other = data.cable(n.asLong());
+                    long[] other = data.cable(n.asLong());
                     if (other == null) continue;
                     for (int j = 0; j < other.length; j++) {
                         Wire o = Wire.unpack(other[j]);
-                        if (o.color == (tw & 15) && o.fiber == ((tw & 16) != 0) && (o.dirs & Wire.bit(d.getOpposite())) != 0
+                        int k = o.index(d.getOpposite());
+                        if (k >= 0 && o.conn[k] == Wire.FLAT && o.color == (tw & 15) && o.fiber == ((tw & 16) != 0)
                                 && done.add(key(n, j))) {
                             wires.add(new long[]{n.asLong(), j});
                         }
@@ -346,30 +348,35 @@ public final class LanManager {
                 BlockPos p = BlockPos.of(cur[0]);
                 cells.add(cur[0]);
                 if (cells.size() + cordCells[0] > MAX_FIBER + 1) return new Segment(port, out, false);
-                int[] here = data.cable(cur[0]);
+                long[] here = data.cable(cur[0]);
                 if (here == null || cur[1] >= here.length) continue;
                 Wire w = Wire.unpack(here[(int) cur[1]]);
                 if (!w.fiber) copper[0] = true;
-                for (Direction d : Direction.Plane.HORIZONTAL) {
-                    int bit = Wire.bit(d);
-                    if ((w.dirs & bit) == 0) continue;
-                    if ((w.plugs & bit) != 0) {
-                        plugs.add(new LanData.Plug(p.relative(d).immutable(), cablePort(d.getOpposite(), w.laneToward(d))));
+                Direction[] ds = w.dirs();
+                for (int i = 0; i < 4; i++) {
+                    Direction d = ds[i];
+                    if (w.port(i) >= 0) {
+                        plugs.add(new LanData.Plug(p.relative(d).immutable(), w.port(i)));
                         continue;
                     }
-                    BlockPos n = next(p, w, d);
-                    int[] tray = data.tray(n.asLong());
-                    if (tray != null) {
-                        int tw = w.color | (w.fiber ? 16 : 0);
-                        for (int t : tray) if (t == tw && trayDone.add(n.asLong() * 32 + t)) trayq.add(new long[]{n.asLong(), t});
-                        continue;
+                    Object[] t = target(p, w, i);
+                    if (t == null) continue;
+                    BlockPos n = (BlockPos) t[0];
+                    Direction face = (Direction) t[1];
+                    if (w.conn[i] == Wire.FLAT) {
+                        int[] tray = data.tray(n.asLong());
+                        if (tray != null) {
+                            int tw = w.color | (w.fiber ? 16 : 0);
+                            for (int tt : tray) if (tt == tw && trayDone.add(n.asLong() * 32 + tt)) trayq.add(new long[]{n.asLong(), tt});
+                            continue;
+                        }
                     }
-                    int[] other = data.cable(n.asLong());
+                    long[] other = data.cable(n.asLong());
                     if (other == null) continue;
-                    int lane = w.laneToward(d);
+                    int edge = Wire.edgeAxis(w.face, d).ordinal();
                     for (int j = 0; j < other.length; j++) {
                         Wire o = Wire.unpack(other[j]);
-                        if (o.sameKind(w) && o.laneToward(d.getOpposite()) == lane && done.add(key(n, j))) {
+                        if (o.face == face && o.sameKind(w) && o.lane[edge] == w.lane[edge] && done.add(key(n, j))) {
                             wires.add(new long[]{n.asLong(), j});
                         }
                     }
@@ -381,15 +388,12 @@ public final class LanManager {
                 LanData.Device d = data.device(pl.pos());
                 if (d == null) continue;
                 if (d.passive()) {
-                    // Патч-панель: канал (дорожка) спереди = он же сзади = он же в корде — идём дальше насквозь
-                    int ch = pl.port() % 4;
-                    for (Direction face : Direction.Plane.HORIZONTAL) {
-                        if ((d.mask() & Wire.bit(face)) == 0) continue;
-                        LanData.Plug side = new LanData.Plug(pl.pos(), cablePort(face, ch));
-                        if (seenPlugs.add(side)) seed(data, pl.pos(), side.port(), wires, plugs, done, cordCells);
+                    // Патч-панель: гнездо k спереди = гнездо k сзади = корд k — идём дальше насквозь
+                    int ch = pl.port() < LanData.CABLE_PORTS ? pl.port() % PatchPanelBlock.CHANNELS : pl.port() - LanData.CABLE_PORTS;
+                    for (int side : new int[]{ch, PatchPanelBlock.CHANNELS + ch, LanData.CABLE_PORTS + ch}) {
+                        LanData.Plug other = new LanData.Plug(pl.pos(), side);
+                        if (seenPlugs.add(other)) seed(data, pl.pos(), side, wires, plugs, done, cordCells);
                     }
-                    LanData.Plug cordSide = new LanData.Plug(pl.pos(), LanData.CABLE_PORTS + ch);
-                    if (seenPlugs.add(cordSide)) seed(data, pl.pos(), cordSide.port(), wires, plugs, done, cordCells);
                 } else {
                     out.add(pl);
                 }
@@ -399,21 +403,12 @@ public final class LanManager {
         return new Segment(port, out, length <= (copper[0] ? MAX_SEGMENT : MAX_FIBER));
     }
 
-    /** Что воткнуто в порт: провода с вилкой на этой дорожке этой стороны и патч-корды. */
+    /** Что воткнуто в порт: провода с вилкой в этот порт и патч-корды. */
     private static void seed(LanData data, BlockPos dev, int port, ArrayDeque<long[]> wires, ArrayDeque<LanData.Plug> plugs,
                              Set<Long> done, int[] cordCells) {
         if (port < LanData.CABLE_PORTS) {
-            Direction face = portFace(port);
-            int lane = port % 4;
-            BlockPos cp = dev.relative(face);
-            int[] here = data.cable(cp.asLong());
-            if (here != null) {
-                for (int i = 0; i < here.length; i++) {
-                    Wire w = Wire.unpack(here[i]);
-                    if ((w.plugs & Wire.bit(face.getOpposite())) != 0 && w.laneToward(face) == lane && done.add(key(cp, i))) {
-                        wires.add(new long[]{cp.asLong(), i});
-                    }
-                }
+            for (PlugWire pw : plugWires(data, dev)) {
+                if (pw.port() == port && done.add(key(pw.cell(), pw.index()))) wires.add(new long[]{pw.cell().asLong(), pw.index()});
             }
         }
         for (LanData.Cord c : data.cords(dev)) {

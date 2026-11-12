@@ -59,14 +59,21 @@ public final class SwitchPorts {
         BlockState state = level.getBlockState(pos);
         Map<Integer, LanManager.Segment> used = new HashMap<>();
         for (int port : LanManager.usedPorts(data, pos, d)) used.put(port, LanManager.explore(data, pos, port));
+        List<LanDevice.Socket> socks = state.getBlock() instanceof LanDevice dev ? dev.sockets(state) : List.of();
         for (int port = 0; port < LanData.PORTS; port++) {
-            boolean exists = port < LanData.CABLE_PORTS && (d.mask() & Wire.bit(LanManager.portFace(port))) != 0;
+            boolean exists = port < LanData.CABLE_PORTS && port < socks.size();
             LanManager.Segment seg = used.get(port);
             if (!exists && seg == null) continue;
-            // У стоечного коммутатора 16 гнёзд: показываем только занятые, чтобы окно не было бесконечным
+            // У стоечного коммутатора 12 гнёзд: показываем только занятые, чтобы окно не было бесконечным
             if (d.type() == LanData.RACK_SWITCH && seg == null) continue;
-            char side = port < LanData.CABLE_PORTS ? side(state, LanManager.portFace(port)) : 'C';
-            int number = port < LanData.CABLE_PORTS ? port % 4 + 1 : port - LanData.CABLE_PORTS + 1;
+            char side = 'C';
+            int number = port - LanData.CABLE_PORTS + 1;
+            if (port < LanData.CABLE_PORTS) {
+                Direction face = port < socks.size() ? socks.get(port).face() : Direction.NORTH;
+                side = side(state, face);
+                number = 1;
+                for (int j = 0; j < port && j < socks.size(); j++) if (socks.get(j).face() == face) number++;
+            }
             String device = "";
             boolean link = seg != null && seg.ok() && !seg.plugs().isEmpty();
             if (seg != null && !seg.ok()) device = "!";

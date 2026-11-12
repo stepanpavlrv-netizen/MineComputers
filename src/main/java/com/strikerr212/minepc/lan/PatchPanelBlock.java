@@ -71,6 +71,19 @@ public class PatchPanelBlock extends HorizontalDirectionalBlock implements LanDe
         return frontOrBack(state, face);
     }
 
+    /** Каналов (гнёзд на стороне): порт k спереди, CHANNELS + k сзади, патч-корд — LanData.CABLE_PORTS + k. */
+    public static final int CHANNELS = 6;
+
+    /** 6 гнёзд спереди и 6 сзади, гнездо k спереди соединено с гнездом k сзади. */
+    @Override
+    public java.util.List<Socket> sockets(BlockState state) {
+        Direction f = state.getValue(FACING);
+        java.util.List<Socket> out = new java.util.ArrayList<>();
+        for (int i = 0; i < CHANNELS; i++) out.add(LanDevice.local(f, false, 13 - 2 * i, 7, 0, true, true));
+        for (int i = 0; i < CHANNELS; i++) out.add(LanDevice.local(f, true, 13 - 2 * i, 7, 0, true, true));
+        return out;
+    }
+
     @Override
     public long lanBitsPerSecond(Level level, BlockPos pos, BlockState state) {
         return 10_000_000_000L;

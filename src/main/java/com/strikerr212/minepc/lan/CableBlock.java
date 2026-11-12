@@ -30,7 +30,7 @@ import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
 /**
- * Сетевой кабель: провода лежат на полу, как редстоун, до 4 в одном блоке.
+ * Сетевой кабель: провода толщиной в пиксель лежат на полу, стенах и потолке клетки, до 6 на каждой грани.
  * Ломается по одному проводу — тот, на который смотришь. ПКМ красителем — перекрасить провод.
  */
 public class CableBlock extends BaseEntityBlock {
@@ -67,18 +67,28 @@ public class CableBlock extends BaseEntityBlock {
         return level.getBlockEntity(pos) instanceof CableBlockEntity be && be.facade() != null ? Shapes.block() : Shapes.empty();
     }
 
+    /** Держится, пока хоть один провод лежит на опоре (проверяет сам блок кабеля при каждом изменении соседей). */
     @Override
     protected boolean canSurvive(BlockState state, LevelReader level, BlockPos pos) {
-        BlockPos below = pos.below();
-        return level.getBlockState(below).isFaceSturdy(level, below, Direction.UP);
+        return true;
     }
 
     @Override
     protected BlockState updateShape(BlockState state, Direction dir, BlockState neighbor, LevelAccessor level,
                                      BlockPos pos, BlockPos neighborPos) {
-        if (dir == Direction.DOWN && !canSurvive(state, level, pos)) return Blocks.AIR.defaultBlockState();
-        // Любой сосед (и блок сверху — он может закрыть подъём по стенке) — пересчитать соединения
-        if (!level.isClientSide() && level.getBlockEntity(pos) instanceof CableBlockEntity be) be.reconnect();
+        if (!level.isClientSide() && level.getBlockEntity(pos) instanceof CableBlockEntity be) {
+            // Убрали опору — провода с этой грани падают предметами
+            if (be.facade() == null) {
+                for (Wire w : new java.util.ArrayList<>(be.wires())) {
+                    if (w.face == dir && !be.supported(w)) {
+                        be.remove(w);
+                        if (level instanceof Level l) popResource(l, pos, CableBlockEntity.item(w));
+                    }
+                }
+                if (be.wires().isEmpty()) return Blocks.AIR.defaultBlockState();
+            }
+            be.reconnect();
+        }
         return state;
     }
 
@@ -98,13 +108,8 @@ public class CableBlock extends BaseEntityBlock {
         super.onRemove(state, level, pos, newState, moved);
         if (!state.is(newState.getBlock()) && level instanceof net.minecraft.server.level.ServerLevel server) {
             LanData.get(server).removeCable(pos);
-            // Блока уже нет: провода на блок выше/ниже (подъёмы по стенкам) должны отцепиться; соседи на том же уровне
-            // узнают сами (updateShape)
-            for (Direction d : Direction.Plane.HORIZONTAL) {
-                for (BlockPos n : new BlockPos[]{pos.relative(d).above(), pos.relative(d).below()}) {
-                    if (level.isLoaded(n) && level.getBlockEntity(n) instanceof CableBlockEntity other) other.reconnect();
-                }
-            }
+            // Блока уже нет: провода вокруг (и по диагонали — внешние углы) должны отцепиться
+            CableBlockEntity.reconnectAround(level, pos);
         }
     }
 
@@ -123,12 +128,13 @@ public class CableBlock extends BaseEntityBlock {
         if (level.getBlockEntity(pos) instanceof CableBlockEntity be && be.wires().size() > 1) {
             HitResult hit = player.pick(player.blockInteractionRange(), 1f, false);
             Vec3 at = hit.getLocation().subtract(pos.getX(), pos.getY(), pos.getZ()).scale(16);
-            Wire w = be.nearest(at.x, at.z);
+            Wire w = be.nearest(at.x, at.y, at.z);
             if (w != null) {
                 if (!level.isClientSide) {
                     be.remove(w);
+                    be.reconnect();
                     be.reconnectNeighbours();
-                    if (!player.isCreative()) popResource(level, pos, new ItemStack(w.fiber ? ModItems.FIBER.get() : ModItems.CABLE.get()));
+                    if (!player.isCreative()) popResource(level, pos, CableBlockEntity.item(w));
                     level.playSound(null, pos, SoundEvents.WOOL_BREAK, SoundSource.BLOCKS, 1f, 1f);
                 }
                 return false;
@@ -155,7 +161,7 @@ public class CableBlock extends BaseEntityBlock {
         }
         if (stack.getItem() instanceof DyeItem dye && level.getBlockEntity(pos) instanceof CableBlockEntity be) {
             Vec3 at = hit.getLocation().subtract(pos.getX(), pos.getY(), pos.getZ()).scale(16);
-            Wire w = be.nearest(at.x, at.z);
+            Wire w = be.nearest(at.x, at.y, at.z);
             int color = dye.getDyeColor().getId();
             if (w == null || w.color == color) return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
             if (!level.isClientSide) {

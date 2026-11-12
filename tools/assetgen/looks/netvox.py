@@ -77,7 +77,7 @@ def switch(body=(52, 56, 62), ports=6):
     return m
 
 def rack_switch():
-    """Стоечный коммутатор: два ряда по 12 портов, лампочки, патч-корды свисают разноцветными петлями."""
+    """Стоечный коммутатор: два ряда по 6 гнёзд (медь и оптика), над каждым лампочка."""
     m = Model()
     frame = (40, 43, 50)
     m.box(0, 0, 0, 16, 16, 16, noise(frame, 3, 211))
@@ -89,14 +89,6 @@ def rack_switch():
             m.v[(x, unit_y + 1, F)] = (96, 100, 108)
             m.v[(x, unit_y, F)] = (18, 18, 20) if x % 2 == 0 else (96, 100, 108)
             m.v[(x, unit_y + 2, F)] = glow((80, 255, 120)) if x % 2 == 0 and r.random() < 0.8 else (60, 64, 70)
-        # патч-корды: из гнезда вниз петлёй
-        for k, x in enumerate(range(2, 14, 2)):
-            if r.random() < 0.25: continue
-            c = cols[(k + unit_y) % len(cols)]
-            drop = 2 + (k % 3)
-            m.v[(x, unit_y, F + 1)] = PLUG
-            for d in range(1, drop + 1):
-                m.v[(x, unit_y - d, F + 1)] = c
     for y in range(1, 5):                                       # блок питания снизу
         for x in range(2, 14):
             m.v[(x, y, F)] = (30, 32, 36) if (x + y) % 2 else (54, 58, 64)
@@ -113,6 +105,10 @@ def router(body=(236, 238, 242)):
     for x in (4, 8, 11):
         for y in range(2, 9):
             m.v[(x, y, 5)] = (40, 42, 48) if y > 2 else (90, 92, 98)
+    # сзади: синее гнездо WAN и четыре LAN с жёлтыми метками
+    for i, x in enumerate((4, 6, 8, 10, 12)):
+        m.v[(x, 0, 5)] = (14, 14, 16)
+        m.v[(x, 1, 5)] = (60, 110, 210) if i == 0 else (230, 190, 60)
     m.paint(lambda x, y, z: y == 1 and 6 <= x <= 9 and 7 <= z <= 9 and (x + z) % 2 == 0, sh(body, 0.85))
     return m
 

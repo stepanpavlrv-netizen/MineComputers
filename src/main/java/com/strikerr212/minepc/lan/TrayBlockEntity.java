@@ -115,8 +115,8 @@ public class TrayBlockEntity extends BlockEntity {
             if (!level.isLoaded(n)) continue;
             BlockEntity be = level.getBlockEntity(n);
             if (be instanceof TrayBlockEntity) c |= 1 << d.ordinal();
-            else if (be instanceof CableBlockEntity cable && d.getAxis().isHorizontal()) {
-                for (Wire w : cable.wires()) if (has(w)) c |= 1 << d.ordinal();
+            else if (be instanceof CableBlockEntity cable) {
+                for (Wire w : cable.wires()) if (has(w) && w.index(d.getOpposite()) >= 0) c |= 1 << d.ordinal();
             }
         }
         if (c != conn) {

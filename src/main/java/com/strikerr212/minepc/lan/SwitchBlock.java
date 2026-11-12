@@ -23,7 +23,7 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 
 /**
  * Коммутатор: соединяет все кабели, вставленные в его гнёзда, и усиливает сигнал (+1 тик к задержке).
- * Настольный — 8 гнёзд: по 4 спереди и сзади. Стоечный — целый блок, по 4 гнезда с каждой стороны,
+ * Настольный — 6 гнёзд спереди. Стоечный — целый блок, два ряда по 6 гнёзд спереди (медь и оптика),
  * 10 Гбит/с; стоечные коммутаторы вплотную друг к другу работают как один.
  */
 public class SwitchBlock extends HorizontalDirectionalBlock implements LanDevice, net.minecraft.world.level.block.EntityBlock {
@@ -68,17 +68,30 @@ public class SwitchBlock extends HorizontalDirectionalBlock implements LanDevice
         return Kind.SWITCH;
     }
 
+    /** Гнёзда только спереди: у настольного 6 в ряд, у стоечного два ряда по 6 (медь и оптика). */
     @Override
     public boolean acceptsCable(BlockState state, Direction face) {
-        if (!face.getAxis().isHorizontal()) return false;
-        if (rack) return true;
-        Direction f = state.getValue(FACING);
-        return face == f || face == f.getOpposite();
+        return face == state.getValue(FACING);
     }
 
     @Override
     public boolean acceptsFiber(BlockState state, Direction face) {
-        return rack && face.getAxis().isHorizontal();
+        return rack && face == state.getValue(FACING);
+    }
+
+    /** Порт 1 — левый, если смотреть на лицевую сторону (как подписано в программе switch). */
+    @Override
+    public java.util.List<Socket> sockets(BlockState state) {
+        Direction f = state.getValue(FACING);
+        java.util.List<Socket> out = new java.util.ArrayList<>();
+        if (rack) {
+            for (int row : new int[]{12, 7}) {
+                for (int i = 0; i < 6; i++) out.add(LanDevice.local(f, false, 13 - 2 * i, row, 0, true, true));
+            }
+        } else {
+            for (int i = 0; i < 6; i++) out.add(LanDevice.local(f, false, 13 - 2 * i, 1, 4, true, false));
+        }
+        return out;
     }
 
     @Override

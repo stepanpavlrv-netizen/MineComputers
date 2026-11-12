@@ -478,22 +478,52 @@ public class CiScreenshots {
         });
     }
 
-    private static void wire(ServerLevel level, BlockPos pos, int color, int xi, int zi) {
+    /** Провод на грани face клетки pos с дорожками a, b (по осям плоскости грани в порядке X, Y, Z). */
+    private static void wire(ServerLevel level, BlockPos pos, Direction face, int color, boolean fiber, int a, int b) {
         if (!(level.getBlockState(pos).getBlock() instanceof com.strikerr212.minepc.lan.CableBlock)) {
             level.setBlockAndUpdate(pos, ModBlocks.CABLE.get().defaultBlockState());
         }
-        if (level.getBlockEntity(pos) instanceof com.strikerr212.minepc.lan.CableBlockEntity be && be.free(xi, zi)) {
-            be.add(new com.strikerr212.minepc.lan.Wire(color, xi, zi));
+        if (level.getBlockEntity(pos) instanceof com.strikerr212.minepc.lan.CableBlockEntity be && be.free(face, a, b)) {
+            be.add(com.strikerr212.minepc.lan.CableBlockEntity.make(color, fiber, face, a, b));
         }
     }
 
-    /** Сеть: два компьютера с мониторами, коммутатор между ними, кабели в две дорожки; оба запускают chat. */
+    /** Провод на полу: дорожка по X (для хода север–юг) и по Z (для хода запад–восток). */
+    private static void wire(ServerLevel level, BlockPos pos, int color, int lx, int lz) {
+        wire(level, pos, Direction.DOWN, color, false, lx, lz);
+    }
+
+    /** Пересчитать все провода и лотки в коробке (дважды — соединения зависят друг от друга). */
+    private static void reconnectArea(ServerLevel level, BlockPos from, BlockPos to) {
+        for (int pass = 0; pass < 3; pass++) {
+            for (BlockPos q : BlockPos.betweenClosed(from, to)) {
+                if (level.getBlockEntity(q) instanceof com.strikerr212.minepc.lan.CableBlockEntity be) be.reconnect();
+                if (level.getBlockEntity(q) instanceof com.strikerr212.minepc.lan.TrayBlockEntity t) t.reconnect();
+            }
+        }
+    }
+
+    /** Порт, в который воткнут провод клетки cell в сторону toward (первый такой провод), или -1. */
+    private static int plugPort(ServerLevel level, BlockPos cell, Direction toward, boolean fiber) {
+        if (level.getBlockEntity(cell) instanceof com.strikerr212.minepc.lan.CableBlockEntity be) {
+            for (var w : be.wires()) {
+                int k = w.index(toward);
+                if (w.fiber == fiber && k >= 0 && w.port(k) >= 0) return w.port(k);
+            }
+        }
+        return -1;
+    }
+
+    /**
+     * Сеть: два компьютера и коммутатор, кабели 1×1 вдоль задних стенок в гнёзда коммутатора; третий компьютер за
+     * кирпичной стенкой — провод поднимается по ней, идёт поверху и спускается; роутер Wi-Fi и ноутбук без кабеля.
+     */
     private static void placeNetwork() {
         var server = Minecraft.getInstance().getSingleplayerServer();
         ServerPlayer p = server.getPlayerList().getPlayers().get(0);
         ServerLevel level = p.serverLevel();
         BlockPos n = casePos.east().south(26).west(3);
-        for (int dx = -2; dx <= 9; dx++) {
+        for (int dx = -3; dx <= 9; dx++) {
             for (int dz = -9; dz <= 7; dz++) {
                 level.setBlockAndUpdate(n.offset(dx, -1, dz), net.minecraft.world.level.block.Blocks.SMOOTH_STONE.defaultBlockState());
                 for (int dy = 0; dy <= 3; dy++) level.setBlockAndUpdate(n.offset(dx, dy, dz), net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
@@ -506,36 +536,38 @@ public class CiScreenshots {
         for (BlockPos c : new BlockPos[]{netA, netB}) {
             put(level, c.above(), ModBlocks.MONITOR.get().defaultBlockState().setValue(com.strikerr212.minepc.block.MonitorBlock.KEYBOARD, true));
         }
-        level.setBlockAndUpdate(n.east(3), ModBlocks.NETWORK_SWITCH.get().defaultBlockState()
-                .setValue(com.strikerr212.minepc.lan.SwitchBlock.FACING, Direction.EAST));
+        // Коммутатор позади, лицом к ряду кабелей вдоль задних стенок
+        BlockPos sw = n.east(3).south(2), front = sw.north();
+        level.setBlockAndUpdate(sw, ModBlocks.NETWORK_SWITCH.get().defaultBlockState()
+                .setValue(com.strikerr212.minepc.lan.SwitchBlock.FACING, Direction.NORTH));
         int blue = net.minecraft.world.item.DyeColor.BLUE.getId(), orange = net.minecraft.world.item.DyeColor.ORANGE.getId();
-        for (int dx : new int[]{1, 2, 4, 5}) wire(level, n.east(dx), blue, 1, 1);
-        for (int dx : new int[]{1, 2}) wire(level, n.east(dx), orange, 2, 2);          // вторая дорожка: отдельная сеть рядом
-        wire(level, n.east(4), orange, 2, 2);
-        // Третий компьютер за стенкой: провод ответвляется, поднимается по стенке, идёт поверху и спускается
-        BlockPos br = n.east(4);
-        level.setBlockAndUpdate(br.south(3), net.minecraft.world.level.block.Blocks.BRICKS.defaultBlockState());
-        level.setBlockAndUpdate(br.south(3).east(), net.minecraft.world.level.block.Blocks.BRICKS.defaultBlockState());
-        level.setBlockAndUpdate(br.south(3).west(), net.minecraft.world.level.block.Blocks.BRICKS.defaultBlockState());
-        netC = br.south(4).east();
+        // A → коммутатор
+        for (int dx = 0; dx <= 3; dx++) wire(level, n.east(dx).south(), blue, 0, 1);
+        // B → коммутатор
+        for (int dx = 3; dx <= 6; dx++) wire(level, n.east(dx).south(), blue, 1, 2);
+        // C: из коммутатора на север, вверх по кирпичной стенке, поверху и вниз к компьютеру за ней
+        wire(level, front, blue, 2, 3);
+        wire(level, n.east(3), blue, 2, 0);
+        wire(level, n.east(3).north(), blue, 2, 0);
+        for (int dx = 2; dx <= 4; dx++) level.setBlockAndUpdate(n.east(dx).north(2), net.minecraft.world.level.block.Blocks.BRICKS.defaultBlockState());
+        wire(level, n.east(3).north(), Direction.NORTH, blue, false, 2, 0);
+        wire(level, n.east(3).north(2).above(), blue, 2, 0);
+        wire(level, n.east(3).north(3), Direction.SOUTH, blue, false, 2, 0);
+        wire(level, n.east(3).north(3), blue, 2, 0);
+        netC = n.east(3).north(4);
         fillCase(level, netC, 2);
         put(level, netC.above(), ModBlocks.MONITOR.get().defaultBlockState().setValue(com.strikerr212.minepc.block.MonitorBlock.KEYBOARD, true));
-        for (BlockPos c : new BlockPos[]{br.south(), br.south(2), br.south(3).above(), br.south(4)}) wire(level, c, blue, 1, 1);
-        for (int pass = 0; pass < 2; pass++) {
-            for (int dx = 0; dx <= 6; dx++) {
-                for (int dz = 0; dz <= 4; dz++) {
-                    for (int dy = 0; dy <= 1; dy++) {
-                        if (level.getBlockEntity(n.offset(dx, dy, dz)) instanceof com.strikerr212.minepc.lan.CableBlockEntity be) be.reconnect();
-                    }
-                }
-            }
-        }
-        // Wi-Fi: роутер на том же проводе, ноутбук-компьютер без кабеля с USB-адаптером
-        BlockPos router = br.south().east();
+        // Роутер Wi-Fi: от коммутатора на восток и на север, в гнездо сзади роутера
+        wire(level, front, blue, 3, 4);
+        wire(level, n.east(4).south(), blue, 3, 4);
+        wire(level, n.east(4), blue, 3, 0);
+        BlockPos router = n.east(4).north();
         level.setBlockAndUpdate(router, ModBlocks.ROUTER.get().defaultBlockState()
                 .setValue(com.strikerr212.minepc.lan.RouterBlock.FACING, Direction.NORTH));
         if (level.getBlockEntity(router) instanceof com.strikerr212.minepc.lan.RouterBlockEntity r) r.apply("Office", "minecraft1", 32);
-        if (level.getBlockEntity(br.south()) instanceof com.strikerr212.minepc.lan.CableBlockEntity be) be.reconnect();
+        // Рядом — отдельная оранжевая сеть: два провода по стене, просто для вида
+        for (int dz = 0; dz <= 2; dz++) level.setBlockAndUpdate(n.west(2).south(dz), net.minecraft.world.level.block.Blocks.BRICKS.defaultBlockState());
+        for (int dz = 0; dz <= 2; dz++) wire(level, n.west().south(dz), Direction.WEST, orange, false, 0, 5);
         netD = n.offset(-2, 0, 6);
         fillCase(level, netD, 3);
         put(level, netD.above(), ModBlocks.MONITOR.get().defaultBlockState().setValue(com.strikerr212.minepc.block.MonitorBlock.KEYBOARD, true));
@@ -544,22 +576,12 @@ public class CiScreenshots {
                     new net.minecraft.world.item.ItemStack(com.strikerr212.minepc.registry.ModItems.WIFI_N.get()));
         }
         netRouter = router;
-        p.teleportTo(level, n.getX() + 3.5, n.getY() + 1.5, n.getZ() - 4.5, 0f, 20f);
+        reconnectArea(level, n.offset(-3, -1, -5), n.offset(8, 3, 3));
+        p.teleportTo(level, n.getX() + 3.5, n.getY() + 3.5, n.getZ() - 9.5, 0f, 28f);
     }
 
     private static BlockPos lanBase = BlockPos.ZERO, lanE = BlockPos.ZERO, lanF = BlockPos.ZERO, lanJ1 = BlockPos.ZERO,
             lanJ2 = BlockPos.ZERO, radio1 = BlockPos.ZERO;
-
-    private static void fiber(ServerLevel level, BlockPos pos, int xi, int zi) {
-        if (!(level.getBlockState(pos).getBlock() instanceof com.strikerr212.minepc.lan.CableBlock)) {
-            level.setBlockAndUpdate(pos, ModBlocks.CABLE.get().defaultBlockState());
-        }
-        if (level.getBlockEntity(pos) instanceof com.strikerr212.minepc.lan.CableBlockEntity be && be.free(xi, zi)) {
-            var w = new com.strikerr212.minepc.lan.Wire(net.minecraft.world.item.DyeColor.YELLOW.getId(), xi, zi);
-            w.fiber = true;
-            be.add(w);
-        }
-    }
 
     private static void tray(ServerLevel level, BlockPos pos) {
         level.setBlockAndUpdate(pos, ModBlocks.TRAY.get().defaultBlockState());
@@ -596,16 +618,19 @@ public class CiScreenshots {
         level.setBlockAndUpdate(b.west(), panel);
         level.setBlockAndUpdate(b, rack);
         level.setBlockAndUpdate(b.east(5), rack);
-        int blue = net.minecraft.world.item.DyeColor.BLUE.getId();
-        for (int dx = 1; dx <= 4; dx++) fiber(level, b.east(dx), 1, 1);
-        lanF = b.east(6).south();
+        int blue = net.minecraft.world.item.DyeColor.BLUE.getId(), yellow = net.minecraft.world.item.DyeColor.YELLOW.getId();
+        // Оптика: из гнезда первого стоечного коммутатора вдоль фасада во второй
+        for (int dx = 0; dx <= 5; dx++) wire(level, b.east(dx).north(), Direction.DOWN, yellow, true, 0, 1);
+        // Компьютер F — сбоку от второго коммутатора, медью из его гнезда
+        lanF = b.east(7).north();
         pcWithMonitor(level, lanF);
-        wire(level, b.east(5).south(), blue, 1, 1);
+        wire(level, b.east(5).north(), blue, 1, 2);
+        wire(level, b.east(6).north(), blue, 1, 2);
+        // Компьютер E — сзади патч-панели; кабель под маскировкой
         lanE = b.south(2);
         pcWithMonitor(level, lanE);
         wire(level, b.west().south(), blue, 1, 1);
         wire(level, b.west().south(2), blue, 1, 1);
-        // Кабель за панелью спрятан под блоком
         if (level.getBlockEntity(b.west().south()) instanceof com.strikerr212.minepc.lan.CableBlockEntity be) {
             be.setFacade(net.minecraft.world.level.block.Blocks.STONE_BRICKS.defaultBlockState());
         }
@@ -628,33 +653,22 @@ public class CiScreenshots {
         BlockPos far = radio1.east(300);
         level.setBlockAndUpdate(far, radio);
         level.setBlockAndUpdate(far.above(), ModBlocks.MAST.get().defaultBlockState());
-        // Пересчитать провода, потом корд и VLAN
-        for (int pass = 0; pass < 2; pass++) {
-            for (int dx = -2; dx <= 16; dx++) {
-                for (int dz = -1; dz <= 5; dz++) {
-                    for (int dy = 0; dy <= 2; dy++) {
-                        BlockPos q = b.offset(dx, dy, dz);
-                        if (level.getBlockEntity(q) instanceof com.strikerr212.minepc.lan.CableBlockEntity be) be.reconnect();
-                        if (level.getBlockEntity(q) instanceof com.strikerr212.minepc.lan.TrayBlockEntity t) t.reconnect();
-                    }
-                }
-            }
-        }
+        reconnectArea(level, b.offset(-2, 0, -1), b.offset(16, 2, 5));
         var data = com.strikerr212.minepc.lan.LanData.get(level);
         com.strikerr212.minepc.lan.LanManager.updateDevice(level, b.west());
         com.strikerr212.minepc.lan.LanManager.updateDevice(level, b);
-        data.addCord(new com.strikerr212.minepc.lan.LanData.Cord(b.west(), com.strikerr212.minepc.lan.LanData.CABLE_PORTS + 1, b,
+        // Корд: из того канала патч-панели, куда воткнут кабель от E, в первый корд-порт коммутатора
+        int panelPort = Math.max(0, plugPort(level, b.west().south(), Direction.NORTH, false));
+        int ch = panelPort % com.strikerr212.minepc.lan.PatchPanelBlock.CHANNELS;
+        data.addCord(new com.strikerr212.minepc.lan.LanData.Cord(b.west(), com.strikerr212.minepc.lan.LanData.CABLE_PORTS + ch, b,
                 com.strikerr212.minepc.lan.LanData.CABLE_PORTS, net.minecraft.world.item.DyeColor.LIME.getId()));
         com.strikerr212.minepc.lan.CordList.refresh(level, b.west());
         com.strikerr212.minepc.lan.CordList.refresh(level, b);
         int lime = net.minecraft.world.item.DyeColor.LIME.getId() + 1;
-        int eastFiber = com.strikerr212.minepc.lan.LanManager.cablePort(Direction.EAST, 1);
-        int westFiber = com.strikerr212.minepc.lan.LanManager.cablePort(Direction.WEST, 1);
-        int southPort = com.strikerr212.minepc.lan.LanManager.cablePort(Direction.SOUTH, 1);
         data.setPort(b, com.strikerr212.minepc.lan.LanData.CABLE_PORTS, true, lime);
-        data.setPort(b, eastFiber, true, lime);
-        data.setPort(b.east(5), westFiber, true, lime);
-        data.setPort(b.east(5), southPort, true, lime);
+        data.setPort(b, plugPort(level, b.north(), Direction.SOUTH, true), true, lime);
+        data.setPort(b.east(5), plugPort(level, b.east(5).north(), Direction.SOUTH, true), true, lime);
+        data.setPort(b.east(5), plugPort(level, b.east(5).north(), Direction.SOUTH, false), true, lime);
         p.teleportTo(level, b.getX() + 7.5, b.getY() + 1.5, b.getZ() - 8.5, 0f, 22f);
     }
 

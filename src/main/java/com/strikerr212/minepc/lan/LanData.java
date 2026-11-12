@@ -25,7 +25,7 @@ public final class LanData extends SavedData {
 
     public static final int COMPUTER = 0, DESK_SWITCH = 1, RACK_SWITCH = 2, ROUTER = 3, PANEL = 4, RADIO = 5;
 
-    /** Портов у устройства: 16 под кабели (4 стороны × 4 дорожки) и 8 под патч-корды. */
+    /** Портов у устройства: 16 под кабели (гнёзда по порядку, {@link LanDevice#sockets}) и 8 под патч-корды. */
     public static final int CABLE_PORTS = 16, CORD_PORTS = 8, PORTS = CABLE_PORTS + CORD_PORTS;
 
     /**
@@ -73,7 +73,7 @@ public final class LanData extends SavedData {
     }
 
     private final Map<Long, WifiLink> wifi = new HashMap<>();
-    private final Map<Long, int[]> cables = new HashMap<>();
+    private final Map<Long, long[]> cables = new HashMap<>();
     /** Лотки: провода (цвет | оптика << 4). */
     private final Map<Long, int[]> trays = new HashMap<>();
     private final Map<Long, Device> devices = new HashMap<>();
@@ -95,16 +95,16 @@ public final class LanData extends SavedData {
 
     // ======================= Провода =======================
 
-    public int[] cable(long pos) {
+    public long[] cable(long pos) {
         return cables.get(pos);
     }
 
-    public void putCable(BlockPos pos, int[] wires) {
+    public void putCable(BlockPos pos, long[] wires) {
         if (wires.length == 0) {
             removeCable(pos);
             return;
         }
-        int[] old = cables.put(pos.asLong(), wires.clone());
+        long[] old = cables.put(pos.asLong(), wires.clone());
         if (old == null || !Arrays.equals(old, wires)) bump();
     }
 
@@ -272,7 +272,15 @@ public final class LanData extends SavedData {
         ListTag list = tag.getList("cables", Tag.TAG_COMPOUND);
         for (int i = 0; i < list.size(); i++) {
             CompoundTag c = list.getCompound(i);
-            int[] w = c.getIntArray("w");
+            long[] w;
+            if (c.contains("l")) {
+                w = c.getLongArray("l");
+            } else {
+                // Схема мира до 0.22: старые провода (только пол) → новые; порты выберутся при загрузке чанка
+                List<Long> conv = new ArrayList<>();
+                for (int old : c.getIntArray("w")) for (Wire nw : Wire.fromLegacy(old)) conv.add(nw.packed());
+                w = conv.stream().mapToLong(Long::longValue).toArray();
+            }
             if (w.length > 0) d.cables.put(c.getLong("p"), w);
         }
         list = tag.getList("trays", Tag.TAG_COMPOUND);
@@ -305,7 +313,7 @@ public final class LanData extends SavedData {
         for (var e : cables.entrySet()) {
             CompoundTag c = new CompoundTag();
             c.putLong("p", e.getKey());
-            c.putIntArray("w", e.getValue());
+            c.putLongArray("l", e.getValue());
             list.add(c);
         }
         tag.put("cables", list);

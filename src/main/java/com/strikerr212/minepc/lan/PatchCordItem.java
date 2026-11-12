@@ -51,13 +51,23 @@ public class PatchCordItem extends Item {
         return pending(stack) != null;
     }
 
-    /** Порт для нового корда: у патч-панели — дорожка, куда кликнули; у остальных — первый свободный. -1 — нет мест. */
-    private static int pickPort(LanData data, BlockPos pos, BlockState state, LanData.Device d, Vec3 hit) {
-        if (d.passive()) {
-            Direction f = state.getValue(PatchPanelBlock.FACING);
-            double local = (f.getAxis() == Direction.Axis.Z ? hit.x - pos.getX() : hit.z - pos.getZ()) * 16;
-            int ch = Math.max(0, Math.min(3, (int) (local / 4)));
-            int port = LanData.CABLE_PORTS + ch;
+    /** Порт для нового корда: у патч-панели — канал гнезда, по которому кликнули; у остальных — первый свободный. -1 — нет мест. */
+    private static int pickPort(LanData data, BlockPos pos, BlockState state, LanData.Device d, Vec3 hit, Direction clicked) {
+        if (d.passive() && state.getBlock() instanceof LanDevice dev) {
+            List<LanDevice.Socket> socks = dev.sockets(state);
+            double lx = (hit.x - pos.getX()) * 16, ly = (hit.y - pos.getY()) * 16, lz = (hit.z - pos.getZ()) * 16;
+            int best = 0;
+            double bestD = Double.MAX_VALUE;
+            for (int i = 0; i < socks.size(); i++) {
+                LanDevice.Socket s = socks.get(i);
+                double along = s.face().getAxis() == Direction.Axis.Z ? lx : lz;
+                double dist = Math.abs(s.along() + 0.5 - along) + 0.5 * Math.abs(s.height() + 0.5 - ly) + (s.face() == clicked ? 0 : 100);
+                if (dist < bestD) {
+                    bestD = dist;
+                    best = i;
+                }
+            }
+            int port = LanData.CABLE_PORTS + best % PatchPanelBlock.CHANNELS;
             return data.cordAt(pos, port) ? -1 : port;
         }
         for (int port = LanData.CABLE_PORTS; port < LanData.PORTS; port++) if (!data.cordAt(pos, port)) return port;
@@ -90,7 +100,7 @@ public class PatchCordItem extends Item {
             return InteractionResult.CONSUME;
         }
 
-        int port = pickPort(data, pos, state, d, ctx.getClickLocation());
+        int port = pickPort(data, pos, state, d, ctx.getClickLocation(), ctx.getClickedFace());
         if (port < 0) {
             if (player != null) player.displayClientMessage(Component.translatable("message.minepc.cord.busy"), true);
             return InteractionResult.FAIL;
