@@ -405,7 +405,21 @@ public class CiScreenshots {
                 com.mojang.logging.LogUtils.getLogger().info("[CI-BMC] srv-b state={} log={}", b == null ? -1 : b.computerState(),
                         b == null ? "" : String.join(" | ", b.bmc().entries()));
             });
-            case 2710 -> mc.stop();
+            // Пароли не уходят игрокам: в данных блока для клиента нет ни пароля BMC, ни пароля Wi-Fi
+            case 2708 -> server.execute(() -> {
+                ServerLevel level = server.overworld();
+                PcCaseBlockEntity b = com.strikerr212.minepc.block.Hosts.get(level, rackPos, 1);
+                if (b == null || !(level.getBlockEntity(rackPos) instanceof com.strikerr212.minepc.block.RackBlockEntity rack)) return;
+                b.bmc().setPassword("secret-42");
+                String sent = rack.getUpdateTag(level.registryAccess()).toString();
+                String saved = rack.saveWithoutMetadata(level.registryAccess()).toString();
+                com.mojang.logging.LogUtils.getLogger().info("[CI-SECRETS] в данных для игроков пароль={} ключ bmc_password={} | в сохранении открытым текстом={} | пароль подходит={} чужой={} | старый открытый={}",
+                        sent.contains("secret-42"), sent.contains("bmc_password"), saved.contains("secret-42"),
+                        b.bmc().checkPassword("secret-42"), b.bmc().checkPassword("admin"),
+                        com.strikerr212.minepc.block.Secrets.matches("old-plain", "old-plain"));
+                b.bmc().setPassword(com.strikerr212.minepc.block.Bmc.DEFAULT_PASSWORD);
+            });
+            case 2712 -> mc.stop();
             default -> {
             }
         }

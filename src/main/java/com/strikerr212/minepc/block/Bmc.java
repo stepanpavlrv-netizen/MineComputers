@@ -31,7 +31,8 @@ public final class Bmc {
     public static final int FANS = 6;
 
     private final PcCaseBlockEntity be;
-    private String password = DEFAULT_PASSWORD;
+    /** Отпечаток пароля (см. {@link Secrets}). */
+    private String password = Secrets.hash(DEFAULT_PASSWORD);
     private final ArrayDeque<String> log = new ArrayDeque<>();
 
     Bmc(PcCaseBlockEntity be) {
@@ -50,15 +51,15 @@ public final class Bmc {
     }
 
     public boolean defaultPassword() {
-        return DEFAULT_PASSWORD.equals(password);
+        return Secrets.matches(password, DEFAULT_PASSWORD);
     }
 
     public boolean checkPassword(String pw) {
-        return password.equals(pw);
+        return Secrets.matches(password, pw);
     }
 
     public void setPassword(String pw) {
-        password = pw;
+        password = Secrets.store(pw);
         be.setChanged();
     }
 
@@ -81,7 +82,7 @@ public final class Bmc {
     }
 
     void save(CompoundTag tag) {
-        if (!defaultPassword()) tag.putString("bmc_password", password);
+        if (!defaultPassword()) tag.putString("bmc_password", Secrets.store(password));
         if (!log.isEmpty()) {
             ListTag list = new ListTag();
             for (String s : log) list.add(StringTag.valueOf(s));
@@ -90,7 +91,7 @@ public final class Bmc {
     }
 
     void load(CompoundTag tag) {
-        password = tag.contains("bmc_password") ? tag.getString("bmc_password") : DEFAULT_PASSWORD;
+        password = tag.contains("bmc_password") ? Secrets.store(tag.getString("bmc_password")) : Secrets.hash(DEFAULT_PASSWORD);
         log.clear();
         for (Tag t : tag.getList("bmc_log", Tag.TAG_STRING)) log.addLast(t.getAsString());
     }

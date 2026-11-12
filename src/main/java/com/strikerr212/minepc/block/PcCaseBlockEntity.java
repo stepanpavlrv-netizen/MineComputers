@@ -1007,8 +1007,9 @@ public class PcCaseBlockEntity extends BlockEntity implements com.strikerr212.mi
         return clientView(saveWithoutMetadata(registries));
     }
 
-    /** То, что уходит игрокам: без пароля и журнала BMC (их видно только через сам BMC). */
+    /** То, что уходит игрокам: без паролей (Wi-Fi, BMC) и журнала BMC (его видно только через сам BMC). */
     public static CompoundTag clientView(CompoundTag tag) {
+        tag.remove("wifi_password");
         tag.remove("bmc_password");
         tag.remove("bmc_log");
         return tag;

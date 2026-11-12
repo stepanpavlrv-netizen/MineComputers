@@ -21,8 +21,8 @@ import java.util.Map;
  * @param lan          встроенная сетевая карта
  * @param usb          USB-порты (флешки и Wi-Fi адаптеры)
  * @param wifi         Wi-Fi адаптеры (если включён USB)
- * @param biosPassword пароль на вход в настройки ("" — нет)
- * @param bootPassword пароль при включении ("" — нет)
+ * @param biosPassword отпечаток пароля на вход в настройки ("" — нет), см. {@link Secrets}
+ * @param bootPassword отпечаток пароля при включении ("" — нет)
  * @param powerLoss    после пропажи питания (загрузка мира): 0 — как было, 1 — включаться, 2 — оставаться выключенным
  * @param redstone     включаться по сигналу красного камня
  * @param fastBoot     быстрая загрузка: без проверки памяти и паузы на экране самотеста
@@ -67,8 +67,8 @@ public record BiosSettings(List<String> bootOrder, int cores, boolean lan, boole
         t.putBoolean("noLan", !lan);
         t.putBoolean("noUsb", !usb);
         t.putBoolean("noWifi", !wifi);
-        t.putString("biosPass", biosPassword);
-        t.putString("bootPass", bootPassword);
+        t.putString("biosPass", Secrets.store(biosPassword));   // отпечаток, не сам пароль
+        t.putString("bootPass", Secrets.store(bootPassword));
         t.putInt("powerLoss", powerLoss);
         t.putBoolean("redstone", redstone);
         t.putBoolean("fastBoot", fastBoot);
@@ -111,8 +111,8 @@ public record BiosSettings(List<String> bootOrder, int cores, boolean lan, boole
                 changes.get("lan") instanceof Boolean b ? b : lan,
                 changes.get("usb") instanceof Boolean b ? b : usb,
                 changes.get("wifi") instanceof Boolean b ? b : wifi,
-                changes.containsKey("biosPassword") && !(changes.get("biosPassword") instanceof Boolean) ? cap(text(changes.get("biosPassword"))) : biosPassword,
-                changes.containsKey("bootPassword") && !(changes.get("bootPassword") instanceof Boolean) ? cap(text(changes.get("bootPassword"))) : bootPassword,
+                changes.containsKey("biosPassword") && !(changes.get("biosPassword") instanceof Boolean) ? Secrets.store(cap(text(changes.get("biosPassword")))) : biosPassword,
+                changes.containsKey("bootPassword") && !(changes.get("bootPassword") instanceof Boolean) ? Secrets.store(cap(text(changes.get("bootPassword")))) : bootPassword,
                 changes.get("powerLoss") instanceof Number n ? Math.max(0, Math.min(2, n.intValue())) : powerLoss,
                 changes.get("redstone") instanceof Boolean b ? b : redstone,
                 changes.get("fastBoot") instanceof Boolean b ? b : fastBoot);

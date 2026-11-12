@@ -257,7 +257,7 @@ public final class CaseComputer implements Computer.Host {
     public boolean biosCheckPassword(String kind, String password) {
         BiosSettings b = bios();
         String want = "boot".equals(kind) ? b.bootPassword() : b.biosPassword();
-        return want.isEmpty() || want.equals(password);
+        return want.isEmpty() || Secrets.matches(want, password);
     }
 
     @Override
