@@ -99,6 +99,45 @@ public final class HardwarePresets {
     public static ItemStack hdd(int tier) { return stock(HardwareType.HDD, HDD, tier); }
     public static ItemStack ssd(int tier) { return stock(HardwareType.SSD, SSD, tier); }
 
+    /** Варианты заводской детали уровня tier — для шаблонов сборочного стола. */
+    public static List<Integer> stockValues(HardwareType type, int tier) {
+        int[][] table = switch (type) {
+            case MOTHERBOARD -> MOTHERBOARD;
+            case CPU -> CPU;
+            case COOLER -> COOLER;
+            case RAM -> RAM;
+            case GPU -> GPU;
+            case PSU -> PSU;
+            case HDD -> HDD;
+            case SSD -> SSD;
+        };
+        List<Integer> list = new ArrayList<>();
+        for (int v : table[Math.max(1, Math.min(MAX_TIER, tier)) - 1]) list.add(v);
+        return Specs.of(type).sanitize(list);
+    }
+
+    /**
+     * Серверный шаблон: много ядер на умеренной частоте, много памяти, большой и надёжный диск.
+     * null — для этой детали серверного варианта нет.
+     */
+    public static List<Integer> serverValues(HardwareType type) {
+        int[] v = switch (type) {
+            // 24 ядра, 2.5 МГц, 7 нм, 64 КБ кэша — много программ сразу, умеренное тепло
+            case CPU -> new int[]{1, 7, 4, 7, 6, 3, 1, 1, 2, 0, 0};
+            // 16 чипов по 1 МБ на 3200
+            case RAM -> new int[]{2, 4, 3, 1, 2, 2, 0, 0};
+            // 3.5", 32 МБ, 7200 об/мин, большой кэш
+            case HDD -> new int[]{0, 8, 2, 5, 1, 0, 0};
+            // 4 слота, 4 канала, много SATA
+            case MOTHERBOARD -> new int[]{1, 3, 1, 2, 3, 1, 2, 0, 0, 1, 0, 0};
+            default -> null;
+        };
+        if (v == null) return null;
+        List<Integer> list = new ArrayList<>();
+        for (int x : v) list.add(x);
+        return Specs.of(type).sanitize(list);
+    }
+
     /** Примеры деталей "собранных игроком". */
     public static List<ItemStack> customExamples() {
         return List.of(

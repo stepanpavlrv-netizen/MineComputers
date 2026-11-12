@@ -251,9 +251,47 @@ public class CiScreenshots {
             case 2040 -> { startRecording(mc); perf(mc, true, lanJ2); }
             case 2140 -> { perf(mc, false, lanJ2); shot(mc, "bunker_1"); }
             case 2220 -> shot(mc, "bunker_2");
-            case 2290 -> mc.stop();
+            // Сборочный стол 2.0: на обычном масштабе (окно 854×480 → 427×240) и на масштабе 1, в режиме выживания
+            case 2270 -> {
+                mc.setScreen(null);
+                server.execute(() -> {
+                    ServerPlayer p = server.getPlayerList().getPlayers().get(0);
+                    p.setGameMode(net.minecraft.world.level.GameType.SURVIVAL);
+                    p.getInventory().add(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.QUARTZ, 20));
+                    p.getInventory().add(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.COPPER_INGOT, 4));
+                    p.openMenu(new net.minecraft.world.SimpleMenuProvider((id, inv, pl) ->
+                            new com.strikerr212.minepc.menu.AssemblyMenu(id, inv, net.minecraft.world.inventory.ContainerLevelAccess.NULL),
+                            net.minecraft.network.chat.Component.translatable("container.minepc.assembly_table")));
+                });
+            }
+            case 2280 -> assemblyTab(mc, 1);
+            case 2290 -> shot(mc, "assembly_cpu");
+            case 2292 -> { assemblyTab(mc, 4); AssemblyScreen.ciTemplates = true; }
+            case 2302 -> shot(mc, "assembly_gpu_templates");
+            case 2305 -> {
+                AssemblyScreen.ciTemplates = false;
+                assemblyTab(mc, 1);
+                mc.options.guiScale().set(1);
+                mc.resizeDisplay();
+            }
+            case 2315 -> shot(mc, "assembly_cpu_big");
+            case 2318 -> assemblyTab(mc, 2);
+            case 2326 -> shot(mc, "assembly_cooler_big");
+            case 2330 -> {
+                mc.options.guiScale().set(0);
+                mc.resizeDisplay();
+                mc.setScreen(null);
+            }
+            case 2340 -> mc.stop();
             default -> {
             }
+        }
+    }
+
+    /** Переключить вкладку открытого сборочного стола, как будто игрок щёлкнул по ней. */
+    private static void assemblyTab(Minecraft mc, int tab) {
+        if (mc.player != null && mc.gameMode != null && mc.player.containerMenu instanceof com.strikerr212.minepc.menu.AssemblyMenu m) {
+            mc.gameMode.handleInventoryButtonClick(m.containerId, com.strikerr212.minepc.menu.AssemblyMenu.BTN_TYPE + tab);
         }
     }
 

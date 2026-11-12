@@ -38,6 +38,8 @@ public class AssemblyMenu extends AbstractContainerMenu {
     public static final int BTN_BUILD = 12;
     public static final int BTN_RESET = 13;
     public static final int BTN_PARAM = 20;    // 20 + номер параметра * 2 (+1 — вперёд, +0 — назад)
+    /** Выбрать вариант сразу: 1000 + номер параметра * 64 + номер варианта. */
+    public static final int BTN_SET = 1000, SET_STRIDE = 64;
 
     // ----- Раскладка данных -----
     private static final int DATA_TYPE = 0;
@@ -107,6 +109,12 @@ public class AssemblyMenu extends AbstractContainerMenu {
         }
     }
 
+    /** Применить шаблон: сразу все варианты для вкладки type (если игрок не успел её сменить). */
+    public void applyValues(int type, List<Integer> v) {
+        if (type != typeIndex()) return;
+        setValues(spec().sanitize(v));
+    }
+
     public void setLabel(String text) {
         String clean = text == null ? "" : ChatFormatting.stripFormatting(text).trim();
         label = clean.length() > PartDesign.MAX_LABEL ? clean.substring(0, PartDesign.MAX_LABEL) : clean;
@@ -130,6 +138,14 @@ public class AssemblyMenu extends AbstractContainerMenu {
         }
         if (id == BTN_BUILD) {
             build(player);
+            return true;
+        }
+        if (id >= BTN_SET) {
+            int param = (id - BTN_SET) / SET_STRIDE, option = (id - BTN_SET) % SET_STRIDE;
+            if (param >= spec.params().size()) return false;
+            List<Integer> v = new ArrayList<>(values());
+            v.set(param, spec.params().get(param).clamp(option));
+            setValues(v);
             return true;
         }
         if (id >= BTN_PARAM) {

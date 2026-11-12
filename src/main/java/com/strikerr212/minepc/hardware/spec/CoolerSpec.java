@@ -87,6 +87,17 @@ public class CoolerSpec extends PartSpec {
         if (isActive(FANS, v)) lines.add(paramLine(v, FANS));
         if (isActive(RADIATOR, v)) lines.add(paramLine(v, RADIATOR));
         lines.add(line("tooltip.minepc.cooling", Units.watts(d.coolingW())));
+        lines.add(perfLine("tooltip.minepc.perf_cooler", Units.watts(maxTdp(d.coolingW(), 1.1)), Units.watts(maxTdp(d.coolingW(), 1.0))));
+    }
+
+    /** Самый горячий процессор (TDP, Вт), который под полной нагрузкой держит частоту не ниже {@code factor} от базовой (буст +10%). */
+    public static int maxTdp(int coolingW, double factor) {
+        int best = 0;
+        for (int tdp = 1; tdp <= 2000; tdp++) {
+            if (com.strikerr212.minepc.computer.CpuClock.steady(tdp, coolingW, 0.10, 1.0) >= factor - 1e-3) best = tdp;
+            else break;
+        }
+        return best;
     }
 
     @Override

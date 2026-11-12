@@ -24,6 +24,12 @@ public class ModNetwork {
                         menu.setLabel(payload.text());
                     }
                 }));
+        registrar.playToServer(AssemblyValuesPayload.TYPE, AssemblyValuesPayload.STREAM_CODEC, (payload, context) ->
+                context.enqueueWork(() -> {
+                    if (context.player().containerMenu instanceof AssemblyMenu menu) {
+                        menu.applyValues(payload.type(), payload.values());
+                    }
+                }));
 
         // Экран компьютера: сервер → игроки рядом
         registrar.playToClient(TerminalPayload.TYPE, TerminalPayload.STREAM_CODEC, (payload, context) ->
