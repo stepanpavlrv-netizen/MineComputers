@@ -783,5 +783,6 @@
   "message.minepc.rack.no_switch": "No switch module in this rack row: the bus is down",
   "message.minepc.rack.ups": "UPS: batteries charged",
   "message.minepc.rack.blank": "Blank panel: Shift + right-click to remove it",
-  "gui.minepc.console.tabs": "Rack row servers"
+  "gui.minepc.console.tabs": "Rack row servers",
+  "gui.minepc.switch.wan": "Router WAN %s"
 }

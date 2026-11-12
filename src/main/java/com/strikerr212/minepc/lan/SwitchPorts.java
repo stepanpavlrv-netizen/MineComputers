@@ -80,7 +80,8 @@ public final class SwitchPorts {
                 boolean net = p.port() >= LanData.CABLE_PORTS
                         || LanManager.RackBus.isNetwork(d.slotKind(LanManager.hostSlot(d, p.port())));
                 if (!net) continue;   // гнёзда серверов сзади — не порты шины
-                out.add(new Port(BUS_BASE + ri * PER_RACK + p.port(), p.side(), p.number(), p.link(), p.device(), p.enabled(), p.vlan(), p.length()));
+                boolean wan = p.port() < LanData.CABLE_PORTS && d.slotKind(LanManager.hostSlot(d, p.port())) == LanManager.RackBus.ROUTER;
+                out.add(new Port(BUS_BASE + ri * PER_RACK + p.port(), wan ? 'W' : p.side(), p.number(), p.link(), p.device(), p.enabled(), p.vlan(), p.length()));
             }
         }
         return out;

@@ -783,5 +783,6 @@
   "message.minepc.rack.no_switch": "В ряду стоек нет модуля коммутатора — шина не работает",
   "message.minepc.rack.ups": "ИБП: батареи заряжены",
   "message.minepc.rack.blank": "Заглушка — Shift + ПКМ, чтобы вынуть",
-  "gui.minepc.console.tabs": "Серверы ряда"
+  "gui.minepc.console.tabs": "Серверы ряда",
+  "gui.minepc.switch.wan": "Роутер WAN %s"
 }

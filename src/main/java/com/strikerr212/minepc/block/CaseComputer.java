@@ -366,6 +366,7 @@ public final class CaseComputer implements Computer.Host {
                     case 'L' -> "left";
                     case 'R' -> "right";
                     case 'S' -> "bus";
+                    case 'W' -> "wan";
                     default -> "cord";
                 });
                 m.put("n", port.number());

@@ -542,7 +542,7 @@ public class CiScreenshots {
             fillModule(r.server(2), 2);
         }
         if (level.getBlockEntity(r1.east()) instanceof com.strikerr212.minepc.block.RackBlockEntity r) fillModule(r.server(1), 4);
-        p.teleportTo(level, r1.getX() + 1.0, r1.getY() + 0.1, r1.getZ() - 2.7, 0f, -8f);
+        p.teleportTo(level, r1.getX() + 1.0, r1.getY(), r1.getZ() - 3.4, 0f, 6f);
     }
 
     /** [CI-BUS]: кого видит srv-x (место 1 нижней левой стойки ряда) и через сколько переходов. */

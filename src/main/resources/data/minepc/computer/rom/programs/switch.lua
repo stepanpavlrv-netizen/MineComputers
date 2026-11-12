@@ -7,7 +7,7 @@ local id, port, what = ...
 local isColor = term.isColor()
 local function c(col) if isColor then term.setTextColor(col) end end
 local kinds = { desk = "коммутатор", rack = "стоечный коммутатор", rackbus = "шина стоек", router = "Wi-Fi роутер", radio = "радиомодем" }
-local sides = { front = "спереди", back = "сзади", left = "слева", right = "справа", cord = "корд", bus = "шина" }
+local sides = { front = "спереди", back = "сзади", left = "слева", right = "справа", cord = "корд", bus = "сервер", wan = "WAN" }
 
 if not id then
   local list = switch.list()
