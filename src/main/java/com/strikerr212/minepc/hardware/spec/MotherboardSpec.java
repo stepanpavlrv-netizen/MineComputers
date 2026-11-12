@@ -54,7 +54,8 @@ public class MotherboardSpec extends PartSpec {
         int slots = val(v, server ? SRV_SLOTS : RAM_SLOTS);
         int channels = Math.min(val(v, server ? SRV_CHANNELS : CHANNELS), slots);   // каналов не больше, чем слотов
         int chipset = idx(v, CHIPSET);
-        return new MotherboardData(tier(v), server ? MotherboardData.SOCKET_SERVER : val(v, SOCKET), chipset, chipset + 1,
+        // Серверная плата держит любые серверные процессоры; чипсет у неё влияет на уровень и потребление
+        return new MotherboardData(tier(v), server ? MotherboardData.SOCKET_SERVER : val(v, SOCKET), chipset, server ? 5 : chipset + 1,
                 slots, channels, val(v, RAM_SPEED), val(v, M2), val(v, SATA) + (server ? 2 : 0),
                 10 + (chipset + 1) * 5 + (server ? SERVER_EXTRA_W : 0), server ? 2 : 1, server);
     }
@@ -96,7 +97,7 @@ public class MotherboardSpec extends PartSpec {
 
     @Override
     public String nameKey(List<Integer> v) {
-        return "item.minepc.motherboard";
+        return isServer(v) ? "item.minepc.motherboard_server" : "item.minepc.motherboard";
     }
 
     @Override

@@ -68,7 +68,7 @@ public class RamSpec extends PartSpec {
 
     @Override
     public String nameKey(List<Integer> v) {
-        return "item.minepc.ram";
+        return isEcc(v) ? "item.minepc.ram_ecc" : "item.minepc.ram";
     }
 
     @Override

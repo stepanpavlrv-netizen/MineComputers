@@ -91,7 +91,7 @@ public class CpuSpec extends PartSpec {
 
     @Override
     public String nameKey(List<Integer> v) {
-        return "item.minepc.cpu";
+        return isServer(v) ? "item.minepc.cpu_server" : "item.minepc.cpu";
     }
 
     @Override

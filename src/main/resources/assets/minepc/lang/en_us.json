@@ -753,5 +753,8 @@
   "message.minepc.cpu2_first": "Remove the second CPU first",
   "message.minepc.psu_last": "This is the only PSU that can carry the server: remove it only when the server is off",
   "gui.minepc.slot.cpu2": "Second CPU (server board, identical to the first)",
-  "gui.minepc.slot.psu2": "Second PSU for redundancy: pull one and the server runs on the other"
+  "gui.minepc.slot.psu2": "Second PSU for redundancy: pull one and the server runs on the other",
+  "item.minepc.motherboard_server": "Server Motherboard",
+  "item.minepc.cpu_server": "Server CPU",
+  "item.minepc.ram_ecc": "ECC Memory"
 }
