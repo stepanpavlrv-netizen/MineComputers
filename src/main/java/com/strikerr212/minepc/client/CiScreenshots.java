@@ -458,27 +458,27 @@ public class CiScreenshots {
                 typeHost(new com.strikerr212.minepc.block.HostRef(rackPos.above(), 0), "clear");
                 typeHost(new com.strikerr212.minepc.block.HostRef(rackPos.above(), 0), "raid");
             }
-            case 3130 -> {
+            case 3330 -> {
                 typeHost(new com.strikerr212.minepc.block.HostRef(rackPos.above(), 0), "raid");
                 typeHost(new com.strikerr212.minepc.block.HostRef(rackPos.above(), 0), "ls /data");
             }
-            case 3136 -> mc.setScreen(new TerminalScreen(new com.strikerr212.minepc.block.HostRef(rackPos.above(), 0)));
-            case 3148 -> shot(mc, "raid_rebuilt");
-            case 3150 -> server.execute(() -> {
+            case 3336 -> mc.setScreen(new TerminalScreen(new com.strikerr212.minepc.block.HostRef(rackPos.above(), 0)));
+            case 3348 -> shot(mc, "raid_rebuilt");
+            case 3350 -> server.execute(() -> {
                 PcCaseBlockEntity c = com.strikerr212.minepc.block.Hosts.get(server.overworld(), rackPos.above(), 0);
                 if (c != null) com.mojang.logging.LogUtils.getLogger().info("[CI-RAID] итог: {}",
                         String.join(" | ", c.bmc().entries().subList(Math.max(0, c.bmc().entries().size() - 4), c.bmc().entries().size())));
             });
             // Консоль BMC: с srv-a — экран и клавиатура srv-b по сети
-            case 3152 -> {
+            case 3352 -> {
                 mc.setScreen(null);
                 typeHost(new com.strikerr212.minepc.block.HostRef(rackPos, 0), "clear");
                 typeHost(new com.strikerr212.minepc.block.HostRef(rackPos, 0), "bmc -p admin srv-b console");
             }
-            case 3162 -> typeHost(new com.strikerr212.minepc.block.HostRef(rackPos, 0), "ls /");
-            case 3170 -> mc.setScreen(new TerminalScreen(new com.strikerr212.minepc.block.HostRef(rackPos, 0)));
-            case 3182 -> shot(mc, "bmc_console");
-            case 3186 -> mc.stop();
+            case 3362 -> typeHost(new com.strikerr212.minepc.block.HostRef(rackPos, 0), "ls /");
+            case 3370 -> mc.setScreen(new TerminalScreen(new com.strikerr212.minepc.block.HostRef(rackPos, 0)));
+            case 3382 -> shot(mc, "bmc_console");
+            case 3386 -> mc.stop();
             default -> {
             }
         }

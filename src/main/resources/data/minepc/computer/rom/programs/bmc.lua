@@ -66,13 +66,12 @@ if cmd == "console" then
         term.clear()
         term.setCursorPos(1, 1)
         c(colors.black) bg(colors.lightGray)
-        local head = (" BMC " .. target .. " — Ctrl+T: выйти "):sub(1, w)
-        write(head .. (" "):rep(w - #head))
+        term.write((" BMC " .. target .. " — Ctrl+T: выйти") .. (" "):rep(w))   -- term.write обрезает по краю экрана
         bg(colors.black) c(colors.white)
         if ok2 and data then
           for i = 1, math.min(h - 1, #data.lines) do
             term.setCursorPos(1, i + 1)
-            write(data.lines[i]:sub(1, w))
+            term.write(data.lines[i])
           end
           term.setCursorPos(math.min(w, data.cx + 1), math.min(h, data.cy + 2))
         else
