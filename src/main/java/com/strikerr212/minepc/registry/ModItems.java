@@ -80,11 +80,22 @@ public class ModItems {
     public static final DeferredItem<BlockItem> BRACKET = ITEMS.registerSimpleBlockItem("cable_bracket", ModBlocks.BRACKET);
     public static final DeferredItem<BlockItem> SERVER_RACK = ITEMS.registerSimpleBlockItem("server_rack", ModBlocks.SERVER_RACK);
     public static final DeferredItem<com.strikerr212.minepc.item.RackModuleItem> SERVER_MODULE = ITEMS.register("server_module",
-            () -> new com.strikerr212.minepc.item.RackModuleItem(new Item.Properties().stacksTo(1), true));
+            () -> new com.strikerr212.minepc.item.RackModuleItem(new Item.Properties().stacksTo(1), com.strikerr212.minepc.block.RackBlockEntity.SERVER));
     public static final DeferredItem<com.strikerr212.minepc.item.RackModuleItem> SERVER_MODULE_2U = ITEMS.register("server_module_2u",
-            () -> new com.strikerr212.minepc.item.RackModuleItem(new Item.Properties().stacksTo(1), true));
+            () -> new com.strikerr212.minepc.item.RackModuleItem(new Item.Properties().stacksTo(1), com.strikerr212.minepc.block.RackBlockEntity.SERVER_2U));
     public static final DeferredItem<com.strikerr212.minepc.item.RackModuleItem> CONSOLE_MODULE = ITEMS.register("console_module",
-            () -> new com.strikerr212.minepc.item.RackModuleItem(new Item.Properties().stacksTo(16), false));
+            () -> new com.strikerr212.minepc.item.RackModuleItem(new Item.Properties().stacksTo(16), com.strikerr212.minepc.block.RackBlockEntity.CONSOLE));
+    // Сетевые модули стойки
+    public static final DeferredItem<com.strikerr212.minepc.item.RackModuleItem> SWITCH_MODULE = ITEMS.register("switch_module",
+            () -> new com.strikerr212.minepc.item.RackModuleItem(new Item.Properties().stacksTo(16), com.strikerr212.minepc.block.RackBlockEntity.SWITCH));
+    public static final DeferredItem<com.strikerr212.minepc.item.RackModuleItem> PATCH_MODULE = ITEMS.register("patch_module",
+            () -> new com.strikerr212.minepc.item.RackModuleItem(new Item.Properties().stacksTo(16), com.strikerr212.minepc.block.RackBlockEntity.PATCH));
+    public static final DeferredItem<com.strikerr212.minepc.item.RackModuleItem> ROUTER_MODULE = ITEMS.register("router_module",
+            () -> new com.strikerr212.minepc.item.RackModuleItem(new Item.Properties().stacksTo(16), com.strikerr212.minepc.block.RackBlockEntity.ROUTER));
+    public static final DeferredItem<com.strikerr212.minepc.item.RackModuleItem> UPS_MODULE = ITEMS.register("ups_module",
+            () -> new com.strikerr212.minepc.item.RackModuleItem(new Item.Properties().stacksTo(16), com.strikerr212.minepc.block.RackBlockEntity.UPS));
+    public static final DeferredItem<com.strikerr212.minepc.item.RackModuleItem> BLANK_MODULE = ITEMS.register("blank_module",
+            () -> new com.strikerr212.minepc.item.RackModuleItem(new Item.Properties().stacksTo(64), com.strikerr212.minepc.block.RackBlockEntity.BLANK));
     public static final DeferredItem<com.strikerr212.minepc.lan.CuttersItem> CUTTERS = ITEMS.register("wire_cutters",
             () -> new com.strikerr212.minepc.lan.CuttersItem(new Item.Properties().stacksTo(1).durability(512)));
     public static final DeferredItem<BlockItem> RADIO = ITEMS.registerSimpleBlockItem("radio_modem", ModBlocks.RADIO);

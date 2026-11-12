@@ -27,8 +27,20 @@ public class RackBlockEntity extends BlockEntity {
 
     public static final int SLOTS = 4;
     public static final int EMPTY = 0, SERVER = 1, CONSOLE = 2;
-    /** Сервер 2U: стоит на этом месте и занимает следующее над ним (там UPPER). */
+    /** Модуль 2U (сервер, роутер, ИБП): стоит на этом месте и занимает следующее над ним (там UPPER). */
     public static final int SERVER_2U = 3, UPPER = 4;
+    /** Сетевые и прочие модули: коммутатор 1U, патч-панель 1U, роутер 2U, ИБП 2U, заглушка 1U. */
+    public static final int SWITCH = 5, PATCH = 6, ROUTER = 7, UPS = 8, BLANK = 9;
+
+    /** Высота модуля в местах стойки. */
+    public static int sizeOf(int kind) {
+        return kind == SERVER_2U || kind == ROUTER || kind == UPS ? 2 : 1;
+    }
+
+    /** Модуль сети: подключается к шине стойки и даёт гнёзда наружу. */
+    public static boolean isNetwork(int kind) {
+        return kind == SWITCH || kind == PATCH || kind == ROUTER;
+    }
 
     private final int[] kinds = new int[SLOTS];
     private final PcCaseBlockEntity[] servers = new PcCaseBlockEntity[SLOTS];
@@ -50,7 +62,12 @@ public class RackBlockEntity extends BlockEntity {
 
     /** Высота модуля в местах (1U или 2U). */
     public int size(int slot) {
-        return kind(slot) == SERVER_2U ? 2 : 1;
+        return sizeOf(kind(slot));
+    }
+
+    public boolean has(int kind) {
+        for (int k : kinds) if (k == kind) return true;
+        return false;
     }
 
     public static boolean isServer(int kind) {
@@ -96,39 +113,50 @@ public class RackBlockEntity extends BlockEntity {
     /** Поставить модуль из предмета в свободное место (2U — сюда и на место выше; если выше занято — на место ниже). */
     public boolean insert(int slot, ItemStack stack) {
         if (slot < 0 || slot >= SLOTS || kinds[slot] != EMPTY) return false;
-        boolean tall = stack.is(ModItems.SERVER_MODULE_2U.get());
+        int kind = com.strikerr212.minepc.item.RackModuleItem.kindOf(stack);
+        if (kind <= 0) return false;
+        boolean tall = sizeOf(kind) == 2;
         if (tall) {
             if (slot + 1 >= SLOTS || kinds[slot + 1] != EMPTY) {
                 if (slot - 1 >= 0 && kinds[slot - 1] == EMPTY) slot--;
                 else return false;
             }
         }
-        if (stack.is(ModItems.SERVER_MODULE.get()) || tall) {
-            kinds[slot] = tall ? SERVER_2U : SERVER;
-            if (tall) kinds[slot + 1] = UPPER;
+        kinds[slot] = kind;
+        if (tall) kinds[slot + 1] = UPPER;
+        if (isServer(kind)) {
             servers[slot] = newServer(slot, tall);
             CustomData data = stack.get(DataComponents.CUSTOM_DATA);
             if (data != null && data.copyTag().contains("machine") && level != null) {
                 servers[slot].loadWithComponents(data.copyTag().getCompound("machine"), level.registryAccess());
             }
-        } else if (stack.is(ModItems.CONSOLE_MODULE.get())) {
-            kinds[slot] = CONSOLE;
-        } else {
-            return false;
         }
         changed();
         return true;
+    }
+
+    /** Предмет модуля по его виду. */
+    private static ItemStack itemFor(int kind) {
+        return new ItemStack(switch (kind) {
+            case SERVER -> ModItems.SERVER_MODULE.get();
+            case SERVER_2U -> ModItems.SERVER_MODULE_2U.get();
+            case CONSOLE -> ModItems.CONSOLE_MODULE.get();
+            case SWITCH -> ModItems.SWITCH_MODULE.get();
+            case PATCH -> ModItems.PATCH_MODULE.get();
+            case ROUTER -> ModItems.ROUTER_MODULE.get();
+            case UPS -> ModItems.UPS_MODULE.get();
+            default -> ModItems.BLANK_MODULE.get();
+        });
     }
 
     /** Вынуть модуль целиком (сервер — вместе с деталями внутри). Пустой стек — места нет. */
     public ItemStack take(int slot) {
         if (slot < 0 || slot >= SLOTS || kinds[slot] == EMPTY) return ItemStack.EMPTY;
         slot = base(slot);
-        ItemStack out;
-        if (isServer(kinds[slot])) {
-            boolean tall = kinds[slot] == SERVER_2U;
-            out = new ItemStack(tall ? ModItems.SERVER_MODULE_2U.get() : ModItems.SERVER_MODULE.get());
-            if (tall) kinds[slot + 1] = EMPTY;
+        int kind = kinds[slot];
+        ItemStack out = itemFor(kind);
+        if (sizeOf(kind) == 2 && slot + 1 < SLOTS) kinds[slot + 1] = EMPTY;
+        if (isServer(kind)) {
             PcCaseBlockEntity s = servers[slot];
             if (s != null && level != null) {
                 CompoundTag t = new CompoundTag();
@@ -137,8 +165,6 @@ public class RackBlockEntity extends BlockEntity {
                 s.setRemoved();
             }
             servers[slot] = null;
-        } else {
-            out = new ItemStack(ModItems.CONSOLE_MODULE.get());
         }
         kinds[slot] = EMPTY;
         if (extended == slot) extended = -1;
@@ -165,6 +191,9 @@ public class RackBlockEntity extends BlockEntity {
         if (level != null && !level.isClientSide) {
             level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), Block.UPDATE_ALL);
             com.strikerr212.minepc.lan.LanManager.updateDevice(level, worldPosition);
+            // Гнёзда зависят от модулей: провода рядом перепроверяют, куда воткнуты
+            com.strikerr212.minepc.lan.CableBlockEntity.reconnectAround(level, worldPosition);
+            com.strikerr212.minepc.lan.LanManager.invalidate(level);
         }
     }
 

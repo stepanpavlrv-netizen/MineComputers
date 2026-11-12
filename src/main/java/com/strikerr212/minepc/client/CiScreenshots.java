@@ -478,13 +478,87 @@ public class CiScreenshots {
             case 3362 -> typeHost(new com.strikerr212.minepc.block.HostRef(rackPos, 0), "ls /");
             case 3370 -> mc.setScreen(new TerminalScreen(new com.strikerr212.minepc.block.HostRef(rackPos, 0)));
             case 3382 -> shot(mc, "bmc_console");
-            case 3386 -> mc.stop();
+            // Ряд стоек с сетевыми модулями: шина, VLAN и роутер, консоль с вкладками серверов
+            case 3386 -> {
+                mc.setScreen(null);
+                server.execute(CiScreenshots::placeRow);
+            }
+            case 3550 -> {
+                typeHost(new com.strikerr212.minepc.block.HostRef(rowPos, 1), "hostname srv-x");
+                typeHost(new com.strikerr212.minepc.block.HostRef(rowPos, 2), "hostname srv-y");
+                typeHost(new com.strikerr212.minepc.block.HostRef(rowPos.east(), 1), "hostname srv-z");
+            }
+            case 3560 -> server.execute(() -> logBus("шина"));
+            case 3562 -> typeHost(new com.strikerr212.minepc.block.HostRef(rowPos, 1), "ping srv-z 1");
+            case 3570 -> server.execute(() -> {
+                // srv-z — в красный VLAN: с srv-x его видно только через роутер (+1 переход)
+                var data = com.strikerr212.minepc.lan.LanData.get(server.overworld());
+                data.setPort(rowPos.east(), com.strikerr212.minepc.lan.LanData.BUS_PORT0 + 1, true, net.minecraft.world.item.DyeColor.RED.getId() + 1);
+                com.strikerr212.minepc.lan.LanManager.invalidate(server.overworld());
+                logBus("VLAN red у srv-z, роутер есть");
+            });
+            case 3575 -> shot(mc, "rack_row");
+            case 3578 -> server.execute(() -> {
+                ServerPlayer p = server.getPlayerList().getPlayers().get(0);
+                net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(p,
+                        com.strikerr212.minepc.lan.SwitchPorts.openPayload(server.overworld(), rowPos));
+            });
+            case 3588 -> shot(mc, "rack_bus_ports");
+            case 3590 -> mc.setScreen(new TerminalScreen(new com.strikerr212.minepc.block.HostRef(rowPos, 1), rowPos.east()));
+            case 3602 -> shot(mc, "console_tabs");
+            case 3606 -> mc.stop();
             default -> {
             }
         }
     }
 
-    private static BlockPos rackPos = BlockPos.ZERO;
+    private static BlockPos rackPos = BlockPos.ZERO, rowPos = BlockPos.ZERO;
+
+    /** Ряд из двух колонн стоек: коммутатор, патч-панель, роутер, ИБП, заглушки, консоль и три сервера. */
+    private static void placeRow() {
+        var server = Minecraft.getInstance().getSingleplayerServer();
+        ServerPlayer p = server.getPlayerList().getPlayers().get(0);
+        ServerLevel level = p.serverLevel();
+        BlockPos r1 = rackPos.west(4);
+        rowPos = r1;
+        BlockState st = ModBlocks.SERVER_RACK.get().defaultBlockState().setValue(com.strikerr212.minepc.block.RackBlock.FACING, Direction.NORTH);
+        for (BlockPos b : new BlockPos[]{r1, r1.above(), r1.east(), r1.east().above()}) level.setBlockAndUpdate(b, st);
+        java.util.function.BiConsumer<BlockPos, net.minecraft.world.item.Item[]> fill = (b, items) -> {
+            if (!(level.getBlockEntity(b) instanceof com.strikerr212.minepc.block.RackBlockEntity r)) return;
+            for (int i = 0; i < items.length; i++) if (items[i] != null) r.insert(i, new ItemStack(items[i]));
+        };
+        fill.accept(r1, new net.minecraft.world.item.Item[]{com.strikerr212.minepc.registry.ModItems.SWITCH_MODULE.get(),
+                com.strikerr212.minepc.registry.ModItems.SERVER_MODULE.get(), com.strikerr212.minepc.registry.ModItems.SERVER_MODULE.get(),
+                com.strikerr212.minepc.registry.ModItems.BLANK_MODULE.get()});
+        fill.accept(r1.above(), new net.minecraft.world.item.Item[]{com.strikerr212.minepc.registry.ModItems.UPS_MODULE.get(), null,
+                com.strikerr212.minepc.registry.ModItems.ROUTER_MODULE.get(), null});
+        fill.accept(r1.east(), new net.minecraft.world.item.Item[]{com.strikerr212.minepc.registry.ModItems.PATCH_MODULE.get(),
+                com.strikerr212.minepc.registry.ModItems.SERVER_MODULE.get(), com.strikerr212.minepc.registry.ModItems.CONSOLE_MODULE.get(),
+                com.strikerr212.minepc.registry.ModItems.BLANK_MODULE.get()});
+        fill.accept(r1.east().above(), new net.minecraft.world.item.Item[]{com.strikerr212.minepc.registry.ModItems.BLANK_MODULE.get(),
+                com.strikerr212.minepc.registry.ModItems.BLANK_MODULE.get(), com.strikerr212.minepc.registry.ModItems.SERVER_MODULE_2U.get(), null});
+        if (level.getBlockEntity(r1) instanceof com.strikerr212.minepc.block.RackBlockEntity r) {
+            fillModule(r.server(1), 3);
+            fillModule(r.server(2), 2);
+        }
+        if (level.getBlockEntity(r1.east()) instanceof com.strikerr212.minepc.block.RackBlockEntity r) fillModule(r.server(1), 4);
+        p.teleportTo(level, r1.getX() + 1.0, r1.getY() + 0.1, r1.getZ() - 2.7, 0f, -8f);
+    }
+
+    /** [CI-BUS]: кого видит srv-x (место 1 нижней левой стойки ряда) и через сколько переходов. */
+    private static void logBus(String what) {
+        var server = Minecraft.getInstance().getSingleplayerServer();
+        ServerLevel level = server.overworld();
+        var lan = com.strikerr212.minepc.lan.LanManager.get(level);
+        StringBuilder sb = new StringBuilder("[CI-BUS] " + what + ": srv-x ->");
+        for (var r : lan.reach(level, new com.strikerr212.minepc.block.HostRef(rowPos, 1))) {
+            PcCaseBlockEntity pc = com.strikerr212.minepc.block.Hosts.get(level, r.pos(), r.slot());
+            sb.append(' ').append(pc == null ? r.pos().toShortString() + "#" + r.slot() : pc.label()).append(" hops=").append(r.hops());
+        }
+        PcCaseBlockEntity x = com.strikerr212.minepc.block.Hosts.get(level, rowPos, 1);
+        sb.append(" | linked=").append(lan.linked(level, new com.strikerr212.minepc.block.HostRef(rowPos, 1))).append(" link=").append(x == null ? -1 : x.netLinkCode());
+        com.mojang.logging.LogUtils.getLogger().info(sb.toString());
+    }
 
     /** Ввод в компьютер (и в модуль стойки) из CI. */
     private static void typeHost(com.strikerr212.minepc.block.HostRef host, String line) {

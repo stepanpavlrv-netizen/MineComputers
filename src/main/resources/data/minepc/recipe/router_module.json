@@ -1,0 +1,22 @@
+{
+ "type": "minecraft:crafting_shapeless",
+ "category": "redstone",
+ "ingredients": [
+  {
+   "item": "minepc:switch_module"
+  },
+  {
+   "item": "minecraft:comparator"
+  },
+  {
+   "item": "minecraft:gold_ingot"
+  },
+  {
+   "item": "minecraft:iron_ingot"
+  }
+ ],
+ "result": {
+  "id": "minepc:router_module",
+  "count": 1
+ }
+}

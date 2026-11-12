@@ -27,6 +27,8 @@ public final class LanData extends SavedData {
 
     /** Портов у устройства: 16 под кабели (гнёзда по порядку, {@link LanDevice#sockets}) и 8 под патч-корды. */
     public static final int CABLE_PORTS = 16, CORD_PORTS = 8, PORTS = CABLE_PORTS + CORD_PORTS;
+    /** Порты шины стойки (по одному на место): только настройки (вкл, VLAN), гнезда у них нет. */
+    public static final int BUS_PORT0 = PORTS, CONFIG_PORTS = PORTS + 4;
 
     /**
      * Устройство в схеме. kbit — скорость, кбит/с; mask — биты сторон (Wire.N/S/W/E), куда можно воткнуть кабель;
@@ -49,6 +51,16 @@ public final class LanData extends SavedData {
         public long bitsFor(int slot) {
             if (type != RACK) return bits();
             return ((extra >>> (8 * Math.max(0, Math.min(3, slot)))) & 255) * 100_000_000L;
+        }
+
+        /** Серверная стойка: вид модуля на месте slot (RackBlockEntity.SERVER и т.д.). */
+        public int slotKind(int slot) {
+            return type == RACK ? (mask >>> (8 + 4 * Math.max(0, Math.min(3, slot)))) & 15 : 0;
+        }
+
+        /** Серверная стойка: куда смотрит (Direction.get2DDataValue). */
+        public int facing2d() {
+            return (mask >>> 24) & 3;
         }
 
         /** Пассивное устройство: сигнал проходит насквозь (патч-панель, кронштейн воздушной линии). */
@@ -204,8 +216,12 @@ public final class LanData extends SavedData {
     }
 
     public void setPort(BlockPos dev, int port, boolean enabled, int vlan) {
-        if (port < 0 || port >= PORTS) return;
-        int[] cfg = ports.computeIfAbsent(dev.asLong(), k -> new int[PORTS]);
+        if (port < 0 || port >= CONFIG_PORTS) return;
+        int[] cfg = ports.computeIfAbsent(dev.asLong(), k -> new int[CONFIG_PORTS]);
+        if (cfg.length < CONFIG_PORTS) {
+            cfg = Arrays.copyOf(cfg, CONFIG_PORTS);
+            ports.put(dev.asLong(), cfg);
+        }
         int v = (enabled ? 0 : 1) | Math.max(0, Math.min(16, vlan)) << 1;
         if (cfg[port] != v) {
             cfg[port] = v;
@@ -317,7 +333,7 @@ public final class LanData extends SavedData {
         list = tag.getList("ports", Tag.TAG_COMPOUND);
         for (int i = 0; i < list.size(); i++) {
             CompoundTag c = list.getCompound(i);
-            d.ports.put(c.getLong("p"), Arrays.copyOf(c.getIntArray("v"), PORTS));
+            d.ports.put(c.getLong("p"), Arrays.copyOf(c.getIntArray("v"), CONFIG_PORTS));
         }
         return d;
     }

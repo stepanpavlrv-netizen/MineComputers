@@ -3,7 +3,7 @@
  "category": "redstone",
  "pattern": [
   "III",
-  "CCC",
+  "CRC",
   "III"
  ],
  "key": {
@@ -11,11 +11,14 @@
    "item": "minecraft:iron_ingot"
   },
   "C": {
-   "item": "minepc:network_cable"
+   "item": "minecraft:copper_ingot"
+  },
+  "R": {
+   "item": "minecraft:redstone_block"
   }
  },
  "result": {
-  "id": "minepc:patch_panel",
+  "id": "minepc:ups_module",
   "count": 1
  }
 }

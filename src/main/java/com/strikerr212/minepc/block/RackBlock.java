@@ -103,7 +103,7 @@ public class RackBlock extends HorizontalDirectionalBlock implements EntityBlock
         if (!(level.getBlockEntity(pos) instanceof RackBlockEntity rack)) return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
         int slot = slotAt(pos, hit);
         // Модуль в руке — в свободное место
-        if (stack.is(ModItems.SERVER_MODULE.get()) || stack.is(ModItems.SERVER_MODULE_2U.get()) || stack.is(ModItems.CONSOLE_MODULE.get())) {
+        if (stack.getItem() instanceof com.strikerr212.minepc.item.RackModuleItem) {
             if (rack.kind(slot) != RackBlockEntity.EMPTY) return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
             if (!level.isClientSide && rack.insert(slot, stack)) {
                 if (!player.getAbilities().instabuild) stack.shrink(1);
@@ -137,7 +137,7 @@ public class RackBlock extends HorizontalDirectionalBlock implements EntityBlock
                 if (!level.isClientSide) retract(level, pos, state, rack);
                 return InteractionResult.sidedSuccess(level.isClientSide);
             }
-            if (kind == RackBlockEntity.EMPTY) return InteractionResult.PASS;
+            if (kind == RackBlockEntity.EMPTY || kind == RackBlockEntity.UPPER) return InteractionResult.PASS;
             PcCaseBlockEntity s = rack.server(slot);
             if (s != null && s.computerState() == 1) {
                 if (!level.isClientSide) player.displayClientMessage(Component.translatable("message.minepc.rack.running")
@@ -153,6 +153,22 @@ public class RackBlock extends HorizontalDirectionalBlock implements EntityBlock
         }
         if (kind == RackBlockEntity.EMPTY) {
             if (!level.isClientSide) player.displayClientMessage(Component.translatable("message.minepc.rack.empty"), true);
+            return InteractionResult.sidedSuccess(level.isClientSide);
+        }
+        // Сетевые модули не выдвигаются: щелчок — окно портов шины стойки (коммутатор, роутер, патч-панель)
+        if (RackBlockEntity.isNetwork(kind)) {
+            if (!level.isClientSide && player instanceof net.minecraft.server.level.ServerPlayer sp) {
+                if (!hasModule(level, pos, RackBlockEntity.SWITCH)) {
+                    sp.displayClientMessage(Component.translatable("message.minepc.rack.no_switch").withStyle(ChatFormatting.YELLOW), true);
+                }
+                net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(sp,
+                        com.strikerr212.minepc.lan.SwitchPorts.openPayload((net.minecraft.server.level.ServerLevel) level, pos));
+            }
+            return InteractionResult.sidedSuccess(level.isClientSide);
+        }
+        if (kind == RackBlockEntity.UPS || kind == RackBlockEntity.BLANK) {
+            if (!level.isClientSide) player.displayClientMessage(Component.translatable(kind == RackBlockEntity.UPS
+                    ? "message.minepc.rack.ups" : "message.minepc.rack.blank"), true);
             return InteractionResult.sidedSuccess(level.isClientSide);
         }
         if (rack.extended() != slot) {
@@ -240,12 +256,48 @@ public class RackBlock extends HorizontalDirectionalBlock implements EntityBlock
         return out;
     }
 
-    /** Есть ли в колонне стоек модуль консоли (тогда у серверов есть клавиатура). */
-    public static boolean hasConsole(Level level, BlockPos pos) {
-        for (BlockPos p : column(level, pos)) {
-            if (level.getBlockEntity(p) instanceof RackBlockEntity r && r.hasConsole()) return true;
+    /**
+     * Стойки одного ряда: колонна (вплотную друг над другом) и стойки бок о бок, смотрящие в ту же сторону.
+     * У них общая шина: сетевые модули и консоль работают на весь ряд.
+     */
+    public static List<BlockPos> group(net.minecraft.world.level.BlockGetter level, BlockPos pos) {
+        List<BlockPos> out = new ArrayList<>();
+        BlockState start = level.getBlockState(pos);
+        if (!(start.getBlock() instanceof RackBlock)) return out;
+        Direction facing = start.getValue(FACING);
+        java.util.ArrayDeque<BlockPos> q = new java.util.ArrayDeque<>();
+        java.util.Set<BlockPos> seen = new java.util.HashSet<>();
+        q.add(pos.immutable());
+        seen.add(pos.immutable());
+        while (!q.isEmpty() && out.size() < 64) {
+            BlockPos p = q.poll();
+            out.add(p);
+            for (Direction d : new Direction[]{Direction.UP, Direction.DOWN, facing.getClockWise(), facing.getCounterClockWise()}) {
+                BlockPos n = p.relative(d).immutable();
+                if (seen.contains(n)) continue;
+                BlockState ns = level.getBlockState(n);
+                if (ns.getBlock() instanceof RackBlock && ns.getValue(FACING) == facing) {
+                    seen.add(n);
+                    q.add(n);
+                }
+            }
+        }
+        out.sort(java.util.Comparator.comparingInt((BlockPos p) -> p.getY()).reversed()
+                .thenComparingInt(p -> p.getX() * facing.getClockWise().getStepX() + p.getZ() * facing.getClockWise().getStepZ()));
+        return out;
+    }
+
+    /** Есть ли в ряду стоек модуль этого вида. */
+    public static boolean hasModule(net.minecraft.world.level.BlockGetter level, BlockPos pos, int kind) {
+        for (BlockPos p : group(level, pos)) {
+            if (level.getBlockEntity(p) instanceof RackBlockEntity r && r.has(kind)) return true;
         }
         return false;
+    }
+
+    /** Есть ли в ряду стоек модуль консоли (тогда у серверов есть клавиатура). */
+    public static boolean hasConsole(Level level, BlockPos pos) {
+        return hasModule(level, pos, RackBlockEntity.CONSOLE);
     }
 
     /** Скорость сетевого порта сервера по его плате, бит/с (0 — платы нет). */
@@ -266,16 +318,69 @@ public class RackBlock extends HorizontalDirectionalBlock implements EntityBlock
 
     @Override
     public boolean acceptsCable(BlockState state, Direction face) {
-        return face == state.getValue(FACING).getOpposite();
+        Direction f = state.getValue(FACING);
+        return face == f.getOpposite() || face == f;
     }
 
-    /** Гнёзда сзади, по одному на модуль: порт 1 — нижний модуль. */
+    @Override
+    public boolean acceptsFiber(BlockState state, Direction face) {
+        return acceptsCable(state, face);
+    }
+
+    /** Без содержимого (предмет, тесты): гнёзда сзади, по одному на место. */
     @Override
     public List<Socket> sockets(BlockState state) {
+        return sockets(state, new int[RackBlockEntity.SLOTS]);
+    }
+
+    @Override
+    public List<Socket> sockets(net.minecraft.world.level.BlockGetter level, BlockPos pos, BlockState state) {
+        int[] kinds = new int[RackBlockEntity.SLOTS];
+        if (level.getBlockEntity(pos) instanceof RackBlockEntity r) for (int i = 0; i < kinds.length; i++) kinds[i] = r.kind(i);
+        return sockets(state, kinds);
+    }
+
+    /**
+     * Гнёзда по модулям. Порт i (0–3) — главное гнездо места i: у сервера — сзади (как раньше), у коммутатора —
+     * SFP спереди, у патч-панели — сзади, у роутера — WAN спереди. Порты 4+3i … 6+3i — ещё три гнезда модуля:
+     * у коммутатора и роутера — спереди, у патч-панели — сзади (кабели здания). У остальных модулей гнёзд нет.
+     */
+    static List<Socket> sockets(BlockState state, int[] kinds) {
         Direction f = state.getValue(FACING);
-        List<Socket> out = new ArrayList<>();
-        for (int i = 0; i < RackBlockEntity.SLOTS; i++) out.add(LanDevice.local(f, true, 7, 1 + 4 * i, 0, true, false));
+        Socket none = new Socket(f.getOpposite(), 0, 0, 0, false, false);
+        Socket[] main = new Socket[RackBlockEntity.SLOTS];
+        Socket[] extra = new Socket[RackBlockEntity.SLOTS * 3];
+        java.util.Arrays.fill(extra, none);
+        for (int i = 0; i < RackBlockEntity.SLOTS; i++) {
+            int y = 1 + 4 * i, k = kinds[i];
+            main[i] = switch (k) {
+                case RackBlockEntity.SWITCH -> LanDevice.local(f, false, 11, y, 0, false, true);
+                case RackBlockEntity.PATCH -> LanDevice.local(f, true, 7, y, 0, true, false);
+                case RackBlockEntity.ROUTER -> LanDevice.local(f, false, 11, y, 0, true, false);
+                case RackBlockEntity.CONSOLE, RackBlockEntity.UPS, RackBlockEntity.BLANK, RackBlockEntity.UPPER -> none;
+                default -> LanDevice.local(f, true, 7, y, 0, true, false);    // сервер (и пустое место — как раньше)
+            };
+            for (int j = 0; j < 3; j++) {
+                extra[3 * i + j] = switch (k) {
+                    case RackBlockEntity.SWITCH, RackBlockEntity.ROUTER -> LanDevice.local(f, false, 3 + 2 * j, y, 0, true, false);
+                    case RackBlockEntity.PATCH -> LanDevice.local(f, true, j == 2 ? 11 : 3 + 2 * j, y, 0, j < 2, j == 2);
+                    default -> none;
+                };
+            }
+        }
+        List<Socket> out = new ArrayList<>(List.of(main));
+        out.addAll(List.of(extra));
         return out;
+    }
+
+    /** Для схемы сети: виды модулей по местам (по 4 бита) и куда смотрит стойка. */
+    @Override
+    public int lanMaskExtra(Level level, BlockPos pos, BlockState state) {
+        int m = state.getValue(FACING).get2DDataValue() << 16;
+        if (level.getBlockEntity(pos) instanceof RackBlockEntity rack) {
+            for (int i = 0; i < RackBlockEntity.SLOTS; i++) m |= (rack.kind(i) & 15) << (4 * i);
+        }
+        return m;
     }
 
     @Override

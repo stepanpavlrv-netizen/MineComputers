@@ -27,25 +27,31 @@ public class ConsoleScreen extends Screen {
         this.rackPos = rackPos;
     }
 
-    private record Entry(HostRef host, PcCaseBlockEntity server, int rack) {
+    record Entry(HostRef host, PcCaseBlockEntity server, int rack) {
     }
 
     private List<Entry> entries() {
+        return entries(rackPos);
+    }
+
+    /** Серверы ряда стоек: по стойкам (сверху вниз, слева направо), в стойке — сверху вниз. */
+    static List<Entry> entries(BlockPos rackPos) {
         List<Entry> out = new ArrayList<>();
         var level = Minecraft.getInstance().level;
         if (level == null) return out;
-        List<BlockPos> column = RackBlock.column(level, rackPos);
-        for (int r = 0; r < column.size(); r++) {
-            if (!(level.getBlockEntity(column.get(r)) instanceof RackBlockEntity rack)) continue;
+        List<BlockPos> group = RackBlock.group(level, rackPos);
+        for (int r = 0; r < group.size(); r++) {
+            if (!(level.getBlockEntity(group.get(r)) instanceof RackBlockEntity rack)) continue;
             for (int s = RackBlockEntity.SLOTS - 1; s >= 0; s--) {
                 PcCaseBlockEntity pc = rack.server(s);
-                if (pc != null) out.add(new Entry(new HostRef(column.get(r), s), pc, r));
+                if (pc != null) out.add(new Entry(new HostRef(group.get(r), s), pc, r));
             }
         }
-        // Сверху вниз, как в стойке
-        java.util.Collections.reverse(out);
-        out.sort((a, b) -> b.rack != a.rack ? Integer.compare(b.rack, a.rack) : Integer.compare(b.host.slot(), a.host.slot()));
         return out;
+    }
+
+    static String name(PcCaseBlockEntity pc) {
+        return pc.label().isEmpty() ? pc.address().substring(0, Math.min(8, pc.address().length())) : pc.label();
     }
 
     private int panelX, panelY, panelW, panelH;
@@ -65,7 +71,7 @@ public class ConsoleScreen extends Screen {
             Component status = Component.translatable(state == 1 ? "gui.minepc.console.on" : state == 2 ? "gui.minepc.console.error" : "gui.minepc.console.off");
             Component text = Component.translatable("gui.minepc.console.entry", e.rack + 1, e.host.slot() + 1, name, status);
             addRenderableWidget(Button.builder(text, b -> {
-                if (minecraft != null) minecraft.setScreen(new TerminalScreen(e.host));
+                if (minecraft != null) minecraft.setScreen(new TerminalScreen(e.host, rackPos));
             }).bounds(x, y, w - 24, 20).build());
             // Кнопка питания сервера — прямо с консоли, не выдвигая модуль
             Button power = Button.builder(Component.literal("⏻"), b -> net.neoforged.neoforge.network.PacketDistributor.sendToServer(

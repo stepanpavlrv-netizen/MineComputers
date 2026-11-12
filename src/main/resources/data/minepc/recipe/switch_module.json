@@ -9,14 +9,14 @@
    "item": "minepc:network_switch"
   },
   {
-   "item": "minecraft:iron_block"
+   "item": "minecraft:iron_ingot"
   },
   {
    "item": "minecraft:quartz"
   }
  ],
  "result": {
-  "id": "minepc:rack_switch",
+  "id": "minepc:switch_module",
   "count": 1
  }
 }

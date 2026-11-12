@@ -175,13 +175,13 @@ public final class NetHud {
 
     /** Подсказка у гнезда. */
     private static void port(Minecraft mc, BlockPos pos, BlockState state, LanDevice dev, BlockHitResult hit) {
-        List<LanDevice.Socket> sockets = dev.sockets(state);
+        List<LanDevice.Socket> sockets = dev.sockets(mc.level, pos, state);
         Vec3 at = hit.getLocation().subtract(pos.getX(), pos.getY(), pos.getZ()).scale(16);
         int found = -1;
         double best = 2.6;
         for (int i = 0; i < sockets.size(); i++) {
             LanDevice.Socket s = sockets.get(i);
-            if (s.face() != hit.getDirection()) continue;
+            if (s.face() != hit.getDirection() || !s.copper() && !s.fiber()) continue;
             Direction.Axis[] ax = LanDevice.faceAxes(s.face());
             double da = Math.abs(get(at, ax[0]) - (s.along() + 0.5)), dh = Math.abs(get(at, ax[1]) - (s.height() + 0.5));
             double d = Math.max(da, dh);

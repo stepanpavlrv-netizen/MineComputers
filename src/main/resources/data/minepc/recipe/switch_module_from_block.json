@@ -1,0 +1,13 @@
+{
+ "type": "minecraft:crafting_shapeless",
+ "category": "redstone",
+ "ingredients": [
+  {
+   "item": "minepc:rack_switch"
+  }
+ ],
+ "result": {
+  "id": "minepc:switch_module",
+  "count": 1
+ }
+}

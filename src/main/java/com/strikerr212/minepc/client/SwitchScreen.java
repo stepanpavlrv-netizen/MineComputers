@@ -80,6 +80,7 @@ public class SwitchScreen extends Screen {
             case 'B' -> "gui.minepc.switch.back";
             case 'L' -> "gui.minepc.switch.left";
             case 'R' -> "gui.minepc.switch.right";
+            case 'S' -> "gui.minepc.switch.bus";
             default -> "gui.minepc.switch.cord";
         };
         return Component.translatable(key, r.number).getString();

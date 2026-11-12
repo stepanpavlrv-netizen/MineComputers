@@ -291,10 +291,7 @@ def main():
         "type": "minecraft:crafting_shapeless", "category": "redstone",
         "ingredients": [{"item": "minepc:network_cable"}, {"item": "minepc:network_cable"}, {"item": "minecraft:iron_nugget"}],
         "result": {"id": "minepc:patch_cord", "count": 2}})
-    write(os.path.join(DATA, "recipe/patch_panel.json"), {
-        "type": "minecraft:crafting_shaped", "category": "redstone", "pattern": ["III", "CCC", "III"],
-        "key": {"I": {"item": "minecraft:iron_ingot"}, "C": {"item": "minepc:network_cable"}},
-        "result": {"id": "minepc:patch_panel", "count": 1}})
+    # Патч-панель и стоечный коммутатор теперь — модули стойки (рецепты в src/.../recipe/*_module.json)
     write(os.path.join(DATA, "recipe/radio_modem.json"), {
         "type": "minecraft:crafting_shaped", "category": "redstone", "pattern": [" L ", "IRI", "ISI"],
         "key": {"L": {"item": "minecraft:lightning_rod"}, "I": {"item": "minecraft:iron_ingot"},
@@ -352,11 +349,6 @@ def main():
         "key": {"R": {"item": "minecraft:redstone"}, "C": {"item": "minepc:network_cable"},
                 "G": {"item": "minecraft:gold_ingot"}, "I": {"item": "minecraft:iron_ingot"}},
         "result": {"id": "minepc:network_switch", "count": 1}})
-    write(os.path.join(DATA, "recipe/rack_switch.json"), {
-        "type": "minecraft:crafting_shapeless", "category": "redstone",
-        "ingredients": [{"item": "minepc:network_switch"}, {"item": "minepc:network_switch"},
-                        {"item": "minecraft:iron_block"}, {"item": "minecraft:quartz"}],
-        "result": {"id": "minepc:rack_switch", "count": 1}})
 
 
 if __name__ == "__main__":

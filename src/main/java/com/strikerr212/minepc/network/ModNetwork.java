@@ -125,10 +125,11 @@ public class ModNetwork {
                     if (!(context.player() instanceof net.minecraft.server.level.ServerPlayer player)) return;
                     BlockPos pos = payload.pos();
                     if (player.distanceToSqr(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5) > 8 * 8) return;
-                    if (!(player.level().getBlockState(pos).getBlock() instanceof com.strikerr212.minepc.lan.SwitchBlock)) return;
+                    var blk = player.level().getBlockState(pos).getBlock();
+                    if (!(blk instanceof com.strikerr212.minepc.lan.SwitchBlock) && !(blk instanceof com.strikerr212.minepc.block.RackBlock)) return;
                     var level = player.serverLevel();
                     if (payload.port() >= 0) {
-                        com.strikerr212.minepc.lan.LanData.get(level).setPort(pos, payload.port(), payload.enabled(), payload.vlan());
+                        com.strikerr212.minepc.lan.SwitchPorts.set(level, pos, payload.port(), payload.enabled(), payload.vlan());
                     }
                     net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(player,
                             com.strikerr212.minepc.lan.SwitchPorts.openPayload(level, pos));

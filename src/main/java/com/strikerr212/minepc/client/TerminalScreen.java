@@ -34,9 +34,17 @@ public class TerminalScreen extends Screen {
     }
 
     public TerminalScreen(com.strikerr212.minepc.block.HostRef host) {
+        this(host, null);
+    }
+
+    /** Открыт с консоли стойки: сверху — вкладки серверов ряда стоек. */
+    private final BlockPos console;
+
+    public TerminalScreen(com.strikerr212.minepc.block.HostRef host, BlockPos console) {
         super(Component.translatable("gui.minepc.terminal"));
         this.host = host;
         this.casePos = host.pos();
+        this.console = console;
     }
 
     @Override
@@ -44,6 +52,21 @@ public class TerminalScreen extends Screen {
         ClientTerminals.requestFull(host);
         powerButton = addRenderableWidget(Button.builder(Component.translatable("gui.minepc.power"),
                 b -> send(TerminalInputPayload.POWER, "", 0)).bounds(width - 66, 6, 60, 16).build());
+        if (console != null) {
+            // Вкладки серверов: щелчок — экран другого сервера той же консоли
+            int x = 8 + Math.min(120, font.width(heading()) + 12), right = width - 72;
+            for (var e : ConsoleScreen.entries(console)) {
+                String name = font.plainSubstrByWidth(ConsoleScreen.name(e.server()), 60);
+                int w = font.width(name) + 10;
+                if (x + w > right) break;
+                Button tab = Button.builder(Component.literal(name), b -> {
+                    if (minecraft != null) minecraft.setScreen(new TerminalScreen(e.host(), console));
+                }).bounds(x, 6, w, 16).build();
+                tab.active = !e.host().equals(host);
+                addRenderableWidget(tab);
+                x += w + 2;
+            }
+        }
     }
 
     private void send(int kind, String text, int flags) {

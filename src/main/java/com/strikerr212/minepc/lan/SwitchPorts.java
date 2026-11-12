@@ -37,6 +37,7 @@ public final class SwitchPorts {
             case LanData.RACK_SWITCH -> "rack";
             case LanData.ROUTER -> "router";
             case LanData.RADIO -> "radio";
+            case LanData.RACK -> "rackbus";
             default -> "other";
         };
     }
@@ -50,18 +51,76 @@ public final class SwitchPorts {
         return face == f.getClockWise() ? 'L' : 'R';
     }
 
+    /** Номер порта шины ряда стоек: стойка в ряду (по порядку) и порт в ней. */
+    private static final int BUS_BASE = 1000, PER_RACK = 64;
+
+    /**
+     * Порты шины ряда стоек (окно коммутатора-модуля, программа switch): S — сервер на шине (номер места),
+     * F/B — гнёзда сетевых модулей спереди и сзади, C — патч-корды в стойку.
+     */
+    private static List<Port> busPorts(ServerLevel level, BlockPos pos) {
+        LanData data = LanData.get(level);
+        List<Port> out = new ArrayList<>();
+        List<BlockPos> group = LanManager.rackGroup(data, pos);
+        group.sort(java.util.Comparator.comparingLong(BlockPos::asLong));
+        int server = 0;
+        for (int ri = 0; ri < group.size(); ri++) {
+            BlockPos r = group.get(ri);
+            LanData.Device d = data.device(r);
+            for (int slot = 0; slot < 4; slot++) {
+                if (!LanManager.RackBus.isServer(d.slotKind(slot))) continue;
+                server++;
+                PcCaseBlockEntity pc = level.isLoaded(r) ? com.strikerr212.minepc.block.Hosts.get(level, r, slot) : null;
+                String name = pc == null ? "" : "@" + (pc.label().isEmpty() ? pc.address().substring(0, 8) : pc.label());
+                int cfg = data.portConfig(r, LanData.BUS_PORT0 + slot);
+                out.add(new Port(BUS_BASE + ri * PER_RACK + LanData.BUS_PORT0 + slot, 'S', server, true, name,
+                        LanData.portEnabled(cfg), LanData.portVlan(cfg), 0));
+            }
+            for (Port p : ports(level, r, false)) {
+                boolean net = p.port() >= LanData.CABLE_PORTS
+                        || LanManager.RackBus.isNetwork(d.slotKind(LanManager.hostSlot(d, p.port())));
+                if (!net) continue;   // гнёзда серверов сзади — не порты шины
+                out.add(new Port(BUS_BASE + ri * PER_RACK + p.port(), p.side(), p.number(), p.link(), p.device(), p.enabled(), p.vlan(), p.length()));
+            }
+        }
+        return out;
+    }
+
+    /** Включить/выключить порт и задать VLAN (у шины стоек — порт из списка {@link #ports}). */
+    public static boolean set(ServerLevel level, BlockPos pos, int port, boolean enabled, int vlan) {
+        LanData data = LanData.get(level);
+        LanData.Device d = data.device(pos);
+        if (d != null && d.type() == LanData.RACK) {
+            if (port < BUS_BASE) return false;
+            List<BlockPos> group = LanManager.rackGroup(data, pos);
+            group.sort(java.util.Comparator.comparingLong(BlockPos::asLong));
+            int ri = (port - BUS_BASE) / PER_RACK, local = (port - BUS_BASE) % PER_RACK;
+            if (ri >= group.size()) return false;
+            data.setPort(group.get(ri), local, enabled, vlan);
+            return true;
+        }
+        if (port < 0 || port >= LanData.PORTS) return false;
+        data.setPort(pos, port, enabled, vlan);
+        return true;
+    }
+
     /** Все порты устройства, которые есть или заняты. */
     public static List<Port> ports(ServerLevel level, BlockPos pos) {
+        return ports(level, pos, true);
+    }
+
+    private static List<Port> ports(ServerLevel level, BlockPos pos, boolean bus) {
         LanData data = LanData.get(level);
         LanData.Device d = data.device(pos);
         List<Port> out = new ArrayList<>();
         if (d == null) return out;
+        if (bus && d.type() == LanData.RACK) return busPorts(level, pos);
         BlockState state = level.getBlockState(pos);
         Map<Integer, LanManager.Segment> used = new HashMap<>();
         for (int port : LanManager.usedPorts(data, pos, d)) used.put(port, LanManager.explore(data, pos, port));
-        List<LanDevice.Socket> socks = state.getBlock() instanceof LanDevice dev ? dev.sockets(state) : List.of();
+        List<LanDevice.Socket> socks = state.getBlock() instanceof LanDevice dev ? dev.sockets(level, pos, state) : List.of();
         for (int port = 0; port < LanData.PORTS; port++) {
-            boolean exists = port < LanData.CABLE_PORTS && port < socks.size();
+            boolean exists = port < LanData.CABLE_PORTS && port < socks.size() && (socks.get(port).copper() || socks.get(port).fiber());
             LanManager.Segment seg = used.get(port);
             if (!exists && seg == null) continue;
             // У стоечного коммутатора 12 гнёзд: показываем только занятые, чтобы окно не было бесконечным

@@ -76,6 +76,16 @@ public interface LanDevice {
         return new Socket(f, along, (float) Math.floor(h), depth, copper, fiber);
     }
 
+    /** Гнёзда устройства в мире: у серверной стойки они зависят от модулей в ней. */
+    default List<Socket> sockets(net.minecraft.world.level.BlockGetter level, BlockPos pos, BlockState state) {
+        return sockets(state);
+    }
+
+    /** Ещё для схемы сети (старшие биты Device.mask, от 8-го): у стойки — модули и сторона. */
+    default int lanMaskExtra(Level level, BlockPos pos, BlockState state) {
+        return 0;
+    }
+
     /** Габарит модели (по форме блока), в долях блока. */
     static AABB bounds(BlockState state) {
         VoxelShape s = state.getShape(EmptyBlockGetter.INSTANCE, BlockPos.ZERO);
@@ -122,6 +132,6 @@ public interface LanDevice {
     /** Гнёзда устройства, стоящего в pos (пустой список — это не устройство). */
     static List<Socket> socketsAt(net.minecraft.world.level.BlockGetter level, BlockPos pos) {
         BlockState s = level.getBlockState(pos);
-        return s.getBlock() instanceof LanDevice d ? d.sockets(s) : List.of();
+        return s.getBlock() instanceof LanDevice d ? d.sockets(level, pos, s) : List.of();
     }
 }

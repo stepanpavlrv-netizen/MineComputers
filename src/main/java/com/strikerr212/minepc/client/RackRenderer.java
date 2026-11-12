@@ -84,7 +84,8 @@ public class RackRenderer implements BlockEntityRenderer<RackBlockEntity> {
             }
             if (kind == RackBlockEntity.UPPER) continue;                                // верх модуля 2U рисует он сам
             if (RackBlockEntity.isServer(kind)) server(vc, pose, be.server(slot), y, be.size(slot) * 4, dz, ease > 0.6f, l, time, slot);
-            else console(vc, pose, y, dz, ease, l);
+            else if (kind == RackBlockEntity.CONSOLE) console(vc, pose, y, dz, ease, l);
+            else fixedModule(vc, pose, be, kind, slot, y, be.size(slot) * 4, light, time);
         }
         pose.popPose();
     }
@@ -236,6 +237,64 @@ public class RackRenderer implements BlockEntityRenderer<RackBlockEntity> {
         float[] inner = {3.3f, 6.0f, 9.9f, 12.6f};
         boolean left = bank % 2 == 0;
         return left ? inner[bank] - 0.32f - pos * 0.45f : inner[bank] + pos * 0.45f;
+    }
+
+    /**
+     * Модули, которые не выдвигаются: коммутатор (3 гнезда, SFP, лампы портов), патч-панель (сзади — кабели здания,
+     * спереди — гнёзда с бирками), роутер 2U (порты WAN и экранчик), ИБП 2U (батарея и лампы заряда), заглушка.
+     */
+    private static void fixedModule(VertexConsumer vc, PoseStack pose, RackBlockEntity be, int kind, int slot, float y, int h,
+                                    int light, long time) {
+        float top = y + h - 0.2f, mid = y + h / 2f;
+        box(vc, pose, 1, y + 0.2f, 1, 15, top, 15, BODY, light);                    // корпус в глубину
+        box(vc, pose, 0, y + 0.2f, 0, 16, top, 1, FRONT, light);                    // лицо
+        box(vc, pose, 0, y + 0.8f, -0.6f, 0.8f, top - 0.6f, 0, EAR, light);
+        box(vc, pose, 15.2f, y + 0.8f, -0.6f, 16, top - 0.6f, 0, EAR, light);
+        boolean bus = be.has(RackBlockEntity.SWITCH) || com.strikerr212.minepc.block.RackBlock.hasModule(be.getLevel(), be.getBlockPos(), RackBlockEntity.SWITCH);
+        switch (kind) {
+            case RackBlockEntity.SWITCH -> {
+                for (int j = 0; j < 3; j++) {                                          // медные гнёзда (как в схеме: x 3, 5, 7)
+                    float x = 3 + 2 * j;
+                    box(vc, pose, x - 0.3f, y + 0.8f, -0.05f, x + 1.3f, y + 2.2f, 0.1f, DARK, light);
+                    glow(vc, pose, x + 0.5f, y + 2.8f, -0.1f, 0.3f, ((time / 4 + j * 5 + slot) % 7 < 2) ? 0x2A8040 : LED_G);
+                }
+                box(vc, pose, 10.6f, y + 0.8f, -0.05f, 12.4f, y + 2.2f, 0.1f, 0x7E828A, light);   // SFP
+                glow(vc, pose, 11.5f, y + 2.8f, -0.1f, 0.3f, LED_B);
+                // лампы шины: по одной на сервер ряда стоек (до 8)
+                for (int k = 0; k < 8; k++) glow(vc, pose, 13.4f + (k % 4) * 0.45f, y + 1.2f + (k / 4) * 1.2f, -0.1f, 0.15f, LED_G);
+            }
+            case RackBlockEntity.PATCH -> {
+                for (int j = 0; j < 6; j++) {
+                    float x = 2 + j * 2;
+                    box(vc, pose, x, y + 1.0f, -0.05f, x + 1.4f, y + 2.4f, 0.1f, DARK, light);
+                    box(vc, pose, x, y + 2.7f, -0.05f, x + 1.4f, y + 3.3f, 0.05f, 0xD8DADE, light);   // бирка
+                }
+                glow(vc, pose, 14.3f, mid, -0.1f, 0.3f, bus ? LED_G : OFF);
+            }
+            case RackBlockEntity.ROUTER -> {
+                for (int j = 0; j < 3; j++) {
+                    float x = 3 + 2 * j;
+                    box(vc, pose, x - 0.3f, y + 0.8f, -0.05f, x + 1.3f, y + 2.2f, 0.1f, DARK, light);
+                    glow(vc, pose, x + 0.5f, y + 2.8f, -0.1f, 0.3f, bus ? LED_G : OFF);
+                }
+                box(vc, pose, 10.6f, y + 0.8f, -0.05f, 12.4f, y + 2.2f, 0.1f, DARK, light);         // WAN
+                glow(vc, pose, 11.5f, y + 2.8f, -0.1f, 0.3f, bus ? LED_A : OFF);
+                box(vc, pose, 3, y + 4.4f, -0.05f, 11, y + 7f, 0.1f, 0x101A14, light);              // экранчик
+                if (bus) for (int i = 0; i < 3; i++) glow(vc, pose, 3.6f, y + 6.2f - i * 0.7f, -0.1f, 0, 0, 2 + (i * 3) % 5, 0.35f, 0x3CFF8C);
+                glow(vc, pose, 13.8f, top - 1.2f, -0.1f, 0.35f, bus ? LED_B : OFF);
+            }
+            case RackBlockEntity.UPS -> {
+                box(vc, pose, 2, y + 1.2f, -0.05f, 8, top - 1.2f, 0.1f, DARK, light);                // панель батареи
+                for (int i = 0; i < 4; i++) {
+                    glow(vc, pose, 2.6f + i * 1.3f, y + 2.6f, -0.1f, 0, 0, 1.0f, 2.4f, i < 3 ? LED_G : 0x203024);
+                }
+                for (int i = 0; i < 4; i++) box(vc, pose, 9.5f + i * 1.2f, y + 1.2f, -0.05f, 10.2f + i * 1.2f, top - 1.2f, 0.1f, 0x55585F, light);
+                glow(vc, pose, 14.3f, top - 1.2f, -0.1f, 0.35f, LED_G);
+            }
+            default -> {                                                                     // заглушка: перфорация
+                for (int i = 0; i < 12; i++) box(vc, pose, 1.6f + i * 1.1f, mid - 0.3f, -0.05f, 2.1f + i * 1.1f, mid + 0.3f, 0.02f, DARK, light);
+            }
+        }
     }
 
     private static void console(VertexConsumer vc, PoseStack pose, float y, float dz, float ease, int light) {

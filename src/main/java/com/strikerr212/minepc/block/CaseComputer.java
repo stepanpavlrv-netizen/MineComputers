@@ -365,6 +365,7 @@ public final class CaseComputer implements Computer.Host {
                     case 'B' -> "back";
                     case 'L' -> "left";
                     case 'R' -> "right";
+                    case 'S' -> "bus";
                     default -> "cord";
                 });
                 m.put("n", port.number());
@@ -384,11 +385,13 @@ public final class CaseComputer implements Computer.Host {
         return onServer(level -> {
             BlockPos p = linkCode == 0 ? null : switchById(level, id);
             if (p == null) return "Нет такого коммутатора";
-            if (port < 0 || port >= com.strikerr212.minepc.lan.LanData.PORTS) return "Нет такого порта";
             var data = com.strikerr212.minepc.lan.LanData.get(level);
-            int v = vlan == -2 ? com.strikerr212.minepc.lan.LanData.portVlan(data.portConfig(p, port)) : vlan;
-            data.setPort(p, port, enabled, v);
-            return null;
+            int v = vlan;
+            if (vlan == -2) {   // VLAN не меняем: берём нынешний из списка портов
+                v = 0;
+                for (var pp : com.strikerr212.minepc.lan.SwitchPorts.ports(level, p)) if (pp.port() == port) v = pp.vlan();
+            }
+            return com.strikerr212.minepc.lan.SwitchPorts.set(level, p, port, enabled, v) ? null : "Нет такого порта";
         }, "Сервер не ответил");
     }
 

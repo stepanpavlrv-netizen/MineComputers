@@ -87,7 +87,8 @@ public final class LanManager {
         LanData data = LanData.get(server);
         BlockState s = level.getBlockState(pos);
         if (s.getBlock() instanceof LanDevice d) {
-            int mask = Math.min(LanData.CABLE_PORTS, d.sockets(s).size());   // сколько гнёзд
+            int mask = Math.min(LanData.CABLE_PORTS, d.sockets(level, pos, s).size())   // сколько гнёзд
+                    | d.lanMaskExtra(level, pos, s) << 8;                                 // у стойки — модули и сторона
             int kbit = (int) Math.min(Integer.MAX_VALUE, d.lanBitsPerSecond(level, pos, s) / 1000L);
             data.putDevice(pos, new LanData.Device(d.lanType(s), kbit, mask, d.lanExtra(level, pos, s)));
         } else {
@@ -128,8 +129,76 @@ public final class LanManager {
 
     /** Порт компьютера подключён (хотя бы к одному работающему отрезку). */
     public boolean linked(ServerLevel level, HostRef host) {
-        for (Segment s : hostSegments(LanData.get(level), host)) if (s.ok()) return true;
-        return false;
+        LanData data = LanData.get(level);
+        for (Segment s : hostSegments(data, host)) if (s.ok()) return true;
+        // Сервер в стойке с коммутатором-модулем подключён шиной
+        return busPortOn(data, host);
+    }
+
+    /** Сервер стойки подключён к шине: в ряду есть коммутатор-модуль и порт шины не выключен. */
+    static boolean busPortOn(LanData data, HostRef host) {
+        LanData.Device d = data.device(host.pos());
+        if (d == null || d.type() != LanData.RACK || !RackBus.isServer(d.slotKind(host.slot()))) return false;
+        return busAnchor(data, host.pos()) != null && LanData.portEnabled(data.portConfig(host.pos(), LanData.BUS_PORT0 + host.slot()));
+    }
+
+    // ======================= Шина серверной стойки =======================
+
+    /** Стойки одного ряда (колонна и соседи бок о бок, смотрящие туда же) — по схеме, без мира. */
+    public static List<BlockPos> rackGroup(LanData data, BlockPos start) {
+        List<BlockPos> out = new ArrayList<>();
+        LanData.Device d0 = data.device(start);
+        if (d0 == null || d0.type() != LanData.RACK) return out;
+        Direction f = Direction.from2DDataValue(d0.facing2d());
+        ArrayDeque<BlockPos> q = new ArrayDeque<>();
+        Set<BlockPos> seen = new HashSet<>();
+        q.add(start.immutable());
+        seen.add(start.immutable());
+        while (!q.isEmpty() && out.size() < 64) {
+            BlockPos p = q.poll();
+            out.add(p);
+            for (Direction dir : new Direction[]{Direction.UP, Direction.DOWN, f.getClockWise(), f.getCounterClockWise()}) {
+                BlockPos n = p.relative(dir).immutable();
+                if (seen.contains(n)) continue;
+                LanData.Device o = data.device(n);
+                if (o != null && o.type() == LanData.RACK && o.facing2d() == d0.facing2d()) {
+                    seen.add(n);
+                    q.add(n);
+                }
+            }
+        }
+        return out;
+    }
+
+    /** Точка шины ряда (стойка с наименьшим номером), если в ряду есть коммутатор-модуль; иначе null. */
+    public static BlockPos busAnchor(LanData data, BlockPos rack) {
+        List<BlockPos> g = rackGroup(data, rack);
+        boolean sw = false;
+        BlockPos anchor = null;
+        for (BlockPos p : g) {
+            LanData.Device d = data.device(p);
+            for (int i = 0; i < 4; i++) if (d.slotKind(i) == RackBus.SWITCH) sw = true;
+            if (anchor == null || p.asLong() < anchor.asLong()) anchor = p;
+        }
+        return sw ? anchor : null;
+    }
+
+    /** Константы видов модулей стойки (как в RackBlockEntity, но без Minecraft-классов блока). */
+    static final class RackBus {
+        static final int SERVER = 1, SERVER_2U = 3, SWITCH = 5, PATCH = 6, ROUTER = 7;
+
+        static boolean isServer(int k) {
+            return k == SERVER || k == SERVER_2U;
+        }
+
+        static boolean isNetwork(int k) {
+            return k == SWITCH || k == PATCH || k == ROUTER;
+        }
+
+        /** Какие порты гнёзд у модуля на месте slot: главный и три дополнительных. */
+        static int[] ports(int slot) {
+            return new int[]{slot, 4 + 3 * slot, 5 + 3 * slot, 6 + 3 * slot};
+        }
     }
 
     /**
@@ -137,7 +206,8 @@ public final class LanManager {
      * гнездо своего модуля (номер гнезда = номер модуля).
      */
     public static int hostSlot(LanData.Device d, int port) {
-        return d != null && d.type() == LanData.RACK && port < LanData.CABLE_PORTS ? port : 0;
+        if (d == null || d.type() != LanData.RACK || port >= LanData.CABLE_PORTS) return 0;
+        return port < 4 ? port : (port - 4) / 3;
     }
 
     /** Отрезки, к которым подключён компьютер. */
@@ -169,6 +239,11 @@ public final class LanManager {
             for (Segment s : hostSegments(data, start)) {
                 if (s.ok()) for (LanData.Plug p : s.plugs()) v.plug(p, 0, selfBits);
             }
+            // Сервер стойки — в шину ряда (если там есть коммутатор-модуль)
+            if (busPortOn(data, start)) {
+                int cfg = data.portConfig(start.pos(), LanData.BUS_PORT0 + start.slot());
+                v.enter(busAnchor(data, start.pos()), LanData.portVlan(cfg), 1, selfBits);
+            }
         }
         // По Wi-Fi: роутер — как коммутатор, к которому мы подключены (общий VLAN)
         LanData.WifiLink own = start.slot() == 0 ? data.wifiOf(start.pos()) : null;
@@ -177,6 +252,10 @@ public final class LanManager {
             Node cur = queue.poll();
             LanData.Device dev = data.device(cur.pos);
             if (dev == null) continue;
+            if (dev.type() == LanData.RACK) {          // шина ряда стоек
+                visitBus(data, cur, v, start);
+                continue;
+            }
             if (dev.type() == LanData.ROUTER) {
                 for (LanData.WifiLink l : data.wifiClients(cur.pos)) {
                     if (!HostRef.of(l.computer()).equals(start)) v.computer(HostRef.of(l.computer()), cur.hops, Math.min(cur.bits, l.bits()));
@@ -198,6 +277,44 @@ public final class LanManager {
         return new Result(List.copyOf(best.values()), List.copyOf(switches));
     }
 
+    /**
+     * Шина ряда стоек — коммутатор: серверы ряда (по своим портам шины), гнёзда сетевых модулей и патч-корды.
+     * Роутер-модуль соединяет VLAN шины между собой (+1 переход).
+     */
+    private static void visitBus(LanData data, Node cur, Visitor v, HostRef start) {
+        boolean router = false;
+        Set<Integer> vlans = new HashSet<>();
+        for (BlockPos r : rackGroup(data, cur.pos)) {
+            LanData.Device d = data.device(r);
+            List<Integer> netPorts = new ArrayList<>();
+            for (int s = 0; s < 4; s++) {
+                int k = d.slotKind(s);
+                if (k == RackBus.ROUTER) router = true;
+                if (RackBus.isServer(k)) {
+                    int cfg = data.portConfig(r, LanData.BUS_PORT0 + s);
+                    vlans.add(LanData.portVlan(cfg));
+                    HostRef h = new HostRef(r, s);
+                    long b = Math.min(cur.bits, d.bitsFor(s));
+                    if (!h.equals(start) && b > 0 && LanData.portEnabled(cfg) && LanData.portVlan(cfg) == cur.vlan) v.computer(h, cur.hops, b);
+                } else if (RackBus.isNetwork(k)) {
+                    for (int p : RackBus.ports(s)) netPorts.add(p);
+                }
+            }
+            for (int p = LanData.CABLE_PORTS; p < LanData.PORTS; p++) netPorts.add(p);   // патч-корды в стойку — тоже в шину
+            for (Segment seg : segmentsAt(data, r)) {
+                if (!seg.ok() || !netPorts.contains(seg.port())) continue;
+                int cfg = data.portConfig(r, seg.port());
+                vlans.add(LanData.portVlan(cfg));
+                if (!LanData.portEnabled(cfg) || LanData.portVlan(cfg) != cur.vlan) continue;
+                boolean wan = seg.port() < LanData.CABLE_PORTS && d.slotKind(hostSlot(d, seg.port())) == RackBus.ROUTER;
+                for (LanData.Plug pl : seg.plugs()) v.plug(pl, cur.hops + (wan ? 1 : 0), cur.bits);
+            }
+        }
+        if (router) {
+            for (int vl : vlans) if (vl != cur.vlan) v.enter(cur.pos, vl, cur.hops + 1, cur.bits);
+        }
+    }
+
     /** Обход: что делать с найденным портом устройства. */
     private record Visitor(LanData data, HostRef start, Map<HostRef, Reach> best, Set<VKey> visited,
                            List<BlockPos> switches, ArrayDeque<Node> queue) {
@@ -206,6 +323,19 @@ public final class LanManager {
             LanData.Device d = data.device(p.pos());
             if (d == null) return;
             HostRef host = new HostRef(p.pos(), hostSlot(d, p.port()));
+            if (d.type() == LanData.RACK) {
+                // Гнездо сетевого модуля или патч-корд в стойку — в шину ряда; гнездо сервера — сам сервер
+                int k = d.slotKind(host.slot());
+                boolean toBus = p.port() >= LanData.CABLE_PORTS || RackBus.isNetwork(k);
+                BlockPos anchor = toBus ? busAnchor(data, p.pos()) : null;
+                if (anchor != null) {
+                    int cfg = data.portConfig(p.pos(), p.port());
+                    long b = Math.min(bits, 10_000_000_000L);
+                    if (LanData.portEnabled(cfg)) enter(anchor, LanData.portVlan(cfg), hops + 1 + (k == RackBus.ROUTER ? 1 : 0), b);
+                    return;
+                }
+                if (toBus && p.port() < LanData.CABLE_PORTS) return;   // модуль без коммутатора в ряду — тупик
+            }
             if (d.computer() && host.equals(start)) return;
             long b = Math.min(bits, d.computer() ? d.bitsFor(host.slot()) : d.bits());
             if (b <= 0) return;
