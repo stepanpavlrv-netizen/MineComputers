@@ -157,7 +157,7 @@ public class PcCaseScreen extends AbstractContainerScreen<PcCaseMenu> {
     @Override
     protected void containerTick() {
         super.containerTick();
-        if (++age % 10 == 0) refresh();
+        if (++age % 10 == 0 || age == 2) refresh();   // age 2 — данные меню уже пришли с сервера
         if (age % 20 == 0) {
             System.arraycopy(load, 1, load, 0, load.length - 1);
             boolean on = menu.computerState() == 1;
