@@ -15,13 +15,13 @@ import net.minecraft.resources.ResourceLocation;
  * @param data     сжатый кадр или изменения ({@link com.strikerr212.minepc.computer.TerminalCodec})
  * @param keyboard подключена ли клавиатура (можно ли печатать)
  */
-public record TerminalPayload(com.strikerr212.minepc.computer.HostRef host, byte[] data, boolean keyboard) implements CustomPacketPayload {
+public record TerminalPayload(com.strikerr212.minepc.block.HostRef host, byte[] data, boolean keyboard) implements CustomPacketPayload {
 
     public static final Type<TerminalPayload> TYPE =
             new Type<>(ResourceLocation.fromNamespaceAndPath(MineComputers.MODID, "terminal"));
 
     public static final StreamCodec<ByteBuf, TerminalPayload> STREAM_CODEC = StreamCodec.composite(
-            com.strikerr212.minepc.computer.HostRef.STREAM_CODEC, TerminalPayload::host,
+            com.strikerr212.minepc.block.HostRef.STREAM_CODEC, TerminalPayload::host,
             ByteBufCodecs.byteArray(1_000_000), TerminalPayload::data,
             ByteBufCodecs.BOOL, TerminalPayload::keyboard,
             TerminalPayload::new);

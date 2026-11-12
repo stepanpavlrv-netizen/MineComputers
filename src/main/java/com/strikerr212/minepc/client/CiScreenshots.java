@@ -315,11 +315,11 @@ public class CiScreenshots {
             // Серверная стойка: две стойки друг на друге, три сервера и консоль; один сервер выдвинут
             case 2342 -> server.execute(CiScreenshots::placeRack);
             case 2395 -> {
-                typeHost(new com.strikerr212.minepc.computer.HostRef(rackPos, 0), "hostname srv-a");
-                typeHost(new com.strikerr212.minepc.computer.HostRef(rackPos, 1), "hostname srv-b");
-                typeHost(new com.strikerr212.minepc.computer.HostRef(rackPos.above(), 0), "hostname srv-c");
+                typeHost(new com.strikerr212.minepc.block.HostRef(rackPos, 0), "hostname srv-a");
+                typeHost(new com.strikerr212.minepc.block.HostRef(rackPos, 1), "hostname srv-b");
+                typeHost(new com.strikerr212.minepc.block.HostRef(rackPos.above(), 0), "hostname srv-c");
             }
-            case 2402 -> typeHost(new com.strikerr212.minepc.computer.HostRef(rackPos, 0), "ping srv-b 2");
+            case 2402 -> typeHost(new com.strikerr212.minepc.block.HostRef(rackPos, 0), "ping srv-b 2");
             case 2425 -> shot(mc, "world_server_rack");
             case 2428 -> server.execute(() -> {
                 ServerPlayer p = server.getPlayerList().getPlayers().get(0);
@@ -331,13 +331,13 @@ public class CiScreenshots {
                 }
                 var lan = com.strikerr212.minepc.lan.LanManager.get(p.serverLevel());
                 StringBuilder sb = new StringBuilder("[CI-RACK] srv-a ->");
-                for (var r : lan.reach(p.serverLevel(), new com.strikerr212.minepc.computer.HostRef(rackPos, 0))) {
+                for (var r : lan.reach(p.serverLevel(), new com.strikerr212.minepc.block.HostRef(rackPos, 0))) {
                     sb.append(' ').append(r.pos().toShortString()).append('#').append(r.slot()).append(" hops=").append(r.hops());
                 }
                 com.mojang.logging.LogUtils.getLogger().info(sb.toString());
             });
             case 2436 -> shot(mc, "rack_server_gui");
-            case 2440 -> mc.setScreen(new TerminalScreen(new com.strikerr212.minepc.computer.HostRef(rackPos, 0)));
+            case 2440 -> mc.setScreen(new TerminalScreen(new com.strikerr212.minepc.block.HostRef(rackPos, 0)));
             case 2452 -> shot(mc, "rack_terminal");
             case 2455 -> mc.setScreen(new ConsoleScreen(rackPos));
             case 2462 -> shot(mc, "rack_console");
@@ -351,7 +351,7 @@ public class CiScreenshots {
     private static BlockPos rackPos = BlockPos.ZERO;
 
     /** Ввод в компьютер (и в модуль стойки) из CI. */
-    private static void typeHost(com.strikerr212.minepc.computer.HostRef host, String line) {
+    private static void typeHost(com.strikerr212.minepc.block.HostRef host, String line) {
         var server = Minecraft.getInstance().getSingleplayerServer();
         server.execute(() -> {
             PcCaseBlockEntity be = com.strikerr212.minepc.block.Hosts.get(server.overworld(), host);

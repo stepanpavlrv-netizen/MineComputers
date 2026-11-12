@@ -1,6 +1,5 @@
 package com.strikerr212.minepc.block;
 
-import com.strikerr212.minepc.computer.HostRef;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.BlockGetter;
 

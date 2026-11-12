@@ -17,14 +17,14 @@ import java.util.Map;
  */
 final class PixelLayer {
 
-    private static final Map<com.strikerr212.minepc.computer.HostRef, PixelLayer> LAYERS = new HashMap<>();
+    private static final Map<com.strikerr212.minepc.block.HostRef, PixelLayer> LAYERS = new HashMap<>();
 
     private final ResourceLocation id;
     private DynamicTexture texture;
     private int w, h;
     private ClientTerminals.Snapshot source;
 
-    private PixelLayer(com.strikerr212.minepc.computer.HostRef host) {
+    private PixelLayer(com.strikerr212.minepc.block.HostRef host) {
         id = ResourceLocation.fromNamespaceAndPath("minepc", "screen/" + Long.toHexString(host.pos().asLong()) + "_" + host.slot());
     }
 
@@ -40,7 +40,7 @@ final class PixelLayer {
         return layer.id;
     }
 
-    static void release(com.strikerr212.minepc.computer.HostRef pos) {
+    static void release(com.strikerr212.minepc.block.HostRef pos) {
         PixelLayer l = LAYERS.remove(pos);
         if (l != null) l.close();
     }

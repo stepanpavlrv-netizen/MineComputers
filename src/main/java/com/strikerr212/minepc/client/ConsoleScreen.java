@@ -3,7 +3,7 @@ package com.strikerr212.minepc.client;
 import com.strikerr212.minepc.block.PcCaseBlockEntity;
 import com.strikerr212.minepc.block.RackBlock;
 import com.strikerr212.minepc.block.RackBlockEntity;
-import com.strikerr212.minepc.computer.HostRef;
+import com.strikerr212.minepc.block.HostRef;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;

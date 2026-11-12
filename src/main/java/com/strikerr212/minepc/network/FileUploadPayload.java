@@ -12,7 +12,7 @@ import net.minecraft.resources.ResourceLocation;
  * Кусок файла, который игрок перетащил со своего компьютера в окно экрана (игрок → сервер).
  * Большие файлы приходят несколькими кусками: offset — откуда этот кусок, total — размер файла.
  */
-public record FileUploadPayload(com.strikerr212.minepc.computer.HostRef host, String name, int offset, int total, byte[] data)
+public record FileUploadPayload(com.strikerr212.minepc.block.HostRef host, String name, int offset, int total, byte[] data)
         implements CustomPacketPayload {
 
     public static final int CHUNK = 30000;
@@ -22,7 +22,7 @@ public record FileUploadPayload(com.strikerr212.minepc.computer.HostRef host, St
             new Type<>(ResourceLocation.fromNamespaceAndPath(MineComputers.MODID, "file_upload"));
 
     public static final StreamCodec<ByteBuf, FileUploadPayload> STREAM_CODEC = StreamCodec.composite(
-            com.strikerr212.minepc.computer.HostRef.STREAM_CODEC, FileUploadPayload::host,
+            com.strikerr212.minepc.block.HostRef.STREAM_CODEC, FileUploadPayload::host,
             ByteBufCodecs.stringUtf8(255), FileUploadPayload::name,
             ByteBufCodecs.VAR_INT, FileUploadPayload::offset,
             ByteBufCodecs.VAR_INT, FileUploadPayload::total,

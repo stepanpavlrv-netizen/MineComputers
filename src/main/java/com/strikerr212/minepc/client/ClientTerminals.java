@@ -2,7 +2,7 @@ package com.strikerr212.minepc.client;
 
 import com.strikerr212.minepc.computer.TerminalCodec;
 import com.strikerr212.minepc.network.TerminalInputPayload;
-import com.strikerr212.minepc.computer.HostRef;
+import com.strikerr212.minepc.block.HostRef;
 import net.minecraft.core.BlockPos;
 import net.neoforged.neoforge.network.PacketDistributor;
 

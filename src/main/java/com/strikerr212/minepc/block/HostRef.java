@@ -1,4 +1,4 @@
-package com.strikerr212.minepc.computer;
+package com.strikerr212.minepc.block;
 
 import io.netty.buffer.ByteBuf;
 import net.minecraft.core.BlockPos;

@@ -18,19 +18,19 @@ import java.util.Map;
  */
 public final class HumSounds {
 
-    private static final Map<com.strikerr212.minepc.computer.HostRef, Hum> FANS = new HashMap<>();
-    private static final Map<com.strikerr212.minepc.computer.HostRef, Hum> DISKS = new HashMap<>();
+    private static final Map<com.strikerr212.minepc.block.HostRef, Hum> FANS = new HashMap<>();
+    private static final Map<com.strikerr212.minepc.block.HostRef, Hum> DISKS = new HashMap<>();
 
     private HumSounds() {
     }
 
     /** Главный поток: пришли обороты от сервера. */
-    public static void update(com.strikerr212.minepc.computer.HostRef host, int fan, boolean hdd, boolean start) {
+    public static void update(com.strikerr212.minepc.block.HostRef host, int fan, boolean hdd, boolean start) {
         set(FANS, host, fan / 100f, false, start);
         set(DISKS, host, hdd ? 1f : 0f, true, start);
     }
 
-    private static void set(Map<com.strikerr212.minepc.computer.HostRef, Hum> map, com.strikerr212.minepc.computer.HostRef host,
+    private static void set(Map<com.strikerr212.minepc.block.HostRef, Hum> map, com.strikerr212.minepc.block.HostRef host,
                             float target, boolean disk, boolean start) {
         BlockPos pos = host.pos();
         Minecraft mc = Minecraft.getInstance();

@@ -146,8 +146,8 @@ public class PcCaseBlockEntity extends BlockEntity implements com.strikerr212.mi
     }
 
     /** Кто это в сети, на экране и в меню: блок и место в нём. */
-    public com.strikerr212.minepc.computer.HostRef hostRef() {
-        return new com.strikerr212.minepc.computer.HostRef(worldPosition, rackSlot);
+    public com.strikerr212.minepc.block.HostRef hostRef() {
+        return new com.strikerr212.minepc.block.HostRef(worldPosition, rackSlot);
     }
 
     /** Модуль стойки: вызывать вместо выгрузки чанка или удаления блока. */

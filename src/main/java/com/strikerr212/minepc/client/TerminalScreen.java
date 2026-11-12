@@ -24,16 +24,16 @@ public class TerminalScreen extends Screen {
 
     private final BlockPos casePos;
     /** Какой компьютер на экране (у модуля стойки — его место в стойке). */
-    private final com.strikerr212.minepc.computer.HostRef host;
+    private final com.strikerr212.minepc.block.HostRef host;
     private Button powerButton;
     private int termX, termY;
     private float scale = 1;
 
     public TerminalScreen(BlockPos casePos) {
-        this(com.strikerr212.minepc.computer.HostRef.of(casePos));
+        this(com.strikerr212.minepc.block.HostRef.of(casePos));
     }
 
-    public TerminalScreen(com.strikerr212.minepc.computer.HostRef host) {
+    public TerminalScreen(com.strikerr212.minepc.block.HostRef host) {
         super(Component.translatable("gui.minepc.terminal"));
         this.host = host;
         this.casePos = host.pos();

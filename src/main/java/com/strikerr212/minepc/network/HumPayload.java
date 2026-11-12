@@ -16,13 +16,13 @@ import net.minecraft.resources.ResourceLocation;
  * @param hdd  есть ли жёсткий диск (он тоже шумит)
  * @param start компьютер только что включили — звук раскручивается (иначе игрок просто подошёл)
  */
-public record HumPayload(com.strikerr212.minepc.computer.HostRef host, int fan, boolean hdd, boolean start) implements CustomPacketPayload {
+public record HumPayload(com.strikerr212.minepc.block.HostRef host, int fan, boolean hdd, boolean start) implements CustomPacketPayload {
 
     public static final Type<HumPayload> TYPE =
             new Type<>(ResourceLocation.fromNamespaceAndPath(MineComputers.MODID, "hum"));
 
     public static final StreamCodec<ByteBuf, HumPayload> STREAM_CODEC = StreamCodec.composite(
-            com.strikerr212.minepc.computer.HostRef.STREAM_CODEC, HumPayload::host,
+            com.strikerr212.minepc.block.HostRef.STREAM_CODEC, HumPayload::host,
             ByteBufCodecs.VAR_INT, HumPayload::fan,
             ByteBufCodecs.BOOL, HumPayload::hdd,
             ByteBufCodecs.BOOL, HumPayload::start,

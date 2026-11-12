@@ -16,13 +16,13 @@ import net.minecraft.resources.ResourceLocation;
  * @param nowMs    «сейчас» по часам компьютера в момент отправки
  * @param commands команды ({@link com.strikerr212.minepc.computer.audio.Synth})
  */
-public record SoundPayload(com.strikerr212.minepc.computer.HostRef host, long startMs, long nowMs, byte[] commands) implements CustomPacketPayload {
+public record SoundPayload(com.strikerr212.minepc.block.HostRef host, long startMs, long nowMs, byte[] commands) implements CustomPacketPayload {
 
     public static final Type<SoundPayload> TYPE =
             new Type<>(ResourceLocation.fromNamespaceAndPath(MineComputers.MODID, "sound"));
 
     public static final StreamCodec<ByteBuf, SoundPayload> STREAM_CODEC = StreamCodec.composite(
-            com.strikerr212.minepc.computer.HostRef.STREAM_CODEC, SoundPayload::host,
+            com.strikerr212.minepc.block.HostRef.STREAM_CODEC, SoundPayload::host,
             ByteBufCodecs.VAR_LONG, SoundPayload::startMs,
             ByteBufCodecs.VAR_LONG, SoundPayload::nowMs,
             ByteBufCodecs.byteArray(256 * 1024), SoundPayload::commands,

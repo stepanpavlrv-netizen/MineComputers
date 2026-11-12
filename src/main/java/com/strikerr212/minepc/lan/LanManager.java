@@ -2,7 +2,7 @@ package com.strikerr212.minepc.lan;
 
 import com.strikerr212.minepc.block.PcCaseBlockEntity;
 import com.strikerr212.minepc.computer.Computer;
-import com.strikerr212.minepc.computer.HostRef;
+import com.strikerr212.minepc.block.HostRef;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;

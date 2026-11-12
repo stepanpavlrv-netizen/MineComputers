@@ -38,7 +38,7 @@ public final class ComputerAudio {
 
     private static final class Speaker {
         final BlockPos pos;
-        com.strikerr212.minepc.computer.HostRef key;
+        com.strikerr212.minepc.block.HostRef key;
         final Synth synth = new Synth();
         final Timeline timeline = new Timeline(synth);
         final ConcurrentLinkedQueue<Packet> inbox = new ConcurrentLinkedQueue<>();
@@ -55,7 +55,7 @@ public final class ComputerAudio {
         }
     }
 
-    private static final Map<com.strikerr212.minepc.computer.HostRef, Speaker> SPEAKERS = new ConcurrentHashMap<>();
+    private static final Map<com.strikerr212.minepc.block.HostRef, Speaker> SPEAKERS = new ConcurrentHashMap<>();
     /** Для проверки в CI: сколько пакетов пришло и сколько кусочков звука отдано в OpenAL. */
     public static volatile long packets, chunks;
     /** Для проверки в CI: сумма и число задержек «пришёл пакет → зазвучал» (мс, без задержки самой звуковой карты). */
@@ -69,7 +69,7 @@ public final class ComputerAudio {
     }
 
     /** Пакет с сервера (из любого потока). */
-    public static void receive(com.strikerr212.minepc.computer.HostRef host, long startMs, long nowMs, byte[] commands) {
+    public static void receive(com.strikerr212.minepc.block.HostRef host, long startMs, long nowMs, byte[] commands) {
         if (MineClientConfig.programs() <= 0) return;
         Speaker s = SPEAKERS.get(host);
         if (s == null) {
@@ -104,7 +104,7 @@ public final class ComputerAudio {
     // ======================= Поток звука =======================
 
     /** Динамики, у которых есть источник OpenAL (их знает только этот поток). */
-    private static final Map<com.strikerr212.minepc.computer.HostRef, Speaker> LIVE = new java.util.HashMap<>();
+    private static final Map<com.strikerr212.minepc.block.HostRef, Speaker> LIVE = new java.util.HashMap<>();
 
     private static void loop() {
         while (true) {
