@@ -345,12 +345,12 @@ public class AssemblyScreen extends AbstractContainerScreen<AssemblyMenu> {
 
         // Название и уровень под превью
         int y = by + pvH + 4;
-        List<FormattedCharSequence> name = font.split(result.getHoverName().copy().withStyle(result.getRarity().color()), pvW);
+        int tier = spec.tier(values);
+        List<FormattedCharSequence> name = font.split(result.getHoverName(), pvW);
         for (int i = 0; i < Math.min(2, name.size()); i++) {
-            g.drawString(font, name.get(i), bx, y, TEXT, false);
+            g.drawString(font, name.get(i), bx, y, tier >= 3 ? TIER_COLOR[tier] : TEXT, false);
             y += 10;
         }
-        int tier = spec.tier(values);
         Component tierText = Component.translatable("gui.minepc.tier", tier);
         g.drawString(font, tierText, bx, y, TIER_COLOR[tier], false);
         if (inside(mouseX, mouseY, bx, y, font.width(tierText), 9)) {
