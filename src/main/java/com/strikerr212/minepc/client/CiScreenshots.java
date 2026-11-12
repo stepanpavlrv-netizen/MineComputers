@@ -574,7 +574,7 @@ public class CiScreenshots {
         // Роутер Wi-Fi: от коммутатора на восток и на север, в гнездо сзади роутера
         wire(level, front, blue, 3, 4);
         wire(level, n.east(4).south(), blue, 3, 4);
-        wire(level, n.east(4), blue, 3, 0);
+        wire(level, n.east(4), blue, 3, 1);      // своя дорожка: не слиться с проводом C в соседней клетке
         BlockPos router = n.east(4).north();
         level.setBlockAndUpdate(router, ModBlocks.ROUTER.get().defaultBlockState()
                 .setValue(com.strikerr212.minepc.lan.RouterBlock.FACING, Direction.NORTH));
@@ -591,7 +591,7 @@ public class CiScreenshots {
         }
         netRouter = router;
         reconnectArea(level, n.offset(-3, -1, -5), n.offset(8, 3, 3));
-        p.teleportTo(level, n.getX() + 3.5, n.getY() + 3.5, n.getZ() - 9.5, 0f, 28f);
+        p.teleportTo(level, n.getX() + 3.5, n.getY() + 2.5, n.getZ() - 7.5, 0f, 22f);
     }
 
     private static BlockPos lanBase = BlockPos.ZERO, lanE = BlockPos.ZERO, lanF = BlockPos.ZERO, lanJ1 = BlockPos.ZERO,
