@@ -545,11 +545,12 @@ public class AssemblyScreen extends AbstractContainerScreen<AssemblyMenu> {
         List<Template> list = templates();
         int x = tplX(), y = tplY();
         int rowsCount = list.size() + 2;   // + заголовок своих и «сохранить»
+        g.flush();   // сначала дорисовать текст под списком, иначе он просвечивает поверх
         var pose = g.pose();
         pose.pushPose();
         pose.translate(0, 0, 400);
         int hgt = rowsCount * TPL_ROW + 6;
-        g.fill(x, y, x + TPL_W, y + hgt, 0xF8181A1F);
+        g.fill(x, y, x + TPL_W, y + hgt, 0xFF181A1F);
         outline(g, x, y, TPL_W, hgt, ACCENT);
         int ry = y + 3;
         int builtIn = (int) list.stream().filter(t -> t.saved() == null).count();
