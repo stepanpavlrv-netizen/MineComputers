@@ -126,6 +126,13 @@ public class PatchCordItem extends Item {
             if (player != null) player.displayClientMessage(Component.translatable("message.minepc.cord.far"), true);
             return InteractionResult.FAIL;
         }
+        BlockPos blocked = CordShape.blocker(level, a, pos);
+        if (blocked != null) {
+            if (player != null) player.displayClientMessage(Component.translatable("message.minepc.cord.blocked",
+                    level.getBlockState(blocked).getBlock().getName(), blocked.getX() + " " + blocked.getY() + " " + blocked.getZ())
+                    .withStyle(net.minecraft.ChatFormatting.RED), true);
+            return InteractionResult.FAIL;
+        }
         if (data.device(a) == null || data.cordAt(a, portA)) {
             if (player != null) player.displayClientMessage(Component.translatable("message.minepc.cord.gone"), true);
             return InteractionResult.FAIL;

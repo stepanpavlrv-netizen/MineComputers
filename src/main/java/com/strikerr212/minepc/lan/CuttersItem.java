@@ -21,7 +21,7 @@ import java.util.List;
 
 /**
  * Кусачки: ПКМ по проводу — снять именно его (тот, на который смотришь), с Shift — весь жгут в этой клетке.
- * ПКМ по кронштейну — снять воздушные линии от него. Снятый кабель возвращается в инвентарь.
+ * ПКМ по кронштейну или устройству — снять висячие провода от него (воздушные линии, патч-корды). Снятый кабель возвращается в инвентарь.
  */
 public class CuttersItem extends Item {
 
@@ -55,17 +55,18 @@ public class CuttersItem extends Item {
                 be.reconnect();
                 be.reconnectNeighbours();
             }
-        } else if (level.getBlockState(pos).getBlock() instanceof BracketBlock && level instanceof ServerLevel server) {
+        } else if (level.getBlockState(pos).getBlock() instanceof LanDevice && level instanceof ServerLevel server) {
             LanData data = LanData.get(server);
             List<LanData.Cord> removed = data.removeCords(pos);
             for (LanData.Cord c : removed) {
-                back.add(new ItemStack(com.strikerr212.minepc.registry.ModItems.CABLE.get(), c.length()));
+                back.add(c.length() > 4 ? new ItemStack(com.strikerr212.minepc.registry.ModItems.CABLE.get(), c.length())
+                        : new ItemStack(com.strikerr212.minepc.registry.ModItems.PATCH_CORD.get()));
                 CordList.refresh(server, c.a().equals(pos) ? c.b() : c.a());
             }
             CordList.refresh(server, pos);
             if (removed.isEmpty()) return InteractionResult.PASS;
         } else {
-            return level.getBlockState(pos).getBlock() instanceof BracketBlock ? InteractionResult.SUCCESS : InteractionResult.PASS;
+            return level.getBlockState(pos).getBlock() instanceof LanDevice ? InteractionResult.SUCCESS : InteractionResult.PASS;
         }
         if (back.isEmpty()) return InteractionResult.PASS;
         level.playSound(null, pos, SoundEvents.SHEEP_SHEAR, SoundSource.PLAYERS, 0.8f, 1.4f);
@@ -79,6 +80,13 @@ public class CuttersItem extends Item {
                     ? EquipmentSlot.MAINHAND : EquipmentSlot.OFFHAND);
         }
         return InteractionResult.CONSUME;
+    }
+
+    /** По устройству — раньше самого устройства (иначе оно откроет своё окно). */
+    @Override
+    public InteractionResult onItemUseFirst(ItemStack stack, UseOnContext ctx) {
+        if (ctx.getLevel().getBlockState(ctx.getClickedPos()).getBlock() instanceof LanDevice) return useOn(ctx);
+        return InteractionResult.PASS;
     }
 
     @Override

@@ -248,6 +248,21 @@ public class CiScreenshots {
             // BIOS: классический (плата ур. 3) и UEFI (плата ур. 5)
             case 1630 -> { mc.options.hideGui = false; typeAt(lanE, "reboot"); typeAt(lanJ2, "reboot"); }
             case 1636, 1642, 1648, 1654, 1660 -> { keyAt(lanE, "delete"); keyAt(lanJ2, "delete"); }
+            // Висячий провод сквозь блок: камень поперёк воздушной линии — линия обрывается и падает
+            case 1670 -> server.execute(() -> {
+                ServerLevel lvl = server.overworld();
+                var data = com.strikerr212.minepc.lan.LanData.get(lvl);
+                BlockPos mid = lanK3.east(7);
+                com.mojang.logging.LogUtils.getLogger().info("[CI-CORD] до камня: линий {}, блок на пути {}", data.allCords().size(),
+                        com.strikerr212.minepc.lan.CordShape.blocker(lvl, lanK3.east(2), lanK4.west(2)));
+                lvl.setBlockAndUpdate(mid, net.minecraft.world.level.block.Blocks.STONE.defaultBlockState());
+            });
+            case 1695 -> server.execute(() -> {
+                ServerLevel lvl = server.overworld();
+                var data = com.strikerr212.minepc.lan.LanData.get(lvl);
+                com.mojang.logging.LogUtils.getLogger().info("[CI-CORD] после камня: линий {}, K3 видит {}", data.allCords().size(),
+                        com.strikerr212.minepc.lan.LanManager.get(lvl).reach(lvl, lanK3).size());
+            });
             case 1700 -> mc.setScreen(new TerminalScreen(lanE));
             case 1715 -> shot(mc, "bios_classic");
             case 1716, 1718, 1720, 1722, 1724 -> keyAt(lanE, "right");

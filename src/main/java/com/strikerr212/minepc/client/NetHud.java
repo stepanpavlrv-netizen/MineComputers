@@ -66,6 +66,7 @@ public final class NetHud {
     private static final List<AABB> highlight = new ArrayList<>();
     private static int highlightColor = 0xFFE15A;
     private static final List<Vec3> ghost = new ArrayList<>();
+    private static boolean ghostBlocked;
 
     // ----- Порты устройств с сервера -----
     private record PortInfo(boolean link, String device, boolean enabled, int vlan, int length) {
@@ -125,12 +126,32 @@ public final class NetHud {
         lines.clear();
         highlight.clear();
         ghost.clear();
+        ghostBlocked = false;
         if (mc.player == null || mc.level == null || mc.options.hideGui) return;
         ItemStack held = mc.player.getMainHandItem();
         HitResult hit = mc.hitResult;
         BlockPos target = hit instanceof BlockHitResult bhr && hit.getType() == HitResult.Type.BLOCK ? bhr.getBlockPos() : null;
         BlockState state = target == null ? null : mc.level.getBlockState(target);
 
+        // Патч-корд с первым концом: где он повиснет и не мешает ли блок
+        if (held.getItem() instanceof com.strikerr212.minepc.lan.PatchCordItem) {
+            var data = held.get(net.minecraft.core.component.DataComponents.CUSTOM_DATA);
+            if (data != null && data.copyTag().contains("cord_pos") && target != null && state.getBlock() instanceof LanDevice) {
+                BlockPos from = BlockPos.of(data.copyTag().getLong("cord_pos"));
+                if (!from.equals(target)) {
+                    BlockPos blocked = com.strikerr212.minepc.lan.CordShape.blocker(mc.level, from, target);
+                    if (blocked != null) {
+                        lines.add(Component.translatable("hud.minepc.aerial_blocked", mc.level.getBlockState(blocked).getBlock().getName())
+                                .withStyle(s -> s.withColor(0xE05555)));
+                        highlight.add(new AABB(blocked));
+                        highlightColor = 0xE05555;
+                    }
+                    ghostBlocked = blocked != null;
+                    ghost.addAll(com.strikerr212.minepc.lan.CordShape.points(mc.level, from, target));
+                    return;
+                }
+            }
+        }
         // Моток с началом маршрута
         if (held.getItem() instanceof CableItem cable && CableItem.routeFrom(held) != null) {
             BlockPos from = CableItem.routeFrom(held);
@@ -299,11 +320,16 @@ public final class NetHud {
             boolean ok = dist <= BracketBlock.MAX_SPAN;
             lines.add(Component.translatable(ok ? "hud.minepc.aerial_ok" : "hud.minepc.aerial_far", len, BracketBlock.MAX_SPAN)
                     .withStyle(s -> s.withColor(ok ? 0x8FD3F0 : 0xE05555)));
-            Vec3 a = Vec3.atCenterOf(from), b = Vec3.atCenterOf(target);
-            for (int i = 0; i <= 16; i++) {
-                double t = i / 16.0;
-                ghost.add(a.lerp(b, t).add(0, -(0.1 + 0.025 * dist) * 4 * t * (1 - t), 0));
+            // Где провод пройдёт: если упрётся в блок — призрак красный и этот блок обведён
+            BlockPos blocked = com.strikerr212.minepc.lan.CordShape.blocker(mc.level, from, target);
+            if (blocked != null) {
+                lines.add(Component.translatable("hud.minepc.aerial_blocked", mc.level.getBlockState(blocked).getBlock().getName())
+                        .withStyle(s -> s.withColor(0xE05555)));
+                highlight.add(new AABB(blocked));
+                highlightColor = 0xE05555;
             }
+            ghostBlocked = blocked != null || !ok;
+            ghost.addAll(com.strikerr212.minepc.lan.CordShape.points(mc.level, from, target));
             return;
         }
         long now = mc.level.getGameTime();
@@ -359,11 +385,12 @@ public final class NetHud {
             Vec3 d = p1.subtract(p0);
             if (d.lengthSqr() < 1e-6) continue;
             Vec3 n = d.normalize();
-            vc.addVertex(last, (float) p0.x, (float) p0.y, (float) p0.z).setColor(0.45f, 0.85f, 1f, 1f).setNormal(last, (float) n.x, (float) n.y, (float) n.z);
-            vc.addVertex(last, (float) p1.x, (float) p1.y, (float) p1.z).setColor(0.45f, 0.85f, 1f, 1f).setNormal(last, (float) n.x, (float) n.y, (float) n.z);
+            float gr = ghostBlocked ? 1f : 0.45f, gg = ghostBlocked ? 0.35f : 0.85f, gb = ghostBlocked ? 0.33f : 1f;
+            vc.addVertex(last, (float) p0.x, (float) p0.y, (float) p0.z).setColor(gr, gg, gb, 1f).setNormal(last, (float) n.x, (float) n.y, (float) n.z);
+            vc.addVertex(last, (float) p1.x, (float) p1.y, (float) p1.z).setColor(gr, gg, gb, 1f).setNormal(last, (float) n.x, (float) n.y, (float) n.z);
         }
-        for (Vec3 p : ghost) {
-            LevelRenderer.renderLineBox(pose, vc, new AABB(p, p).inflate(0.04), 0.45f, 0.85f, 1f, 1f);
+        if (!ghostBlocked) {
+            for (Vec3 p : ghost) LevelRenderer.renderLineBox(pose, vc, new AABB(p, p).inflate(0.04), 0.45f, 0.85f, 1f, 1f);
         }
         pose.popPose();
         buffers.endBatch(RenderType.lines());

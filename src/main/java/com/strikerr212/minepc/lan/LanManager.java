@@ -487,6 +487,7 @@ public final class LanManager {
 
     public void tick(ServerLevel level) {
         long now = level.getGameTime();
+        if (now % 40 == 0) CordGuard.check(level);
         Outgoing o;
         while ((o = outbox.poll()) != null) {
             if (!level.isLoaded(o.from) || !(level.getBlockEntity(o.from) instanceof PcCaseBlockEntity src)) continue;

@@ -658,7 +658,7 @@
   "gui.minepc.help_general": "Click an option to pick it. Shift + wheel over a parameter cycles options. Hover a parameter name to see what it does. Preview: drag to rotate, wheel to zoom, RMB to reset.",
   "tooltip.minepc.cable_length": "Length: %s m",
   "tooltip.minepc.cable_route": "Right-click a device, then another one — lays cable socket to socket (between brackets — an aerial line)",
-  "tooltip.minepc.cutters": "Right-click a wire to remove it, Shift + right-click for the whole bundle, a bracket for its aerial lines. Cable goes back to your inventory",
+  "tooltip.minepc.cutters": "Right-click a wire to remove it, Shift + right-click for the whole bundle; a bracket or device — its hanging wires. Cable goes back to your inventory",
   "tooltip.minepc.bracket": "Aerial line holder: right-click one bracket with cable, then another (up to %s blocks)",
   "item.minepc.wire_cutters": "Wire Cutters",
   "block.minepc.cable_bracket": "Aerial Line Bracket",
@@ -694,5 +694,8 @@
   "hud.minepc.aerial_ok": "Span: %s m (max %s)",
   "hud.minepc.aerial_far": "Too far: %s m (max %s)",
   "unit.minepc.gbit": "%s Gbit/s",
-  "unit.minepc.mbit": "%s Mbit/s"
+  "unit.minepc.mbit": "%s Mbit/s",
+  "message.minepc.cord.blocked": "The wire would run into a block: %s (%s)",
+  "message.minepc.cord.in_way": "A wire hangs here — the block won't go in. Remove the wire with cutters",
+  "hud.minepc.aerial_blocked": "In the way: %s"
 }

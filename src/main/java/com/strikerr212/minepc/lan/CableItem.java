@@ -111,6 +111,9 @@ public class CableItem extends Item {
             double dist = Math.sqrt(from.distSqr(pos));
             if (fiber) return fail(player, "message.minepc.route.aerial_fiber");
             if (dist > BracketBlock.MAX_SPAN) return fail(player, "message.minepc.route.too_far", BracketBlock.MAX_SPAN);
+            BlockPos blocked = CordShape.blocker(level, from, pos);
+            if (blocked != null) return fail(player, "message.minepc.cord.blocked", level.getBlockState(blocked).getBlock().getName(),
+                    blocked.getX() + " " + blocked.getY() + " " + blocked.getZ());
             LanData data = LanData.get(server);
             int pa = freeCord(data, from), pb = freeCord(data, pos);
             if (pa < 0 || pb < 0) return fail(player, "message.minepc.route.bracket_full");
