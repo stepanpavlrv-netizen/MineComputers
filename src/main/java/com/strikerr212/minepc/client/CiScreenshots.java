@@ -684,34 +684,34 @@ public class CiScreenshots {
         level.setBlockAndUpdate(far, radio);
         level.setBlockAndUpdate(far.above(), ModBlocks.MAST.get().defaultBlockState());
         // Воздушная линия: компьютер — кронштейн ~~ 10 блоков ~~ кронштейн — компьютер
-        lanK3 = b.offset(-2, 0, -4);
-        lanK4 = b.offset(12, 0, -4);
+        lanK3 = b.offset(-2, 0, -5);
+        lanK4 = b.offset(12, 0, -5);
         fillCase(level, lanK3, 2);
         fillCase(level, lanK4, 2);
         BlockState bracket = ModBlocks.BRACKET.get().defaultBlockState()
                 .setValue(com.strikerr212.minepc.lan.BracketBlock.FACE, net.minecraft.world.level.block.state.properties.AttachFace.FLOOR);
-        level.setBlockAndUpdate(b.offset(0, 0, -4), bracket);
-        level.setBlockAndUpdate(b.offset(10, 0, -4), bracket);
-        wire(level, b.offset(-1, 0, -4), blue, 2, 2);
-        wire(level, b.offset(11, 0, -4), blue, 2, 2);
+        level.setBlockAndUpdate(b.offset(0, 0, -5), bracket);
+        level.setBlockAndUpdate(b.offset(10, 0, -5), bracket);
+        wire(level, b.offset(-1, 0, -5), blue, 2, 2);
+        wire(level, b.offset(11, 0, -5), blue, 2, 2);
         // Прокладка «от гнезда до гнезда» через каменную стенку: K5 → K6
         lanK5 = b.offset(3, 0, -3);
         lanK6 = b.offset(9, 0, -3);
         fillCase(level, lanK5, 2);
         fillCase(level, lanK6, 2);
-        for (int dz = -5; dz <= -2; dz++) level.setBlockAndUpdate(b.offset(6, 0, dz), net.minecraft.world.level.block.Blocks.STONE.defaultBlockState());
+        for (int dz = -4; dz <= -2; dz++) level.setBlockAndUpdate(b.offset(6, 0, dz), net.minecraft.world.level.block.Blocks.STONE.defaultBlockState());
         reconnectArea(level, b.offset(-2, 0, -5), b.offset(16, 2, 5));
         var route = com.strikerr212.minepc.lan.RoutePlanner.plan(level, lanK5, lanK6, false);
         com.mojang.logging.LogUtils.getLogger().info("[CI-ROUTE] маршрут {}", route == null ? "не найден"
                 : route.length() + " клеток, проводов " + route.pieces().size() + ", дорожка " + route.lane());
         if (route != null) com.strikerr212.minepc.lan.RoutePlanner.lay(level, route, net.minecraft.world.item.DyeColor.LIME.getId(), false);
         var data = com.strikerr212.minepc.lan.LanData.get(level);
-        com.strikerr212.minepc.lan.LanManager.updateDevice(level, b.offset(0, 0, -4));
-        com.strikerr212.minepc.lan.LanManager.updateDevice(level, b.offset(10, 0, -4));
-        data.addCord(new com.strikerr212.minepc.lan.LanData.Cord(b.offset(0, 0, -4), com.strikerr212.minepc.lan.LanData.CABLE_PORTS,
-                b.offset(10, 0, -4), com.strikerr212.minepc.lan.LanData.CABLE_PORTS, blue));
-        com.strikerr212.minepc.lan.CordList.refresh(level, b.offset(0, 0, -4));
-        com.strikerr212.minepc.lan.CordList.refresh(level, b.offset(10, 0, -4));
+        com.strikerr212.minepc.lan.LanManager.updateDevice(level, b.offset(0, 0, -5));
+        com.strikerr212.minepc.lan.LanManager.updateDevice(level, b.offset(10, 0, -5));
+        data.addCord(new com.strikerr212.minepc.lan.LanData.Cord(b.offset(0, 0, -5), com.strikerr212.minepc.lan.LanData.CABLE_PORTS,
+                b.offset(10, 0, -5), com.strikerr212.minepc.lan.LanData.CABLE_PORTS, blue));
+        com.strikerr212.minepc.lan.CordList.refresh(level, b.offset(0, 0, -5));
+        com.strikerr212.minepc.lan.CordList.refresh(level, b.offset(10, 0, -5));
         com.strikerr212.minepc.lan.LanManager.updateDevice(level, b.west());
         com.strikerr212.minepc.lan.LanManager.updateDevice(level, b);
         // Корд: из того канала патч-панели, куда воткнут кабель от E, в первый корд-порт коммутатора
