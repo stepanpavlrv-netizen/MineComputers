@@ -82,6 +82,19 @@ public abstract class HardwareItem extends Item {
             tooltip.add(Component.translatable("tooltip.minepc.power", Component.literal("").append(Units.watts(power))
                     .withStyle(ChatFormatting.WHITE)).withStyle(ChatFormatting.GRAY));
         }
+        // Накопитель: износ, отказ, массив RAID
+        if (getHardwareType() == com.strikerr212.minepc.hardware.HardwareType.HDD || getHardwareType() == com.strikerr212.minepc.hardware.HardwareType.SSD) {
+            var h = com.strikerr212.minepc.block.DiskHealth.of(stack);
+            if (h.failed()) {
+                tooltip.add(Component.translatable("tooltip.minepc.disk_failed").withStyle(ChatFormatting.RED));
+            } else if (h.wear() > 0) {
+                tooltip.add(Component.translatable("tooltip.minepc.disk_wear", h.percent())
+                        .withStyle(h.warning() ? ChatFormatting.GOLD : ChatFormatting.GRAY));
+            }
+            if (!h.raid().isEmpty()) {
+                tooltip.add(Component.translatable("tooltip.minepc.disk_raid", h.raid(), h.member() + 1).withStyle(ChatFormatting.DARK_AQUA));
+            }
+        }
         if (flag.isAdvanced()) {
             tooltip.add(Component.literal("design: " + v).withStyle(ChatFormatting.DARK_GRAY));
         }

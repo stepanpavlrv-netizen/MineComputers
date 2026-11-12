@@ -105,6 +105,7 @@ public final class Bmc {
             case "sensors" -> sensors();
             case "log" -> logCommand(arg);
             case "screen" -> screen();
+            case "input" -> input(arg);
             case "power" -> power(level, arg, from);
             case "password" -> password(arg, from);
             case "help", "" -> reply(true, String.join("\n",
@@ -113,6 +114,7 @@ public final class Bmc {
                     "  sensors         — температура, обороты, потребление",
                     "  log [N|clear]   — журнал событий",
                     "  screen          — что сейчас на экране сервера",
+                    "  console         — экран и клавиатура сервера по сети",
                     "  power on|off|reset — включить, выключить, перезагрузить",
                     "  password новый  — сменить пароль BMC"), null);
             default -> reply(false, "Неизвестная команда BMC: " + cmd + " (bmc имя help — список)", null);
@@ -190,17 +192,41 @@ public final class Bmc {
         }
         d.put("psu", psu);
         sb.append("Блоки пит.   ").append(ps).append(be.psuCount() < 2 ? "  ! нет резерва" : "").append('\n');
+        // Диски: # работает, ! просит замены, x отказал, ~ восстанавливается, . пусто
         Map<Object, Object> disks = new LinkedHashMap<>();
         StringBuilder ds = new StringBuilder();
-        int n = 0;
-        for (int i = 0; i < 4; i++) {
-            boolean has = !be.getStack(PcCaseBlockEntity.SLOT_HDD + i).isEmpty();
-            disks.put(i + 1, has);
-            if (has) n++;
-            ds.append(has ? '#' : '.');
+        int n = 0, bad = 0;
+        int rebuild = be.rebuildingBay();
+        for (int i = 0; i < be.bayCount(); i++) {
+            var disk = be.getStack(PcCaseBlockEntity.baySlot(i));
+            DiskHealth h = DiskHealth.of(disk);
+            String st = disk.isEmpty() ? "empty" : h.failed() ? "failed" : i == rebuild ? "rebuilding" : h.warning() ? "warning" : "ok";
+            disks.put(i + 1, st);
+            if (!disk.isEmpty()) n++;
+            if (h.failed() || h.warning()) bad++;
+            ds.append(switch (st) {
+                case "empty" -> '.';
+                case "failed" -> 'x';
+                case "rebuilding" -> '~';
+                case "warning" -> '!';
+                default -> '#';
+            });
         }
         d.put("disks", disks);
-        sb.append("Диски        ").append(n).append(" из 4  [").append(ds).append("]\n");
+        sb.append("Диски        ").append(n).append(" из ").append(be.bayCount()).append("  [").append(ds).append("]")
+                .append(bad > 0 ? "  ! замените диски" : "").append('\n');
+        Map<String, Object> raid = be.caseComputer().raidStatus();
+        if (raid != null) {
+            d.put("raid", raid);
+            String st = String.valueOf(raid.get("state"));
+            sb.append("RAID         ").append(raid.get("name")).append(", ").append(switch (st) {
+                case "ok" -> "исправен";
+                case "degraded" -> "без резерва  !";
+                case "rebuilding" -> "восстановление " + raid.getOrDefault("rebuild", 0) + "%  !";
+                case "failed" -> "развалился  !";
+                default -> "не собран (сервер выключен)";
+            }).append('\n');
+        }
         int watts = state == 1 ? in.powerDraw() : 8;   // выключенный: дежурное питание и сам BMC
         d.put("watts", watts);
         sb.append("Потребление  ").append(watts).append(" Вт");
@@ -258,7 +284,25 @@ public final class Bmc {
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("lines", d);
         data.put("width", t.width());
+        data.put("height", t.height());
+        data.put("cx", t.cursorX());
+        data.put("cy", t.cursorY());
         return reply(true, String.join("\n", lines), data);
+    }
+
+    /** Клавиатура по сети (консоль BMC): "c:символ" или "k:клавиша[:ctrl[:shift]]". */
+    private Object[] input(String arg) {
+        if (be.computerState() != 1) return reply(false, "Сервер выключен", null);
+        if (arg.startsWith("c:") && arg.length() > 2) {
+            be.input(com.strikerr212.minepc.network.TerminalInputPayload.CHAR, arg.substring(2), false, false);
+        } else if (arg.startsWith("k:")) {
+            String[] p = arg.substring(2).split(":");
+            be.input(com.strikerr212.minepc.network.TerminalInputPayload.KEY, p[0],
+                    p.length > 1 && "1".equals(p[1]), p.length > 2 && "1".equals(p[2]));
+        } else {
+            return reply(false, "input c:символ | k:клавиша", null);
+        }
+        return reply(true, "", null);
     }
 
     private Object[] power(ServerLevel level, String arg, String from) {

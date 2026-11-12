@@ -758,5 +758,12 @@
   "item.minepc.cpu_server": "Server CPU",
   "item.minepc.ram_ecc": "ECC Memory",
   "gui.minepc.net.bmc": "BMC %s",
-  "gui.minepc.net.bmc_tip": "The BMC is a separate computer on the server board. It runs on standby power even while the server is off. From another computer on the network: bmc name status, power on|off|reset, log, screen. The default password is admin; change it on the server itself: bmc password new"
+  "gui.minepc.net.bmc_tip": "The BMC is a separate computer on the server board. It runs on standby power even while the server is off. From another computer on the network: bmc name status, power on|off|reset, log, screen. The default password is admin; change it on the server itself: bmc password new",
+  "item.minepc.server_module_2u": "2U Server Module",
+  "tooltip.minepc.server_module_2u": "A server two rack slots tall: 8 drive bays, stronger fans",
+  "gui.minepc.slot.bay": "Drive bay: a hard drive or SATA SSD, hot-swappable",
+  "gui.minepc.row.drive_failed": "%s: failed",
+  "tooltip.minepc.disk_wear": "Wear: %s%%",
+  "tooltip.minepc.disk_failed": "The drive has failed and can't be read",
+  "tooltip.minepc.disk_raid": "In RAID array %s, disk %s"
 }

@@ -758,5 +758,12 @@
   "item.minepc.cpu_server": "Серверный процессор",
   "item.minepc.ram_ecc": "Память ECC",
   "gui.minepc.net.bmc": "BMC %s",
-  "gui.minepc.net.bmc_tip": "BMC — отдельный компьютер на серверной плате. Работает от дежурного питания, даже когда сервер выключен. С другого компьютера сети: bmc имя status, power on|off|reset, log, screen. Пароль по умолчанию admin — смените на самом сервере: bmc password новый"
+  "gui.minepc.net.bmc_tip": "BMC — отдельный компьютер на серверной плате. Работает от дежурного питания, даже когда сервер выключен. С другого компьютера сети: bmc имя status, power on|off|reset, log, screen. Пароль по умолчанию admin — смените на самом сервере: bmc password новый",
+  "item.minepc.server_module_2u": "Модуль сервера 2U",
+  "tooltip.minepc.server_module_2u": "Сервер высотой в два места стойки: 8 отсеков дисков, мощнее вентиляторы",
+  "gui.minepc.slot.bay": "Отсек диска: жёсткий диск или SATA SSD, меняется на ходу",
+  "gui.minepc.row.drive_failed": "%s — отказал",
+  "tooltip.minepc.disk_wear": "Износ: %s%%",
+  "tooltip.minepc.disk_failed": "Диск отказал: не читается",
+  "tooltip.minepc.disk_raid": "В массиве RAID %s, диск %s"
 }

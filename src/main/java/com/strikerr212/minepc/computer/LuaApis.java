@@ -313,6 +313,16 @@ final class LuaApis {
                 RegisteredFunction.ofV("check", (s, a) -> valueOf(c.host().biosCheckPassword(
                         text(a.arg(1).checkLuaString()), text(a.arg(2).checkLuaString())))),
                 RegisteredFunction.ofV("info", (s, a) -> toLua(c.host().biosInfo())),
+                // RAID-контроллер серверной платы
+                RegisteredFunction.ofV("raid", (s, a) -> toLua(c.host().raidInfo())),
+                RegisteredFunction.ofV("raidCreate", (s, a) -> {
+                    String err = c.host().raidCreate(text(a.arg(1).checkLuaString()));
+                    return err == null ? Constants.TRUE : varargsOf(new LuaValue[]{Constants.NIL, str(err)});
+                }),
+                RegisteredFunction.ofV("raidDelete", (s, a) -> {
+                    String err = c.host().raidDelete();
+                    return err == null ? Constants.TRUE : varargsOf(new LuaValue[]{Constants.NIL, str(err)});
+                }),
                 RegisteredFunction.ofV("devices", (s, a) -> listToLua(c.host().biosDevices())),
         });
         return t;

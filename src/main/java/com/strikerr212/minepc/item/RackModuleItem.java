@@ -30,7 +30,8 @@ public class RackModuleItem extends Item {
 
     @Override
     public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
-        tooltip.add(Component.translatable(server ? "tooltip.minepc.server_module" : "tooltip.minepc.console_module")
+        boolean tall = stack.is(com.strikerr212.minepc.registry.ModItems.SERVER_MODULE_2U.get());
+        tooltip.add(Component.translatable(tall ? "tooltip.minepc.server_module_2u" : server ? "tooltip.minepc.server_module" : "tooltip.minepc.console_module")
                 .withStyle(ChatFormatting.GRAY));
         var data = stack.get(DataComponents.CUSTOM_DATA);
         if (server && data != null && data.copyTag().contains("machine")) {

@@ -419,7 +419,66 @@ public class CiScreenshots {
                         com.strikerr212.minepc.block.Secrets.matches("old-plain", "old-plain"));
                 b.bmc().setPassword(com.strikerr212.minepc.block.Bmc.DEFAULT_PASSWORD);
             });
-            case 2712 -> mc.stop();
+            // RAID 5 на сервере 2U (srv-c): собрать, износить и уронить диск, заменить — массив восстанавливается
+            case 2712 -> typeHost(new com.strikerr212.minepc.block.HostRef(rackPos.above(), 0), "raid create raid5");
+            case 2716 -> typeHost(new com.strikerr212.minepc.block.HostRef(rackPos.above(), 0), "да");
+            case 2850 -> {
+                typeHost(new com.strikerr212.minepc.block.HostRef(rackPos.above(), 0), "clear");
+                typeHost(new com.strikerr212.minepc.block.HostRef(rackPos.above(), 0), "cp /rom/programs/ping.lua /data/ping.lua");
+            }
+            case 2856 -> server.execute(() -> {
+                PcCaseBlockEntity c = com.strikerr212.minepc.block.Hosts.get(server.overworld(), rackPos.above(), 0);
+                if (c == null) return;
+                c.wearDisk(PcCaseBlockEntity.baySlot(2), 0.92);      // отсек 3 — просит замены
+                c.wearDisk(PcCaseBlockEntity.baySlot(1), 1.0);       // отсек 2 — отказал
+                com.mojang.logging.LogUtils.getLogger().info("[CI-RAID] после отказа: state={} log={}", c.computerState(),
+                        String.join(" | ", c.bmc().entries().subList(Math.max(0, c.bmc().entries().size() - 5), c.bmc().entries().size())));
+            });
+            case 2860 -> typeHost(new com.strikerr212.minepc.block.HostRef(rackPos.above(), 0), "raid");
+            case 2866 -> typeHost(new com.strikerr212.minepc.block.HostRef(rackPos.above(), 0), "ls /data");
+            case 2870 -> mc.setScreen(new TerminalScreen(new com.strikerr212.minepc.block.HostRef(rackPos.above(), 0)));
+            case 2882 -> shot(mc, "raid_degraded");
+            case 2884 -> {
+                mc.setScreen(null);
+                server.execute(() -> server.getPlayerList().getPlayers().get(0).teleportTo(server.overworld(),
+                        rackPos.getX() + 1.9, rackPos.getY() + 0.4, rackPos.getZ() - 2.4, 30f, 12f));
+            }
+            case 2896 -> shot(mc, "rack_2u_leds");
+            case 2898 -> server.execute(() -> {
+                PcCaseBlockEntity c = com.strikerr212.minepc.block.Hosts.get(server.overworld(), rackPos.above(), 0);
+                if (c == null) return;
+                var inv = c.inventory();
+                ItemStack old = inv.extractItem(PcCaseBlockEntity.baySlot(1), 1, false);
+                ItemStack left = inv.insertItem(PcCaseBlockEntity.baySlot(1),
+                        HardwarePresets.server(com.strikerr212.minepc.hardware.HardwareType.HDD), false);
+                com.mojang.logging.LogUtils.getLogger().info("[CI-RAID] замена: вынут={} вставлен={} восстанавливается отсек={}",
+                        !old.isEmpty(), left.isEmpty(), c.rebuildingBay() + 1);
+            });
+            case 2902 -> {
+                typeHost(new com.strikerr212.minepc.block.HostRef(rackPos.above(), 0), "clear");
+                typeHost(new com.strikerr212.minepc.block.HostRef(rackPos.above(), 0), "raid");
+            }
+            case 3130 -> {
+                typeHost(new com.strikerr212.minepc.block.HostRef(rackPos.above(), 0), "raid");
+                typeHost(new com.strikerr212.minepc.block.HostRef(rackPos.above(), 0), "ls /data");
+            }
+            case 3136 -> mc.setScreen(new TerminalScreen(new com.strikerr212.minepc.block.HostRef(rackPos.above(), 0)));
+            case 3148 -> shot(mc, "raid_rebuilt");
+            case 3150 -> server.execute(() -> {
+                PcCaseBlockEntity c = com.strikerr212.minepc.block.Hosts.get(server.overworld(), rackPos.above(), 0);
+                if (c != null) com.mojang.logging.LogUtils.getLogger().info("[CI-RAID] итог: {}",
+                        String.join(" | ", c.bmc().entries().subList(Math.max(0, c.bmc().entries().size() - 4), c.bmc().entries().size())));
+            });
+            // Консоль BMC: с srv-a — экран и клавиатура srv-b по сети
+            case 3152 -> {
+                mc.setScreen(null);
+                typeHost(new com.strikerr212.minepc.block.HostRef(rackPos, 0), "clear");
+                typeHost(new com.strikerr212.minepc.block.HostRef(rackPos, 0), "bmc -p admin srv-b console");
+            }
+            case 3162 -> typeHost(new com.strikerr212.minepc.block.HostRef(rackPos, 0), "ls /");
+            case 3170 -> mc.setScreen(new TerminalScreen(new com.strikerr212.minepc.block.HostRef(rackPos, 0)));
+            case 3182 -> shot(mc, "bmc_console");
+            case 3186 -> mc.stop();
             default -> {
             }
         }
@@ -463,7 +522,11 @@ public class CiScreenshots {
             fillServer(r.server(1), 12, 2);
         }
         if (level.getBlockEntity(rk.above()) instanceof com.strikerr212.minepc.block.RackBlockEntity r) {
-            r.insert(0, new ItemStack(com.strikerr212.minepc.registry.ModItems.SERVER_MODULE.get()));
+            // Сверху — сервер 2U: восемь отсеков, в четырёх диски (для RAID 5)
+            r.insert(0, new ItemStack(com.strikerr212.minepc.registry.ModItems.SERVER_MODULE_2U.get()));
+            var inv = (IItemHandlerModifiable) r.server(0).inventory();
+            inv.setStackInSlot(PcCaseBlockEntity.baySlot(2), HardwarePresets.server(com.strikerr212.minepc.hardware.HardwareType.HDD));
+            inv.setStackInSlot(PcCaseBlockEntity.baySlot(3), HardwarePresets.server(com.strikerr212.minepc.hardware.HardwareType.HDD));
             fillServer(r.server(0), 8, 1);
         }
         // Сзади: два провода из гнёзд модулей 1 и 2 в коммутатор

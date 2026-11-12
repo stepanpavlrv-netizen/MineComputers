@@ -44,6 +44,7 @@ public class ModCreativeTabs {
                         output.accept(ModItems.BRACKET.get());
                         output.accept(ModItems.SERVER_RACK.get());
                         output.accept(ModItems.SERVER_MODULE.get());
+                        output.accept(ModItems.SERVER_MODULE_2U.get());
                         output.accept(ModItems.CONSOLE_MODULE.get());
                         output.accept(ModItems.CUTTERS.get());
                         output.accept(ModItems.PATCH_PANEL.get());

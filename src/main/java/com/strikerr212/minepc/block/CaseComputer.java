@@ -639,30 +639,57 @@ public final class CaseComputer implements Computer.Host {
         removable.clear();
         soundMounts.clear();
         fs.mount("rom", ComputerRom.mount());
-        // Системный диск — первый по порядку загрузки в BIOS (по умолчанию: M.2, SATA SSD, жёсткий диск)
-        List<int[]> kinds = new ArrayList<>();
-        for (String id : bios.bootOrder()) {
-            switch (id) {
-                case "nvme" -> kinds.add(new int[]{PcCaseBlockEntity.SLOT_M2, PcCaseBlockEntity.SLOT_M2 + 1});
-                case "sata" -> kinds.add(new int[]{PcCaseBlockEntity.SLOT_SATA_SSD, PcCaseBlockEntity.SLOT_SATA_SSD + 1});
-                case "hdd" -> kinds.add(new int[]{PcCaseBlockEntity.SLOT_HDD, PcCaseBlockEntity.SLOT_HDD + 1});
-                default -> { }
-            }
-        }
-        int[] order = kinds.stream().flatMapToInt(java.util.Arrays::stream).toArray();
+        // Системный диск — первый по порядку загрузки в BIOS (по умолчанию: M.2, SATA SSD, жёсткий диск).
+        // Вид диска — по самому диску (у сервера отсеки универсальные). Массив RAID встаёт на место своего первого диска.
+        List<Integer> slots = new ArrayList<>();
+        for (int i = 0; i < PcCaseBlockEntity.M2_SLOTS; i++) slots.add(PcCaseBlockEntity.SLOT_M2 + i);
+        for (int i = 0; i < be.bayCount(); i++) slots.add(PcCaseBlockEntity.baySlot(i));
+        List<String> bootOrder = bios.bootOrder();
+        slots.sort(java.util.Comparator.comparingInt(sl -> {
+            int k = bootOrder.indexOf(driveKind(be.getStack(sl)));
+            return k < 0 ? 99 : k;
+        }));
         bootPaths.keySet().removeAll(List.of("nvme", "sata", "hdd"));
         bays.clear();
+        rebuildSlot = -1;
+        raidConfig = be.motherboard() != null && be.motherboard().server() ? RaidConfig.of(be.getStack(PcCaseBlockEntity.SLOT_MOTHERBOARD)) : null;
+        raidPath = null;
+        int missing = raidConfig == null ? 0 : raidConfig.members() - raidMembers().size();
+        raidState = raidConfig == null ? "" : missing == 0 ? "ok" : missing <= raidConfig.tolerance() ? "degraded" : "failed";
+        if ("failed".equals(raidState)) be.bmc().log("RAID: не хватает дисков (" + missing + ") — массив не собран");
         boolean root = false;
-        for (int slot : order) {
+        for (int slot : slots) {
             ItemStack stack = be.getStack(slot);
+            if (bootOrder.indexOf(driveKind(stack)) < 0) continue;
+            if (raidConfig != null && isMember(stack)) {
+                if (DiskHealth.of(stack).failed()) continue;
+                bays.put(slot, RAID);
+                if (raidPath != null || "failed".equals(raidState)) continue;
+                Mount array = raidMount(level);
+                raidPath = root ? freeDataPath() : "";
+                fs.mount(raidPath, array);
+                bootPaths.putIfAbsent(driveKind(stack), "/" + raidPath);
+                root = true;
+                continue;
+            }
             Mount mount = internalMount(level, stack);
             if (mount == null) continue;
-            String kind = stack.getItem() instanceof SsdItem ? (SsdItem.data(stack).isNvme() ? "nvme" : "sata") : "hdd";
             String at = root ? freeDataPath() : "";
             fs.mount(at, mount);
             bays.put(slot, at);
-            bootPaths.putIfAbsent(kind, "/" + at);
+            bootPaths.putIfAbsent(driveKind(stack), "/" + at);
             root = true;
+        }
+        // Массив без резерва, а в отсеке чистый диск — восстановить на него сразу
+        if ("degraded".equals(raidState)) {
+            for (int i = 0; i < be.bayCount(); i++) {
+                int slot = PcCaseBlockEntity.baySlot(i);
+                ItemStack d = be.getStack(slot);
+                if (!d.isEmpty() && !bays.containsKey(slot) && !DiskHealth.of(d).failed() && com.strikerr212.minepc.item.DriveItem.id(d).isEmpty()) {
+                    startRebuild(slot);
+                    break;
+                }
+            }
         }
         be.setChanged();   // накопители могли получить номера
         updateRemovable(level, false);
@@ -681,6 +708,7 @@ public final class CaseComputer implements Computer.Host {
 
     /** Файловая система внутреннего накопителя (жёсткий диск или SSD) или null. */
     private Mount internalMount(ServerLevel level, ItemStack stack) {
+        if (DiskHealth.of(stack).failed()) return null;   // отказавший диск не читается
         long capacity, speed;
         String name;
         int opBytes;
@@ -707,15 +735,17 @@ public final class CaseComputer implements Computer.Host {
 
     /**
      * Сервер: диск в отсеке или блок питания поменяли на ходу. Диск данных отключается и подключается с событиями
-     * disk_eject / disk; вынули системный — сервер падает. Блок питания: пока оставшийся тянет нагрузку, сервер работает
-     * (событие power_supply с числом блоков), иначе выключается.
+     * disk_eject / disk; вынули системный — сервер падает. Диск массива RAID: массив работает дальше без резерва
+     * (или разваливается, если резерва не было); новый диск в массив без резерва — восстановление на него.
+     * Блок питания: пока оставшийся тянет нагрузку, сервер работает (событие power_supply), иначе выключается.
      */
     void hotSwap(ServerLevel level, int slot) {
         boolean psuSlot = slot == PcCaseBlockEntity.SLOT_PSU || slot == PcCaseBlockEntity.SLOT_PSU2;
         boolean empty = be.getStack(slot).isEmpty();
         // Журнал BMC пишется всегда, даже у выключенного сервера (BMC работает от дежурного питания)
         if (psuSlot) be.bmc().log("блок питания " + (slot == PcCaseBlockEntity.SLOT_PSU ? 1 : 2) + (empty ? " вынут" : " вставлен"));
-        else be.bmc().log("диск в отсеке " + (slot - PcCaseBlockEntity.SLOT_HDD + 1) + (empty ? " извлечён" : " вставлен"));
+        else be.bmc().log("диск в отсеке " + (PcCaseBlockEntity.bayIndex(slot) + 1) + (empty ? " извлечён" : " вставлен"));
+        be.markUpdated();
         if (computer == null || !computer.isOn()) return;
         if (psuSlot) {
             var psu = be.activePsu();
@@ -727,27 +757,340 @@ public final class CaseComputer implements Computer.Host {
             computer.queueEvent("power_supply", be.psuCount());
             return;
         }
+        if (!detach(slot)) return;          // сервер упал
+        attach(level, slot);
+    }
+
+    /** Диск в слоте больше не работает (вынули или отказал). false — сервер упал. */
+    private boolean detach(int slot) {
         var fs = computer.fileSystem();
-        String was = bays.get(slot);
-        ItemStack now = be.getStack(slot);
-        if (was != null) {
-            if (was.isEmpty()) {          // системный диск вынули — работать не на чем
-                be.bmc().log("вынут системный диск — сервер упал");
-                partsChanged();
-                return;
+        String was = bays.remove(slot);
+        if (was == null) return true;
+        int bay = PcCaseBlockEntity.bayIndex(slot) + 1;
+        if (was.equals(REBUILD)) {
+            rebuildSlot = -1;
+            raidState = "degraded";
+            be.bmc().log("RAID: восстановление на отсек " + bay + " прервано");
+            computer.queueEvent("raid", raidState);
+            return true;
+        }
+        if (was.equals(RAID)) {
+            int missing = raidConfig.members() - countRaid();
+            if (missing > raidConfig.tolerance()) {
+                raidState = "failed";
+                be.bmc().log("RAID: из массива выпал диск " + bay + " — массив развалился");
+                if (raidPath != null && raidPath.isEmpty()) {
+                    partsChanged();
+                    return false;
+                }
+                if (raidPath != null) {
+                    fs.unmount(raidPath);
+                    computer.queueEvent("disk_eject", "/" + raidPath);
+                }
+                raidPath = null;
+            } else {
+                raidState = "degraded";
+                be.bmc().log("RAID: из массива выпал диск " + bay + " — работает без резерва");
             }
-            fs.unmount(was);
-            bays.remove(slot);
-            computer.queueEvent("disk_eject", "/" + was);
+            computer.queueEvent("raid", raidState);
+            return true;
+        }
+        if (was.isEmpty()) {          // системный диск — работать не на чем
+            be.bmc().log("системный диск недоступен — сервер упал");
+            partsChanged();
+            return false;
+        }
+        fs.unmount(was);
+        computer.queueEvent("disk_eject", "/" + was);
+        return true;
+    }
+
+    /** В слот вставили диск: свой диск массива — обратно в массив, чужой в массив без резерва — восстановление, иначе — отдельный диск. */
+    private void attach(ServerLevel level, int slot) {
+        ItemStack now = be.getStack(slot);
+        if (now.isEmpty()) return;
+        DiskHealth h = DiskHealth.of(now);
+        int bay = PcCaseBlockEntity.bayIndex(slot) + 1;
+        if (h.failed()) {
+            be.bmc().log("в отсек " + bay + " вставлен неисправный диск");
+            return;
+        }
+        if (raidConfig != null && isMember(now)) {
+            bays.put(slot, RAID);
+            if ("failed".equals(raidState)) {
+                be.bmc().log("RAID: диск " + bay + " вернулся — перезагрузите сервер, чтобы собрать массив");
+            } else {
+                raidState = raidConfig.members() - countRaid() == 0 && rebuildSlot < 0 ? "ok" : raidState;
+                be.bmc().log("RAID: диск " + bay + " вернулся в массив");
+                computer.queueEvent("raid", raidState);
+            }
+            return;
+        }
+        if (raidConfig != null && "degraded".equals(raidState) && rebuildSlot < 0 && PcCaseBlockEntity.isDriveBay(slot)) {
+            startRebuild(slot);
+            return;
         }
         Mount mount = internalMount(level, now);
         if (mount != null) {
             String at = freeDataPath();
-            fs.mount(at, mount);
+            computer.fileSystem().mount(at, mount);
             bays.put(slot, at);
             computer.queueEvent("disk", "/" + at);
             be.setChanged();   // новый диск мог получить номер
         }
+    }
+
+    // ======================= RAID =======================
+
+    private static final String RAID = "@raid", REBUILD = "@rebuild";
+    private RaidConfig raidConfig;
+    /** Где смонтирован массив (null — не смонтирован). */
+    private String raidPath;
+    /** ok, degraded (без резерва), rebuilding, failed; "" — массива нет. */
+    private volatile String raidState = "";
+    private int rebuildSlot = -1;
+    private long rebuildTicks, rebuildTotal;
+
+    private boolean isMember(ItemStack stack) {
+        return isMember(raidConfig, stack);
+    }
+
+    private static boolean isMember(RaidConfig cfg, ItemStack stack) {
+        return cfg != null && !stack.isEmpty() && cfg.id().equals(DiskHealth.of(stack).raid());
+    }
+
+    /** Исправные диски массива в отсеках. */
+    private List<Integer> raidMembers() {
+        return raidMembers(raidConfig);
+    }
+
+    private List<Integer> raidMembers(RaidConfig cfg) {
+        List<Integer> out = new ArrayList<>();
+        for (int i = 0; i < be.bayCount(); i++) {
+            int slot = PcCaseBlockEntity.baySlot(i);
+            ItemStack d = be.getStack(slot);
+            if (isMember(cfg, d) && !DiskHealth.of(d).failed()) out.add(slot);
+        }
+        return out;
+    }
+
+    private int countRaid() {
+        int n = 0;
+        for (String v : bays.values()) if (RAID.equals(v)) n++;
+        return n;
+    }
+
+    /** Файловая система массива: своя папка, объём и скорость — по самому маленькому и медленному диску. */
+    private Mount raidMount(ServerLevel level) {
+        long minCap = Long.MAX_VALUE, minSpeed = Long.MAX_VALUE;
+        boolean hdd = false;
+        for (int slot : raidMembers()) {
+            ItemStack d = be.getStack(slot);
+            minCap = Math.min(minCap, diskCapacity(d));
+            minSpeed = Math.min(minSpeed, diskSpeed(d));
+            if (d.getItem() instanceof HddItem) hdd = true;
+        }
+        if (minCap == Long.MAX_VALUE) minCap = 0;
+        if (minSpeed == Long.MAX_VALUE) minSpeed = 1;
+        Mount m = new com.strikerr212.minepc.computer.fs.DirMount(DriveStorage.folder(level.getServer(), raidConfig.folderId()),
+                raidConfig.capacity(minCap), raidConfig.levelName())
+                .withSpeed(Math.round(raidConfig.speed(minSpeed) * com.strikerr212.minepc.MineConfig.disk()), hdd ? 512 : 32);
+        if (hdd) soundMounts.put(m, be.getBlockPos().immutable());
+        return m;
+    }
+
+    private static long diskCapacity(ItemStack d) {
+        if (d.getItem() instanceof SsdItem) return Perf.gameStorageBytes(SsdItem.data(d).capacityMb());
+        if (d.getItem() instanceof HddItem) return Perf.gameStorageBytes(HddItem.data(d).capacityMb());
+        return 0;
+    }
+
+    private static long diskSpeed(ItemStack d) {
+        if (d.getItem() instanceof SsdItem) return Perf.gameDiskBytesPerSecond(SsdItem.data(d).speedMbs());
+        if (d.getItem() instanceof HddItem) return Perf.gameDiskBytesPerSecond(HddItem.data(d).speedMbs());
+        return 1;
+    }
+
+    static String driveKind(ItemStack stack) {
+        if (stack.getItem() instanceof SsdItem) return SsdItem.data(stack).isNvme() ? "nvme" : "sata";
+        if (stack.getItem() instanceof HddItem) return "hdd";
+        return "";
+    }
+
+    /** Восстановить массив на диск в слоте: копирование занимает время (по объёму и скорости диска, 10 с – 1 мин). */
+    private void startRebuild(int slot) {
+        ItemStack d = be.getStack(slot);
+        rebuildSlot = slot;
+        rebuildTicks = 0;
+        long seconds = diskCapacity(d) / Math.max(1, diskSpeed(d));
+        rebuildTotal = Math.max(200, Math.min(1200, seconds * 20));   // от 10 секунд до минуты
+        raidState = "rebuilding";
+        bays.put(slot, REBUILD);
+        be.bmc().log("RAID: восстановление на диск в отсеке " + (PcCaseBlockEntity.bayIndex(slot) + 1));
+        computer.queueEvent("raid", raidState);
+        be.markUpdated();
+    }
+
+    private void tickRebuild() {
+        if (rebuildSlot < 0 || computer == null || !computer.isOn()) return;
+        if (++rebuildTicks < rebuildTotal) return;
+        ItemStack d = be.getStack(rebuildSlot);
+        // Какого номера в массиве не хватает — его и занимает новый диск
+        java.util.Set<Integer> have = new java.util.HashSet<>();
+        for (int slot : raidMembers()) have.add(DiskHealth.of(be.getStack(slot)).member());
+        int index = 0;
+        while (have.contains(index)) index++;
+        DiskHealth.of(d).withRaid(raidConfig.id(), index).writeTo(d);
+        bays.put(rebuildSlot, RAID);
+        be.bmc().log("RAID: восстановление на отсек " + (PcCaseBlockEntity.bayIndex(rebuildSlot) + 1) + " завершено");
+        rebuildSlot = -1;
+        raidState = raidConfig.members() - countRaid() == 0 ? "ok" : "degraded";
+        computer.queueEvent("raid", raidState);
+        be.markUpdated();
+    }
+
+    /** Какой отсек сейчас восстанавливается (-1 — никакой) — для лампы на модуле. */
+    int rebuildBay() {
+        return rebuildSlot < 0 ? -1 : PcCaseBlockEntity.bayIndex(rebuildSlot);
+    }
+
+    /** Состояние массива для BMC и программ. */
+    Map<String, Object> raidStatus() {
+        boolean on = computer != null && computer.isOn();
+        RaidConfig cfg = on && raidConfig != null ? raidConfig : RaidConfig.of(be.getStack(PcCaseBlockEntity.SLOT_MOTHERBOARD));
+        if (cfg == null || be.motherboard() == null || !be.motherboard().server()) return null;
+        int present = raidMembers(cfg).size();
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("level", cfg.level());
+        m.put("name", cfg.levelName());
+        m.put("members", cfg.members());
+        m.put("present", present);
+        m.put("state", !on || raidState.isEmpty() ? "off" : raidState);
+        if (rebuildSlot >= 0) m.put("rebuild", (int) (rebuildTicks * 100 / Math.max(1, rebuildTotal)));
+        if (raidPath != null) m.put("path", "/" + raidPath);
+        return m;
+    }
+
+    // ======================= Износ дисков =======================
+
+    /** Раз в 10 секунд: работающие диски изнашиваются (по настройке diskWear); 90% — просят замены, 100% — отказ. */
+    private void tickWear() {
+        int mode = com.strikerr212.minepc.MineConfig.diskWear();
+        if (mode == 0 || mode == 1 && !be.serverChassis()) return;
+        double life = com.strikerr212.minepc.MineConfig.diskLifeHours() * 3600;
+        for (int slot : new ArrayList<>(bays.keySet())) {
+            ItemStack d = be.getStack(slot);
+            if (d.isEmpty()) continue;
+            wearDisk(slot, d, 10 / (life * (d.getItem() instanceof SsdItem ? 1.5 : 1)));
+            if (computer == null || !computer.isOn()) return;
+        }
+    }
+
+    /** Добавить износ диску в слоте (и обработать «просит замены» и отказ). */
+    void wearDisk(int slot, ItemStack d, double add) {
+        DiskHealth h = DiskHealth.of(d);
+        if (h.failed()) return;
+        DiskHealth n = h.withWear(h.wear() + add);
+        n.writeTo(d);
+        be.setChanged();
+        String where = PcCaseBlockEntity.isDriveBay(slot) ? "в отсеке " + (PcCaseBlockEntity.bayIndex(slot) + 1) : "M.2 " + (slot - PcCaseBlockEntity.SLOT_M2 + 1);
+        if (n.failed()) {
+            be.bmc().log("диск " + where + " отказал");
+            computer.queueEvent("disk_failed", where);
+            be.markUpdated();
+            if (detach(slot)) {
+                // диск остался в слоте, но больше не работает
+            }
+        } else if (n.warning() && !h.warning()) {
+            be.bmc().log("диск " + where + " просит замены (износ " + n.percent() + "%)");
+            computer.queueEvent("disk_warning", where);
+            be.markUpdated();
+        }
+    }
+
+    // ======================= RAID для программ =======================
+
+    @Override
+    public Map<String, Object> raidInfo() {
+        return onServer(level -> {
+            MotherboardData board = be.motherboard();
+            if (board == null || !board.server()) return null;
+            Map<String, Object> m = new LinkedHashMap<>();
+            Map<String, Object> st = raidStatus();
+            if (st != null) m.put("array", st);
+            Map<Object, Object> disks = new LinkedHashMap<>();
+            for (int i = 0; i < be.bayCount(); i++) {
+                ItemStack d = be.getStack(PcCaseBlockEntity.baySlot(i));
+                Map<String, Object> e = new LinkedHashMap<>();
+                if (d.isEmpty()) {
+                    e.put("empty", true);
+                } else {
+                    DiskHealth h = DiskHealth.of(d);
+                    e.put("kind", driveKind(d));
+                    e.put("size", (double) diskCapacity(d));
+                    e.put("wear", h.percent());
+                    e.put("failed", h.failed());
+                    e.put("member", isMember(RaidConfig.of(be.getStack(PcCaseBlockEntity.SLOT_MOTHERBOARD)), d));
+                    e.put("rebuilding", PcCaseBlockEntity.baySlot(i) == rebuildSlot);
+                }
+                disks.put(i + 1, e);
+            }
+            m.put("disks", disks);
+            return m;
+        }, null);
+    }
+
+    @Override
+    public String raidCreate(String level) {
+        int lv = RaidConfig.parseLevel(level);
+        if (lv < 0) return "Уровень: stripe (RAID 0), mirror (RAID 1) или raid5";
+        return onServer(srv -> {
+            MotherboardData board = be.motherboard();
+            if (board == null || !board.server()) return "Нет RAID-контроллера: нужна серверная плата";
+            ItemStack boardStack = be.getStack(PcCaseBlockEntity.SLOT_MOTHERBOARD);
+            if (RaidConfig.of(boardStack) != null) return "Массив уже есть — сначала raid delete";
+            List<Integer> disks = new ArrayList<>();
+            for (int i = 0; i < be.bayCount(); i++) {
+                int slot = PcCaseBlockEntity.baySlot(i);
+                ItemStack d = be.getStack(slot);
+                if (d.isEmpty()) continue;
+                if (DiskHealth.of(d).failed()) return "В отсеке " + (i + 1) + " неисправный диск — замените его";
+                disks.add(slot);
+            }
+            if (disks.size() < RaidConfig.minMembers(lv)) return "Нужно хотя бы " + RaidConfig.minMembers(lv) + " диска в отсеках";
+            RaidConfig cfg = new RaidConfig(java.util.UUID.randomUUID().toString().substring(0, 8), lv, disks.size());
+            cfg.writeTo(boardStack);
+            for (int k = 0; k < disks.size(); k++) {
+                ItemStack d = be.getStack(disks.get(k));
+                d.remove(com.strikerr212.minepc.registry.ModDataComponents.DRIVE_ID.get());   // данные дисков стираются
+                DiskHealth.of(d).withRaid(cfg.id(), k).writeTo(d);
+            }
+            be.bmc().log("RAID: создан " + cfg.levelName() + " из " + disks.size() + " дисков");
+            be.markUpdated();
+            reconfigure = true;
+            return null;
+        }, "Сервер не ответил");
+    }
+
+    @Override
+    public String raidDelete() {
+        return onServer(srv -> {
+            ItemStack boardStack = be.getStack(PcCaseBlockEntity.SLOT_MOTHERBOARD);
+            RaidConfig cfg = RaidConfig.of(boardStack);
+            if (cfg == null) return "Массива нет";
+            RaidConfig.clear(boardStack);
+            for (int i = 0; i < be.bayCount(); i++) {
+                ItemStack d = be.getStack(PcCaseBlockEntity.baySlot(i));
+                if (!d.isEmpty() && cfg.id().equals(DiskHealth.of(d).raid())) {
+                    d.remove(com.strikerr212.minepc.registry.ModDataComponents.DRIVE_ID.get());
+                    DiskHealth.of(d).withoutRaid().writeTo(d);
+                }
+            }
+            be.bmc().log("RAID: массив " + cfg.levelName() + " разобран");
+            be.markUpdated();
+            reconfigure = true;
+            return null;
+        }, "Сервер не ответил");
     }
 
     private long lastOverheatLog = -100000;
@@ -814,6 +1157,8 @@ public final class CaseComputer implements Computer.Host {
         age++;
         Runnable task;
         while ((task = serverTasks.poll()) != null) task.run();
+        tickRebuild();
+        if (age % 200 == 11 && computer != null && computer.isOn()) tickWear();
         // BMC следит за температурой: перегрев — в журнал (не чаще раза в минуту)
         if (age % 100 == 7 && computer != null && computer.isOn() && computer.cpuTemp() >= 90 && age - lastOverheatLog > 1200) {
             lastOverheatLog = age;
@@ -1002,8 +1347,8 @@ public final class CaseComputer implements Computer.Host {
     /** Кнопка питания, раскрутка диска и писк самотеста. */
     private void startSounds(ServerLevel level, SystemModel.Input in, SystemModel.Report report) {
         hasHdd = false;
-        for (int i = 0; i < PcCaseBlockEntity.HDD_SLOTS; i++) {
-            if (be.getStack(PcCaseBlockEntity.SLOT_HDD + i).getItem() instanceof HddItem) hasHdd = true;
+        for (int i = 0; i < PcCaseBlockEntity.MAX_BAYS; i++) {
+            if (be.getStack(PcCaseBlockEntity.baySlot(i)).getItem() instanceof HddItem) hasHdd = true;
         }
         if (hasHdd) level.playSound(null, be.getBlockPos(), com.strikerr212.minepc.registry.ModSounds.HDD_SPINUP.get(),
                 net.minecraft.sounds.SoundSource.BLOCKS, 0.5f, 1f);

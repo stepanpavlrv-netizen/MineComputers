@@ -47,6 +47,7 @@ public class PcCaseMenu extends AbstractContainerMenu {
             {HIDDEN, HIDDEN}, {HIDDEN, HIDDEN},         // второй процессор и блок питания — только у сервера
             {HIDDEN, HIDDEN}, {HIDDEN, HIDDEN}, {HIDDEN, HIDDEN}, {HIDDEN, HIDDEN}, {HIDDEN, HIDDEN}, {HIDDEN, HIDDEN},
             {HIDDEN, HIDDEN}, {HIDDEN, HIDDEN}, {HIDDEN, HIDDEN}, {HIDDEN, HIDDEN}, {HIDDEN, HIDDEN}, {HIDDEN, HIDDEN},
+            {HIDDEN, HIDDEN}, {HIDDEN, HIDDEN}, {HIDDEN, HIDDEN}, {HIDDEN, HIDDEN},   // отсеки 5–8 — у сервера
     };
 
     /**
@@ -75,6 +76,7 @@ public class PcCaseMenu extends AbstractContainerMenu {
             {85, 21}, {103, 21},                        // память 5–6
             {13, 61}, {31, 61}, {49, 61}, {67, 61}, {85, 61}, {103, 61},   // память 7–12
             {13, 81}, {31, 81}, {49, 81}, {67, 81},     // память 13–16
+            {49, 105}, {67, 105}, {85, 105}, {103, 105},   // отсеки 5–8 (2U и серверный корпус)
     };
     public static final int INV_X = 8, INV_Y = 140;
 
@@ -82,6 +84,8 @@ public class PcCaseMenu extends AbstractContainerMenu {
     private final ContainerLevelAccess access;
     /** Окно серверного шасси (своя раскладка слотов). */
     private final boolean serverLayout;
+    /** Сколько отсеков дисков у шасси (лишние не показываются). */
+    private final int bays;
     private final ContainerData data;
 
     /** Клиент: позиция корпуса приходит с сервера. */
@@ -106,6 +110,7 @@ public class PcCaseMenu extends AbstractContainerMenu {
         this.access = be != null && be.getLevel() != null ? ContainerLevelAccess.create(be.getLevel(), be.getBlockPos()) : ContainerLevelAccess.NULL;
         IItemHandler handler = be != null ? be.inventory() : new ItemStackHandler(PcCaseBlockEntity.SLOT_COUNT);
         this.serverLayout = be != null && be.serverChassis();
+        this.bays = be == null ? 4 : be.bayCount();
         for (int i = 0; i < PcCaseBlockEntity.SLOT_COUNT; i++) {
             addSlot(new CaseSlot(handler, i, slotX(i) + 1, slotY(i) + 1));
         }
@@ -151,10 +156,12 @@ public class PcCaseMenu extends AbstractContainerMenu {
 
     /** Рамка слота корпуса в окне (HIDDEN — слота в этой раскладке нет). */
     public int slotX(int slot) {
+        if (PcCaseBlockEntity.bayIndex(slot) >= bays) return HIDDEN;
         return (serverLayout ? SERVER_POS : SLOT_POS)[slot][0];
     }
 
     public int slotY(int slot) {
+        if (PcCaseBlockEntity.bayIndex(slot) >= bays) return HIDDEN;
         return (serverLayout ? SERVER_POS : SLOT_POS)[slot][1];
     }
 

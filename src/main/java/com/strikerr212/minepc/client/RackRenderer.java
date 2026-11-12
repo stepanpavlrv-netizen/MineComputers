@@ -82,37 +82,38 @@ public class RackRenderer implements BlockEntityRenderer<RackBlockEntity> {
                 box(vc, pose, 1, y + 0.2f, 1.5f, 15, y + 3.8f, 2, DARK, l);           // заглушка
                 continue;
             }
-            if (kind == RackBlockEntity.SERVER) server(vc, pose, be.server(slot), y, dz, ease > 0.6f, l, time, slot);
+            if (kind == RackBlockEntity.UPPER) continue;                                // верх модуля 2U рисует он сам
+            if (RackBlockEntity.isServer(kind)) server(vc, pose, be.server(slot), y, be.size(slot) * 4, dz, ease > 0.6f, l, time, slot);
             else console(vc, pose, y, dz, ease, l);
         }
         pose.popPose();
     }
 
-    private static void server(VertexConsumer vc, PoseStack pose, PcCaseBlockEntity s, float y, float dz, boolean open, int light,
+    /** Сервер высотой h пикселей (4 — 1U, 8 — 2U). */
+    private static void server(VertexConsumer vc, PoseStack pose, PcCaseBlockEntity s, float y, int h, float dz, boolean open, int light,
                                long time, int slot) {
         int state = s == null ? 0 : s.displayState();
+        float top = y + h - 0.2f;
         // Корпус: дно и стенки, крышка — пока модуль не выдвинут
         box(vc, pose, 1, y + 0.2f, dz + 1, 15, y + 0.6f, dz + 16, BODY, light);
-        box(vc, pose, 1, y + 0.2f, dz + 1, 1.5f, y + 3.8f, dz + 16, BODY, light);
-        box(vc, pose, 14.5f, y + 0.2f, dz + 1, 15, y + 3.8f, dz + 16, BODY, light);
-        if (!open) box(vc, pose, 1, y + 3.4f, dz + 1, 15, y + 3.8f, dz + 16, BODY, light);
-        // Лицо: ушки, четыре отсека дисков, лампочки
-        box(vc, pose, 0, y + 0.2f, dz, 16, y + 3.8f, dz + 1, FRONT, light);
-        box(vc, pose, 0, y + 0.8f, dz - 0.6f, 0.8f, y + 3.2f, dz, EAR, light);
-        box(vc, pose, 15.2f, y + 0.8f, dz - 0.6f, 16, y + 3.2f, dz, EAR, light);
-        // Отсеки дисков: отсек i — слот диска i (два под жёсткие диски, два под SATA SSD)
-        for (int i = 0; i < 4; i++) {
-            float x = 2 + i * 3;
-            boolean has = s != null && !s.getStack(PcCaseBlockEntity.SLOT_HDD + i).isEmpty();
-            box(vc, pose, x, y + 0.9f, dz - 0.1f, x + 2.4f, y + 3.1f, dz + 0.2f, has ? 0x5A5E66 : BAY, light);
-            boolean busy = state == 1 && has && ((time / 3 + i * 7 + slot) % 9 < 2);
-            int led = !has ? OFF : state == 1 ? (busy ? LED_A : LED_G) : OFF;
-            glow(vc, pose, x + 1.9f, y + 2.5f, dz - 0.2f, 0.35f, led);
+        box(vc, pose, 1, y + 0.2f, dz + 1, 1.5f, top, dz + 16, BODY, light);
+        box(vc, pose, 14.5f, y + 0.2f, dz + 1, 15, top, dz + 16, BODY, light);
+        if (!open) box(vc, pose, 1, top - 0.4f, dz + 1, 15, top, dz + 16, BODY, light);
+        // Лицо: ушки, отсеки дисков (1U — ряд из четырёх, 2U — два ряда), лампочки
+        box(vc, pose, 0, y + 0.2f, dz, 16, top, dz + 1, FRONT, light);
+        box(vc, pose, 0, y + 0.8f, dz - 0.6f, 0.8f, top - 0.6f, dz, EAR, light);
+        box(vc, pose, 15.2f, y + 0.8f, dz - 0.6f, 16, top - 0.6f, dz, EAR, light);
+        int bays = h >= 8 ? 8 : 4;
+        for (int i = 0; i < bays; i++) {
+            float x = 2 + (i % 4) * 3, by = y + (h >= 8 ? (1 - i / 4) * 4 : 0);   // нижний ряд — отсеки 5–8
+            boolean has = s != null && !s.getStack(PcCaseBlockEntity.baySlot(i)).isEmpty();
+            box(vc, pose, x, by + 0.9f, dz - 0.1f, x + 2.4f, by + 3.1f, dz + 0.2f, has ? 0x5A5E66 : BAY, light);
+            glow(vc, pose, x + 1.9f, by + 2.5f, dz - 0.2f, 0.35f, bayLed(s, i, state, time, slot));
         }
-        glow(vc, pose, 14.3f, y + 2.6f, dz - 0.2f, 0.4f, state == 1 ? LED_B : state == 2 ? LED_R : OFF);
+        glow(vc, pose, 14.3f, top - 1.2f, dz - 0.2f, 0.4f, state == 1 ? LED_B : state == 2 ? LED_R : OFF);
         // Лампа питания: жёлтая, если у работающего сервера нет второго блока (резерва)
         boolean noSpare = s != null && s.psuCount() < 2;
-        glow(vc, pose, 14.3f, y + 1.4f, dz - 0.2f, 0.3f, state == 1 ? (noSpare ? LED_A : LED_G) : OFF);
+        glow(vc, pose, 14.3f, top - 2.4f, dz - 0.2f, 0.3f, state == 1 ? (noSpare ? LED_A : LED_G) : OFF);
         if (!open || s == null) return;
         // ----- Начинка (вид сверху) -----
         float b = y + 0.6f;
@@ -126,15 +127,18 @@ public class RackRenderer implements BlockEntityRenderer<RackBlockEntity> {
             metal = hw.spec().tint(v, 1) & 0xFFFFFF;
         }
         if (board != null) box(vc, pose, 1.6f, b, dz + 6, 14.4f, b + 0.25f, dz + 15.5f, pcb, light);
-        // Диски в отсеках
-        for (int i = 0; i < 4; i++) {
-            if (!s.getStack(PcCaseBlockEntity.SLOT_HDD + i).isEmpty()) box(vc, pose, 2 + i * 3, b, dz + 1, 4.4f + i * 3, b + 2, dz + 4.5f, 0x7E828A, light);
+        // Диски в отсеках (в 2U — стопкой по два)
+        for (int i = 0; i < bays; i++) {
+            if (s.getStack(PcCaseBlockEntity.baySlot(i)).isEmpty()) continue;
+            float dy = (h >= 8 ? (1 - i / 4) * 4 : 0);
+            box(vc, pose, 2 + (i % 4) * 3, b + dy, dz + 1, 4.4f + (i % 4) * 3, b + dy + 2, dz + 4.5f, 0x7E828A, light);
         }
-        // Стена вентиляторов
+        // Стена вентиляторов (в 2U — вдвое выше)
+        float fanH = h - 1.4f;
         for (int i = 0; i < 6; i++) {
             float x = 2 + i * 2;
-            box(vc, pose, x, b, dz + 5, x + 1.8f, b + 2.6f, dz + 5.8f, i % 2 == 0 ? 0x26272B : 0x3A3C42, light);
-            box(vc, pose, x + 0.6f, b + 0.9f, dz + 4.9f, x + 1.2f, b + 1.5f, dz + 5, 0x6A6E74, light);
+            box(vc, pose, x, b, dz + 5, x + 1.8f, b + fanH, dz + 5.8f, i % 2 == 0 ? 0x26272B : 0x3A3C42, light);
+            box(vc, pose, x + 0.6f, b + fanH / 2 - 0.3f, dz + 4.9f, x + 1.2f, b + fanH / 2 + 0.3f, dz + 5, 0x6A6E74, light);
         }
         if (board != null) {
             float t = b + 0.25f;
@@ -199,6 +203,23 @@ public class RackRenderer implements BlockEntityRenderer<RackBlockEntity> {
             box(vc, pose, x, b, dz + 12, x + 2.8f, b + 2.6f, dz + 15.8f, 0x55585F, light);
             glow(vc, pose, x + 2.3f, b + 2.0f, dz + 11.9f, 0.3f, state == 1 ? (noSpare ? LED_A : LED_G) : OFF);
         }
+    }
+
+    /**
+     * Лампа отсека: зелёная — диск работает (мигает жёлтым при обращениях), жёлтая — диск просит замены,
+     * красная — диск отказал, мигающая жёлтая медленно — массив RAID восстанавливается на этот диск.
+     */
+    private static int bayLed(PcCaseBlockEntity s, int bay, int state, long time, int slot) {
+        if (s == null) return OFF;
+        ItemStack d = s.getStack(PcCaseBlockEntity.baySlot(bay));
+        if (d.isEmpty()) return OFF;
+        var health = com.strikerr212.minepc.block.DiskHealth.of(d);
+        if (health.failed()) return LED_R;
+        if (state != 1) return OFF;
+        if (s.rebuildingBay() == bay) return (time / 10) % 2 == 0 ? LED_A : OFF;
+        if (health.warning()) return LED_A;
+        boolean busy = (time / 3 + bay * 7 + slot) % 9 < 2;
+        return busy ? 0x2A8040 : LED_G;   // обращение к диску — лампа моргает
     }
 
     /** Где сокеты (левый край радиатора) по ширине модуля. */

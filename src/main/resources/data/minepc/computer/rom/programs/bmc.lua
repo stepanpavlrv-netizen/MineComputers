@@ -1,11 +1,12 @@
 -- BMC: управление серверами по сети. Работает, даже если сервер выключен или упал (нужен блок питания и кабель)
 --   bmc                         — свой BMC (если это сервер): адрес, пароль
 --   bmc password <новый>        — сменить пароль своего BMC
---   bmc <сервер> <команда> [...] — status, sensors, log, screen, power on|off|reset, password, help
+--   bmc <сервер> <команда> [...] — status, sensors, log, screen, console, power on|off|reset, password, help
 -- Пароль спросит один раз (или задайте: bmc -p пароль <сервер> <команда>)
 local args = { ... }
 local color = term.isColor()
 local function c(col) if color then term.setTextColor(col) end end
+local function bg(col) if color then term.setBackgroundColor(col) end end
 
 local password
 if args[1] == "-p" then
@@ -44,6 +45,55 @@ if cmd == "power" and not arg then print("bmc " .. target .. " power on|off|rese
 if not password then
   write("Пароль BMC " .. target .. ": ")
   password = read("*")
+end
+
+-- Консоль: экран сервера по сети (обновляется 4 раза в секунду) и клавиатура; Ctrl+T — выйти
+if cmd == "console" then
+  local ok, msg = net.bmc(target, password, "screen")
+  if not ok and msg ~= "Сервер выключен — экрана нет" then c(colors.red) print(msg) c(colors.white) return end
+  local w, h = term.getSize()
+  local last = nil
+  local timer = os.startTimer(0)
+  while true do
+    local ev = { os.pullEventRaw() }
+    if ev[1] == "terminate" then break
+    elseif ev[1] == "timer" and ev[2] == timer then
+      local ok2, text, data = net.bmc(target, password, "screen")
+      local key = (ok2 and text or "") .. (data and (data.cx .. "," .. data.cy) or "")
+      if key ~= last then
+        last = key
+        bg(colors.black)
+        term.clear()
+        term.setCursorPos(1, 1)
+        c(colors.black) bg(colors.lightGray)
+        local head = (" BMC " .. target .. " — Ctrl+T: выйти "):sub(1, w)
+        write(head .. (" "):rep(w - #head))
+        bg(colors.black) c(colors.white)
+        if ok2 and data then
+          for i = 1, math.min(h - 1, #data.lines) do
+            term.setCursorPos(1, i + 1)
+            write(data.lines[i]:sub(1, w))
+          end
+          term.setCursorPos(math.min(w, data.cx + 1), math.min(h, data.cy + 2))
+        else
+          term.setCursorPos(1, 3)
+          c(colors.yellow) print(text) c(colors.white)
+          print("power on — включить: bmc " .. target .. " power on")
+        end
+      end
+      timer = os.startTimer(0.25)
+    elseif ev[1] == "char" then
+      net.bmc(target, password, "input", "c:" .. ev[2])
+      timer = os.startTimer(0.05)
+    elseif ev[1] == "key" then
+      net.bmc(target, password, "input", "k:" .. tostring(ev[2]) .. ":" .. (ev[3] and "1" or "0") .. ":" .. (ev[4] and "1" or "0"))
+      timer = os.startTimer(0.05)
+    end
+  end
+  bg(colors.black) c(colors.white)
+  term.clear() term.setCursorPos(1, 1)
+  print("Консоль BMC закрыта")
+  return
 end
 
 local ok, msg, data = net.bmc(target, password, cmd, arg)

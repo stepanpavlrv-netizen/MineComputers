@@ -80,7 +80,11 @@ public class PcCaseBlockEntity extends BlockEntity implements com.strikerr212.mi
     public static final int RAM_EXTRA_SLOTS = 12;
     /** Всего слотов памяти (4 обычных + 12 серверных). */
     public static final int MAX_RAM_SLOTS = RAM_SLOTS + RAM_EXTRA_SLOTS;
-    public static final int SLOT_COUNT = 31;
+    public static final int SLOT_BAY_EXTRA = 31;   // 31..34 — отсеки дисков 5–8 (сервер 2U, серверный корпус)
+    public static final int BAY_EXTRA_SLOTS = 4;
+    /** Отсеков дисков у самого большого шасси. */
+    public static final int MAX_BAYS = HDD_SLOTS + SATA_SSD_SLOTS + BAY_EXTRA_SLOTS;
+    public static final int SLOT_COUNT = 35;
     /** Охлаждение серверного шасси без кулера: стена вентиляторов поперёк корпуса, Вт отвода на процессор. */
     public static final int FAN_WALL_W = 260;
 
@@ -96,16 +100,28 @@ public class PcCaseBlockEntity extends BlockEntity implements com.strikerr212.mi
         return -1;
     }
 
+    /** Слот отсека i (0..7): у обычного корпуса 0–1 — жёсткие диски, 2–3 — SATA SSD; у сервера любой диск в любой. */
+    public static int baySlot(int i) {
+        return i < HDD_SLOTS + SATA_SSD_SLOTS ? SLOT_HDD + i : SLOT_BAY_EXTRA + i - HDD_SLOTS - SATA_SSD_SLOTS;
+    }
+
+    /** Номер отсека (0..7) для слота или -1. */
+    public static int bayIndex(int slot) {
+        if (slot >= SLOT_HDD && slot < SLOT_SATA_SSD + SATA_SSD_SLOTS) return slot - SLOT_HDD;
+        if (slot >= SLOT_BAY_EXTRA && slot < SLOT_BAY_EXTRA + BAY_EXTRA_SLOTS) return slot - SLOT_BAY_EXTRA + HDD_SLOTS + SATA_SSD_SLOTS;
+        return -1;
+    }
+
     public static boolean isDriveBay(int slot) {
-        return slot >= SLOT_HDD && slot < SLOT_SATA_SSD + SATA_SSD_SLOTS;
+        return bayIndex(slot) >= 0;
     }
 
     /** Версия раскладки: если сохранение старое, детали раскладываются заново. */
-    private static final int LAYOUT_VERSION = 4;
+    private static final int LAYOUT_VERSION = 5;
 
     /** Порядок снятия: как в жизни, плата и блок питания — последними. */
     private static final int[] REMOVE_ORDER = {
-            16, 15, SLOT_GPU, 14, 13, 12, 11, 10, 9, 30, 29, 28, 27, 26, 25, 24, 23, 22, 21, 20, 19, 6, 5, 4, 3,
+            16, 15, SLOT_GPU, 14, 13, 34, 33, 32, 31, 12, 11, 10, 9, 30, 29, 28, 27, 26, 25, 24, 23, 22, 21, 20, 19, 6, 5, 4, 3,
             SLOT_COOLER, SLOT_CPU2, SLOT_CPU, SLOT_PSU2, SLOT_PSU, SLOT_MOTHERBOARD};
 
     /** Инвентарь корпуса: по одной детали в слоте. */
@@ -175,6 +191,20 @@ public class PcCaseBlockEntity extends BlockEntity implements com.strikerr212.mi
         return pc;
     }
 
+    /** Износить диск в слоте (как от долгой работы): для проверок и команд администратора. Только у работающего. */
+    public void wearDisk(int slot, double add) {
+        ItemStack d = getStack(slot);
+        if (!d.isEmpty() && computerState() == 1) pc.wearDisk(slot, d, add);
+    }
+
+    /** На клиенте: какой отсек восстанавливает RAID (приходит с сервера). */
+    private int clientRebuild = -1;
+
+    /** Какой отсек сейчас восстанавливается массивом RAID (-1 — никакой): лампа на модуле мигает. */
+    public int rebuildingBay() {
+        return level != null && level.isClientSide ? clientRebuild : pc.rebuildBay();
+    }
+
     public boolean isModule() {
         return module;
     }
@@ -220,6 +250,23 @@ public class PcCaseBlockEntity extends BlockEntity implements com.strikerr212.mi
      */
     public boolean serverChassis() {
         return module || style() == CaseStyle.SERVER;
+    }
+
+    /** Модуль 2U: выше, восемь отсеков дисков, мощнее стена вентиляторов. */
+    private boolean tall;
+
+    public void setTall(boolean tall) {
+        this.tall = tall;
+    }
+
+    public boolean isTall() {
+        return tall;
+    }
+
+    /** Сколько отсеков дисков: модуль 1U — 4, модуль 2U и серверный корпус — 8, обычный корпус — 4 (2 HDD + 2 SSD). */
+    public int bayCount() {
+        if (module) return tall ? 8 : 4;
+        return serverChassis() ? 8 : 4;
     }
 
     private boolean running() {
@@ -294,12 +341,13 @@ public class PcCaseBlockEntity extends BlockEntity implements com.strikerr212.mi
             return null;
         }
         if (slot == SLOT_GPU) return type == HardwareType.GPU ? null : "message.minepc.no_slot";
-        if (slot >= SLOT_HDD && slot < SLOT_HDD + HDD_SLOTS) {
-            if (type != HardwareType.HDD) return "message.minepc.no_slot";
-            return sataFreeFor(board, slot) ? null : "message.minepc.no_sata_short";
-        }
-        if (slot >= SLOT_SATA_SSD && slot < SLOT_SATA_SSD + SATA_SSD_SLOTS) {
-            if (type != HardwareType.SSD || SsdItem.data(stack).isNvme()) return "message.minepc.no_slot";
+        int bay = bayIndex(slot);
+        if (bay >= 0) {
+            if (bay >= bayCount()) return "message.minepc.no_slot";
+            boolean hdd = type == HardwareType.HDD, sata = type == HardwareType.SSD && !SsdItem.data(stack).isNvme();
+            // У сервера отсеки универсальные (салазки под любой диск), у обычного корпуса — корзина HDD и крепления SSD
+            boolean fits = serverChassis() ? hdd || sata : slot < SLOT_SATA_SSD ? hdd : sata;
+            if (!fits) return "message.minepc.no_slot";
             return sataFreeFor(board, slot) ? null : "message.minepc.no_sata_short";
         }
         if (slot >= SLOT_M2 && slot < SLOT_M2 + M2_SLOTS) {
@@ -320,8 +368,7 @@ public class PcCaseBlockEntity extends BlockEntity implements com.strikerr212.mi
     /** Свободен ли порт SATA для устройства в слоте slot (сам слот не считаем). */
     private boolean sataFreeFor(MotherboardData board, int slot) {
         int used = 0;
-        for (int i = 0; i < HDD_SLOTS; i++) if (SLOT_HDD + i != slot && !getStack(SLOT_HDD + i).isEmpty()) used++;
-        for (int i = 0; i < SATA_SSD_SLOTS; i++) if (SLOT_SATA_SSD + i != slot && !getStack(SLOT_SATA_SSD + i).isEmpty()) used++;
+        for (int i = 0; i < MAX_BAYS; i++) if (baySlot(i) != slot && !getStack(baySlot(i)).isEmpty()) used++;
         return used < board.sataPorts();
     }
 
@@ -336,7 +383,7 @@ public class PcCaseBlockEntity extends BlockEntity implements com.strikerr212.mi
         if (slot == SLOT_MOTHERBOARD) {
             boolean free = getStack(SLOT_CPU).isEmpty() && getStack(SLOT_CPU2).isEmpty() && getStack(SLOT_GPU).isEmpty()
                     && !anyIn(SLOT_RAM, RAM_SLOTS, -1) && !anyIn(SLOT_RAM_EXTRA, RAM_EXTRA_SLOTS, -1)
-                    && !anyIn(SLOT_HDD, HDD_SLOTS + SATA_SSD_SLOTS + M2_SLOTS, -1);
+                    && !anyIn(SLOT_HDD, HDD_SLOTS + SATA_SSD_SLOTS + M2_SLOTS, -1) && !anyIn(SLOT_BAY_EXTRA, BAY_EXTRA_SLOTS, -1);
             return free ? null : "message.minepc.board_busy";
         }
         if (slot == SLOT_CPU) {
@@ -581,8 +628,9 @@ public class PcCaseBlockEntity extends BlockEntity implements com.strikerr212.mi
             case RAM -> java.util.stream.IntStream.range(0, MAX_RAM_SLOTS).map(PcCaseBlockEntity::ramSlot).toArray();
             case GPU -> new int[]{SLOT_GPU};
             case PSU -> new int[]{SLOT_PSU, SLOT_PSU2};
-            case HDD -> new int[]{SLOT_HDD, SLOT_HDD + 1};
-            case SSD -> SsdItem.data(held).isNvme() ? new int[]{SLOT_M2, SLOT_M2 + 1} : new int[]{SLOT_SATA_SSD, SLOT_SATA_SSD + 1};
+            case HDD -> serverChassis() ? allBays() : new int[]{SLOT_HDD, SLOT_HDD + 1};
+            case SSD -> SsdItem.data(held).isNvme() ? new int[]{SLOT_M2, SLOT_M2 + 1}
+                    : serverChassis() ? allBays() : new int[]{SLOT_SATA_SSD, SLOT_SATA_SSD + 1};
         };
         // Первое свободное место, куда деталь встаёт; иначе — причина с первого свободного места
         int slot = -1;
@@ -645,9 +693,14 @@ public class PcCaseBlockEntity extends BlockEntity implements com.strikerr212.mi
     /** Жёсткие диски и SATA SSD занимают порты SATA на плате. */
     private int sataDevices() {
         int count = 0;
-        for (int i = 0; i < HDD_SLOTS; i++) if (!getStack(SLOT_HDD + i).isEmpty()) count++;
-        for (int i = 0; i < SATA_SSD_SLOTS; i++) if (!getStack(SLOT_SATA_SSD + i).isEmpty()) count++;
+        for (int i = 0; i < MAX_BAYS; i++) if (!getStack(baySlot(i)).isEmpty()) count++;
         return count;
+    }
+
+    private int[] allBays() {
+        int[] out = new int[bayCount()];
+        for (int i = 0; i < out.length; i++) out[i] = baySlot(i);
+        return out;
     }
 
     private boolean sataPortFree(MotherboardData board) {
@@ -687,7 +740,7 @@ public class PcCaseBlockEntity extends BlockEntity implements com.strikerr212.mi
         CoolerData coolerData = cooler.getItem() instanceof CoolerItem ? CoolerItem.data(cooler) : null;
         if (serverChassis()) {
             // Стена вентиляторов гонит воздух через радиаторы всех процессоров; кулер (в напольном корпусе) — в помощь
-            int wall = FAN_WALL_W * sockets;
+            int wall = FAN_WALL_W * sockets * (tall ? 3 : 2) / 2;   // в 2U вентиляторы крупнее
             if (coolerData == null || coolerData.coolingW() < wall) {
                 coolerData = new CoolerData(coolerData == null ? 3 : coolerData.tier(), CoolerData.FAN_WALL, wall, 6 * sockets);
             }
@@ -940,6 +993,7 @@ public class PcCaseBlockEntity extends BlockEntity implements com.strikerr212.mi
         tag.putInt("state", pc.stateCode());
         cords.save(tag);
         bmc.save(tag);
+        tag.putInt("rebuild_bay", pc.rebuildBay());
         if (!pc.wifiSsid().isEmpty()) {
             tag.putString("wifi_ssid", pc.wifiSsid());
             tag.putString("wifi_password", pc.wifiPassword());
@@ -954,7 +1008,8 @@ public class PcCaseBlockEntity extends BlockEntity implements com.strikerr212.mi
         int layout = tag.getInt("layout");
         boolean sameLayout = layout == LAYOUT_VERSION && saved.getSlots() == SLOT_COUNT;
         // Версия 2 отличалась только отсутствием USB-портов в конце, версия 3 — серверных слотов в конце
-        boolean prefix = layout == 2 && saved.getSlots() == 15 || layout == 3 && saved.getSlots() == 17;
+        boolean prefix = layout == 2 && saved.getSlots() == 15 || layout == 3 && saved.getSlots() == 17
+                || layout == 4 && saved.getSlots() == 31;
 
         for (int slot = 0; slot < SLOT_COUNT; slot++) {
             boolean keep = sameLayout || (prefix && slot < saved.getSlots());
@@ -967,6 +1022,7 @@ public class PcCaseBlockEntity extends BlockEntity implements com.strikerr212.mi
         clientState = tag.getInt("state");
         cords.load(tag);
         bmc.load(tag);
+        clientRebuild = tag.contains("rebuild_bay") ? tag.getInt("rebuild_bay") : -1;
         if (!sameLayout && !prefix) {
             // Сохранение из старой версии мода: раскладываем детали по новым слотам
             for (int i = 0; i < saved.getSlots(); i++) {

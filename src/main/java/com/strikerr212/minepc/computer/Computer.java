@@ -104,6 +104,17 @@ public final class Computer {
         /** Настройки BIOS для программ (без самих паролей); null — хранить в памяти компьютера (тесты). */
         default java.util.Map<String, Object> biosSettings() { return null; }
 
+        // ----- RAID (серверная плата) -----
+
+        /** Массив RAID и диски в отсеках; null — нет RAID-контроллера (обычная плата). */
+        default java.util.Map<String, Object> raidInfo() { return null; }
+
+        /** Создать массив из всех дисков в отсеках (уровень: stripe, mirror, raid5). null — готово, иначе ошибка. */
+        default String raidCreate(String level) { return "Нет RAID-контроллера: нужна серверная плата"; }
+
+        /** Разобрать массив (данные массива пропадут). null — готово. */
+        default String raidDelete() { return "Нет RAID-контроллера: нужна серверная плата"; }
+
         /** Сохранить изменения настроек; null — получилось, иначе причина. */
         default String biosSave(java.util.Map<?, ?> changes) { return "Настройки не сохраняются"; }
 

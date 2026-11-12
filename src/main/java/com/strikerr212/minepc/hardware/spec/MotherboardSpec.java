@@ -58,7 +58,7 @@ public class MotherboardSpec extends PartSpec {
         int chipset = idx(v, CHIPSET);
         // Серверная плата держит любые серверные процессоры; чипсет у неё влияет на уровень и потребление
         return new MotherboardData(tier(v), server ? MotherboardData.SOCKET_SERVER : val(v, SOCKET), chipset, server ? 5 : chipset + 1,
-                slots, channels, val(v, RAM_SPEED), val(v, M2), val(v, SATA) + (server ? 2 : 0),
+                slots, channels, val(v, RAM_SPEED), val(v, M2), val(v, SATA) + (server ? 4 : 0),
                 10 + (chipset + 1) * 5 + (server ? SERVER_EXTRA_W : 0), server ? 2 : 1, server);
     }
 

@@ -27,6 +27,8 @@ public class RackBlockEntity extends BlockEntity {
 
     public static final int SLOTS = 4;
     public static final int EMPTY = 0, SERVER = 1, CONSOLE = 2;
+    /** Сервер 2U: стоит на этом месте и занимает следующее над ним (там UPPER). */
+    public static final int SERVER_2U = 3, UPPER = 4;
 
     private final int[] kinds = new int[SLOTS];
     private final PcCaseBlockEntity[] servers = new PcCaseBlockEntity[SLOTS];
@@ -41,9 +43,23 @@ public class RackBlockEntity extends BlockEntity {
         return slot < 0 || slot >= SLOTS ? EMPTY : kinds[slot];
     }
 
+    /** Нижнее место модуля, которому принадлежит slot (у 2U верхняя половина — его же). */
+    public int base(int slot) {
+        return kind(slot) == UPPER ? slot - 1 : slot;
+    }
+
+    /** Высота модуля в местах (1U или 2U). */
+    public int size(int slot) {
+        return kind(slot) == SERVER_2U ? 2 : 1;
+    }
+
+    public static boolean isServer(int kind) {
+        return kind == SERVER || kind == SERVER_2U;
+    }
+
     /** Сервер в месте slot или null. */
     public PcCaseBlockEntity server(int slot) {
-        return slot < 0 || slot >= SLOTS || kinds[slot] != SERVER ? null : servers[slot];
+        return slot < 0 || slot >= SLOTS || !isServer(kinds[slot]) ? null : servers[slot];
     }
 
     public int extended() {
@@ -55,8 +71,9 @@ public class RackBlockEntity extends BlockEntity {
         return false;
     }
 
-    private PcCaseBlockEntity newServer(int slot) {
+    private PcCaseBlockEntity newServer(int slot, boolean tall) {
         PcCaseBlockEntity s = new PcCaseBlockEntity(worldPosition, ModBlocks.PC_CASE.get().defaultBlockState(), slot);
+        s.setTall(tall);
         if (level != null) s.setLevel(level);
         return s;
     }
@@ -76,12 +93,20 @@ public class RackBlockEntity extends BlockEntity {
 
     // ======================= Модули =======================
 
-    /** Поставить модуль из предмета в свободное место. */
+    /** Поставить модуль из предмета в свободное место (2U — сюда и на место выше; если выше занято — на место ниже). */
     public boolean insert(int slot, ItemStack stack) {
         if (slot < 0 || slot >= SLOTS || kinds[slot] != EMPTY) return false;
-        if (stack.is(ModItems.SERVER_MODULE.get())) {
-            kinds[slot] = SERVER;
-            servers[slot] = newServer(slot);
+        boolean tall = stack.is(ModItems.SERVER_MODULE_2U.get());
+        if (tall) {
+            if (slot + 1 >= SLOTS || kinds[slot + 1] != EMPTY) {
+                if (slot - 1 >= 0 && kinds[slot - 1] == EMPTY) slot--;
+                else return false;
+            }
+        }
+        if (stack.is(ModItems.SERVER_MODULE.get()) || tall) {
+            kinds[slot] = tall ? SERVER_2U : SERVER;
+            if (tall) kinds[slot + 1] = UPPER;
+            servers[slot] = newServer(slot, tall);
             CustomData data = stack.get(DataComponents.CUSTOM_DATA);
             if (data != null && data.copyTag().contains("machine") && level != null) {
                 servers[slot].loadWithComponents(data.copyTag().getCompound("machine"), level.registryAccess());
@@ -98,9 +123,12 @@ public class RackBlockEntity extends BlockEntity {
     /** Вынуть модуль целиком (сервер — вместе с деталями внутри). Пустой стек — места нет. */
     public ItemStack take(int slot) {
         if (slot < 0 || slot >= SLOTS || kinds[slot] == EMPTY) return ItemStack.EMPTY;
+        slot = base(slot);
         ItemStack out;
-        if (kinds[slot] == SERVER) {
-            out = new ItemStack(ModItems.SERVER_MODULE.get());
+        if (isServer(kinds[slot])) {
+            boolean tall = kinds[slot] == SERVER_2U;
+            out = new ItemStack(tall ? ModItems.SERVER_MODULE_2U.get() : ModItems.SERVER_MODULE.get());
+            if (tall) kinds[slot + 1] = EMPTY;
             PcCaseBlockEntity s = servers[slot];
             if (s != null && level != null) {
                 CompoundTag t = new CompoundTag();
@@ -166,7 +194,7 @@ public class RackBlockEntity extends BlockEntity {
         tag.putIntArray("kinds", kinds.clone());
         tag.putInt("extended", extended);
         for (int i = 0; i < SLOTS; i++) {
-            if (kinds[i] == SERVER && servers[i] != null) tag.put("server" + i, servers[i].saveWithoutMetadata(registries));
+            if (isServer(kinds[i]) && servers[i] != null) tag.put("server" + i, servers[i].saveWithoutMetadata(registries));
         }
     }
 
@@ -176,8 +204,9 @@ public class RackBlockEntity extends BlockEntity {
         int[] k = tag.getIntArray("kinds");
         for (int i = 0; i < SLOTS; i++) {
             kinds[i] = i < k.length ? k[i] : EMPTY;
-            if (kinds[i] == SERVER) {
-                if (servers[i] == null) servers[i] = newServer(i);
+            if (isServer(kinds[i])) {
+                if (servers[i] == null) servers[i] = newServer(i, kinds[i] == SERVER_2U);
+                servers[i].setTall(kinds[i] == SERVER_2U);
                 if (tag.contains("server" + i)) servers[i].loadWithComponents(tag.getCompound("server" + i), registries);
             } else if (servers[i] != null) {
                 servers[i].setRemoved();

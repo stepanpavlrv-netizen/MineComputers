@@ -31,18 +31,22 @@ public class RackDrawerBlock extends HorizontalDirectionalBlock {
 
     public static final MapCodec<RackDrawerBlock> CODEC = simpleCodec(RackDrawerBlock::new);
     public static final IntegerProperty SLOT = IntegerProperty.create("slot", 0, RackBlockEntity.SLOTS - 1);
-    private static final BoxShapes[] SHAPES = new BoxShapes[RackBlockEntity.SLOTS];
+    /** Выдвинут сервер 2U (вдвое выше). */
+    public static final net.minecraft.world.level.block.state.properties.BooleanProperty TALL =
+            net.minecraft.world.level.block.state.properties.BooleanProperty.create("tall");
+    private static final BoxShapes[][] SHAPES = new BoxShapes[2][RackBlockEntity.SLOTS];
 
     static {
-        for (int i = 0; i < SHAPES.length; i++) {
+        for (int i = 0; i < RackBlockEntity.SLOTS; i++) {
             // Модуль выходит из стойки (она с юга, у «смотрящего на север») на TRAVEL пикселей
-            SHAPES[i] = BoxShapes.of(0, i * 4, 16 - RackBlock.TRAVEL, 16, i * 4 + 4, 16);
+            SHAPES[0][i] = BoxShapes.of(0, i * 4, 16 - RackBlock.TRAVEL, 16, i * 4 + 4, 16);
+            SHAPES[1][i] = BoxShapes.of(0, i * 4, 16 - RackBlock.TRAVEL, 16, Math.min(16, i * 4 + 8), 16);
         }
     }
 
     public RackDrawerBlock(Properties properties) {
         super(properties);
-        registerDefaultState(stateDefinition.any().setValue(FACING, Direction.NORTH).setValue(SLOT, 0));
+        registerDefaultState(stateDefinition.any().setValue(FACING, Direction.NORTH).setValue(SLOT, 0).setValue(TALL, false));
     }
 
     @Override
@@ -52,7 +56,7 @@ public class RackDrawerBlock extends HorizontalDirectionalBlock {
 
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
-        builder.add(FACING, SLOT);
+        builder.add(FACING, SLOT, TALL);
     }
 
     @Override
@@ -62,7 +66,7 @@ public class RackDrawerBlock extends HorizontalDirectionalBlock {
 
     @Override
     protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
-        return SHAPES[state.getValue(SLOT)].get(state.getValue(FACING));
+        return SHAPES[state.getValue(TALL) ? 1 : 0][state.getValue(SLOT)].get(state.getValue(FACING));
     }
 
     private static BlockPos rackPos(BlockState state, BlockPos pos) {

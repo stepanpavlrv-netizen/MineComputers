@@ -103,7 +103,7 @@ public class RackBlock extends HorizontalDirectionalBlock implements EntityBlock
         if (!(level.getBlockEntity(pos) instanceof RackBlockEntity rack)) return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
         int slot = slotAt(pos, hit);
         // Модуль в руке — в свободное место
-        if (stack.is(ModItems.SERVER_MODULE.get()) || stack.is(ModItems.CONSOLE_MODULE.get())) {
+        if (stack.is(ModItems.SERVER_MODULE.get()) || stack.is(ModItems.SERVER_MODULE_2U.get()) || stack.is(ModItems.CONSOLE_MODULE.get())) {
             if (rack.kind(slot) != RackBlockEntity.EMPTY) return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
             if (!level.isClientSide && rack.insert(slot, stack)) {
                 if (!player.getAbilities().instabuild) stack.shrink(1);
@@ -111,6 +111,7 @@ public class RackBlock extends HorizontalDirectionalBlock implements EntityBlock
             }
             return ItemInteractionResult.sidedSuccess(level.isClientSide);
         }
+        slot = rack.base(slot);   // верхняя половина модуля 2U — это он же
         // Деталь в руке — в выдвинутый сервер
         if (stack.getItem() instanceof HardwareItem && rack.extended() == slot && rack.server(slot) != null && !player.isShiftKeyDown()) {
             if (!level.isClientSide) player.displayClientMessage(rack.server(slot).tryInstall(stack, player), true);
@@ -125,7 +126,7 @@ public class RackBlock extends HorizontalDirectionalBlock implements EntityBlock
     @Override
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
         if (!(level.getBlockEntity(pos) instanceof RackBlockEntity rack)) return InteractionResult.PASS;
-        return use(level, pos, state, rack, slotAt(pos, hit), player);
+        return use(level, pos, state, rack, rack.base(slotAt(pos, hit)), player);
     }
 
     /** Общее для пустой руки и предмета: выдвинуть, задвинуть, открыть, вынуть. */
@@ -186,7 +187,8 @@ public class RackBlock extends HorizontalDirectionalBlock implements EntityBlock
         }
         rack.setExtended(slot);
         level.setBlock(front, ModBlocks.RACK_DRAWER.get().defaultBlockState()
-                .setValue(RackDrawerBlock.FACING, f).setValue(RackDrawerBlock.SLOT, slot), Block.UPDATE_ALL);
+                .setValue(RackDrawerBlock.FACING, f).setValue(RackDrawerBlock.SLOT, slot)
+                .setValue(RackDrawerBlock.TALL, rack.size(slot) == 2), Block.UPDATE_ALL);
         level.playSound(null, pos, SoundEvents.CHAIN_PLACE, SoundSource.BLOCKS, 0.8f, 1.3f);
     }
 

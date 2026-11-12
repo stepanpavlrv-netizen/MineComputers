@@ -37,6 +37,7 @@ programs/mv.lua
 programs/peers.lua
 programs/ping.lua
 programs/ps.lua
+programs/raid.lua
 programs/reboot.lua
 programs/recv.lua
 programs/rm.lua

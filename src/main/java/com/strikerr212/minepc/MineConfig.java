@@ -24,6 +24,8 @@ public final class MineConfig {
     private static final ModConfigSpec.IntValue SCREEN_FPS;
     private static final ModConfigSpec.IntValue SCREEN_KB;
     private static final ModConfigSpec.BooleanValue BOOT_TIME;
+    private static final ModConfigSpec.IntValue DISK_WEAR;
+    private static final ModConfigSpec.DoubleValue DISK_LIFE_HOURS;
 
     static {
         ModConfigSpec.Builder b = new ModConfigSpec.Builder();
@@ -64,6 +66,12 @@ public final class MineConfig {
         BOOT_TIME = b.comment("Загрузка системы занимает время (зависит от накопителя: SSD быстрее жёсткого диска)",
                         "System boot takes time depending on the drive")
                 .define("bootTime", true);
+        DISK_WEAR = b.comment("Износ накопителей: 0 — нет, 1 — только у серверов (по умолчанию), 2 — у всех компьютеров",
+                        "Drive wear: 0 = off, 1 = servers only (default), 2 = all computers")
+                .defineInRange("diskWear", 1, 0, 2);
+        DISK_LIFE_HOURS = b.comment("Сколько часов работы (настоящих) выдерживает жёсткий диск; SSD — в полтора раза дольше",
+                        "Real hours of powered-on time a hard drive lasts; SSDs last 1.5 times longer")
+                .defineInRange("diskLifeHours", 40.0, 0.01, 100000.0);
         b.pop();
         SPEC = b.build();
     }
@@ -101,6 +109,8 @@ public final class MineConfig {
     public static int threads() { return get(THREADS, 0); }
     public static int sliceMs() { return get(SLICE_MS, 20); }
     public static boolean bootTime() { return get(BOOT_TIME, true); }
+    public static int diskWear() { return get(DISK_WEAR, 1); }
+    public static double diskLifeHours() { return get(DISK_LIFE_HOURS, 40.0); }
     public static int screenFps() { return get(SCREEN_FPS, 60); }
     public static int screenKbPerSecond() { return get(SCREEN_KB, 2048); }
 }

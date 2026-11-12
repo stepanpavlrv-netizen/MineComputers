@@ -81,10 +81,11 @@ public class PcCaseScreen extends AbstractContainerScreen<PcCaseMenu> {
             "gui.minepc.slot.sata", "gui.minepc.slot.sata", "gui.minepc.slot.m2", "gui.minepc.slot.m2",
             "gui.minepc.slot.usb", "gui.minepc.slot.usb", "gui.minepc.slot.cpu2", "gui.minepc.slot.psu2",
             "gui.minepc.slot.ram", "gui.minepc.slot.ram", "gui.minepc.slot.ram", "gui.minepc.slot.ram", "gui.minepc.slot.ram", "gui.minepc.slot.ram",
-            "gui.minepc.slot.ram", "gui.minepc.slot.ram", "gui.minepc.slot.ram", "gui.minepc.slot.ram", "gui.minepc.slot.ram", "gui.minepc.slot.ram"};
+            "gui.minepc.slot.ram", "gui.minepc.slot.ram", "gui.minepc.slot.ram", "gui.minepc.slot.ram", "gui.minepc.slot.ram", "gui.minepc.slot.ram",
+            "gui.minepc.slot.bay", "gui.minepc.slot.bay", "gui.minepc.slot.bay", "gui.minepc.slot.bay"};
     private static final String[] GHOSTS = {"motherboard", "cpu", "cooler", "ram", "ram", "ram", "ram", "gpu", "psu",
             "hdd", "hdd", "sata", "sata", "m2", "m2", "usb", "usb", "cpu", "psu",
-            "ram", "ram", "ram", "ram", "ram", "ram", "ram", "ram", "ram", "ram", "ram", "ram"};
+            "ram", "ram", "ram", "ram", "ram", "ram", "ram", "ram", "ram", "ram", "ram", "ram", "hdd", "hdd", "hdd", "hdd"};
 
     /** Дорожки на плате: всегда один и тот же рисунок. */
     private static final List<int[]> TRACES = new ArrayList<>();
@@ -326,6 +327,7 @@ public class PcCaseScreen extends AbstractContainerScreen<PcCaseMenu> {
         out.add(Row.of("ram", tr("gui.minepc.row.part_w", tr("gui.minepc.part.ram"), power(PcCaseBlockEntity.SLOT_RAM, PcCaseBlockEntity.RAM_SLOTS)
                 + power(PcCaseBlockEntity.SLOT_RAM_EXTRA, PcCaseBlockEntity.RAM_EXTRA_SLOTS)), th.fg));
         int drives = power(PcCaseBlockEntity.SLOT_HDD, PcCaseBlockEntity.HDD_SLOTS) + power(PcCaseBlockEntity.SLOT_SATA_SSD, PcCaseBlockEntity.SATA_SSD_SLOTS)
+                + power(PcCaseBlockEntity.SLOT_BAY_EXTRA, PcCaseBlockEntity.BAY_EXTRA_SLOTS)
                 + power(PcCaseBlockEntity.SLOT_M2, PcCaseBlockEntity.M2_SLOTS);
         out.add(Row.of("disk", tr("gui.minepc.row.part_w", tr("gui.minepc.part.drives"), drives), th.fg));
         out.add(Row.of("board", tr("gui.minepc.row.part_w", tr("gui.minepc.part.other"), power(PcCaseBlockEntity.SLOT_MOTHERBOARD, 1)), th.fg));
@@ -355,8 +357,8 @@ public class PcCaseScreen extends AbstractContainerScreen<PcCaseMenu> {
     }
 
     private void driveRows(List<Row> out, SystemModel.Input in, SystemModel.Report r) {
-        int[] order = {PcCaseBlockEntity.SLOT_M2, PcCaseBlockEntity.SLOT_M2 + 1, PcCaseBlockEntity.SLOT_SATA_SSD,
-                PcCaseBlockEntity.SLOT_SATA_SSD + 1, PcCaseBlockEntity.SLOT_HDD, PcCaseBlockEntity.SLOT_HDD + 1};
+        List<Integer> order = new ArrayList<>(List.of(PcCaseBlockEntity.SLOT_M2, PcCaseBlockEntity.SLOT_M2 + 1));
+        for (int i = 0; i < PcCaseBlockEntity.MAX_BAYS; i++) order.add(PcCaseBlockEntity.baySlot(i));
         for (int slot : order) {
             ItemStack s = stack(slot);
             String kind;
@@ -375,8 +377,13 @@ public class PcCaseScreen extends AbstractContainerScreen<PcCaseMenu> {
                 continue;
             }
             long gameSpeed = Math.round(Perf.gameDiskBytesPerSecond(speed) * MineConfig.disk());
-            out.add(Row.of("disk", tr("gui.minepc.row.drive", kind, bytes(Perf.gameStorageBytes(capacity))), th.fg)
-                    .tip(s.getHoverName(), tr("gui.minepc.row.disk", bytes(gameSpeed)).withStyle(ChatFormatting.GRAY)));
+            var health = com.strikerr212.minepc.block.DiskHealth.of(s);
+            int color = health.failed() ? th.bad : health.warning() ? th.warn : th.fg;
+            Component text = health.failed() ? tr("gui.minepc.row.drive_failed", kind)
+                    : tr("gui.minepc.row.drive", kind, bytes(Perf.gameStorageBytes(capacity)));
+            out.add(Row.of("disk", text, color)
+                    .tip(s.getHoverName(), tr("gui.minepc.row.disk", bytes(gameSpeed)).withStyle(ChatFormatting.GRAY),
+                            tr("tooltip.minepc.disk_wear", health.percent()).withStyle(health.warning() ? ChatFormatting.GOLD : ChatFormatting.GRAY)));
         }
         if (out.isEmpty()) {
             out.add(Row.of("disk", tr("gui.minepc.row.no_drives"), th.bad));
@@ -711,7 +718,7 @@ public class PcCaseScreen extends AbstractContainerScreen<PcCaseMenu> {
         }
         int shadow = th.labelShadow;
         if (menu.serverLayout()) {
-            text(g, tr("gui.minepc.group.board"), 33, 110, th.labelColor, 60, shadow);
+            if (!menu.slotShown(PcCaseBlockEntity.SLOT_BAY_EXTRA)) text(g, tr("gui.minepc.group.board"), 33, 110, th.labelColor, 60, shadow);
             // Резерв питания: два блока — зелёная лампа, один — жёлтая
             PcCaseBlockEntity be = menu.blockEntity();
             if (be != null && be.psuCount() > 0) {
@@ -837,7 +844,7 @@ public class PcCaseScreen extends AbstractContainerScreen<PcCaseMenu> {
             }
             if (mx >= sx && mx < sx + 18 && my >= sy && my < sy + 18 && !menu.slots.get(i).hasItem()) {
                 List<Component> tip = new ArrayList<>();
-                tip.add(tr(SLOT_HINTS[i]));
+                tip.add(tr(menu.serverLayout() && PcCaseBlockEntity.isDriveBay(i) ? "gui.minepc.slot.bay" : SLOT_HINTS[i]));
                 if (disabled(i)) tip.add(tr("gui.minepc.slot.unavailable").withStyle(ChatFormatting.RED));
                 else if (hoverBe != null && hoverBe.lockedWhileRunning(i)) tip.add(tr("message.minepc.server_running").withStyle(ChatFormatting.GOLD));
                 g.renderComponentTooltip(font, tip, mouseX, mouseY);

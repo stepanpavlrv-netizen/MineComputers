@@ -1,0 +1,28 @@
+{
+ "type": "minecraft:crafting_shapeless",
+ "category": "redstone",
+ "ingredients": [
+  {
+   "item": "minecraft:iron_ingot"
+  },
+  {
+   "item": "minecraft:iron_ingot"
+  },
+  {
+   "item": "minecraft:iron_ingot"
+  },
+  {
+   "item": "minecraft:iron_ingot"
+  },
+  {
+   "item": "minecraft:redstone"
+  },
+  {
+   "item": "minepc:network_cable"
+  }
+ ],
+ "result": {
+  "id": "minepc:server_module_2u",
+  "count": 1
+ }
+}
