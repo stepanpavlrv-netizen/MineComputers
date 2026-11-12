@@ -139,7 +139,7 @@
   "gui.minepc.build": "Собрать",
   "gui.minepc.reset": "Сброс",
   "gui.minepc.label": "Надпись / модель:",
-  "gui.minepc.label_hint": "например, MINECORE X",
+  "gui.minepc.label_hint": "MINECORE X",
   "gui.minepc.rotate_hint": "Тяни — вращать, колесо — масштаб, ПКМ — исходный вид",
   "gui.minepc.cost": "Стоимость (ур. %s):",
   "gui.minepc.cost_free": "Творческий режим, ур. %s",
@@ -653,5 +653,7 @@
   "param.minepc.ssd.iface.help": "Интерфейс SSD: SATA подключается к портам SATA, NVMe — к слотам M.2 и намного быстрее.",
   "param.minepc.ssd.capacity.help": "Сколько файлов поместится на SSD.",
   "param.minepc.ssd.nand.help": "Тип памяти: QLC медленнее, SLC быстрее всех.",
-  "param.minepc.ssd.cooling.help": "Только внешний вид."
+  "param.minepc.ssd.cooling.help": "Только внешний вид.",
+  "gui.minepc.label_row": "Надпись",
+  "gui.minepc.help_general": "Щелчок по варианту — выбрать. Shift + колесо над параметром — листать варианты. Наведи на название параметра — что он делает. Превью: тяни — вращать, колесо — масштаб, ПКМ — исходный вид."
 }
