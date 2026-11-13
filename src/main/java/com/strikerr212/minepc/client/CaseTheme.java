@@ -28,6 +28,13 @@ public final class CaseTheme {
     // ----- передняя панель (USB и нагрузка) -----
     int portsFill, portsTL, portsBR, portsLabel, graphBg, graphFg;
     Deco deco = Deco.NONE;
+    // ----- корпус без крышки (окно 2.0) -----
+    /** Задняя стенка, её перфорация, рёбра корпуса, кожух блока питания. */
+    int wall, wallDot, frame, shroud;
+    /** Цвет пунктира свободного места и подсветки под мышью. */
+    int accent;
+    /** Боковое стекло (блик) и подсветка вентиляторов. */
+    boolean glassPanel, rgbLights;
 
     private CaseTheme() {
     }
@@ -66,6 +73,7 @@ public final class CaseTheme {
     static final CaseTheme CLASSIC = new CaseTheme();
     static {
         CaseTheme t = CLASSIC;
+        t.wall = rgb(112, 114, 118); t.wallDot = rgb(96, 98, 102); t.frame = rgb(150, 152, 156); t.shroud = rgb(126, 128, 132); t.accent = rgb(255, 240, 120);
         t.winFill = rgb(198, 198, 198); t.winLight = rgb(255, 255, 255); t.winDark = rgb(85, 85, 85); t.winOutline = rgb(0, 0, 0);
         t.titleColor = rgb(64, 64, 64); t.scoreColor = rgb(64, 64, 64);
         t.caseFill = rgb(139, 139, 139); t.caseTL = rgb(55, 55, 55); t.caseBR = rgb(255, 255, 255);
@@ -85,6 +93,7 @@ public final class CaseTheme {
     static final CaseTheme RETRO = new CaseTheme();
     static {
         CaseTheme t = RETRO;
+        t.wall = rgb(186, 178, 152); t.wallDot = rgb(170, 162, 136); t.frame = rgb(214, 205, 178); t.shroud = rgb(200, 192, 166); t.accent = rgb(150, 70, 30);
         t.winFill = BEIGE; t.winLight = rgb(236, 230, 210); t.winDark = rgb(150, 140, 112); t.winOutline = rgb(70, 60, 40);
         t.titleColor = rgb(90, 70, 40); t.scoreColor = rgb(120, 90, 40);
         t.caseFill = rgb(78, 78, 74); t.caseTL = rgb(40, 40, 38); t.caseBR = rgb(150, 146, 132);
@@ -106,6 +115,7 @@ public final class CaseTheme {
     static final CaseTheme OFFICE = new CaseTheme();
     static {
         CaseTheme t = OFFICE;
+        t.wall = rgb(206, 211, 218); t.wallDot = rgb(190, 196, 204); t.frame = rgb(232, 235, 240); t.shroud = rgb(222, 226, 232); t.accent = OFFICE_BLUE;
         t.winFill = rgb(232, 234, 238); t.winLight = rgb(255, 255, 255); t.winDark = rgb(176, 180, 188); t.winOutline = rgb(90, 94, 102);
         t.titleColor = rgb(40, 44, 52); t.scoreColor = OFFICE_BLUE;
         t.caseFill = rgb(246, 247, 249); t.caseTL = rgb(190, 194, 200); t.caseBR = rgb(255, 255, 255);
@@ -126,6 +136,8 @@ public final class CaseTheme {
     static final CaseTheme GAMING = new CaseTheme();
     static {
         CaseTheme t = GAMING;
+        t.wall = rgb(22, 21, 27); t.wallDot = rgb(30, 29, 37); t.frame = rgb(40, 38, 50); t.shroud = rgb(31, 29, 38); t.accent = rgb(255, 79, 208);
+        t.glassPanel = true; t.rgbLights = true;
         t.winFill = rgb(26, 26, 32); t.winLight = rgb(56, 56, 66); t.winDark = rgb(10, 10, 12); t.winOutline = rgb(0, 0, 0);
         t.titleColor = rgb(230, 230, 240); t.scoreColor = rgb(255, 90, 210);
         t.caseFill = rgb(14, 14, 18); t.caseTL = rgb(6, 6, 8); t.caseBR = rgb(40, 40, 48);
@@ -156,6 +168,7 @@ public final class CaseTheme {
     static final CaseTheme INDUSTRIAL = new CaseTheme();
     static {
         CaseTheme t = INDUSTRIAL;
+        t.wall = rgb(72, 82, 88); t.wallDot = rgb(46, 52, 56); t.frame = rgb(120, 134, 140); t.shroud = rgb(88, 100, 106); t.accent = rgb(255, 176, 40);
         t.winFill = STEEL; t.winLight = rgb(150, 164, 170); t.winDark = rgb(60, 70, 74); t.winOutline = rgb(20, 24, 26);
         t.titleColor = rgb(240, 240, 236); t.scoreColor = rgb(255, 176, 40);
         t.caseFill = rgb(72, 82, 88); t.caseTL = rgb(40, 46, 50); t.caseBR = rgb(130, 144, 150);
@@ -176,6 +189,7 @@ public final class CaseTheme {
     static final CaseTheme SERVER = new CaseTheme();
     static {
         CaseTheme t = SERVER;
+        t.wall = rgb(30, 33, 38); t.wallDot = rgb(38, 42, 48); t.frame = rgb(64, 68, 78); t.shroud = rgb(44, 48, 54); t.accent = rgb(92, 240, 106);
         t.winFill = rgb(40, 43, 50); t.winLight = rgb(70, 74, 84); t.winDark = rgb(18, 20, 24); t.winOutline = rgb(0, 0, 0);
         t.titleColor = rgb(220, 224, 230); t.scoreColor = rgb(60, 255, 120);
         t.caseFill = rgb(28, 30, 36); t.caseTL = rgb(14, 15, 18); t.caseBR = rgb(64, 68, 78);

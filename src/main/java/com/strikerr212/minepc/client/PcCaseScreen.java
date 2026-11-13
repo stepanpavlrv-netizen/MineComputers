@@ -19,6 +19,7 @@ import com.strikerr212.minepc.item.GpuItem;
 import com.strikerr212.minepc.item.HardwareItem;
 import com.strikerr212.minepc.item.HddItem;
 import com.strikerr212.minepc.item.SsdItem;
+import com.strikerr212.minepc.menu.CaseLayout;
 import com.strikerr212.minepc.menu.PcCaseMenu;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.GuiGraphics;
@@ -38,29 +39,18 @@ import java.util.Locale;
 import java.util.Random;
 
 /**
- * Окно системного блока (248×228).
+ * Окно системного блока 2.0 (276×236): слева корпус без боковой крышки ({@link CaseView}) — детали на своих местах,
+ * места на плате появляются от её характеристик; справа экран состояния; снизу инвентарь и передняя панель.
  *
- * ┌ Системный блок ───────────────────────── 1320 очков ┐
- * │ ┌ корпус изнутри ───────────────┐ ┌ экран ──────────┐ │
- * │ │ ЦП  кулер   Память ×3   │ БП  │ │ ⏻ Работает      │ │
- * │ │             (4-я ниже)  │ HDD │ │ Σ ⚡ ° ■        │ │
- * │ │ Видео       M.2 ×2      │ HDD │ │ строки состояния│ │
- * │ │ ═══ PCIe ═══            │ SSD │ │                 │ │
- * │ │ Плата                   │ SSD │ │                 │ │
- * │ └─────────────────────────┘     ┘ └─────────────────┘ │
- * │ Инвентарь                          ┌ USB  □ □ ──────┐ │
- * │ □□□□□□□□□                          │ Нагрузка ▁▃▅▇  │ │
- * └─────────────────────────────────────────────────────┘
- *
- * Оформление зависит от корпуса (см. {@link CaseTheme}), раскладка у всех одна.
+ * Значки предметов в слотах корпуса игра рисует как обычно, но поверх них окно рисует сам корпус с деталями,
+ * а мышь ловит форма детали ({@link CaseLayout#hit}).
  */
 public class PcCaseScreen extends AbstractContainerScreen<PcCaseMenu> {
 
-    private static final int W = 248, H = 228;
-    private static final int CX0 = 7, CY0 = 17, CX1 = 153, CY1 = 129;          // корпус изнутри
-    private static final int BX0 = 11, BY0 = 19, BX1 = 128, BY1 = 125;         // плата
-    private static final int SX0 = 158, SY0 = 17, SX1 = 241, SY1 = 129;        // экран состояния
-    private static final int PX0 = 176, PY0 = 137, PX1 = 241, PY1 = 221;       // передняя панель
+    private static final int W = CaseLayout.W, H = CaseLayout.H;
+    private static final int CX0 = CaseLayout.CX0, CY0 = CaseLayout.CY0, CX1 = CaseLayout.CX1 - 1, CY1 = CaseLayout.CY1 - 1;   // корпус изнутри
+    private static final int SX0 = 182, SY0 = 16, SX1 = 269, SY1 = 143;        // экран состояния
+    private static final int PX0 = 182, PY0 = 150, PX1 = 269, PY1 = 233;       // передняя панель
     private static final int BTN_X = SX0 + 4, BTN_Y = SY0 + 4;                 // кнопка питания 16×15
     private static final int TAB_Y = SY0 + 23, ROWS_Y = TAB_Y + 15;
     private static final int TEXT_X = SX0 + 15, TEXT_W = SX1 - SX0 - 18;
@@ -83,22 +73,6 @@ public class PcCaseScreen extends AbstractContainerScreen<PcCaseMenu> {
             "gui.minepc.slot.ram", "gui.minepc.slot.ram", "gui.minepc.slot.ram", "gui.minepc.slot.ram", "gui.minepc.slot.ram", "gui.minepc.slot.ram",
             "gui.minepc.slot.ram", "gui.minepc.slot.ram", "gui.minepc.slot.ram", "gui.minepc.slot.ram", "gui.minepc.slot.ram", "gui.minepc.slot.ram",
             "gui.minepc.slot.bay", "gui.minepc.slot.bay", "gui.minepc.slot.bay", "gui.minepc.slot.bay"};
-    private static final String[] GHOSTS = {"motherboard", "cpu", "cooler", "ram", "ram", "ram", "ram", "gpu", "psu",
-            "hdd", "hdd", "sata", "sata", "m2", "m2", "usb", "usb", "cpu", "psu",
-            "ram", "ram", "ram", "ram", "ram", "ram", "ram", "ram", "ram", "ram", "ram", "ram", "hdd", "hdd", "hdd", "hdd"};
-
-    /** Дорожки на плате: всегда один и тот же рисунок. */
-    private static final List<int[]> TRACES = new ArrayList<>();
-    static {
-        Random rnd = new Random(3);
-        for (int k = 0; k < 40; k++) {
-            int x = BX0 + 2 + rnd.nextInt(BX1 - BX0 - 3), y = BY0 + 2 + rnd.nextInt(BY1 - BY0 - 3);
-            int len = 3 + rnd.nextInt(8);
-            if (rnd.nextBoolean()) TRACES.add(new int[]{x, y, Math.min(BX1 - 2, x + len), y});
-            else TRACES.add(new int[]{x, y, x, Math.min(BY1 - 2, y + len)});
-        }
-    }
-
     /** Строка экрана состояния: значок, короткий текст, по желанию полоска и подсказка. */
     private record Row(String glyph, Component text, int color, float bar, int barColor, List<Component> tip) {
         static Row of(String glyph, Component text, int color) {
@@ -439,26 +413,6 @@ public class PcCaseScreen extends AbstractContainerScreen<PcCaseMenu> {
                 .tip(tr("gui.minepc.net.traffic_tip")));
     }
 
-    /** Слот, куда сейчас ничего нельзя поставить (на плате нет такого разъёма). */
-    private boolean disabled(int slot) {
-        PcCaseBlockEntity be = menu.blockEntity();
-        if (be == null) return false;
-        MotherboardData board = be.motherboard();
-        if (slot == PcCaseBlockEntity.SLOT_MOTHERBOARD || slot == PcCaseBlockEntity.SLOT_PSU || slot == PcCaseBlockEntity.SLOT_PSU2
-                || PcCaseBlockEntity.isUsb(slot)) {
-            return false;
-        }
-        if (slot == PcCaseBlockEntity.SLOT_COOLER && be.isModule()) return true;   // в 1U кулер не влезет
-        if (board == null) return true;
-        if (slot == PcCaseBlockEntity.SLOT_CPU2) return board.cpuSockets() < 2;
-        int ram = PcCaseBlockEntity.ramIndex(slot);
-        if (ram >= 0) return ram >= board.ramSlots();
-        if (slot >= PcCaseBlockEntity.SLOT_M2 && slot < PcCaseBlockEntity.SLOT_M2 + PcCaseBlockEntity.M2_SLOTS) {
-            return slot - PcCaseBlockEntity.SLOT_M2 >= board.m2Slots();
-        }
-        return false;
-    }
-
     // ======================= Рисование: примитивы (координаты включительно) =======================
 
     private static void rect(GuiGraphics g, int x0, int y0, int x1, int y1, int c) {
@@ -556,7 +510,6 @@ public class PcCaseScreen extends AbstractContainerScreen<PcCaseMenu> {
         g.pose().pushPose();
         g.pose().translate(leftPos, topPos, 0);
         g.drawManaged(() -> drawShapes(g));
-        drawGhosts(g);
         drawTexts(g);
         g.pose().popPose();
     }
@@ -575,27 +528,8 @@ public class PcCaseScreen extends AbstractContainerScreen<PcCaseMenu> {
         rect(g, 1, H - 2, W - 2, H - 2, th.winDark);
         rect(g, W - 2, 1, W - 2, H - 2, th.winDark);
         decoWindow(g);
-        // ----- корпус изнутри и плата -----
-        bevel(g, CX0, CY0, CX1, CY1, th.caseFill, th.caseTL, th.caseBR);
-        decoCase(g);
-        rect(g, BX0, BY0, BX1, BY1, th.pcb);
-        outline(g, BX0, BY0, BX1, BY1, CaseTheme.sh(th.pcb, 0.6));
-        int trace = CaseTheme.sh(th.pcb, 1.18);
-        for (int[] t : TRACES) rect(g, t[0], t[1], t[2], t[3], trace);
-        if (!menu.serverLayout()) {
-            // слот PCIe под видеокартой
-            rect(g, BX0 + 4, 86, BX0 + 100, 88, CaseTheme.rgb(40, 42, 46));
-            rect(g, BX0 + 4, 86, BX0 + 100, 86, CaseTheme.rgb(70, 72, 78));
-            for (int x = BX0 + 6; x < BX0 + 100; x += 3) px(g, x, 87, CaseTheme.rgb(200, 170, 70));
-        } else {
-            // серверная плата: разводка двух сокетов и отсек дисков с салазками
-            for (int k = 0; k < 2; k++) outline(g, 12 + k * 18, 40, 31 + k * 18, 59, CaseTheme.rgb(200, 170, 70));
-        }
-        // ----- слоты корпуса -----
-        for (int i = 0; i < PcCaseBlockEntity.SLOT_COUNT; i++) {
-            if (PcCaseBlockEntity.isUsb(i) || !menu.slotShown(i)) continue;   // USB — на передней панели, рисуются после неё
-            slotFrame(g, menu.slotX(i), menu.slotY(i));
-        }
+        // корпус изнутри рисует CaseView поверх значков слотов (renderLabels)
+        bevel(g, CX0 - 1, CY0 - 1, CX1 + 1, CY1 + 1, th.caseFill, th.caseTL, th.caseBR);
         // ----- экран состояния -----
         rect(g, SX0, SY0, SX1, SY1, th.bezel);
         rect(g, SX0 + 2, SY0 + 2, SX1 - 2, SY1 - 2, th.glass);
@@ -638,7 +572,7 @@ public class PcCaseScreen extends AbstractContainerScreen<PcCaseMenu> {
             for (int x = PX0 + 1; x < PX1; x++) px(g, x, PY1, CaseTheme.rgbAt((double) (x - PX0) / (PX1 - PX0)));
         }
         for (int i = PcCaseBlockEntity.SLOT_USB; i < PcCaseBlockEntity.SLOT_USB + PcCaseBlockEntity.USB_SLOTS; i++) {
-            slotFrame(g, menu.slotX(i), menu.slotY(i));
+            slotFrame(g, menu.slotX(i) - 1, menu.slotY(i) - 1);
         }
         rect(g, GX0, GY0, GX1, GY1, th.graphBg);
         for (int x = GX0 + 1; x < GX1; x += 2) px(g, x, (GY0 + GY1) / 2, CaseTheme.sh(th.graphBg, th.graphBg == CaseTheme.rgb(240, 244, 250) ? 0.9 : 1.8));
@@ -674,33 +608,6 @@ public class PcCaseScreen extends AbstractContainerScreen<PcCaseMenu> {
         }
     }
 
-    private void drawGhosts(GuiGraphics g) {
-        RenderSystem.enableBlend();
-        RenderSystem.defaultBlendFunc();
-        float a = ((th.ghost >>> 24) & 255) / 255f, r = ((th.ghost >> 16) & 255) / 255f,
-                gr = ((th.ghost >> 8) & 255) / 255f, b = (th.ghost & 255) / 255f;
-        for (int i = 0; i < PcCaseBlockEntity.SLOT_COUNT; i++) {
-            if (menu.slots.get(i).hasItem() || !menu.slotShown(i)) continue;
-            int x = menu.slotX(i), y = menu.slotY(i);
-            if (disabled(i)) continue;
-            RenderSystem.setShaderColor(r, gr, b, a);
-            g.blit(ResourceLocation.fromNamespaceAndPath(MineComputers.MODID, "textures/gui/ghost/" + GHOSTS[i] + ".png"),
-                    x + 1, y + 1, 0, 0, 16, 16, 16, 16);
-        }
-        RenderSystem.setShaderColor(1, 1, 1, 1);
-        RenderSystem.disableBlend();
-        // Разъёма нет на этой плате — слот перечёркнут
-        for (int i = 0; i < PcCaseBlockEntity.SLOT_COUNT; i++) {
-            if (menu.slots.get(i).hasItem() || !disabled(i) || !menu.slotShown(i)) continue;
-            int x = menu.slotX(i), y = menu.slotY(i);
-            g.fill(x + 1, y + 1, x + 17, y + 17, 0x40A02020);
-            for (int k = 0; k < 8; k++) {
-                px(g, x + 5 + k, y + 5 + k, 0xA0802020);
-                px(g, x + 12 - k, y + 5 + k, 0xA0802020);
-            }
-        }
-    }
-
     private void drawTexts(GuiGraphics g) {
         text(g, title, 8, 5, th.titleColor, 150);
         int scoreW = 0;
@@ -716,22 +623,6 @@ public class PcCaseScreen extends AbstractContainerScreen<PcCaseMenu> {
                 rect(g, x0 + k * 5, 7, x0 + k * 5 + 2, 8, c);
             }
         }
-        int shadow = th.labelShadow;
-        if (menu.serverLayout()) {
-            if (!menu.slotShown(PcCaseBlockEntity.SLOT_BAY_EXTRA)) text(g, tr("gui.minepc.group.board"), 33, 110, th.labelColor, 60, shadow);
-            // Резерв питания: каждый из двух блоков тянет сервер один — зелёная лампа, иначе жёлтая
-            PcCaseBlockEntity be = menu.blockEntity();
-            if (be != null && be.psuCount() > 0) {
-                int lamp = be.reserve(be.collectInput().powerDraw()) == 1 ? CaseTheme.rgb(60, 220, 110) : CaseTheme.rgb(240, 190, 40);
-                rect(g, 151, 22, 152, 23, lamp);
-            }
-        } else {
-            text(g, tr("gui.minepc.group.cpu"), 18, 21, th.labelColor, 36, shadow);
-            text(g, tr("gui.minepc.group.memory"), 62, 21, th.labelColor, 54, shadow);
-            text(g, tr("gui.minepc.group.video"), 18, 55, th.labelColor, 40, shadow);
-            text(g, tr("gui.minepc.group.m2"), 62, 55, th.labelColor, 36, shadow);
-            text(g, tr("gui.minepc.group.board"), 38, 103, th.labelColor, 60, shadow);
-        }
         // экран состояния
         int state = menu.computerState();
         Component stateText = tr(state == 1 ? "gui.minepc.state.on" : state == 2 ? "gui.minepc.state.crashed" : "gui.minepc.state.off");
@@ -743,7 +634,7 @@ public class PcCaseScreen extends AbstractContainerScreen<PcCaseMenu> {
             text(g, row.text(), TEXT_X, y, row.color(), TEXT_W);
             y += row.bar() >= 0 ? 16 : 10;
         }
-        text(g, playerInventoryTitle, 8, PcCaseMenu.INV_Y - 9, th.titleColor, 100);
+        text(g, playerInventoryTitle, 8, PcCaseMenu.INV_Y - 10, th.titleColor, 100);
         text(g, tr("gui.minepc.group.usb"), PX0 + 4, PY0 + 3, th.portsLabel, 40);
         text(g, tr("gui.minepc.load"), PX0 + 4, PY0 + 36, th.portsLabel, PX1 - PX0 - 6);
     }
@@ -779,30 +670,6 @@ public class PcCaseScreen extends AbstractContainerScreen<PcCaseMenu> {
         }
     }
 
-    private void decoCase(GuiGraphics g) {
-        switch (th.deco) {
-            case GAMING -> {
-                int per = 2 * ((CX1 - CX0) + (CY1 - CY0));
-                int k = 0;
-                for (int x = CX0; x <= CX1; x++) px(g, x, CY0, CaseTheme.rgbAt((double) k++ / per));
-                for (int y = CY0; y <= CY1; y++) px(g, CX1, y, CaseTheme.rgbAt((double) k++ / per));
-                for (int x = CX1; x >= CX0; x--) px(g, x, CY1, CaseTheme.rgbAt((double) k++ / per));
-                for (int y = CY1; y >= CY0; y--) px(g, CX0, y, CaseTheme.rgbAt((double) k++ / per));
-            }
-            case INDUSTRIAL -> {
-                int hole = CaseTheme.sh(CaseTheme.STEEL, 0.62);
-                for (int x = CX0 + 2; x < CX1 - 1; x += 4) {
-                    for (int y = CY0 + 2; y < CY1 - 1; y += 4) {
-                        if (x >= BX0 && x <= BX1 && y >= BY0 && y <= BY1) continue;   // под платой не видно
-                        px(g, x, y, hole);
-                    }
-                }
-            }
-            default -> {
-            }
-        }
-    }
-
     private void decoTop(GuiGraphics g) {
         if (th.deco == CaseTheme.Deco.RETRO) {
             rect(g, SX0 + 3, SY1 + 2, SX0 + 20, SY1 + 3, CaseTheme.sh(CaseTheme.BEIGE, 0.7));   // прорезь под экраном
@@ -811,46 +678,95 @@ public class PcCaseScreen extends AbstractContainerScreen<PcCaseMenu> {
 
     @Override
     protected void renderLabels(GuiGraphics g, int mouseX, int mouseY) {
-        // Все надписи рисуются в renderBg вместе с оформлением темы
+        // Надписи окна рисуются в renderBg; здесь (после значков слотов, до предмета в руке) — корпус с деталями
+        g.pose().pushPose();
+        g.pose().translate(0, 0, 210);
+        float time = age + (minecraft != null ? minecraft.getTimer().getGameTimeDeltaPartialTick(false) : 0);
+        new CaseView(g, font, th, menu, menu.computerState() == 1, time, hoverSlot(mouseX - leftPos, mouseY - topPos),
+                menu.getCarried()).draw();
+        g.pose().popPose();
+    }
+
+    /** Какую деталь мышь накрывает формой (мелкие — раньше крупных), -1 — никакую. */
+    private int hoverSlot(int mx, int my) {
+        if (!CaseLayout.inside(new int[]{CX0, CY0, CX1 + 1, CY1 + 1}, mx, my)) {
+            for (int i = PcCaseBlockEntity.SLOT_USB; i < PcCaseBlockEntity.SLOT_USB + PcCaseBlockEntity.USB_SLOTS; i++) {
+                if (CaseLayout.inside(menu.hit(i), mx, my)) return i;
+            }
+            return -1;
+        }
+        boolean coolerOn = !menu.slots.get(PcCaseBlockEntity.SLOT_COOLER).getItem().isEmpty();
+        for (int slot : HOVER_ORDER) {
+            if (slot == PcCaseBlockEntity.SLOT_CPU && coolerOn && !menu.serverLayout()) continue;   // процессор под кулером
+            if (!menu.slotShown(slot)) continue;
+            if (CaseLayout.inside(menu.hit(slot), mx, my)) return slot;
+        }
+        return -1;
+    }
+
+    /** Порядок поиска детали под мышью: сначала мелкие, плата — последней. */
+    private static final int[] HOVER_ORDER;
+    static {
+        List<Integer> order = new ArrayList<>();
+        for (int i = 0; i < PcCaseBlockEntity.MAX_RAM_SLOTS; i++) order.add(PcCaseBlockEntity.ramSlot(i));
+        for (int i = 0; i < PcCaseBlockEntity.M2_SLOTS; i++) order.add(PcCaseBlockEntity.SLOT_M2 + i);
+        for (int i = 0; i < PcCaseBlockEntity.MAX_BAYS; i++) order.add(PcCaseBlockEntity.baySlot(i));
+        order.addAll(List.of(PcCaseBlockEntity.SLOT_CPU, PcCaseBlockEntity.SLOT_CPU2, PcCaseBlockEntity.SLOT_COOLER,
+                PcCaseBlockEntity.SLOT_GPU, PcCaseBlockEntity.SLOT_PSU, PcCaseBlockEntity.SLOT_PSU2, PcCaseBlockEntity.SLOT_MOTHERBOARD));
+        HOVER_ORDER = order.stream().mapToInt(Integer::intValue).toArray();
+    }
+
+    /** Слот ловит мышь формой детали, а не квадратом значка. */
+    @Override
+    protected boolean isHovering(int x, int y, int width, int height, double mouseX, double mouseY) {
+        if (width == 16 && height == 16) {
+            for (int i = 0; i < PcCaseBlockEntity.SLOT_COUNT; i++) {
+                net.minecraft.world.inventory.Slot s = menu.slots.get(i);
+                if (s.x == x && s.y == y) {
+                    return hoverSlot((int) Math.floor(mouseX) - leftPos, (int) Math.floor(mouseY) - topPos) == i;
+                }
+            }
+        }
+        return super.isHovering(x, y, width, height, mouseX, mouseY);
     }
 
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         super.render(g, mouseX, mouseY, partialTick);
-        if (th.deco == CaseTheme.Deco.GAMING) {               // блик на стекле — поверх деталей
+        if (th.glassPanel) {                                   // блик на боковом стекле — поверх деталей
             g.pose().pushPose();
             g.pose().translate(leftPos, topPos, 250);
-            for (int k = 0; k < 28; k++) {
-                int y = CY0 + 2 + k;
-                if (y < CY1 - 2) g.fill(CX0 + 60 + k, y, CX0 + 62 + k, y + 1, 0x2EFFFFFF);
+            for (int k = 0; k < 96; k++) {
+                int y = CY0 + 1 + k;
+                if (y >= CaseLayout.SHROUD_Y) break;
+                int x = CX0 + 104 - k * 2 / 3;
+                g.fill(x, y, x + 14, y + 1, 0x14FFFFFF);
             }
             g.pose().popPose();
         }
-        renderTooltip(g, mouseX, mouseY);
         if (!menu.getCarried().isEmpty()) return;
         int mx = mouseX - leftPos, my = mouseY - topPos;
-        // Пустой слот: что сюда ставить
         PcCaseBlockEntity hoverBe = menu.blockEntity();
-        for (int i = 0; i < PcCaseBlockEntity.SLOT_COUNT; i++) {
-            if (!menu.slotShown(i)) continue;
-            int sx = menu.slotX(i), sy = menu.slotY(i);
-            if (mx >= sx && mx < sx + 18 && my >= sy && my < sy + 18 && hoverBe != null && hoverBe.lockedWhileRunning(i)
-                    && menu.slots.get(i).hasItem()) {
-                // Работающий сервер: деталь видно, но не вынуть
-                List<Component> tip = new ArrayList<>(getTooltipFromContainerItem(menu.slots.get(i).getItem()));
-                tip.add(tr("message.minepc.server_running").withStyle(ChatFormatting.GOLD));
-                g.renderComponentTooltip(font, tip, mouseX, mouseY);
-                return;
+        int slot = hoverSlot(mx, my);
+        if (slot >= 0) {
+            ItemStack item = menu.slots.get(slot).getItem();
+            List<Component> tip = new ArrayList<>();
+            if (!item.isEmpty()) {
+                tip.addAll(getTooltipFromContainerItem(item));
+                if (hoverBe != null && hoverBe.slotExtra(slot)) tip.add(tr("gui.minepc.slot.extra").withStyle(ChatFormatting.RED));
+                if (hoverBe != null && hoverBe.lockedWhileRunning(slot)) tip.add(tr("message.minepc.server_running").withStyle(ChatFormatting.GOLD));
+                else if (hoverBe != null && hoverBe.takeError(slot) != null && !hoverBe.lockedWhileRunning(slot)) {
+                    tip.add(tr(hoverBe.takeError(slot)).withStyle(ChatFormatting.GOLD));
+                }
+            } else {
+                tip.add(tr(menu.serverLayout() && PcCaseBlockEntity.isDriveBay(slot) ? "gui.minepc.slot.bay" : SLOT_HINTS[slot]));
+                slotDetails(slot, tip);
+                if (hoverBe != null && hoverBe.lockedWhileRunning(slot)) tip.add(tr("message.minepc.server_running").withStyle(ChatFormatting.GOLD));
             }
-            if (mx >= sx && mx < sx + 18 && my >= sy && my < sy + 18 && !menu.slots.get(i).hasItem()) {
-                List<Component> tip = new ArrayList<>();
-                tip.add(tr(menu.serverLayout() && PcCaseBlockEntity.isDriveBay(i) ? "gui.minepc.slot.bay" : SLOT_HINTS[i]));
-                if (disabled(i)) tip.add(tr("gui.minepc.slot.unavailable").withStyle(ChatFormatting.RED));
-                else if (hoverBe != null && hoverBe.lockedWhileRunning(i)) tip.add(tr("message.minepc.server_running").withStyle(ChatFormatting.GOLD));
-                g.renderComponentTooltip(font, tip, mouseX, mouseY);
-                return;
-            }
+            g.renderComponentTooltip(font, tip, mouseX, mouseY);
+            return;
         }
+        renderTooltip(g, mouseX, mouseY);
         if (in(mx, my, BTN_X, BTN_Y, 17, 16)) {
             g.renderTooltip(font, tr(menu.computerState() == 1 ? "gui.minepc.power_tip.on" : "gui.minepc.power_tip.off"), mouseX, mouseY);
             return;
@@ -883,6 +799,31 @@ public class PcCaseScreen extends AbstractContainerScreen<PcCaseMenu> {
             List<FormattedCharSequence> lines = new ArrayList<>();
             for (Component c : report) lines.addAll(font.split(c, 220));
             g.renderTooltip(font, lines, mouseX, mouseY);
+        }
+    }
+
+    /** Что подходит в пустое место: по характеристикам платы. */
+    private void slotDetails(int slot, List<Component> tip) {
+        PcCaseBlockEntity be = menu.blockEntity();
+        if (be == null) return;
+        MotherboardData board = be.motherboard();
+        if (board == null) {
+            if (PcCaseBlockEntity.isDriveBay(slot)) tip.add(tr("gui.minepc.slot.need_board").withStyle(ChatFormatting.GRAY));
+            return;
+        }
+        if (PcCaseBlockEntity.ramIndex(slot) >= 0) {
+            tip.add(tr("gui.minepc.slot.ram_info", board.ramSlots(), board.maxRamMhz()).withStyle(ChatFormatting.GRAY));
+            tip.add(tr(board.server() ? "gui.minepc.slot.ram_ecc" : "gui.minepc.slot.ram_plain").withStyle(ChatFormatting.DARK_GRAY));
+        } else if (slot >= PcCaseBlockEntity.SLOT_M2 && slot < PcCaseBlockEntity.SLOT_M2 + PcCaseBlockEntity.M2_SLOTS) {
+            tip.add(tr("gui.minepc.slot.m2_info", board.m2Slots()).withStyle(ChatFormatting.GRAY));
+        } else if (PcCaseBlockEntity.isDriveBay(slot)) {
+            int used = 0;
+            for (int i = 0; i < PcCaseBlockEntity.MAX_BAYS; i++) if (!menu.slots.get(PcCaseBlockEntity.baySlot(i)).getItem().isEmpty()) used++;
+            tip.add(tr("gui.minepc.slot.sata_info", used, board.sataPorts()).withStyle(used >= board.sataPorts() ? ChatFormatting.RED : ChatFormatting.GRAY));
+        } else if (slot == PcCaseBlockEntity.SLOT_COOLER) {
+            tip.add(tr("gui.minepc.slot.cooler_info", cpuHeat()).withStyle(ChatFormatting.GRAY));
+        } else if (slot == PcCaseBlockEntity.SLOT_CPU || slot == PcCaseBlockEntity.SLOT_CPU2) {
+            tip.add(tr("gui.minepc.slot.cpu_info", board.maxCpuTier()).withStyle(ChatFormatting.GRAY));
         }
     }
 

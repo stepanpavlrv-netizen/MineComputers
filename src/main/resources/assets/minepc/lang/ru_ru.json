@@ -871,5 +871,20 @@
   "hud.minepc.draw.hint2": "Ещё раз по точке — свободный конец · Shift+ПКМ — назад",
   "message.minepc.power.reserve_ok": "Резерв есть: каждый блок питания тянет сервер в одиночку",
   "message.minepc.power.reserve_no": "Нет резерва: блоки делят нагрузку — если один откажет, сервер выключится",
-  "message.minepc.power.reserve_single": "Нет резерва: блок питания один — поставьте второй"
+  "message.minepc.power.reserve_single": "Нет резерва: блок питания один — поставьте второй",
+  "gui.minepc.case.board_first.title": "Материнская плата",
+  "gui.minepc.case.board_first.hint": "ставится первой",
+  "gui.minepc.case.server_board_first.title": "Серверная плата",
+  "gui.minepc.case.server_board_first.hint": "ставится первой",
+  "gui.minepc.case.psu": "БП",
+  "gui.minepc.case.watts": "%sВт",
+  "gui.minepc.slot.extra": "На этой плате нет такого места — выньте деталь",
+  "gui.minepc.slot.need_board": "Диски подключаются к плате — сначала поставьте её",
+  "gui.minepc.slot.ram_info": "Слотов на плате: %s · до %s МГц",
+  "gui.minepc.slot.ram_ecc": "Только серверная память ECC",
+  "gui.minepc.slot.ram_plain": "Обычная память, без ECC",
+  "gui.minepc.slot.m2_info": "Слотов M.2 на плате: %s",
+  "gui.minepc.slot.sata_info": "SATA-порты: занято %s из %s",
+  "gui.minepc.slot.cooler_info": "Процессор выделяет %s Вт тепла",
+  "gui.minepc.slot.cpu_info": "Плата держит процессоры до уровня %s"
 }

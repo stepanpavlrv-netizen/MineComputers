@@ -871,5 +871,20 @@
   "hud.minepc.draw.hint2": "Again on the point — loose end · Shift+right-click — undo",
   "message.minepc.power.reserve_ok": "Redundancy OK: each power supply can run the server alone",
   "message.minepc.power.reserve_no": "No redundancy: the supplies share the load — if one fails, the server shuts down",
-  "message.minepc.power.reserve_single": "No redundancy: only one power supply — add a second one"
+  "message.minepc.power.reserve_single": "No redundancy: only one power supply — add a second one",
+  "gui.minepc.case.board_first.title": "Motherboard",
+  "gui.minepc.case.board_first.hint": "goes in first",
+  "gui.minepc.case.server_board_first.title": "Server board",
+  "gui.minepc.case.server_board_first.hint": "goes in first",
+  "gui.minepc.case.psu": "PSU",
+  "gui.minepc.case.watts": "%sW",
+  "gui.minepc.slot.extra": "This board has no such slot — take the part out",
+  "gui.minepc.slot.need_board": "Drives connect to the board — install it first",
+  "gui.minepc.slot.ram_info": "Slots on the board: %s · up to %s MHz",
+  "gui.minepc.slot.ram_ecc": "Server ECC memory only",
+  "gui.minepc.slot.ram_plain": "Regular memory, no ECC",
+  "gui.minepc.slot.m2_info": "M.2 slots on the board: %s",
+  "gui.minepc.slot.sata_info": "SATA ports: %s of %s in use",
+  "gui.minepc.slot.cooler_info": "The CPU puts out %s W of heat",
+  "gui.minepc.slot.cpu_info": "The board supports CPUs up to tier %s"
 }

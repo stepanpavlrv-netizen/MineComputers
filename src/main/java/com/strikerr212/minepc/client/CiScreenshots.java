@@ -580,7 +580,21 @@ public class CiScreenshots {
             }
             case 4030 -> server.execute(() -> logPower(server.overworld()));
             case 4040 -> shot(mc, "cable_draw_done");
-            case 4046 -> mc.stop();
+            case 4046 -> server.execute(() -> placeEmptyCase(server.overworld()));
+            case 4052 -> {
+                PcCaseScreen.ciTheme = com.strikerr212.minepc.block.CaseStyle.GAMING;
+                if (mc.screen instanceof PcCaseScreen s) s.ciRefresh();
+            }
+            case 4058 -> shot(mc, "case_gui_empty");
+            case 4060 -> server.execute(() -> emptyCaseStep(server.overworld(), 1));
+            case 4068 -> shot(mc, "case_gui_board");
+            case 4070 -> server.execute(() -> emptyCaseStep(server.overworld(), 2));
+            case 4078 -> shot(mc, "case_gui_cpu");
+            case 4080 -> {
+                PcCaseScreen.ciTheme = null;
+                mc.setScreen(null);
+            }
+            case 4086 -> mc.stop();
             default -> {
             }
         }
@@ -1009,6 +1023,43 @@ public class CiScreenshots {
                 be.activePsu() == null ? 0 : be.activePsu().wattage(), draw, be.reserve(draw));
         log.info("[CI-POWER] 2 × топ на 2 × 1600: нагрузка ~{} Вт, тянет {}, резерв {}", 2 * top.tdp() + 150,
                 2 * top.tdp() + 150 <= 3200, 2 * top.tdp() + 150 <= 1600);
+    }
+
+    private static BlockPos emptyCasePos;
+
+    /** Окно корпуса 2.0: пустой корпус — только место под плату; плата — её места; процессор — место под кулер. */
+    private static void placeEmptyCase(ServerLevel level) {
+        ServerPlayer p = level.getServer().getPlayerList().getPlayers().get(0);
+        emptyCasePos = p.blockPosition().above(2).north(2);
+        level.setBlockAndUpdate(emptyCasePos, ModBlocks.PC_CASE.get().defaultBlockState().setValue(PcCaseBlock.FACING, Direction.SOUTH));
+        if (level.getBlockEntity(emptyCasePos) instanceof PcCaseBlockEntity be) {
+            logSlots("пустой", be);
+            p.openMenu(be, buf -> buf.writeBlockPos(emptyCasePos));
+        }
+    }
+
+    private static void emptyCaseStep(ServerLevel level, int step) {
+        if (!(level.getBlockEntity(emptyCasePos) instanceof PcCaseBlockEntity be)) return;
+        var inv = (IItemHandlerModifiable) be.inventory();
+        if (step == 1) {
+            inv.setStackInSlot(PcCaseBlockEntity.SLOT_MOTHERBOARD, HardwarePresets.motherboard(1));
+            logSlots("плата ур. 1", be);
+        } else {
+            inv.setStackInSlot(PcCaseBlockEntity.SLOT_CPU, HardwarePresets.cpu(1));
+            inv.setStackInSlot(PcCaseBlockEntity.SLOT_RAM, HardwarePresets.ram(1));
+            inv.setStackInSlot(PcCaseBlockEntity.SLOT_PSU, HardwarePresets.psu(2));
+            logSlots("процессор", be);
+            com.mojang.logging.LogUtils.getLogger().info("[CI-CASE2] вынуть плату: {} | кулер в пустой корпус: {}",
+                    be.takeError(PcCaseBlockEntity.SLOT_MOTHERBOARD), be.placeError(PcCaseBlockEntity.SLOT_COOLER, HardwarePresets.cooler(1)));
+        }
+    }
+
+    private static void logSlots(String what, PcCaseBlockEntity be) {
+        StringBuilder b = new StringBuilder("[CI-CASE2] ").append(what).append(": видно");
+        for (int i = 0; i < PcCaseBlockEntity.SLOT_COUNT; i++) if (be.slotPresent(i)) b.append(' ').append(i);
+        var board = be.motherboard();
+        if (board != null) b.append(" | плата: память ").append(board.ramSlots()).append(", M.2 ").append(board.m2Slots());
+        com.mojang.logging.LogUtils.getLogger().info(b.toString());
     }
 
     private static ItemStack psuOut = ItemStack.EMPTY, diskOut = ItemStack.EMPTY;

@@ -372,6 +372,40 @@ public class PcCaseBlockEntity extends BlockEntity implements com.strikerr212.mi
         return used < board.sataPorts();
     }
 
+    /**
+     * Есть ли это место в корпусе сейчас. Пустой корпус показывает только место под плату (и свои: блок питания,
+     * отсеки дисков, USB); места на плате появляются от её характеристик, место под кулер — когда стоит процессор.
+     * Занятое место видно всегда — даже если плата его не поддерживает (тогда деталь «лишняя», см. {@link #slotExtra}).
+     */
+    public boolean slotPresent(int slot) {
+        if (isUsb(slot) || slot == SLOT_MOTHERBOARD || slot == SLOT_PSU) return true;
+        if (slot == SLOT_PSU2) return serverChassis();
+        int bay = bayIndex(slot);
+        if (bay >= 0) return bay < bayCount();
+        if (!getStack(slot).isEmpty()) return true;
+        return boardHas(slot);
+    }
+
+    /** Деталь стоит там, где у этой платы места нет (старое сохранение или плату заменили) — в окне горит красным. */
+    public boolean slotExtra(int slot) {
+        if (getStack(slot).isEmpty() || isUsb(slot) || slot == SLOT_MOTHERBOARD || slot == SLOT_PSU || slot == SLOT_PSU2) return false;
+        if (isDriveBay(slot)) return false;
+        return !boardHas(slot);
+    }
+
+    /** Есть ли на плате (с учётом других деталей) такое место. */
+    private boolean boardHas(int slot) {
+        MotherboardData board = motherboard();
+        if (board == null) return false;
+        if (slot == SLOT_CPU || slot == SLOT_GPU) return true;
+        if (slot == SLOT_CPU2) return board.cpuSockets() >= 2;
+        if (slot == SLOT_COOLER) return !module && !getStack(SLOT_CPU).isEmpty();
+        int ram = ramIndex(slot);
+        if (ram >= 0) return ram < board.ramSlots();
+        if (slot >= SLOT_M2 && slot < SLOT_M2 + M2_SLOTS) return slot - SLOT_M2 < board.m2Slots();
+        return false;
+    }
+
     /** Можно ли вынуть деталь: плату — только когда на ней ничего нет, процессор — без кулера. */
     public boolean canTake(int slot) {
         return takeError(slot) == null;

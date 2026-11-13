@@ -25,60 +25,10 @@ public class PcCaseMenu extends AbstractContainerMenu {
 
     public static final int BTN_POWER = 0;
 
-    /**
-     * Положение рамок слотов в окне (x, y) — в том же порядке, что слоты корпуса.
-     * Слоты стоят там, где детали стоят в настоящем компьютере: процессор и кулер у сокета,
-     * память справа, видеокарта над PCIe, M.2 рядом, плата снизу; справа отсек — БП и диски.
-     */
     /** Слот, которого в этой раскладке нет: стоит далеко за окном. */
     public static final int HIDDEN = -10000;
 
-    public static final int[][] SLOT_POS = {
-            {18, 98},                                   // плата
-            {18, 30},                                   // процессор
-            {38, 30},                                   // кулер
-            {62, 30}, {80, 30}, {98, 30}, {98, 48},     // память
-            {18, 64},                                   // видеокарта
-            {133, 21},                                  // блок питания
-            {133, 41}, {133, 59},                       // жёсткие диски
-            {133, 81}, {133, 99},                       // SATA SSD
-            {62, 64}, {80, 64},                         // M.2
-            {180, 150}, {200, 150},                     // USB (передняя панель)
-            {HIDDEN, HIDDEN}, {HIDDEN, HIDDEN},         // второй процессор и блок питания — только у сервера
-            {HIDDEN, HIDDEN}, {HIDDEN, HIDDEN}, {HIDDEN, HIDDEN}, {HIDDEN, HIDDEN}, {HIDDEN, HIDDEN}, {HIDDEN, HIDDEN},
-            {HIDDEN, HIDDEN}, {HIDDEN, HIDDEN}, {HIDDEN, HIDDEN}, {HIDDEN, HIDDEN}, {HIDDEN, HIDDEN}, {HIDDEN, HIDDEN},
-            {HIDDEN, HIDDEN}, {HIDDEN, HIDDEN}, {HIDDEN, HIDDEN}, {HIDDEN, HIDDEN},   // отсеки 5–8 — у сервера
-    };
-
-    /**
-     * Раскладка серверного шасси: память в три ряда вокруг двух сокетов, справа два блока питания и четыре отсека дисков.
-     *
-     *   ОЗУ ОЗУ ОЗУ ОЗУ ОЗУ ОЗУ   │ БП1
-     *   ЦП1 ЦП2 кул  ·  M.2 M.2   │ БП2
-     *   ОЗУ ОЗУ ОЗУ ОЗУ ОЗУ ОЗУ   │ диск
-     *   ОЗУ ОЗУ ОЗУ ОЗУ  ·  Видео │ диск
-     *   Плата                     │ диск
-     *                             │ диск
-     */
-    public static final int[][] SERVER_POS = {
-            {13, 105},                                  // плата
-            {13, 41},                                   // процессор 1
-            {49, 41},                                   // кулер (в модуле 1U не встаёт)
-            {13, 21}, {31, 21}, {49, 21}, {67, 21},     // память 1–4
-            {103, 81},                                  // видеокарта
-            {133, 19},                                  // блок питания 1
-            {133, 57}, {133, 75},                       // отсеки: жёсткие диски
-            {133, 93}, {133, 111},                      // отсеки: SATA SSD
-            {85, 41}, {103, 41},                        // M.2
-            {180, 150}, {200, 150},                     // USB
-            {31, 41},                                   // процессор 2
-            {133, 37},                                  // блок питания 2
-            {85, 21}, {103, 21},                        // память 5–6
-            {13, 61}, {31, 61}, {49, 61}, {67, 61}, {85, 61}, {103, 61},   // память 7–12
-            {13, 81}, {31, 81}, {49, 81}, {67, 81},     // память 13–16
-            {49, 105}, {67, 105}, {85, 105}, {103, 105},   // отсеки 5–8 (2U и серверный корпус)
-    };
-    public static final int INV_X = 8, INV_Y = 140;
+    public static final int INV_X = CaseLayout.INV_X, INV_Y = CaseLayout.INV_Y;
 
     private final PcCaseBlockEntity be;
     private final ContainerLevelAccess access;
@@ -112,7 +62,7 @@ public class PcCaseMenu extends AbstractContainerMenu {
         this.serverLayout = be != null && be.serverChassis();
         this.bays = be == null ? 4 : be.bayCount();
         for (int i = 0; i < PcCaseBlockEntity.SLOT_COUNT; i++) {
-            addSlot(new CaseSlot(handler, i, slotX(i) + 1, slotY(i) + 1));
+            addSlot(new CaseSlot(handler, i, slotX(i), slotY(i), be));
         }
         for (int row = 0; row < 3; row++) {
             for (int col = 0; col < 9; col++) {
@@ -154,19 +104,27 @@ public class PcCaseMenu extends AbstractContainerMenu {
         return serverLayout;
     }
 
-    /** Рамка слота корпуса в окне (HIDDEN — слота в этой раскладке нет). */
+    /** Значок слота в окне (HIDDEN — места в этой раскладке нет вовсе). */
     public int slotX(int slot) {
-        if (PcCaseBlockEntity.bayIndex(slot) >= bays) return HIDDEN;
-        return (serverLayout ? SERVER_POS : SLOT_POS)[slot][0];
+        return hit(slot) == null ? HIDDEN : CaseLayout.iconX(slot);
     }
 
     public int slotY(int slot) {
-        if (PcCaseBlockEntity.bayIndex(slot) >= bays) return HIDDEN;
-        return (serverLayout ? SERVER_POS : SLOT_POS)[slot][1];
+        return hit(slot) == null ? HIDDEN : CaseLayout.iconY(slot);
     }
 
+    /** Место детали в окне: [x0, y0, x1, y1) или null. */
+    public int[] hit(int slot) {
+        return CaseLayout.hit(serverLayout, bays, slot);
+    }
+
+    public int bays() {
+        return bays;
+    }
+
+    /** Место есть в раскладке и в корпусе сейчас (зависит от платы). */
     public boolean slotShown(int slot) {
-        return slotX(slot) != HIDDEN;
+        return hit(slot) != null && (be == null || be.slotPresent(slot));
     }
 
     public PcCaseBlockEntity blockEntity() {
@@ -232,10 +190,24 @@ public class PcCaseMenu extends AbstractContainerMenu {
                 && player.distanceToSqr(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5) <= 64.0, true);
     }
 
-    /** Слот корпуса: одна деталь, правила — у системного блока. */
+    /** Слот корпуса: одна деталь, правила — у системного блока. Места, которых у платы нет, неактивны. */
     public static class CaseSlot extends SlotItemHandler {
-        public CaseSlot(IItemHandler handler, int index, int x, int y) {
+        private final PcCaseBlockEntity owner;
+
+        public CaseSlot(IItemHandler handler, int index, int x, int y, PcCaseBlockEntity owner) {
             super(handler, index, x, y);
+            this.owner = owner;
+        }
+
+        @Override
+        public boolean isActive() {
+            return x != HIDDEN && (owner == null || owner.slotPresent(getSlotIndex()));
+        }
+
+        /** Подсветку под мышью окно рисует само — формой детали. */
+        @Override
+        public boolean isHighlightable() {
+            return false;
         }
 
         @Override
