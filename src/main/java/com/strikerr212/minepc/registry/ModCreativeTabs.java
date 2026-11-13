@@ -55,6 +55,7 @@ public class ModCreativeTabs {
                         output.accept(ModItems.CUTTERS.get());
                         output.accept(ModItems.ROUTER.get());
                         output.accept(ModItems.ACCESS_POINT.get());
+                        output.accept(ModItems.IO_CONTROLLER.get());
                         output.accept(ModItems.WIFI_G.get());
                         output.accept(ModItems.WIFI_N.get());
                         output.accept(ModItems.WIFI_AC.get());

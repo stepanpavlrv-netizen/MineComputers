@@ -605,7 +605,17 @@ public class CiScreenshots {
                 PcCaseScreen.ciTheme = null;
                 mc.setScreen(null);
             }
-            case 4126 -> mc.stop();
+            case 4126 -> server.execute(CiScreenshots::placeIo);
+            case 4134 -> server.execute(CiScreenshots::cableIo);
+            case 4150 -> typeAt(drawPcA, "ioc");
+            case 4180 -> typeAt(drawPcA, "ioc ctl set north 15");
+            case 4205 -> typeAt(drawPcA, "ioc ctl");
+            case 4230 -> server.execute(CiScreenshots::logIo);
+            case 4236 -> shot(mc, "io_world");
+            case 4240 -> mc.setScreen(new IoScreen(ioPos));
+            case 4250 -> shot(mc, "io_gui");
+            case 4252 -> mc.setScreen(null);
+            case 4258 -> mc.stop();
             default -> {
             }
         }
@@ -1036,7 +1046,56 @@ public class CiScreenshots {
                 2 * top.tdp() + 150 <= 3200, 2 * top.tdp() + 150 <= 1600);
     }
 
-    private static BlockPos emptyCasePos;
+    private static BlockPos emptyCasePos, ioPos;
+
+    /** Контроллер ввода-вывода у коммутатора сцены проводов: лампа на севере, редстоун-блок на юге, сундук сверху. */
+    private static void placeIo() {
+        var server = Minecraft.getInstance().getSingleplayerServer();
+        ServerPlayer p = server.getPlayerList().getPlayers().get(0);
+        ServerLevel level = p.serverLevel();
+        ioPos = drawBase.offset(12, 0, 2);
+        level.setBlockAndUpdate(ioPos, ModBlocks.IO_CONTROLLER.get().defaultBlockState()
+                .setValue(com.strikerr212.minepc.lan.IoControllerBlock.FACING, Direction.EAST));
+        level.setBlockAndUpdate(ioPos.north(), net.minecraft.world.level.block.Blocks.REDSTONE_LAMP.defaultBlockState());
+        level.setBlockAndUpdate(ioPos.south(), net.minecraft.world.level.block.Blocks.REDSTONE_BLOCK.defaultBlockState());
+        level.setBlockAndUpdate(ioPos.above(), net.minecraft.world.level.block.Blocks.CHEST.defaultBlockState());
+        if (level.getBlockEntity(ioPos.above()) instanceof net.minecraft.world.level.block.entity.ChestBlockEntity chest) {
+            for (int i = 0; i < 9; i++) chest.setItem(i, new ItemStack(net.minecraft.world.item.Items.WHEAT, 64));
+        }
+        if (level.getBlockEntity(ioPos) instanceof com.strikerr212.minepc.lan.IoControllerBlockEntity io) io.setLabel("ctl");
+        p.teleportTo(level, ioPos.getX() + 3.5, ioPos.getY() + 1, ioPos.getZ() + 0.5, 90f, 25f);
+    }
+
+    private static void cableIo() {
+        var server = Minecraft.getInstance().getSingleplayerServer();
+        ServerPlayer p = server.getPlayerList().getPlayers().get(0);
+        ServerLevel level = p.serverLevel();
+        var a = drawSocket(level, ioPos, false);
+        var b = drawSocket(level, drawSwitch, false);
+        p.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, new ItemStack(com.strikerr212.minepc.registry.ModItems.CABLE.get(), 64));
+        if (a == null || b == null) {
+            com.mojang.logging.LogUtils.getLogger().info("[CI-IO] нет гнезда: контроллер={} коммутатор={}", a, b);
+            return;
+        }
+        com.strikerr212.minepc.lan.CableLaying.lay(p, net.minecraft.world.InteractionHand.MAIN_HAND, List.of(a, b));
+    }
+
+    private static void logIo() {
+        var server = Minecraft.getInstance().getSingleplayerServer();
+        ServerLevel level = server.overworld();
+        var log = com.mojang.logging.LogUtils.getLogger();
+        var lamp = level.getBlockState(ioPos.north());
+        if (level.getBlockEntity(ioPos) instanceof com.strikerr212.minepc.lan.IoControllerBlockEntity io) {
+            log.info("[CI-IO] лампа горит: {} | вход юг {} | сундук сверху {} | адрес {} | выход север {}",
+                    lamp.getValue(net.minecraft.world.level.block.RedstoneLampBlock.LIT), io.input(3), io.fill(1), io.address(), io.outLevel(2));
+        }
+        StringBuilder sb = new StringBuilder("[CI-IO] A ->");
+        for (var r : com.strikerr212.minepc.lan.LanManager.get(level).reach(level, ioPos)) sb.append(' ').append(r.pos().toShortString());
+        log.info(sb.toString());
+        if (level.getBlockEntity(drawPcA) instanceof PcCaseBlockEntity pc) {
+            for (String line : pc.screenLines()) if (!line.isBlank()) log.info("[CI-IO] | {}", line.stripTrailing());
+        }
+    }
 
     /** Окно корпуса 2.0: пустой корпус — только место под плату; плата — её места; процессор — место под кулер. */
     private static void placeEmptyCase(ServerLevel level) {

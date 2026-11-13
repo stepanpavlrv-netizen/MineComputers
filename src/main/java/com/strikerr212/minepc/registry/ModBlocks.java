@@ -103,6 +103,10 @@ public class ModBlocks {
                 MONITOR_BLOCK.get(), MONITOR_BLOCK_WHITE.get(), MONITOR_BLOCK_RETRO.get(), MONITOR_WIDE.get(), MONITOR_CURVED.get());
     }
 
+    public static final DeferredBlock<com.strikerr212.minepc.lan.IoControllerBlock> IO_CONTROLLER = BLOCKS.register("io_controller",
+            () -> new com.strikerr212.minepc.lan.IoControllerBlock(BlockBehaviour.Properties.of()
+                    .mapColor(MapColor.METAL).strength(2.0f, 6.0f).sound(SoundType.METAL).requiresCorrectToolForDrops()));
+
     public static final DeferredBlock<KeyboardBlock> KEYBOARD_STAND = BLOCKS.register("keyboard_stand",
             () -> new KeyboardBlock(BlockBehaviour.Properties.of()
                     .mapColor(MapColor.COLOR_GRAY)

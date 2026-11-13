@@ -886,5 +886,22 @@
   "gui.minepc.slot.m2_info": "M.2 slots on the board: %s",
   "gui.minepc.slot.sata_info": "SATA ports: %s of %s in use",
   "gui.minepc.slot.cooler_info": "The CPU puts out %s W of heat",
-  "gui.minepc.slot.cpu_info": "The board supports CPUs up to tier %s"
+  "gui.minepc.slot.cpu_info": "The board supports CPUs up to tier %s",
+  "block.minepc.io_controller": "I/O Controller",
+  "tooltip.minepc.io_controller": "Redstone and sensors over the network: cable at the back, every side is an input or output",
+  "tooltip.minepc.io_controller2": "Use the ioc command on a computer; rename it on an anvil to set its network name",
+  "gui.minepc.io.hint": "Badge toggles in/out, click the output bar to set its level",
+  "gui.minepc.io.in": "in",
+  "gui.minepc.io.out": "out",
+  "gui.minepc.io.side.north": "North",
+  "gui.minepc.io.side.south": "South",
+  "gui.minepc.io.side.west": "West",
+  "gui.minepc.io.side.east": "East",
+  "gui.minepc.io.side.up": "Top",
+  "gui.minepc.io.side.down": "Bottom",
+  "gui.minepc.io.air": "nothing",
+  "gui.minepc.io.players": "Players nearby: %s",
+  "gui.minepc.io.nobody": "nobody",
+  "gui.minepc.io.light": "Light: %s",
+  "gui.minepc.io.log_empty": "Log is empty"
 }

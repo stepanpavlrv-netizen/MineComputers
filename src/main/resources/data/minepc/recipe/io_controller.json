@@ -1,0 +1,27 @@
+{
+ "type": "minecraft:crafting_shaped",
+ "category": "redstone",
+ "pattern": [
+  " C ",
+  "RIR",
+  "INI"
+ ],
+ "key": {
+  "C": {
+   "item": "minecraft:comparator"
+  },
+  "R": {
+   "item": "minecraft:redstone"
+  },
+  "I": {
+   "item": "minecraft:iron_ingot"
+  },
+  "N": {
+   "item": "minepc:network_cable"
+  }
+ },
+ "result": {
+  "id": "minepc:io_controller",
+  "count": 1
+ }
+}

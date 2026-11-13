@@ -10,6 +10,7 @@
     "minepc:tower_sector",
     "minepc:tower_dish",
     "minepc:network_outlet",
-    "minepc:wifi_access_point"
+    "minepc:wifi_access_point",
+    "minepc:io_controller"
   ]
 }

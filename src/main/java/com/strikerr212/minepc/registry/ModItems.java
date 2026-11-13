@@ -75,6 +75,7 @@ public class ModItems {
     public static final DeferredItem<BlockItem> NETWORK_SWITCH = ITEMS.registerSimpleBlockItem("network_switch", ModBlocks.NETWORK_SWITCH);
     public static final DeferredItem<BlockItem> RACK_SWITCH = ITEMS.registerSimpleBlockItem("rack_switch", ModBlocks.RACK_SWITCH);
     public static final DeferredItem<BlockItem> ROUTER = ITEMS.registerSimpleBlockItem("wifi_router", ModBlocks.ROUTER);
+    public static final DeferredItem<BlockItem> IO_CONTROLLER = ITEMS.registerSimpleBlockItem("io_controller", ModBlocks.IO_CONTROLLER);
     public static final DeferredItem<BlockItem> TRAY = ITEMS.registerSimpleBlockItem("cable_tray", ModBlocks.TRAY);
     public static final DeferredItem<BlockItem> PATCH_PANEL = ITEMS.registerSimpleBlockItem("patch_panel", ModBlocks.PATCH_PANEL);
     public static final DeferredItem<BlockItem> BRACKET = ITEMS.registerSimpleBlockItem("cable_bracket", ModBlocks.BRACKET);

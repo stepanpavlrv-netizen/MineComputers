@@ -127,6 +127,19 @@ public class ModNetwork {
                             com.strikerr212.minepc.lan.RouterBlock.openPayload(player.serverLevel(), pos, router));
                 }));
 
+        // Контроллер ввода-вывода: стороны из окна
+        registrar.playToServer(IoActionPayload.TYPE, IoActionPayload.STREAM_CODEC, (payload, context) ->
+                context.enqueueWork(() -> {
+                    if (!(context.player() instanceof net.minecraft.server.level.ServerPlayer player)) return;
+                    BlockPos pos = payload.pos();
+                    if (player.distanceToSqr(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5) > 8 * 8) return;
+                    if (!(player.level().getBlockEntity(pos) instanceof com.strikerr212.minepc.lan.IoControllerBlockEntity io)) return;
+                    int side = payload.side();
+                    if (side < 0 || side > 5) return;
+                    if (payload.action() == IoActionPayload.MODE) io.setMode(side, !io.isOutput(side));
+                    else if (payload.action() == IoActionPayload.LEVEL) io.setOutput(side, payload.value());
+                }));
+
         // Коммутатор: окно портов
         registrar.playToClient(SwitchOpenPayload.TYPE, SwitchOpenPayload.STREAM_CODEC, (payload, context) ->
                 context.enqueueWork(() -> com.strikerr212.minepc.client.ClientAccess.openSwitch(payload)));

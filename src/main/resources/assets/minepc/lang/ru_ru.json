@@ -886,5 +886,22 @@
   "gui.minepc.slot.m2_info": "Слотов M.2 на плате: %s",
   "gui.minepc.slot.sata_info": "SATA-порты: занято %s из %s",
   "gui.minepc.slot.cooler_info": "Процессор выделяет %s Вт тепла",
-  "gui.minepc.slot.cpu_info": "Плата держит процессоры до уровня %s"
+  "gui.minepc.slot.cpu_info": "Плата держит процессоры до уровня %s",
+  "block.minepc.io_controller": "Контроллер ввода-вывода",
+  "tooltip.minepc.io_controller": "Редстоун и датчики по сети: кабель сзади, каждая сторона — вход или выход",
+  "tooltip.minepc.io_controller2": "Команда ioc на компьютере; переименуйте на наковальне — это имя в сети",
+  "gui.minepc.io.hint": "Плашка — вход/выход, шкала выхода — уровень",
+  "gui.minepc.io.in": "вход",
+  "gui.minepc.io.out": "выход",
+  "gui.minepc.io.side.north": "Север",
+  "gui.minepc.io.side.south": "Юг",
+  "gui.minepc.io.side.west": "Запад",
+  "gui.minepc.io.side.east": "Восток",
+  "gui.minepc.io.side.up": "Верх",
+  "gui.minepc.io.side.down": "Низ",
+  "gui.minepc.io.air": "пусто",
+  "gui.minepc.io.players": "Игроки рядом: %s",
+  "gui.minepc.io.nobody": "никого",
+  "gui.minepc.io.light": "Свет: %s",
+  "gui.minepc.io.log_empty": "Журнал пуст"
 }

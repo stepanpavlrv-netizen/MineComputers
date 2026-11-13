@@ -979,13 +979,13 @@ public final class LanManager {
         if (now % 40 == 20) weather(level, now);
         Outgoing o;
         while ((o = outbox.poll()) != null) {
-            PcCaseBlockEntity src = level.isLoaded(o.from.pos()) ? com.strikerr212.minepc.block.Hosts.get(level, o.from) : null;
+            NetEndpoint src = level.isLoaded(o.from.pos()) ? com.strikerr212.minepc.block.Hosts.endpoint(level, o.from) : null;
             if (src == null) continue;
             String fromAddr = src.address();
             networkSounds(level, o.from, now);
             for (Reach r : reach(level, o.from)) {
                 // Компьютер в незагруженном чанке выключен — ему некому ответить (провода по дороге — неважно)
-                PcCaseBlockEntity dst = level.isLoaded(r.pos) ? com.strikerr212.minepc.block.Hosts.get(level, r.host()) : null;
+                NetEndpoint dst = level.isLoaded(r.pos) ? com.strikerr212.minepc.block.Hosts.endpoint(level, r.host()) : null;
                 if (dst == null) continue;
                 if (!matches(o.target, dst.address(), dst.label())) continue;
                 // Задержка: по тику на коммутатор, плюс время передачи по самой медленной связи
@@ -996,7 +996,7 @@ public final class LanManager {
         }
         while (!pending.isEmpty() && pending.peek().tick <= now) {
             Delivery d = pending.poll();
-            PcCaseBlockEntity dst = level.isLoaded(d.to.pos()) ? com.strikerr212.minepc.block.Hosts.get(level, d.to) : null;
+            NetEndpoint dst = level.isLoaded(d.to.pos()) ? com.strikerr212.minepc.block.Hosts.endpoint(level, d.to) : null;
             if (dst != null) {
                 dst.netReceive(d.from, d.port, d.hops, d.payload, d.bytes);
             }

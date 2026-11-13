@@ -6,6 +6,7 @@ openos/cores.lua
 openos/event.lua
 openos/filesystem.lua
 openos/io.lua
+openos/ioc.lua
 openos/keyboard.lua
 openos/note.lua
 openos/process.lua
@@ -26,6 +27,7 @@ programs/edit.lua
 programs/help.lua
 programs/hostname.lua
 programs/info.lua
+programs/ioc.lua
 programs/ip.lua
 programs/kill.lua
 programs/label.lua

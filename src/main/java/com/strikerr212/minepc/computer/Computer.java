@@ -648,9 +648,35 @@ public final class Computer {
         return id;
     }
 
+    private final java.util.concurrent.atomic.AtomicInteger nextIoRequest = new java.util.concurrent.atomic.AtomicInteger(1);
+
+    /**
+     * Команда контроллеру ввода-вывода (служебный порт, как ping): ответ придёт событием io_state(адрес, номер, данные)
+     * или io_error(адрес, номер, текст), изменения входов — io_change. Возвращает номер запроса или -1.
+     */
+    public int netIo(String target, String command, Object... args) {
+        int id = nextIoRequest.getAndIncrement();
+        Object[] payload = new Object[3 + args.length];
+        payload[0] = "io";
+        payload[1] = id;
+        payload[2] = command;
+        System.arraycopy(args, 0, payload, 3, args.length);
+        if (!netSend(target, PING_PORT, payload, 64)) return -1;
+        return id;
+    }
+
     /** Пришло сообщение по сети: событие net_message, если программа слушает этот порт. */
     public void netReceive(String from, int port, int hops, Object[] payload, int bytes) {
         if (state != State.RUNNING) return;
+        if (port == PING_PORT && payload.length > 0 && payload[0] instanceof String kind && kind.startsWith("io_")) {
+            // Ответы и события контроллера ввода-вывода: событие для программы, порт открывать не нужно
+            netReceived.addAndGet(bytes);
+            Object[] args = new Object[1 + payload.length - 1];
+            args[0] = from;
+            System.arraycopy(payload, 1, args, 1, payload.length - 1);
+            queueEvent(kind, args);
+            return;
+        }
         if (port == PING_PORT) {
             if (payload.length < 3 || !(payload[2] instanceof Number sent)) return;
             netReceived.addAndGet(bytes);

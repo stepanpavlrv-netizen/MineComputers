@@ -57,6 +57,11 @@ public final class ClientAccess {
     }
 
     /** Окно роутера: открыть или (если уже открыто) обновить список подключённых. */
+    /** Окно контроллера ввода-вывода (данные — из блок-сущности, она синхронизируется сама). */
+    public static void openIoController(net.minecraft.core.BlockPos pos) {
+        Minecraft.getInstance().setScreen(new IoScreen(pos));
+    }
+
     public static void openRouter(com.strikerr212.minepc.network.RouterOpenPayload payload) {
         var mc = Minecraft.getInstance();
         com.mojang.logging.LogUtils.getLogger().debug("Окно роутера {}", payload.pos());

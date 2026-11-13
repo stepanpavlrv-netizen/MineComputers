@@ -1,0 +1,12 @@
+{
+ "parent": "minecraft:block/cube",
+ "textures": {
+  "particle": "minepc:block/io_controller_side",
+  "north": "minepc:block/io_controller_front",
+  "south": "minepc:block/io_controller_back",
+  "east": "minepc:block/io_controller_side",
+  "west": "minepc:block/io_controller_side",
+  "up": "minepc:block/io_controller_top",
+  "down": "minepc:block/io_controller_top"
+ }
+}

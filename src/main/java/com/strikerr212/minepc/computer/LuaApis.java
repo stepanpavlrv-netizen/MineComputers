@@ -204,6 +204,15 @@ final class LuaApis {
                     return id < 0 ? Constants.NIL : valueOf(id);
                 }),
                 RegisteredFunction.ofV("address", (s, a) -> str(c.address())),
+                // Контроллер ввода-вывода: net.io(кому, команда, ...) → номер запроса; ответ — событие io_state / io_error
+                RegisteredFunction.ofV("io", (s, a) -> {
+                    String target = text(a.arg(1).checkLuaString());
+                    String cmd = text(a.arg(2).checkLuaString());
+                    Object[] rest = new Object[Math.max(0, a.count() - 2)];
+                    for (int i = 0; i < rest.length; i++) rest[i] = copyOut(a.arg(3 + i));
+                    int id = c.netIo(target, cmd, rest);
+                    return id < 0 ? Constants.NIL : valueOf(id);
+                }),
                 // BMC: net.bmc(сервер, пароль, команда [, аргумент]) → ok, сообщение, данные (ждёт ответа)
                 RegisteredFunction.ofV("bmc", (s, a) -> {
                     Object[] r = c.host().bmc(text(a.arg(1).checkLuaString()), a.arg(2).isNil() ? "" : text(a.arg(2).checkLuaString()),

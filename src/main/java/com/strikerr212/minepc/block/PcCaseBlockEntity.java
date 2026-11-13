@@ -55,7 +55,8 @@ import java.util.Locale;
  * "Мозг" системного блока: хранит установленные детали, проверяет совместимость
  * и управляет компьютером (см. {@link CaseComputer}).
  */
-public class PcCaseBlockEntity extends BlockEntity implements com.strikerr212.minepc.lan.CordList.Holder, MenuProvider {
+public class PcCaseBlockEntity extends BlockEntity implements com.strikerr212.minepc.lan.CordList.Holder, MenuProvider,
+        com.strikerr212.minepc.lan.NetEndpoint {
 
     // ----- Раскладка слотов -----
     public static final int SLOT_MOTHERBOARD = 0;
@@ -462,6 +463,16 @@ public class PcCaseBlockEntity extends BlockEntity implements com.strikerr212.mi
         return msg;
     }
 
+    /** Строки экрана компьютера (для проверок CI), пусто — компьютер выключен. */
+    public java.util.List<String> screenLines() {
+        java.util.List<String> out = new java.util.ArrayList<>();
+        var c = pc.computer();
+        if (c == null) return out;
+        var t = c.terminal();
+        for (int y = 0; y < t.height(); y++) out.add(t.line(y));
+        return out;
+    }
+
     /** 0 — выключен, 1 — работает, 2 — ошибка. */
     public int computerState() {
         return pc.stateCode();
@@ -478,17 +489,25 @@ public class PcCaseBlockEntity extends BlockEntity implements com.strikerr212.mi
 
     // ======================= Сеть =======================
 
+    @Override
+    public boolean netOnline() {
+        return computerState() == 1;
+    }
+
     /** Постоянный адрес компьютера в сети (есть и на клиенте). */
+    @Override
     public String address() {
         return pc.getAddress();
     }
 
     /** Имя компьютера (hostname / label). */
+    @Override
     public String label() {
         return pc.label();
     }
 
     /** Пришло сообщение по сети (вызывает LanManager в тике сервера). */
+    @Override
     public void netReceive(String from, int port, int hops, Object[] payload, int bytes) {
         pc.netReceive(from, port, hops, payload, bytes);
     }

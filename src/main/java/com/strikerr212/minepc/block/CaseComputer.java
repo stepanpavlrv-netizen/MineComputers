@@ -190,8 +190,8 @@ public final class CaseComputer implements Computer.Host {
         List<Computer.Peer> list = new java.util.ArrayList<>();
         if (linked) {
             for (var r : lan.reach(level, be.hostRef())) {
-                PcCaseBlockEntity other = level.isLoaded(r.pos()) ? Hosts.get(level, r.pos(), r.slot()) : null;
-                if (other != null && other.computerState() == 1) {
+                var other = level.isLoaded(r.pos()) ? Hosts.endpoint(level, r.host()) : null;
+                if (other != null && other.netOnline()) {
                     list.add(new Computer.Peer(other.address(), other.label(), r.hops()));
                 }
             }

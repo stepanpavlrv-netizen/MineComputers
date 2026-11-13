@@ -366,6 +366,7 @@ function os.exit() error("exit", 0) end
 
 io = require("io")
 component = require("component")
+ioc = require("ioc")
 
 -- ===================== Отдельный процесс (computer.spawn) =====================
 -- Процесс на другом ядре: та же система, но вместо командной строки — одна программа.
