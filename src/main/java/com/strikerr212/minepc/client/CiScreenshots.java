@@ -544,10 +544,13 @@ public class CiScreenshots {
             case 3846 -> server.execute(CiScreenshots::placeTowers);
             case 3880 -> server.execute(() -> logTowers("вышки"));
             case 3900 -> shot(mc, "radio_tower");
-            case 3902 -> server.execute(() -> server.overworld().setDayTime(18000));
-            case 3912 -> shot(mc, "radio_tower_night");
-            case 3932 -> shot(mc, "radio_tower_night2");
-            case 3936 -> server.execute(() -> {
+            case 3902 -> server.execute(() -> server.getPlayerList().getPlayers().get(0).teleportTo(server.overworld(),
+                    tower1.getX() + 7.5, tower1.getY(), tower1.getZ() - 5.5, 45f, -48f));
+            case 3914 -> shot(mc, "radio_tower_close");
+            case 3916 -> server.execute(() -> server.overworld().setDayTime(18000));
+            case 3946 -> shot(mc, "radio_tower_night");
+            case 3966 -> shot(mc, "radio_tower_night2");
+            case 3970 -> server.execute(() -> {
                 server.overworld().setDayTime(6000);
                 ServerLevel level = server.overworld();
                 boolean t2 = com.strikerr212.minepc.lan.LanManager.strike(level, towerModem2);
@@ -555,7 +558,7 @@ public class CiScreenshots {
                 com.mojang.logging.LogUtils.getLogger().info("[CI-TOWER] молния: вышка 2 (без громоотвода) выбита={}, вышка 1 (с громоотводом) выбита={}", t2, t1);
                 logTowers("после молнии");
             });
-            case 3946 -> mc.stop();
+            case 3980 -> mc.stop();
             default -> {
             }
         }

@@ -37,7 +37,7 @@ public class TowerLampRenderer implements BlockEntityRenderer<TowerSectionBlockE
         float half = w / 2 - 0.06f;
         VertexConsumer q = buffers.getBuffer(XrayRenderTypes.FLAT);
         Matrix4f m = pose.last().pose();
-        float s = on ? 0.09f : 0.07f;
+        float s = on ? 0.13f : 0.08f;
         for (int sx = -1; sx <= 1; sx += 2) {
             for (int sz = -1; sz <= 1; sz += 2) {
                 float cx = 0.5f + sx * half, cz = 0.5f + sz * half, cy = 1.0f + s;
