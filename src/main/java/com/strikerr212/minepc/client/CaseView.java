@@ -637,7 +637,7 @@ final class CaseView {
                 frame(r[0], r[1], r[2], r[3], argb(0xFF4040));
             }
         }
-        if (hovered >= 0 && hovered < SLOT_COUNT && !isUsb(hovered)) {
+        if (hovered >= 0 && hovered < SLOT_COUNT) {
             int[] r = hit(hovered);
             if (r != null) {
                 box(r[0], r[1], r[2], r[3], alpha(0xFFFFFF, 0x30));

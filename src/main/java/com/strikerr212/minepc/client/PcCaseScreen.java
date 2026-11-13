@@ -682,7 +682,8 @@ public class PcCaseScreen extends AbstractContainerScreen<PcCaseMenu> {
         g.pose().pushPose();
         g.pose().translate(0, 0, 210);
         float time = age + (minecraft != null ? minecraft.getTimer().getGameTimeDeltaPartialTick(false) : 0);
-        new CaseView(g, font, th, menu, menu.computerState() == 1, time, hoverSlot(mouseX - leftPos, mouseY - topPos),
+        new CaseView(g, font, th, menu, menu.computerState() == 1, time,
+                CiScreenshots.active() ? -1 : hoverSlot(mouseX - leftPos, mouseY - topPos),
                 menu.getCarried()).draw();
         g.pose().popPose();
     }
@@ -744,7 +745,7 @@ public class PcCaseScreen extends AbstractContainerScreen<PcCaseMenu> {
             }
             g.pose().popPose();
         }
-        if (!menu.getCarried().isEmpty()) return;
+        if (!menu.getCarried().isEmpty() || CiScreenshots.active()) return;
         int mx = mouseX - leftPos, my = mouseY - topPos;
         PcCaseBlockEntity hoverBe = menu.blockEntity();
         int slot = hoverSlot(mx, my);

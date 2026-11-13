@@ -31,6 +31,11 @@ import net.neoforged.neoforge.items.IItemHandlerModifiable;
 public class CiScreenshots {
 
     private static final boolean ENABLED = Boolean.getBoolean("minepc.ciShots");
+
+    /** Идут снимки CI: окна без подсказок под мышью (мышь стоит посреди экрана). */
+    public static boolean active() {
+        return ENABLED;
+    }
     private static int ticks;
     private static BlockPos casePos;
 
@@ -580,7 +585,8 @@ public class CiScreenshots {
             }
             case 4030 -> server.execute(() -> logPower(server.overworld()));
             case 4040 -> shot(mc, "cable_draw_done");
-            case 4046 -> server.execute(() -> placeEmptyCase(server.overworld()));
+            case 4044 -> server.execute(() -> placeEmptyCase(server.overworld()));
+            case 4048 -> server.execute(() -> openEmptyCase(server.overworld()));
             case 4052 -> {
                 PcCaseScreen.ciTheme = com.strikerr212.minepc.block.CaseStyle.GAMING;
                 if (mc.screen instanceof PcCaseScreen s) s.ciRefresh();
@@ -1034,8 +1040,12 @@ public class CiScreenshots {
         level.setBlockAndUpdate(emptyCasePos, ModBlocks.PC_CASE.get().defaultBlockState().setValue(PcCaseBlock.FACING, Direction.SOUTH));
         if (level.getBlockEntity(emptyCasePos) instanceof PcCaseBlockEntity be) {
             logSlots("пустой", be);
-            p.openMenu(be, buf -> buf.writeBlockPos(emptyCasePos));
         }
+    }
+
+    private static void openEmptyCase(ServerLevel level) {
+        ServerPlayer p = level.getServer().getPlayerList().getPlayers().get(0);
+        if (level.getBlockEntity(emptyCasePos) instanceof PcCaseBlockEntity be) p.openMenu(be, buf -> buf.writeBlockPos(emptyCasePos));
     }
 
     private static void emptyCaseStep(ServerLevel level, int step) {

@@ -108,17 +108,17 @@ public final class CaseLayout {
     }
 
     /**
-     * Где игра рисует значок предмета слота. Сами детали рисует окно поверх, значок под ними не виден — поэтому
-     * значки стоят ровной сеткой внутри корпуса: у каждого слота своё место, по нему окно узнаёт слот.
+     * Где игра рисует значок предмета слота. Детали корпуса рисует само окно, поэтому значки слотов корпуса
+     * уносятся за край экрана — у каждого своё место, по нему окно узнаёт слот (USB — как обычно, на передней панели).
      */
     public static int iconX(int slot) {
         if (PcCaseBlockEntity.isUsb(slot)) return usb(slot)[0] + 1;
-        return CX0 + 2 + (slot % 9) * 17;
+        return -3000 - slot * 20;
     }
 
     public static int iconY(int slot) {
         if (PcCaseBlockEntity.isUsb(slot)) return usb(slot)[1] + 1;
-        return CY0 + 2 + (slot / 9) * 17;
+        return -3000;
     }
 
     public static boolean inside(int[] r, int x, int y) {
