@@ -27,7 +27,8 @@ public final class CableLabels {
     public static int id(Level level, ItemStack stack) {
         if (!(level instanceof ServerLevel server)) return 0;
         String name = of(stack);
-        return name.isEmpty() ? 0 : LanData.get(server).labelId(name);
+        int id = name.isEmpty() ? 0 : LanData.get(server).labelId(name);
+        return id <= Wire.MAX_LABEL_ID ? id : 0;
     }
 
     /** Имя бирки по номеру (только на сервере). */

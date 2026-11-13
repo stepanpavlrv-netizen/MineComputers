@@ -30,7 +30,8 @@ import java.util.List;
  */
 public class CableBlockEntity extends BlockEntity {
 
-    public static final int MAX_PER_FACE = Wire.LANES;
+    /** Больше проводов на одной грани клетки не помещается. */
+    public static final int MAX_PER_FACE = 8;
     /** Для модели: провода как числа ({@link Wire#packed()}). */
     public static final ModelProperty<long[]> WIRES = new ModelProperty<>();
     /** Для модели: где гнёзда, в которые воткнуты вилки (по 4 числа на провод: сторона → гнездо или -1). */
@@ -121,21 +122,46 @@ public class CableBlockEntity extends BlockEntity {
         return n < MAX_PER_FACE;
     }
 
-    /** Ближайшая свободная пара дорожек на грани или null. */
-    public int[] nearestFree(Direction face, int a, int b) {
-        int[] best = null;
-        int bestD = Integer.MAX_VALUE;
-        for (int x = 0; x < Wire.LANES; x++) {
-            for (int y = 0; y < Wire.LANES; y++) {
-                if (!free(face, x, y)) continue;
-                int d = Math.abs(x - a) + Math.abs(y - b);
-                if (d < bestD) {
-                    bestD = d;
-                    best = new int[]{x, y};
-                }
-            }
+    /**
+     * Ляжет ли провод w на эту клетку: на грани меньше {@link #MAX_PER_FACE} проводов и ни один не идёт по той же
+     * линии (та же ось и та же дорожка поперёк) там же, где w. Пересекаться под прямым углом провода могут.
+     */
+    public boolean fits(Wire w) {
+        int n = 0;
+        for (Wire o : wires) {
+            if (o.face != w.face) continue;
+            n++;
+            if (overlaps(o, w)) return false;
         }
-        return best;
+        return n < MAX_PER_FACE;
+    }
+
+    /** Два провода одной грани идут по одной линии и их отрезки перекрываются. */
+    public static boolean overlaps(Wire a, Wire b) {
+        if (a.face != b.face) return false;
+        for (Direction.Axis ax : Wire.planeAxes(a.face)) {
+            int[] ia = run(a, ax), ib = run(b, ax);
+            if (ia == null || ib == null) continue;
+            Direction.Axis cross = Wire.planeAxes(a.face)[0] == ax ? Wire.planeAxes(a.face)[1] : Wire.planeAxes(a.face)[0];
+            if (a.lane[cross.ordinal()] != b.lane[cross.ordinal()]) continue;
+            if (ia[0] < ib[1] && ib[0] < ia[1]) return true;
+        }
+        return false;
+    }
+
+    /** Где провод лежит вдоль оси ax (пиксели [от, до)) или null, если вдоль неё не идёт. */
+    private static int[] run(Wire w, Direction.Axis ax) {
+        boolean[] drawn = w.drawn();
+        Direction[] ds = w.dirs();
+        int node = w.lane[ax.ordinal()], lo = node, hi = node + 1;
+        boolean any = false;
+        for (int i = 0; i < 4; i++) {
+            if (!drawn[i] || ds[i].getAxis() != ax) continue;
+            any = true;
+            if (ds[i].getAxisDirection() == Direction.AxisDirection.POSITIVE) hi = 16;
+            else lo = 0;
+        }
+        return any ? new int[]{lo, hi} : null;
     }
 
     /** Новый провод на грани face с дорожками a, b по осям плоскости. */
@@ -149,9 +175,9 @@ public class CableBlockEntity extends BlockEntity {
         return w;
     }
 
-    /** Ближайшая дорожка к точке на оси (в пикселях блока). */
+    /** Дорожка (пиксель) у точки на оси (в пикселях блока). */
     public static int laneAt(double pixel) {
-        return Math.max(0, Math.min(Wire.LANES - 1, (int) Math.round((pixel - Wire.LANE[0] - 0.5) / 2)));
+        return Math.max(0, Math.min(Wire.LANES - 1, (int) Math.floor(pixel)));
     }
 
     public void add(Wire w) {
@@ -171,7 +197,7 @@ public class CableBlockEntity extends BlockEntity {
         if (a == w.face.getAxis()) {
             return w.face.getAxisDirection() == Direction.AxisDirection.POSITIVE ? new float[]{15, 16} : new float[]{0, 1};
         }
-        int p = Wire.LANE[w.lane[a.ordinal()]];
+        int p = w.lane[a.ordinal()];
         return new float[]{p, p + 1};
     }
 
@@ -240,10 +266,13 @@ public class CableBlockEntity extends BlockEntity {
     // ======================= Соединения =======================
 
     /** Провод того же вида на грани face клетки p, идущий через то же ребро (та же дорожка по оси ребра). */
-    private static Wire match(Level level, BlockPos p, Direction face, Wire w, Direction.Axis edge) {
+    private static Wire match(Level level, BlockPos p, Direction face, Wire w, Direction.Axis edge, Direction back) {
         if (!level.isLoaded(p) || !(level.getBlockEntity(p) instanceof CableBlockEntity other)) return null;
         for (Wire o : other.wires) {
-            if (o != w && o.face == face && o.sameKind(w) && o.lane[edge.ordinal()] == w.lane[edge.ordinal()]) return o;
+            if (o != w && o.face == face && o.sameKind(w) && o.lane[edge.ordinal()] == w.lane[edge.ordinal()]) {
+                int k = o.index(back);
+                if (k >= 0 && o.way(k)) return o;      // проложенный щелчками — только оттуда, куда его вели
+            }
         }
         return null;
     }
@@ -265,6 +294,10 @@ public class CableBlockEntity extends BlockEntity {
         if (level == null) return false;
         boolean changed = false;
         for (Wire w : wires) {
+            if (w.ways != Wire.ALL_WAYS) {
+                if (reconnectDrawn(w)) changed = true;
+                continue;
+            }
             Direction[] ds = w.dirs();
             int[] conn = new int[4], plug = new int[4];
             boolean[] device = new boolean[4], unknown = new boolean[4];
@@ -281,11 +314,11 @@ public class CableBlockEntity extends BlockEntity {
                     device[i] = true;
                 } else if (level.getBlockEntity(n) instanceof TrayBlockEntity tray) {
                     if (tray.has(w)) conn[i] = Wire.FLAT;
-                } else if (match(level, worldPosition, d, w, edge) != null) {
+                } else if (match(level, worldPosition, d, w, edge, w.face) != null) {
                     conn[i] = Wire.INNER;
-                } else if (match(level, n, w.face, w, edge) != null) {
+                } else if (match(level, n, w.face, w, edge, d.getOpposite()) != null) {
                     conn[i] = Wire.FLAT;
-                } else if (match(level, n.relative(w.face), d.getOpposite(), w, edge) != null) {
+                } else if (match(level, n.relative(w.face), d.getOpposite(), w, edge, w.face.getOpposite()) != null) {
                     conn[i] = Wire.OUTER;
                 }
                 if (conn[i] != Wire.NONE) links++;
@@ -318,6 +351,44 @@ public class CableBlockEntity extends BlockEntity {
             }
         }
         if (changed) changed();
+        return changed;
+    }
+
+    /**
+     * Провод, проложенный щелчками: соединяется только туда, куда его вели ({@link Wire#ways}) — с проводом, лотком
+     * или вилкой в устройство. true — что-то изменилось.
+     */
+    private boolean reconnectDrawn(Wire w) {
+        boolean changed = false;
+        Direction[] ds = w.dirs();
+        for (int i = 0; i < 4; i++) {
+            int conn = Wire.NONE, plug = 0;
+            Direction d = ds[i];
+            BlockPos n = worldPosition.relative(d);
+            if (w.way(i)) {
+                Direction.Axis edge = Wire.edgeAxis(w.face, d);
+                if (!level.isLoaded(n)) {
+                    conn = w.conn[i];
+                    plug = w.plug[i];
+                } else if (level.getBlockState(n).getBlock() instanceof LanDevice) {
+                    plug = choosePort(w, i, n);
+                    if (plug != 0) LanManager.updateDevice(level, n);
+                } else if (level.getBlockEntity(n) instanceof TrayBlockEntity tray) {
+                    if (tray.has(w)) conn = Wire.FLAT;
+                } else if (match(level, worldPosition, d, w, edge, w.face) != null) {
+                    conn = Wire.INNER;
+                } else if (match(level, n, w.face, w, edge, d.getOpposite()) != null) {
+                    conn = Wire.FLAT;
+                } else if (match(level, n.relative(w.face), d.getOpposite(), w, edge, w.face.getOpposite()) != null) {
+                    conn = Wire.OUTER;
+                }
+            }
+            if (conn != w.conn[i] || plug != w.plug[i]) {
+                w.conn[i] = conn;
+                w.plug[i] = plug;
+                changed = true;
+            }
+        }
         return changed;
     }
 

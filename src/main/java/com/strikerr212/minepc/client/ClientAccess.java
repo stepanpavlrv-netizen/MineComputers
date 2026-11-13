@@ -29,6 +29,16 @@ public final class ClientAccess {
         NetHud.onPortsInfo(payload);
     }
 
+    /** ПКМ мотком по блоку — точка пути провода. */
+    public static void cableClick(net.minecraft.world.InteractionHand hand, net.minecraft.core.BlockPos pos, net.minecraft.core.Direction side,
+                                  net.minecraft.world.phys.Vec3 hit) {
+        CableDrawClient.click(hand, pos, side, hit);
+    }
+
+    public static void cableAir(net.minecraft.world.InteractionHand hand) {
+        CableDrawClient.air(hand);
+    }
+
     public static void onTester(com.strikerr212.minepc.network.TesterPayload payload) {
         TesterHud.onResult(payload);
     }

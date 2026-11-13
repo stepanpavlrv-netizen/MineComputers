@@ -153,12 +153,8 @@ public final class NetHud {
                 }
             }
         }
-        // Моток с началом маршрута
-        if (held.getItem() instanceof CableItem cable && CableItem.routeFrom(held) != null) {
-            BlockPos from = CableItem.routeFrom(held);
-            route(mc, cable, held, from, target, state);
-            return;
-        }
+        // Идёт прокладка щелчками — подсказки у неё свои
+        if (CableDrawClient.active()) return;
         // Монтажник: провод под прицелом
         boolean tool = held.getItem() instanceof CableItem || held.getItem() instanceof CuttersItem;
         if (tool && target != null && mc.level.getBlockEntity(target) instanceof CableBlockEntity be && be.facade() == null
@@ -366,8 +362,8 @@ public final class NetHud {
     private static Vec3 center(RoutePlanner.Piece p) {
         Direction.Axis[] ax = Wire.planeAxes(p.face());
         double[] c = new double[3];
-        c[ax[0].ordinal()] = Wire.LANE[p.a()] + 0.5;
-        c[ax[1].ordinal()] = Wire.LANE[p.b()] + 0.5;
+        c[ax[0].ordinal()] = p.a() + 0.5;
+        c[ax[1].ordinal()] = p.b() + 0.5;
         int n = p.face().getAxis().ordinal();
         c[n] = p.face().getAxisDirection() == Direction.AxisDirection.POSITIVE ? 15.5 : 0.5;
         if (p.face().getAxis().isHorizontal()) c[1] = 8;      // стенка ступеньки — середина по высоте

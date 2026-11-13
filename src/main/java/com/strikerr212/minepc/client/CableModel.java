@@ -109,7 +109,7 @@ public class CableModel extends BakedModelWrapper<BakedModel> {
             if (a == w.face.getAxis()) {
                 cur[a.ordinal()] = w.face.getAxisDirection() == Direction.AxisDirection.POSITIVE ? new float[]{15, 16} : new float[]{0, 1};
             } else {
-                int p = Wire.LANE[w.lane[a.ordinal()]];
+                int p = w.lane[a.ordinal()];
                 cur[a.ordinal()] = new float[]{p, p + 1};
             }
         }
@@ -162,7 +162,7 @@ public class CableModel extends BakedModelWrapper<BakedModel> {
         boolean facePos = w.face.getAxisDirection() == Direction.AxisDirection.POSITIVE;
         float[] along = pos ? new float[]{12.6f, 14.4f} : new float[]{1.6f, 3.4f};
         float layer = facePos ? 15 : 0;                                   // провод прижат к грани: слой 0..1 или 15..16
-        float lane = Wire.LANE[w.lane[third]];
+        float lane = w.lane[third];
         float[][] r = new float[3][];
         // Муфта вокруг провода
         r[ax] = along;

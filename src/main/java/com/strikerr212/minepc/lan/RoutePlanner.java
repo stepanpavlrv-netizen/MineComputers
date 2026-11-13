@@ -133,7 +133,7 @@ public final class RoutePlanner {
             p = st == null ? null : st.prev;
         }
         // Дорожка, свободная везде: на полу каждой клетки и на стенках подъёмов
-        for (int lane = 0; lane < Wire.LANES; lane++) {
+        for (int lane : Wire.LEGACY_PX) {
             List<Piece> pieces = new ArrayList<>();
             boolean ok = true;
             for (int i = 0; i < cells.size() && ok; i++) {

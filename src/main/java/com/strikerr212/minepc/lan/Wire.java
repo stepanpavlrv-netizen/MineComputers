@@ -10,7 +10,9 @@ import java.util.List;
  * Один провод в блоке кабеля — полоска 1×1 пиксель, прижатая к одной грани клетки: к полу (face = DOWN),
  * к потолку (UP) или к стене (NORTH/SOUTH/WEST/EAST — в сторону стены).
  *
- * <p>У провода своя «дорожка» по каждой оси в плоскости грани ({@link #lane}, 0..5 = пиксели 3, 5, … 13). Идёт он
+ * <p>У провода своя «дорожка» по каждой оси в плоскости грани ({@link #lane} — пиксель 0..15; в мирах до 0.31 было
+ * 6 дорожек — пиксели 3, 5, … 13, они переводятся сами). Провод, проложенный щелчками, помнит, куда его вели
+ * ({@link #ways}): соединяется только в эти стороны. У старых проводов — во все (как раньше). Идёт он
  * по одной из четырёх сторон грани ({@link #dirs}): на пол — север/юг/запад/восток, на стену — ещё вверх/вниз.
  * В каждую сторону провод соединяется:
  * <ul>
@@ -23,9 +25,12 @@ import java.util.List;
  */
 public final class Wire {
 
-    public static final int LANES = 6;
-    /** Начало полоски каждой дорожки, пиксели (полоска толщиной 1). */
-    public static final int[] LANE = {3, 5, 7, 9, 11, 13};
+    /** Дорожек (пикселей) по оси. */
+    public static final int LANES = 16;
+    /** Дорожки старых миров (номер 0..5) → пиксель. */
+    public static final int[] LEGACY_PX = {3, 5, 7, 9, 11, 13};
+    /** Все четыре стороны: провод соединяется со всем, что подходит (старые провода и выложенные по одному). */
+    public static final int ALL_WAYS = 15;
     /** Виды соединения в сторону. */
     public static final int NONE = 0, FLAT = 1, INNER = 2, OUTER = 3;
     /** Вилка есть, а порт ещё не выбран (провод из старого мира — порт выберется при загрузке). */
@@ -40,8 +45,15 @@ public final class Wire {
     public final int[] conn = new int[4];
     /** Вилка в каждую сторону: 0 — нет, 1..30 — порт устройства + 1, {@link #PLUG_PENDING} — порт не выбран. */
     public final int[] plug = new int[4];
-    /** Бирка (имя мотка с наковальни): номер в словаре схемы сети ({@link LanData#labelName}), 0 — без бирки. */
+    /** Бирка (имя мотка с наковальни): номер в словаре схемы сети ({@link LanData#labelName}), 0 — без бирки (до 2047). */
     public int label;
+    /** Стороны (биты по {@link #dirs()}), куда провод проложен; {@link #ALL_WAYS} — во все. */
+    public int ways = ALL_WAYS;
+
+    /** Можно ли проводу идти в сторону i. */
+    public boolean way(int i) {
+        return (ways & (1 << i)) != 0;
+    }
 
     public Wire(int color, Direction face, int laneX, int laneY, int laneZ) {
         this.color = color;
@@ -119,6 +131,11 @@ public final class Wire {
      */
     public boolean[] drawn() {
         boolean[] out = new boolean[4];
+        if (ways != ALL_WAYS) {
+            // Проложен щелчками: рисуется туда, куда вели (свободный конец — тоже)
+            for (int i = 0; i < 4; i++) out[i] = way(i);
+            return out;
+        }
         int n = 0;
         for (int i = 0; i < 4; i++) if (connected(i)) {
             out[i] = true;
@@ -134,25 +151,48 @@ public final class Wire {
 
     // ======================= Хранение =======================
 
-    /** Провод одним числом: для модели и для схемы сети (LanData). */
+    /** Самый большой номер бирки, который помещается в провод. */
+    public static final int MAX_LABEL_ID = 2047;
+
+    /**
+     * Провод одним числом: для модели и для схемы сети (LanData). С 0.31: цвет 0–3, оптика 4, грань 5–7,
+     * дорожки по 4 бита 8–19, соединения 20–27, вилки 28–47, стороны 48–51, бирка 52–62, бит 63 — новый формат.
+     */
     public long packed() {
         long p = color & 15;
         if (fiber) p |= 1L << 4;
         p |= (long) face.get3DDataValue() << 5;
-        p |= (long) lane[0] << 8 | (long) lane[1] << 11 | (long) lane[2] << 14;
-        for (int i = 0; i < 4; i++) p |= (long) (conn[i] & 3) << (17 + 2 * i);
-        for (int i = 0; i < 4; i++) p |= (long) (plug[i] & 31) << (25 + 5 * i);
-        p |= (long) (label & 0xFFFF) << 45;
-        return p;
+        p |= (long) (lane[0] & 15) << 8 | (long) (lane[1] & 15) << 12 | (long) (lane[2] & 15) << 16;
+        for (int i = 0; i < 4; i++) p |= (long) (conn[i] & 3) << (20 + 2 * i);
+        for (int i = 0; i < 4; i++) p |= (long) (plug[i] & 31) << (28 + 5 * i);
+        p |= (long) (ways & 15) << 48;
+        p |= (long) (label & MAX_LABEL_ID) << 52;
+        return p | 1L << 63;
     }
 
     public static Wire unpack(long p) {
+        if (p >= 0) return unpackLegacy(p);
         Wire w = new Wire((int) (p & 15), Direction.from3DDataValue((int) (p >> 5) & 7),
-                (int) (p >> 8) & 7, (int) (p >> 11) & 7, (int) (p >> 14) & 7);
+                (int) (p >> 8) & 15, (int) (p >> 12) & 15, (int) (p >> 16) & 15);
+        w.fiber = (p & (1L << 4)) != 0;
+        for (int i = 0; i < 4; i++) w.conn[i] = (int) (p >> (20 + 2 * i)) & 3;
+        for (int i = 0; i < 4; i++) w.plug[i] = (int) (p >> (28 + 5 * i)) & 31;
+        w.ways = (int) (p >>> 48) & 15;
+        w.label = (int) (p >>> 52) & MAX_LABEL_ID;
+        return w;
+    }
+
+    /** Формат 0.22–0.30: дорожки 0..5 (по 3 бита) → пиксели, бирка 16 бит. */
+    private static Wire unpackLegacy(long p) {
+        Wire w = new Wire((int) (p & 15), Direction.from3DDataValue((int) (p >> 5) & 7),
+                LEGACY_PX[Math.min(5, (int) (p >> 8) & 7)], LEGACY_PX[Math.min(5, (int) (p >> 11) & 7)],
+                LEGACY_PX[Math.min(5, (int) (p >> 14) & 7)]);
+        w.lane[w.face.getAxis().ordinal()] = 0;
         w.fiber = (p & (1L << 4)) != 0;
         for (int i = 0; i < 4; i++) w.conn[i] = (int) (p >> (17 + 2 * i)) & 3;
         for (int i = 0; i < 4; i++) w.plug[i] = (int) (p >> (25 + 5 * i)) & 31;
-        w.label = (int) (p >>> 45) & 0xFFFF;
+        int label = (int) (p >>> 45) & 0xFFFF;
+        w.label = label <= MAX_LABEL_ID ? label : 0;
         return w;
     }
 
@@ -185,7 +225,7 @@ public final class Wire {
         int dirs = (p >> 8) & 15, plugs = (p >> 12) & 15, ups = (p >> 16) & 15, downs = (p >> 20) & 15;
         boolean fiber = (p & 1 << 24) != 0;
         List<Wire> out = new ArrayList<>();
-        Wire w = new Wire(color, Direction.DOWN, LEGACY_LANE[xi], 0, LEGACY_LANE[zi]);
+        Wire w = new Wire(color, Direction.DOWN, LEGACY_PX[LEGACY_LANE[xi]], 0, LEGACY_PX[LEGACY_LANE[zi]]);
         w.fiber = fiber;
         out.add(w);
         int riserY = 0;
@@ -200,7 +240,7 @@ public final class Wire {
                 Wire r = new Wire(color, d, 0, 0, 0);
                 r.fiber = fiber;
                 r.lane[edgeAxis(Direction.DOWN, d).ordinal()] = w.laneToward(d);
-                r.lane[1] = riserY++;
+                r.lane[1] = LEGACY_PX[Math.min(5, riserY++)];
                 r.conn[r.index(Direction.DOWN)] = INNER;
                 r.conn[r.index(Direction.UP)] = OUTER;
                 out.add(r);
