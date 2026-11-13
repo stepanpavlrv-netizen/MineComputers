@@ -19,6 +19,8 @@ local function sample()
   if fs.exists("/www") then return end
   fs.makeDir("/www")
   local name = net.hostname and net.hostname() or ""
+  local okNames, owned = net.dns("names")
+  if okNames and owned[1] then name = owned[1].name end
   local f = fs.open("/www/index.page", "w")
   f.write([[
 # Добро пожаловать на мой сайт!
@@ -26,8 +28,10 @@ local function sample()
 Страницы лежат в папке {lightBlue}/www{}: откройте {lightBlue}edit /www/index.page{} и поменяйте этот текст.
 ---
 ## Что умеет разметка
-# — заголовок, ## — подзаголовок, --- — черта, > — цитата.
-{red}Цвет{} пишется в фигурных скобках: {green}green{}, {orange}orange{}, {}{} — обычный.
+Решётка и пробел в начале строки — заголовок, две решётки — подзаголовок,
+три минуса — черта, знак «больше» — цитата.
+> Это цитата.
+{red}Цвет{} — имя в фигурных скобках: {green}green{}, {orange}orange{}, {lightBlue}lightBlue{}; пустые скобки — обычный.
 Ссылка: [страница «Привет»](/hello.lua)
 ---
 ## Форма
