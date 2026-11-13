@@ -221,6 +221,11 @@ final class LuaApis {
                     return varargsOf(new LuaValue[]{toLua(r[0]), toLua(r[1]), toLua(r[2])});
                 }),
                 RegisteredFunction.ofV("bmcInfo", (s, a) -> toLua(c.host().bmcLocal())),
+                // Майннет: net.dns("register"|"unregister"|"lookup"|"names"|"all", [имя]) → ok, текст или таблица
+                RegisteredFunction.ofV("dns", (s, a) -> {
+                    Object[] r = c.host().dns(text(a.arg(1).checkLuaString()), a.arg(2).isNil() ? "" : text(a.arg(2).checkLuaString()));
+                    return varargsOf(new LuaValue[]{toLua(r[0]), toLua(r[1])});
+                }),
                 RegisteredFunction.ofV("bmcPassword", (s, a) -> valueOf(c.host().bmcSetPassword(text(a.arg(1).checkLuaString())))),
                 RegisteredFunction.ofV("hostname", (s, a) -> {
                     if (!a.arg(1).isNil()) {

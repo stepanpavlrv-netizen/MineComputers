@@ -614,8 +614,34 @@ public class CiScreenshots {
             case 4236 -> shot(mc, "io_world");
             case 4240 -> mc.setScreen(new IoScreen(ioPos));
             case 4250 -> shot(mc, "io_gui");
-            case 4252 -> mc.setScreen(null);
-            case 4258 -> mc.stop();
+            case 4252 -> {
+                mc.setScreen(null);
+                server.execute(() -> {
+                    ServerPlayer p = server.getPlayerList().getPlayers().get(0);
+                    p.teleportTo(server.overworld(), drawPcA.getX() + 0.5, drawPcA.getY() + 1, drawPcA.getZ() + 3.5, 180f, 20f);
+                });
+            }
+            case 4256 -> typeAt(drawPcB, "dns register shop");
+            case 4270 -> typeAt(drawPcB, "httpd");
+            case 4300 -> typeAt(drawPcA, "get shop.mine/");
+            case 4330 -> typeAt(drawPcA, "browse shop.mine");
+            case 4350 -> server.execute(() -> logScreens("[CI-WEB]"));
+            case 4352 -> mc.setScreen(new TerminalScreen(drawPcA));
+            case 4365 -> shot(mc, "browse_site");
+            case 4368, 4370 -> keyAt(drawPcA, "tab");
+            case 4372 -> charsAt(drawPcA, "Стив");
+            case 4374 -> keyAt(drawPcA, "enter");
+            case 4400 -> shot(mc, "browse_form");
+            case 4402 -> charsAt(drawPcA, "q");
+            case 4410 -> typeAt(drawPcB, "maild");
+            case 4425 -> typeAt(drawPcA, "mail send admin@shop.mine Привет");
+            case 4430 -> typeAt(drawPcA, "Как дела?");
+            case 4434 -> typeAt(drawPcA, ".");
+            case 4460 -> typeAt(drawPcB, "mail");
+            case 4480 -> server.execute(() -> logScreens("[CI-MAIL]"));
+            case 4482 -> shot(mc, "mail_sent");
+            case 4484 -> mc.setScreen(null);
+            case 4490 -> mc.stop();
             default -> {
             }
         }
@@ -1371,6 +1397,33 @@ public class CiScreenshots {
         server.execute(() -> {
             if (server.overworld().getBlockEntity(pos) instanceof PcCaseBlockEntity be) be.input(TerminalInputPayload.KEY, key, false, false);
         });
+    }
+
+    private static void keyAt(BlockPos pos, String key) {
+        var server = Minecraft.getInstance().getSingleplayerServer();
+        server.execute(() -> {
+            if (server.overworld().getBlockEntity(pos) instanceof PcCaseBlockEntity be) be.input(TerminalInputPayload.KEY, key, false, false);
+        });
+    }
+
+    private static void charsAt(BlockPos pos, String text) {
+        var server = Minecraft.getInstance().getSingleplayerServer();
+        server.execute(() -> {
+            if (server.overworld().getBlockEntity(pos) instanceof PcCaseBlockEntity be) {
+                for (char c : text.toCharArray()) be.input(TerminalInputPayload.CHAR, String.valueOf(c), false, false);
+            }
+        });
+    }
+
+    private static void logScreens(String tag) {
+        var level = Minecraft.getInstance().getSingleplayerServer().overworld();
+        var log = com.mojang.logging.LogUtils.getLogger();
+        for (BlockPos pos : new BlockPos[]{drawPcA, drawPcB}) {
+            if (level.getBlockEntity(pos) instanceof PcCaseBlockEntity pc) {
+                log.info("{} компьютер {}", tag, pos == drawPcA ? "A" : "B");
+                for (String line : pc.screenLines()) if (!line.isBlank()) log.info("{} | {}", tag, line.stripTrailing());
+            }
+        }
     }
 
     private static void typeAt(BlockPos pos, String line) {

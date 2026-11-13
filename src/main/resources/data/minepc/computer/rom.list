@@ -5,6 +5,7 @@ openos/component.lua
 openos/cores.lua
 openos/event.lua
 openos/filesystem.lua
+openos/http.lua
 openos/io.lua
 openos/ioc.lua
 openos/keyboard.lua
@@ -17,15 +18,19 @@ openos/term.lua
 openos/text.lua
 openos/uuid.lua
 programs/bmc.lua
+programs/browse.lua
 programs/bunker.lua
 programs/cat.lua
 programs/chat.lua
 programs/clear.lua
 programs/cp.lua
+programs/dns.lua
 programs/drives.lua
 programs/edit.lua
+programs/get.lua
 programs/help.lua
 programs/hostname.lua
+programs/httpd.lua
 programs/info.lua
 programs/ioc.lua
 programs/ip.lua
@@ -33,6 +38,8 @@ programs/kill.lua
 programs/label.lua
 programs/ls.lua
 programs/lua.lua
+programs/mail.lua
+programs/maild.lua
 programs/mkdir.lua
 programs/music.lua
 programs/mv.lua

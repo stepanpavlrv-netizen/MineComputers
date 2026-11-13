@@ -983,11 +983,16 @@ public final class LanManager {
             if (src == null) continue;
             String fromAddr = src.address();
             networkSounds(level, o.from, now);
+            String target = o.target;
+            if (DnsRegistry.isName(target)) {             // Майннет: shop.mine → адрес владельца имени
+                target = DnsRegistry.get(level).lookup(target);
+                if (target == null) continue;
+            }
             for (Reach r : reach(level, o.from)) {
                 // Компьютер в незагруженном чанке выключен — ему некому ответить (провода по дороге — неважно)
                 NetEndpoint dst = level.isLoaded(r.pos) ? com.strikerr212.minepc.block.Hosts.endpoint(level, r.host()) : null;
                 if (dst == null) continue;
-                if (!matches(o.target, dst.address(), dst.label())) continue;
+                if (!matches(target, dst.address(), dst.label())) continue;
                 // Задержка: по тику на коммутатор, плюс время передачи по самой медленной связи
                 long bytesPerTick = Math.max(1, r.bits / 800 / Computer.TICKS_PER_SECOND);
                 long delay = r.hops + o.bytes / bytesPerTick;

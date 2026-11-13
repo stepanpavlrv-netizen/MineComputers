@@ -324,6 +324,43 @@ public final class CaseComputer implements Computer.Host {
         }
     }
 
+    @Override
+    public Object[] dns(String command, String name) {
+        return onServer(level -> {
+            var reg = com.strikerr212.minepc.lan.DnsRegistry.get(level);
+            String me = be.address();
+            switch (command) {
+                case "register" -> {
+                    String err = reg.register(name, me);
+                    return new Object[]{err == null, err == null ? com.strikerr212.minepc.lan.DnsRegistry.normalize(name) : err};
+                }
+                case "unregister" -> {
+                    String err = reg.unregister(name, me);
+                    return new Object[]{err == null, err == null ? "" : err};
+                }
+                case "lookup" -> {
+                    String a = reg.lookup(name);
+                    return new Object[]{a != null, a == null ? "Имя не занято" : a};
+                }
+                case "names", "all" -> {
+                    Map<Object, Object> t = new java.util.LinkedHashMap<>();
+                    int i = 1;
+                    for (var e : reg.all().entrySet()) {
+                        if (command.equals("names") && !e.getValue().equals(me)) continue;
+                        Map<Object, Object> row = new java.util.LinkedHashMap<>();
+                        row.put("name", e.getKey());
+                        row.put("address", e.getValue());
+                        t.put(i++, row);
+                    }
+                    return new Object[]{true, t};
+                }
+                default -> {
+                    return new Object[]{false, "Неизвестная команда"};
+                }
+            }
+        }, new Object[]{false, "Сервер не ответил"});
+    }
+
     private BlockPos switchById(ServerLevel level, String id) {
         for (BlockPos p : com.strikerr212.minepc.lan.LanManager.get(level).switches(level, be.hostRef())) {
             if (com.strikerr212.minepc.lan.SwitchPorts.id(p).equalsIgnoreCase(id)) return p;

@@ -9,7 +9,7 @@ local topics = {
   { "info", "железо компьютера и скорость" },
   { "label [имя]", "имя компьютера" },
   { "сеть", "ip, peers, ping, chat, wifi, send/recv, switch, bmc, ioc" },
-  { "clear", "очистить экран" },
+  { "майннет", "browse, httpd, dns, mail, maild, get" },
   { "sh", "новая командная строка (exit — назад)" },
   { "ps, top, kill N", "процессы, нагрузка, остановить" },
   { "reboot / shutdown", "перезагрузить / выключить" },

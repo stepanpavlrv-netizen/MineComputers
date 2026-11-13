@@ -60,6 +60,11 @@ public final class Computer {
         /** Кто ещё в сети: {адрес, имя, переходов}. */
         default java.util.List<Peer> netPeers() { return java.util.List.of(); }
 
+        // ----- Майннет: имена .mine -----
+
+        /** DNS: register/unregister имя, lookup имя, names — свои имена, all — все. {ok, текст или данные}. */
+        default Object[] dns(String command, String name) { return new Object[]{false, "Нет сети"}; }
+
         // ----- BMC (управление сервером по сети) -----
 
         /**
@@ -697,6 +702,10 @@ public final class Computer {
         args[2] = hops;
         System.arraycopy(payload, 0, args, 3, payload.length);
         queueEvent("net_message", args);
+        // фоновым процессам (httpd, maild на других ядрах) — тоже: порты у компьютера общие
+        if (state == State.RUNNING) {
+            for (LuaMachine m : machines) if (m != main) m.events.offer(event("net_message", args));
+        }
     }
 
     // ======================= Нагрузка (диспетчер задач, BIOS) =======================
