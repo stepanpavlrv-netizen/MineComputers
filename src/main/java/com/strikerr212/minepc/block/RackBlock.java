@@ -327,7 +327,7 @@ public class RackBlock extends HorizontalDirectionalBlock implements EntityBlock
         return acceptsCable(state, face);
     }
 
-    /** Без содержимого (предмет, тесты): гнёзда сзади, по одному на место. */
+    /** Без содержимого (предмет, тесты): гнёзд нет — они появляются с модулями. */
     @Override
     public List<Socket> sockets(BlockState state) {
         return sockets(state, new int[RackBlockEntity.SLOTS]);
@@ -357,8 +357,9 @@ public class RackBlock extends HorizontalDirectionalBlock implements EntityBlock
                 case RackBlockEntity.SWITCH -> LanDevice.local(f, false, 11, y, 0, false, true);
                 case RackBlockEntity.PATCH -> LanDevice.local(f, true, 7, y, 0, true, false);
                 case RackBlockEntity.ROUTER -> LanDevice.local(f, false, 11, y, 0, true, false);
-                case RackBlockEntity.CONSOLE, RackBlockEntity.UPS, RackBlockEntity.BLANK, RackBlockEntity.UPPER -> none;
-                default -> LanDevice.local(f, true, 7, y, 0, true, false);    // сервер (и пустое место — как раньше)
+                // У пустого места гнезда нет: иначе провод сзади втыкался «в никуда» мимо гнёзд модулей
+                case RackBlockEntity.EMPTY, RackBlockEntity.CONSOLE, RackBlockEntity.UPS, RackBlockEntity.BLANK, RackBlockEntity.UPPER -> none;
+                default -> LanDevice.local(f, true, 7, y, 0, true, false);    // сервер
             };
             for (int j = 0; j < 3; j++) {
                 extra[3 * i + j] = switch (k) {
