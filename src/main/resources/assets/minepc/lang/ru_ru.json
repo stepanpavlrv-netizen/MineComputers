@@ -862,9 +862,11 @@
   "message.minepc.draw.undo": "Шаг назад: точек %s",
   "message.minepc.draw.cancel": "Провод отменён",
   "message.minepc.draw.done": "Провод проложен: ушло %s м кабеля",
-  "hud.minepc.draw.hint_start": "ПКМ по гнезду или по полу — начать провод (зелёные рамки — свободные гнёзда)",
+  "hud.minepc.draw.hint_start": "ПКМ по гнезду или по полу — начать провод",
   "hud.minepc.draw.port": "Порт %s",
   "hud.minepc.draw.status": "Провод: точек %s · %s м",
   "hud.minepc.draw.port_end": "ПКМ — воткнуть в порт %s и закончить",
-  "hud.minepc.draw.hint": "ПКМ — точка излома · ещё раз по ней — свободный конец · Shift+ПКМ — шаг назад"
+  "hud.minepc.draw.hint": "ПКМ — точка излома · по гнезду — конец",
+  "hud.minepc.draw.hint_start2": "Зелёные рамки — свободные гнёзда",
+  "hud.minepc.draw.hint2": "Ещё раз по точке — свободный конец · Shift+ПКМ — назад"
 }

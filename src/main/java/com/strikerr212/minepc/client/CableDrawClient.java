@@ -203,6 +203,7 @@ public final class CableDrawClient {
         }
         if (points.isEmpty()) {
             lines.add(Component.translatable("hud.minepc.draw.hint_start").withStyle(s -> s.withColor(0x8FD3F0)));
+            lines.add(Component.translatable("hud.minepc.draw.hint_start2").withStyle(s -> s.withColor(0x9097A1)));
             if (cursor != null && cursor.socket()) lines.add(Component.translatable("hud.minepc.draw.port", cursor.port() + 1).withStyle(s -> s.withColor(0x5BD47A)));
             return;
         }
@@ -239,6 +240,7 @@ public final class CableDrawClient {
             lines.add(Component.translatable("hud.minepc.draw.port_end", cursor.port() + 1).withStyle(s -> s.withColor(0x5BD47A)));
         }
         lines.add(Component.translatable("hud.minepc.draw.hint").withStyle(s -> s.withColor(0x9097A1)));
+        lines.add(Component.translatable("hud.minepc.draw.hint2").withStyle(s -> s.withColor(0x9097A1)));
     }
 
     private static String key(List<CablePath.Point> path) {

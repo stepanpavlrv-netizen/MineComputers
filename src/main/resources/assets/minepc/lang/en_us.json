@@ -862,9 +862,11 @@
   "message.minepc.draw.undo": "Undone: %s points left",
   "message.minepc.draw.cancel": "Wire cancelled",
   "message.minepc.draw.done": "Wire laid: %s m of cable used",
-  "hud.minepc.draw.hint_start": "Right-click a socket or the floor to start a wire (green frames are free sockets)",
+  "hud.minepc.draw.hint_start": "Right-click a socket or the floor to start a wire",
   "hud.minepc.draw.port": "Port %s",
   "hud.minepc.draw.status": "Wire: %s points · %s m",
   "hud.minepc.draw.port_end": "Right-click to plug into port %s and finish",
-  "hud.minepc.draw.hint": "Right-click — bend · again on it — loose end · Shift+right-click — undo"
+  "hud.minepc.draw.hint": "Right-click — bend · on a socket — finish",
+  "hud.minepc.draw.hint_start2": "Green frames are free sockets",
+  "hud.minepc.draw.hint2": "Again on the point — loose end · Shift+right-click — undo"
 }
