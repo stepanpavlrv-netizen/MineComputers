@@ -27,6 +27,8 @@ def faces(tex, uv=UV):
 
 
 def box(a, b, tex, rot=None):
+    # Игра не принимает элементы модели за пределами -16..32
+    assert all(-16 <= v <= 32 for v in (*a, *b)), (a, b)
     e = {"from": [round(v, 3) for v in a], "to": [round(v, 3) for v in b], "faces": faces(tex)}
     if rot:
         e["rotation"] = rot
@@ -86,7 +88,9 @@ def footing(k):
         for sz in (-1, 1):
             cx = 8 + sx * (h - 1)
             cz = 8 + sz * (h - 1)
-            els.append(box((cx - 2, 0, cz - 2), (cx + 2, 2, cz + 2), "#pad"))
+            lo = lambda v: max(-16, v - 2)
+            hi = lambda v: min(32, v + 2)
+            els.append(box((lo(cx), 0, lo(cz)), (hi(cx), 2, hi(cz)), "#pad"))
     return {"ambientocclusion": False, "textures": {"particle": "minecraft:block/smooth_stone", "pad": "minecraft:block/smooth_stone"},
             "elements": els}
 
