@@ -849,7 +849,11 @@ public class CiScreenshots {
     }
 
     private static void fillCase(ServerLevel level, BlockPos pos, int tier) {
-        level.setBlockAndUpdate(pos, ModBlocks.PC_CASE.get().defaultBlockState().setValue(PcCaseBlock.FACING, Direction.NORTH));
+        fillCase(level, pos, tier, Direction.NORTH);
+    }
+
+    private static void fillCase(ServerLevel level, BlockPos pos, int tier, Direction facing) {
+        level.setBlockAndUpdate(pos, ModBlocks.PC_CASE.get().defaultBlockState().setValue(PcCaseBlock.FACING, facing));
         fillParts(level, pos, tier);
     }
 
@@ -1124,8 +1128,14 @@ public class CiScreenshots {
     }
 
     private static void pcWithMonitor(ServerLevel level, BlockPos pos) {
-        fillCase(level, pos, 3);
-        put(level, pos.above(), ModBlocks.MONITOR.get().defaultBlockState().setValue(com.strikerr212.minepc.block.MonitorBlock.KEYBOARD, true));
+        pcWithMonitor(level, pos, Direction.NORTH);
+    }
+
+    /** Компьютер лицом в сторону facing (сетевой разъём — сзади) и монитор на нём. */
+    private static void pcWithMonitor(ServerLevel level, BlockPos pos, Direction facing) {
+        fillCase(level, pos, 3, facing);
+        level.setBlockAndUpdate(pos.above(), ModBlocks.MONITOR.get().defaultBlockState()
+                .setValue(com.strikerr212.minepc.block.MonitorBlock.KEYBOARD, true).setValue(DeviceBlock.FACING, facing));
     }
 
     /**
@@ -1154,12 +1164,12 @@ public class CiScreenshots {
         for (int dx = 0; dx <= 5; dx++) wire(level, b.east(dx).north(), Direction.DOWN, yellow, true, 0, 1);
         // Компьютер F — сбоку от второго коммутатора, медью из его гнезда
         lanF = b.east(7).north();
-        pcWithMonitor(level, lanF);
+        pcWithMonitor(level, lanF, Direction.EAST);
         wire(level, b.east(5).north(), blue, 1, 2);
         wire(level, b.east(6).north(), blue, 1, 2);
         // Компьютер E — сзади патч-панели; кабель под маскировкой
         lanE = b.south(2);
-        pcWithMonitor(level, lanE);
+        pcWithMonitor(level, lanE, Direction.EAST);
         wire(level, b.west().south(), blue, 1, 1);
         wire(level, b.west().south(2), blue, 1, 1);
         if (level.getBlockEntity(b.west().south()) instanceof com.strikerr212.minepc.lan.CableBlockEntity be) {
@@ -1168,9 +1178,10 @@ public class CiScreenshots {
         // Лотки: от компьютера J1 вверх, поверху и вниз к J2
         lanJ1 = b.offset(8, 0, 4);
         lanJ2 = b.offset(15, 0, 4);
-        pcWithMonitor(level, lanJ1);
-        fillCase(level, lanJ2, 5);
-        put(level, lanJ2.above(), ModBlocks.MONITOR.get().defaultBlockState().setValue(com.strikerr212.minepc.block.MonitorBlock.KEYBOARD, true));
+        pcWithMonitor(level, lanJ1, Direction.WEST);
+        fillCase(level, lanJ2, 5, Direction.EAST);
+        level.setBlockAndUpdate(lanJ2.above(), ModBlocks.MONITOR.get().defaultBlockState()
+                .setValue(com.strikerr212.minepc.block.MonitorBlock.KEYBOARD, true).setValue(DeviceBlock.FACING, Direction.EAST));
         wire(level, b.offset(9, 0, 4), blue, 1, 1);
         wire(level, b.offset(14, 0, 4), blue, 1, 1);
         for (int[] t : new int[][]{{10, 0}, {10, 1}, {10, 2}, {11, 2}, {12, 2}, {13, 2}, {13, 1}, {13, 0}}) tray(level, b.offset(t[0], t[1], 4));
@@ -1187,8 +1198,8 @@ public class CiScreenshots {
         // Воздушная линия: компьютер — кронштейн ~~ 10 блоков ~~ кронштейн — компьютер
         lanK3 = b.offset(-2, 0, -5);
         lanK4 = b.offset(12, 0, -5);
-        fillCase(level, lanK3, 2);
-        fillCase(level, lanK4, 2);
+        fillCase(level, lanK3, 2, Direction.WEST);
+        fillCase(level, lanK4, 2, Direction.EAST);
         BlockState bracket = ModBlocks.BRACKET.get().defaultBlockState()
                 .setValue(com.strikerr212.minepc.lan.BracketBlock.FACE, net.minecraft.world.level.block.state.properties.AttachFace.FLOOR);
         level.setBlockAndUpdate(b.offset(0, 0, -5), bracket);
