@@ -578,6 +578,7 @@ public class CiScreenshots {
                 CableDrawClient.debugPoints(net.minecraft.world.InteractionHand.MAIN_HAND, List.of());
                 server.execute(CiScreenshots::layDraw);
             }
+            case 4030 -> server.execute(() -> logPower(server.overworld()));
             case 4040 -> shot(mc, "cable_draw_done");
             case 4046 -> mc.stop();
             default -> {
@@ -988,6 +989,26 @@ public class CiScreenshots {
         inv.setStackInSlot(PcCaseBlockEntity.SLOT_HDD, HardwarePresets.server(com.strikerr212.minepc.hardware.HardwareType.HDD));
         inv.setStackInSlot(PcCaseBlockEntity.SLOT_HDD + 1, HardwarePresets.server(com.strikerr212.minepc.hardware.HardwareType.HDD));
         be.togglePower();
+    }
+
+    /** 0.31.1: топовый серверный процессор и два блока питания — мощность складывается, резерв считается отдельно. */
+    private static void logPower(ServerLevel level) {
+        var log = com.mojang.logging.LogUtils.getLogger();
+        var spec = (com.strikerr212.minepc.hardware.spec.CpuSpec) com.strikerr212.minepc.hardware.spec.Specs.of(com.strikerr212.minepc.hardware.HardwareType.CPU);
+        java.util.List<Integer> cpu = HardwarePresets.server(com.strikerr212.minepc.hardware.HardwareType.CPU)
+                .get(com.strikerr212.minepc.registry.ModDataComponents.DESIGN.get()).values();
+        java.util.List<Integer> v = new java.util.ArrayList<>(cpu);
+        for (int p : new int[]{com.strikerr212.minepc.hardware.spec.CpuSpec.SRV_CORES, com.strikerr212.minepc.hardware.spec.CpuSpec.CLOCK,
+                com.strikerr212.minepc.hardware.spec.CpuSpec.PROCESS}) v.set(p, spec.params().get(p).count() - 1);
+        var top = spec.derive(v);
+        log.info("[CI-POWER] топовый MS-S: {} ядер, {} МГц, TDP {} Вт; стоковый MS-S: {} Вт", top.cores(), top.clockKhz(), top.tdp(), spec.derive(cpu).tdp());
+        PcCaseBlockEntity be = com.strikerr212.minepc.block.Hosts.get(level, rackPos, 1);
+        if (be == null) return;
+        int draw = be.collectInput().powerDraw();
+        log.info("[CI-POWER] srv-b: блоков {}, вместе {} Вт, нагрузка {} Вт, резерв {}", be.psuCount(),
+                be.activePsu() == null ? 0 : be.activePsu().wattage(), draw, be.reserve(draw));
+        log.info("[CI-POWER] 2 × топ на 2 × 1600: нагрузка ~{} Вт, тянет {}, резерв {}", 2 * top.tdp() + 150,
+                2 * top.tdp() + 150 <= 3200, 2 * top.tdp() + 150 <= 1600);
     }
 
     private static ItemStack psuOut = ItemStack.EMPTY, diskOut = ItemStack.EMPTY;

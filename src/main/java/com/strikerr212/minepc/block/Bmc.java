@@ -191,7 +191,9 @@ public final class Bmc {
             ps.append(k + 1).append(has ? (state == 1 ? " в работе" : " есть") : " вынут");
         }
         d.put("psu", psu);
-        sb.append("Блоки пит.   ").append(ps).append(be.psuCount() < 2 ? "  ! нет резерва" : "").append('\n');
+        boolean reserve = be.reserve(in.powerDraw()) == 1;
+        d.put("reserve", reserve);
+        sb.append("Блоки пит.   ").append(ps).append(reserve ? "" : "  ! нет резерва").append('\n');
         // Диски: # работает, ! просит замены, x отказал, ~ восстанавливается, . пусто
         Map<Object, Object> disks = new LinkedHashMap<>();
         StringBuilder ds = new StringBuilder();

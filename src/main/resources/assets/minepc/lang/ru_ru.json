@@ -868,5 +868,8 @@
   "hud.minepc.draw.port_end": "ПКМ — воткнуть в порт %s и закончить",
   "hud.minepc.draw.hint": "ПКМ — точка излома · по гнезду — конец",
   "hud.minepc.draw.hint_start2": "Зелёные рамки — свободные гнёзда",
-  "hud.minepc.draw.hint2": "Ещё раз по точке — свободный конец · Shift+ПКМ — назад"
+  "hud.minepc.draw.hint2": "Ещё раз по точке — свободный конец · Shift+ПКМ — назад",
+  "message.minepc.power.reserve_ok": "Резерв есть: каждый блок питания тянет сервер в одиночку",
+  "message.minepc.power.reserve_no": "Нет резерва: блоки делят нагрузку — если один откажет, сервер выключится",
+  "message.minepc.power.reserve_single": "Нет резерва: блок питания один — поставьте второй"
 }

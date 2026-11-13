@@ -868,5 +868,8 @@
   "hud.minepc.draw.port_end": "Right-click to plug into port %s and finish",
   "hud.minepc.draw.hint": "Right-click — bend · on a socket — finish",
   "hud.minepc.draw.hint_start2": "Green frames are free sockets",
-  "hud.minepc.draw.hint2": "Again on the point — loose end · Shift+right-click — undo"
+  "hud.minepc.draw.hint2": "Again on the point — loose end · Shift+right-click — undo",
+  "message.minepc.power.reserve_ok": "Redundancy OK: each power supply can run the server alone",
+  "message.minepc.power.reserve_no": "No redundancy: the supplies share the load — if one fails, the server shuts down",
+  "message.minepc.power.reserve_single": "No redundancy: only one power supply — add a second one"
 }

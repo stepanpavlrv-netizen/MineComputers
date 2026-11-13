@@ -19,8 +19,8 @@ public class PsuSpec extends PartSpec {
 
     public PsuSpec() {
         super(HardwareType.PSU, List.of(
-                Param.number("psu.wattage", 0, WATTS, new int[]{300, 450, 550, 650, 750, 850, 1000, 1200, 1600},
-                        new int[]{1, 1, 2, 2, 3, 3, 4, 4, 5}),
+                Param.number("psu.wattage", 0, WATTS, new int[]{300, 450, 550, 650, 750, 850, 1000, 1200, 1600, 2000, 2400},
+                        new int[]{1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 5}),
                 Param.option("psu.cert", 0, 1, 2, 3, 4, 5),
                 Param.option("psu.modular", 0, 1, 2, 3),
                 Param.option("psu.side", 0, 1, 1, 2),

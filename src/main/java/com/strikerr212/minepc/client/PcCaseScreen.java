@@ -719,10 +719,10 @@ public class PcCaseScreen extends AbstractContainerScreen<PcCaseMenu> {
         int shadow = th.labelShadow;
         if (menu.serverLayout()) {
             if (!menu.slotShown(PcCaseBlockEntity.SLOT_BAY_EXTRA)) text(g, tr("gui.minepc.group.board"), 33, 110, th.labelColor, 60, shadow);
-            // Резерв питания: два блока — зелёная лампа, один — жёлтая
+            // Резерв питания: каждый из двух блоков тянет сервер один — зелёная лампа, иначе жёлтая
             PcCaseBlockEntity be = menu.blockEntity();
             if (be != null && be.psuCount() > 0) {
-                int lamp = be.psuCount() >= 2 ? CaseTheme.rgb(60, 220, 110) : CaseTheme.rgb(240, 190, 40);
+                int lamp = be.reserve(be.collectInput().powerDraw()) == 1 ? CaseTheme.rgb(60, 220, 110) : CaseTheme.rgb(240, 190, 40);
                 rect(g, 151, 22, 152, 23, lamp);
             }
         } else {

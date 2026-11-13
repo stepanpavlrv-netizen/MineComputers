@@ -75,7 +75,9 @@ public class CpuSpec extends PartSpec {
         int cores = val(v, server ? SRV_CORES : CORES), clock = val(v, CLOCK);
         float factor = HEAT_FACTOR[idx(v, PROCESS)];
         int igpu = server ? 0 : idx(v, IGPU);
-        int tdp = Math.round(cores * clock / 1000f * factor * 0.75f) + 5 + IGPU_TDP[igpu];
+        // Серверные чипы работают на пониженном напряжении: тепло растёт медленнее числа ядер (128 ядер ≈ 400 Вт, а не 800)
+        float coreHeat = server ? (float) Math.pow(cores, 0.85) : cores;
+        int tdp = Math.round(coreHeat * clock / 1000f * factor * 0.75f) + 5 + IGPU_TDP[igpu];
         return new CpuData(tier(v), val(v, SOCKET), cores, clock, BOOST_PCT[idx(v, PROCESS)], val(v, PROCESS), val(v, CACHE), tdp, igpu);
     }
 

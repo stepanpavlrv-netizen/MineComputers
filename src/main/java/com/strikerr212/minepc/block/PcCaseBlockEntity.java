@@ -753,16 +753,26 @@ public class PcCaseBlockEntity extends BlockEntity implements com.strikerr212.mi
     }
 
     /**
-     * Блок питания, который считается в сборке. С двумя блоками каждый должен один тянуть весь сервер,
-     * поэтому считаем по более слабому.
+     * Питание сборки. Два блока делят нагрузку — их мощность складывается (КПД — по худшему). Резерв — отдельный
+     * вопрос ({@link #reserve}): тянет ли каждый блок сервер в одиночку.
      */
     public PsuData activePsu() {
-        ItemStack a = getStack(SLOT_PSU), b = getStack(SLOT_PSU2);
-        PsuData pa = a.getItem() instanceof PsuItem ? PsuItem.data(a) : null;
-        PsuData pb = b.getItem() instanceof PsuItem ? PsuItem.data(b) : null;
+        PsuData pa = psu(SLOT_PSU), pb = psu(SLOT_PSU2);
         if (pa == null) return pb;
         if (pb == null) return pa;
-        return pa.wattage() <= pb.wattage() ? pa : pb;
+        return new PsuData(Math.max(pa.tier(), pb.tier()), pa.wattage() + pb.wattage(), Math.min(pa.efficiency(), pb.efficiency()));
+    }
+
+    private PsuData psu(int slot) {
+        ItemStack s = getStack(slot);
+        return s.getItem() instanceof PsuItem ? PsuItem.data(s) : null;
+    }
+
+    /** Резерв питания при нагрузке draw: 1 — есть (любой из двух блоков тянет один), 0 — нет, -1 — блок один или ни одного. */
+    public int reserve(int draw) {
+        PsuData pa = psu(SLOT_PSU), pb = psu(SLOT_PSU2);
+        if (pa == null || pb == null) return -1;
+        return Math.min(pa.wattage(), pb.wattage()) >= draw ? 1 : 0;
     }
 
     /** Сколько блоков питания стоит (у сервера с одним — нет резерва). */
@@ -830,6 +840,12 @@ public class PcCaseBlockEntity extends BlockEntity implements com.strikerr212.mi
 
         // ----- Питание и охлаждение -----
         out.add(powerStatus(in.powerDraw()));
+        if (serverChassis() && psuCount() > 0) {
+            int res = reserve(in.powerDraw());
+            out.add(res == 1 ? Component.translatable("message.minepc.power.reserve_ok").withStyle(ChatFormatting.GREEN)
+                    : res == 0 ? Component.translatable("message.minepc.power.reserve_no").withStyle(ChatFormatting.GOLD)
+                    : Component.translatable("message.minepc.power.reserve_single").withStyle(ChatFormatting.GOLD));
+        }
         if (r.wallWatts() > 0) {
             out.add(Component.translatable("message.minepc.power.wall",
                     Units.watts(r.wallWatts()), Units.watts(r.wallWatts() - in.powerDraw())).withStyle(ChatFormatting.DARK_GRAY));
@@ -887,11 +903,11 @@ public class PcCaseBlockEntity extends BlockEntity implements com.strikerr212.mi
 
     /** Хватает ли мощности блока питания. */
     private Component powerStatus(int draw) {
-        ItemStack psu = getStack(SLOT_PSU);
-        if (!(psu.getItem() instanceof PsuItem)) {
+        PsuData total = activePsu();
+        if (total == null) {
             return Component.translatable("message.minepc.power.none", Units.watts(draw)).withStyle(ChatFormatting.RED);
         }
-        int max = PsuItem.data(psu).wattage();
+        int max = total.wattage();
         int percent = max > 0 ? draw * 100 / max : 999;
         if (draw > max) {
             return Component.translatable("message.minepc.power.overload", Units.watts(draw), Units.watts(max))
