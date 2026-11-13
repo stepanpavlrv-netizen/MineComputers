@@ -741,7 +741,7 @@ public class PcCaseScreen extends AbstractContainerScreen<PcCaseMenu> {
                 int y = CY0 + 1 + k;
                 if (y >= CaseLayout.SHROUD_Y) break;
                 int x = CX0 + 104 - k * 2 / 3;
-                g.fill(x, y, x + 14, y + 1, 0x14FFFFFF);
+                g.fill(x, y, x + 9, y + 1, 0x0EFFFFFF);
             }
             g.pose().popPose();
         }

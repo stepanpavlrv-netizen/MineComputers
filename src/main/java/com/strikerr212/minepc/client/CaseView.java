@@ -87,6 +87,11 @@ final class CaseView {
         }
     }
 
+    /** Контур детали: темнее её цвета, чтобы белая деталь читалась на белой плате. */
+    private void edge(int x0, int y0, int x1, int y1, int body) {
+        frame(x0, y0, x1, y1, argb(sh(body, 0.5)));
+    }
+
     private static int argb(int rgb) {
         return 0xFF000000 | (rgb & 0xFFFFFF);
     }
@@ -280,12 +285,15 @@ final class CaseView {
         box(29, 26, 67, 32, heat);
         box(29, 32, 35, 62, heat);
         for (int x = 29; x < 67; x += 3) box(x, 26, x + 1, 32, argb(sh(heat, 0.72)));
+        edge(29, 26, 67, 32, heat);
+        edge(29, 31, 35, 62, heat);
         if (ledC != 0) box(29, 31, 67, 32, ledC);
         // 8-pin процессора
         box(23, 23, 29, 26, argb(0x141416));
         // чипсет
         box(91, 84, 111, 102, heat);
         box(93, 86, 109, 100, argb(sh(heat, 1.15)));
+        edge(91, 84, 111, 102, heat);
         if (ledC != 0) box(93, 99, 109, 100, ledC);
         // 24-pin
         box(124, 58, 128, 82, argb(0x141416));
@@ -340,6 +348,7 @@ final class CaseView {
         box(r[0] + 3, r[1] + 3, r[2] - 3, r[1] + 4, argb(sh(lid, 1.12)));
         int cx = (r[0] + r[2]) / 2, cy = (r[1] + r[3]) / 2;
         box(cx - 3, cy - 1, cx + 3, cy + 1, argb(tint(s, 2)));
+        edge(r[0] + 3, r[1] + 3, r[2] - 3, r[3] - 3, lid);
     }
 
     private void cooler(ItemStack s) {
@@ -353,6 +362,7 @@ final class CaseView {
             case 0, 1 -> {   // коробочный и низкий: плоский радиатор с вентилятором сверху
                 box(37, 32, 67, 62, body);
                 for (int x = 37; x < 67; x += 3) box(x, 32, x + 1, 62, fins);
+                edge(37, 32, 67, 62, body);
                 fan(52, 47, 11, fanFrame, blade, argb(0x28282C), ring, powered);
             }
             case 4 -> {      // СВО: помпа на процессоре, шланги к радиатору спереди
@@ -369,6 +379,7 @@ final class CaseView {
                 int x0 = type == 3 ? 30 : 34, x1 = type == 3 ? 74 : 70;
                 box(x0, 29, x1, 65, body);
                 for (int y = 29; y < 65; y += 2) box(x0, y, x1, y + 1, fins);
+                edge(x0, 29, x1, 65, body);
                 fan(52, 47, 16, fanFrame, blade, argb(0x1E1E22), ring, powered);
             }
         }
@@ -387,6 +398,7 @@ final class CaseView {
         int body = argb(tint(s, 1));
         box(x0, 27, x1, 71, body);
         box(x0, 27, x0 + 1, 71, argb(sh(body, 1.2)));
+        edge(x0, 27, x1, 71, body);
         box(x0, 69, x1, 71, argb(tint(s, 3)));
         box(x0 + 1, 70, x1 - 1, 71, argb(0xC8AA3C));
         int ledC = led(s, 2);
@@ -405,6 +417,7 @@ final class CaseView {
             int c = argb(tint(s, 1));
             box(r[0] + 3, r[1] + 1, r[2] - 3, r[3] - 1, c);
             box(r[0] + 3, r[1] + 3, r[2] - 3, r[1] + 4, argb(sh(c, 1.25)));
+            edge(r[0] + 3, r[1] + 1, r[2] - 3, r[3] - 1, c);
         } else {
             for (int k = 0; k < 3; k++) box(r[0] + 5 + k * 9, r[1] + 2, r[0] + 11 + k * 9, r[3] - 2, argb(0x181818));
             box(r[2] - 9, r[1] + 2, r[2] - 5, r[3] - 2, argb(tint(s, 2)));
@@ -439,6 +452,7 @@ final class CaseView {
                 for (int i = 0; i < fans; i++) box(26 + i * step + 2, y1 - 2, 26 + (i + 1) * step - 2, y1 - 1, argb(0x141416));
             }
         }
+        edge(22, 79, end, y1, cool <= GpuSpec.COOLER_PASSIVE ? 0x9A9EA4 : body);
         int ledC = led(s, 2);
         if (ledC != 0) box(30, 85, Math.min(end - 12, 82), 87, ledC);
         // скоба на задней стенке
@@ -449,6 +463,7 @@ final class CaseView {
         int body = argb(tint(s, 1));
         box(r[0], r[1], r[2], r[3], body);
         box(r[0] + 2, r[1] + 2, r[2] - 2, r[3] - 2, argb(sh(body, 1.1)));
+        edge(r[0], r[1], r[2], r[3], body);
         int watts = s.getItem() instanceof PsuItem ? PsuItem.data(s).wattage() : 0;
         if (desktop) {
             box(r[0] + 2, r[1] + 4, r[0] + 40, r[3] - 4, argb(0xDCDCD2));
@@ -554,6 +569,7 @@ final class CaseView {
                 int body = argb(tint(stack(slot), 1));
                 box(r[0] + 1, r[1] + 1, r[2] - 1, r[3] - 1, body);
                 box(r[0] + 1, r[1] + 1, r[2] - 1, r[1] + 2, argb(sh(body, 1.3)));
+                box(r[0] + 1, r[3] - 2, r[2] - 1, r[3] - 1, argb(sh(body, 0.55)));
             }
             for (int i = 0; i < M2_SLOTS; i++) {
                 int slot = SLOT_M2 + i;
@@ -624,7 +640,7 @@ final class CaseView {
             boolean empty = stack(slot).isEmpty();
             if (empty) {
                 boolean can = !carried.isEmpty() && be != null && be.canPlace(slot, carried);
-                int c = dimPlace(slot) ? argb(CaseTheme.lerp(argb(th.wall), argb(th.frame), 0.9)) : argb(th.accent);
+                int c = dimPlace(slot) ? CaseTheme.lerp(argb(th.wall), argb(th.accent), 0.38) : argb(th.accent);
                 if (can) box(r[0], r[1], r[2], r[3], alpha(th.accent, 0x40));
                 dashed(r[0], r[1], r[2], r[3], c);
                 if (slot == SLOT_PSU && !menu.serverLayout()) {
