@@ -42,14 +42,16 @@ public record Tower(BlockPos bottom, int sections, BlockPos top, boolean pin, in
         return top.getY() - modem.getY() + (pin ? 2 : 1);
     }
 
-    /** Нижняя секция вышки, к которой приставлен модем, или null. */
+    /** Нижняя секция вышки рядом с модемом (до 2 блоков — шкаф стоит снаружи широкой вышки) или null. */
     public static BlockPos bottomNear(BlockGetter level, BlockPos modem) {
-        for (int dx = -1; dx <= 1; dx++) {
-            for (int dz = -1; dz <= 1; dz++) {
-                if (dx == 0 && dz == 0) continue;
-                BlockPos p = modem.offset(dx, 0, dz);
-                BlockState s = level.getBlockState(p);
-                if (s.getBlock() instanceof TowerSectionBlock && s.getValue(TowerSectionBlock.HEIGHT) == 0) return p.immutable();
+        for (int r = 1; r <= 2; r++) {
+            for (int dx = -r; dx <= r; dx++) {
+                for (int dz = -r; dz <= r; dz++) {
+                    if (Math.max(Math.abs(dx), Math.abs(dz)) != r) continue;
+                    BlockPos p = modem.offset(dx, 0, dz);
+                    BlockState s = level.getBlockState(p);
+                    if (s.getBlock() instanceof TowerSectionBlock && s.getValue(TowerSectionBlock.HEIGHT) == 0) return p.immutable();
+                }
             }
         }
         return null;
@@ -98,8 +100,8 @@ public record Tower(BlockPos bottom, int sections, BlockPos top, boolean pin, in
             p = p.below();
         }
         for (BlockPos q : new BlockPos[]{p, anyPart}) {
-            for (int dx = -1; dx <= 1; dx++) {
-                for (int dz = -1; dz <= 1; dz++) {
+            for (int dx = -2; dx <= 2; dx++) {
+                for (int dz = -2; dz <= 2; dz++) {
                     BlockPos m = q.offset(dx, 0, dz);
                     if (level.getBlockState(m).getBlock() instanceof RadioBlock) LanManager.updateDevice(level, m);
                 }

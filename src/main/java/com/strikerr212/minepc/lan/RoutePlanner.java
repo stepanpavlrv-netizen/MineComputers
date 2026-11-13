@@ -23,7 +23,8 @@ public final class RoutePlanner {
     /** Дальше этого (по прямой от первого устройства) маршрут не ищем, блоков. */
     public static final int MAX_RADIUS = 48;
     private static final int MAX_NODES = 40_000;
-    private static final int STEP = 10, TURN = 3, CLIMB = 25, NEAR_CABLE = -2;
+    /** Цена шага, поворота (дорого: лучше ровная «Г», чем лесенка), подъёма; рядом с проводами — чуть дешевле. */
+    private static final int STEP = 10, TURN = 14, CLIMB = 25, NEAR_CABLE = -2;
 
     private RoutePlanner() {
     }
@@ -44,8 +45,7 @@ public final class RoutePlanner {
                 ? !(level.getBlockEntity(p) instanceof CableBlockEntity be) || be.facade() == null
                 : s.canBeReplaced() && s.getFluidState().isEmpty();
         if (!free) return false;
-        BlockPos below = p.below();
-        return level.getBlockState(below).isFaceSturdy(level, below, Direction.UP);
+        return CableSupport.holds(level, p.below(), Direction.UP);
     }
 
     /** Через клетку можно протянуть провод по стенке (воздух или кабель). */
@@ -75,9 +75,22 @@ public final class RoutePlanner {
 
     /** Маршрут от устройства a к устройству b или null. */
     public static Route plan(Level level, BlockPos a, BlockPos b, boolean fiber) {
+        return find(level, a, b, fiber).route();
+    }
+
+    /**
+     * Итог поиска: маршрут или причина, почему его нет (ключ перевода), и где застряли (клетка, ближе всего
+     * подошедшая к цели, или устройство, у которого нет места для провода).
+     */
+    public record Result(Route route, String reason, BlockPos stuck) {
+    }
+
+    public static Result find(Level level, BlockPos a, BlockPos b, boolean fiber) {
         List<BlockPos> starts = ends(level, a, fiber), goals = ends(level, b, fiber);
-        if (starts.isEmpty() || goals.isEmpty() || a.equals(b)) return null;
-        if (a.distManhattan(b) > MAX_RADIUS * 2) return null;
+        if (a.equals(b)) return new Result(null, "message.minepc.route.none", null);
+        if (starts.isEmpty()) return new Result(null, sockets(level, a, fiber) ? "message.minepc.route.no_start" : "message.minepc.route.no_socket", a);
+        if (goals.isEmpty()) return new Result(null, sockets(level, b, fiber) ? "message.minepc.route.no_goal" : "message.minepc.route.no_socket", b);
+        if (a.distManhattan(b) > MAX_RADIUS * 2) return new Result(null, "message.minepc.route.far", b);
         Set<BlockPos> goalSet = new HashSet<>(goals);
         Map<BlockPos, Integer> best = new HashMap<>();
         Map<BlockPos, Step> came = new HashMap<>();
@@ -86,11 +99,12 @@ public final class RoutePlanner {
             best.put(s, 0);
             q.add(new Node(s, null, 0));
         }
-        BlockPos found = null;
+        BlockPos found = null, closest = null;
         int nodes = 0;
         while (!q.isEmpty() && nodes++ < MAX_NODES) {
             Node cur = q.poll();
             if (cur.cost > best.getOrDefault(cur.pos, Integer.MAX_VALUE)) continue;
+            if (closest == null || cur.pos.distManhattan(b) < closest.distManhattan(b)) closest = cur.pos;
             if (goalSet.contains(cur.pos)) {
                 found = cur.pos;
                 break;
@@ -108,7 +122,7 @@ public final class RoutePlanner {
                 }
             }
         }
-        if (found == null) return null;
+        if (found == null) return new Result(null, "message.minepc.route.none", closest);
         // Путь от конца к началу
         List<BlockPos> cells = new ArrayList<>();
         List<Step> steps = new ArrayList<>();
@@ -132,9 +146,15 @@ public final class RoutePlanner {
                     ok = add(level, pieces, new Piece(c, st.dir.getOpposite(), lane, lane));
                 }
             }
-            if (ok) return new Route(pieces, cells.size(), lane);
+            if (ok) return new Result(new Route(pieces, cells.size(), lane), null, null);
         }
-        return null;
+        return new Result(null, "message.minepc.route.no_lane", found);
+    }
+
+    /** Есть ли у устройства вообще гнёзда для этого провода (сбоку — для маршрута по полу). */
+    private static boolean sockets(Level level, BlockPos dev, boolean fiber) {
+        for (LanDevice.Socket s : LanDevice.socketsAt(level, dev)) if (s.accepts(fiber) && s.face().getAxis().isHorizontal()) return true;
+        return false;
     }
 
     private static void push(Level level, PriorityQueue<Node> q, Map<BlockPos, Integer> best, Map<BlockPos, Step> came,

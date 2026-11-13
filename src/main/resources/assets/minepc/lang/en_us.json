@@ -203,7 +203,7 @@
   "block.minepc.cable_tray": "Cable Tray",
   "tooltip.minepc.cable_tray": "Up to 8 wires, on walls and ceilings. Right-click with a cable to add a wire, with dye to recolor the last one",
   "tooltip.minepc.patch_panel": "Passive: a front socket is wired to the back socket on the same lane. Keeps racks tidy",
-  "tooltip.minepc.radio_modem": "Place next to the bottom section of a tower: range grows with height (4 sections — 300 blocks, 12 — 1000, 32 — 3000). Without a tower — 250 blocks (+250 per mast section). Color is the channel",
+  "tooltip.minepc.radio_modem": "Place next to the bottom section of a tower (up to 2 blocks away): range grows with height (4 sections — 300 blocks, 12 — 1000, 32 — 3000). Without a tower — 250 blocks (+250 per mast section). Color is the channel",
   "tooltip.minepc.radio_mast": "Rooftop mast: goes right on top of a radio modem, +250 blocks of range (up to three)",
   "tooltip.minepc.wifi_router": "Shares Wi-Fi with computers that have a USB adapter. Right-click: name, password, range",
   "tooltip.minepc.network_switch": "8 sockets (front and back), 1 Gbit/s. Right-click: ports and VLAN",
@@ -665,7 +665,7 @@
   "message.minepc.route.start": "Start: %s. Right-click the second device to lay cable (Shift + right-click to cancel)",
   "message.minepc.route.start_aerial": "Aerial line from %s. Right-click the second bracket (Shift + right-click to cancel)",
   "message.minepc.route.cancel": "Route start cleared",
-  "message.minepc.route.none": "No route: needs a clear floor and a free lane",
+  "message.minepc.route.none": "No route: the path is blocked (where it got stuck is outlined in red)",
   "message.minepc.route.short": "Not enough cable: need %s m",
   "message.minepc.route.done": "Laid %s blocks, used %s m of cable",
   "message.minepc.route.too_far": "Too far: a span is at most %s blocks",
@@ -840,5 +840,10 @@
   "message.minepc.radio.ant_pin": "whip",
   "message.minepc.radio.ant_sector": "sectors: %s",
   "message.minepc.radio.ant_dish": "dishes: %s",
-  "message.minepc.radio.ant_none": "none (the cabinet's own antenna, 250 blocks)"
+  "message.minepc.radio.ant_none": "none (the cabinet's own antenna, 250 blocks)",
+  "message.minepc.route.no_start": "No room at the sockets of %s: a free cell with a floor is needed in front of the socket",
+  "message.minepc.route.no_goal": "No room at the sockets of %s: a free cell with a floor is needed in front of the socket",
+  "message.minepc.route.no_socket": "%s has no suitable side sockets (fiber goes only into a rack switch or a patch panel)",
+  "message.minepc.route.no_lane": "There is a path, but every lane on it is taken by other wires",
+  "message.minepc.route.far": "Too far to lay in one go (over 96 blocks) — split it with a switch or an outlet"
 }

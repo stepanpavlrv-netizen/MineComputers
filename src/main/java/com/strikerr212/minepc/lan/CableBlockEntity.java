@@ -252,7 +252,7 @@ public class CableBlockEntity extends BlockEntity {
     public boolean supported(Wire w) {
         if (level == null) return true;
         BlockPos s = worldPosition.relative(w.face);
-        return level.isLoaded(s) && level.getBlockState(s).isFaceSturdy(level, s, w.face.getOpposite());
+        return level.isLoaded(s) && CableSupport.holds(level, s, w.face.getOpposite());
     }
 
     /**

@@ -79,7 +79,7 @@ public class RackRenderer implements BlockEntityRenderer<RackBlockEntity> {
             int y = slot * 4;
             int l = e > 0.05f ? frontLight : light;
             if (kind == RackBlockEntity.EMPTY) {
-                box(vc, pose, 1, y + 0.2f, 1.5f, 15, y + 3.8f, 2, DARK, l);           // заглушка
+                box(vc, pose, 1.52f, y + 0.2f, 1.5f, 14.48f, y + 3.8f, 2, DARK, l);           // заглушка
                 continue;
             }
             if (kind == RackBlockEntity.UPPER) continue;                                // верх модуля 2U рисует он сам
@@ -96,14 +96,15 @@ public class RackRenderer implements BlockEntityRenderer<RackBlockEntity> {
         int state = s == null ? 0 : s.displayState();
         float top = y + h - 0.2f;
         // Корпус: дно и стенки, крышка — пока модуль не выдвинут
-        box(vc, pose, 1, y + 0.2f, dz + 1, 15, y + 0.6f, dz + 16, BODY, light);
-        box(vc, pose, 1, y + 0.2f, dz + 1, 1.5f, top, dz + 16, BODY, light);
-        box(vc, pose, 14.5f, y + 0.2f, dz + 1, 15, top, dz + 16, BODY, light);
-        if (!open) box(vc, pose, 1, top - 0.4f, dz + 1, 15, top, dz + 16, BODY, light);
+        // (чуть уже и короче стойки: грани не совпадают с её стенками — иначе мерцают)
+        box(vc, pose, 1.02f, y + 0.2f, dz + 1, 14.98f, y + 0.6f, dz + 15.9f, BODY, light);
+        box(vc, pose, 1.02f, y + 0.2f, dz + 1, 1.5f, top, dz + 15.9f, BODY, light);
+        box(vc, pose, 14.5f, y + 0.2f, dz + 1, 14.98f, top, dz + 15.9f, BODY, light);
+        if (!open) box(vc, pose, 1.02f, top - 0.4f, dz + 1, 14.98f, top, dz + 15.9f, BODY, light);
         // Лицо: ушки, отсеки дисков (1U — ряд из четырёх, 2U — два ряда), лампочки
-        box(vc, pose, 0, y + 0.2f, dz, 16, top, dz + 1, FRONT, light);
-        box(vc, pose, 0, y + 0.8f, dz - 0.6f, 0.8f, top - 0.6f, dz, EAR, light);
-        box(vc, pose, 15.2f, y + 0.8f, dz - 0.6f, 16, top - 0.6f, dz, EAR, light);
+        box(vc, pose, 1.52f, y + 0.2f, dz + 0.02f, 14.48f, top, dz + 1, FRONT, light);       // между стойками рамы
+        box(vc, pose, 0.1f, y + 0.8f, dz - 0.6f, 1.4f, top - 0.6f, dz - 0.02f, EAR, light);  // ушки — перед стойками
+        box(vc, pose, 14.6f, y + 0.8f, dz - 0.6f, 15.9f, top - 0.6f, dz - 0.02f, EAR, light);
         int bays = h >= 8 ? 8 : 4;
         for (int i = 0; i < bays; i++) {
             float x = 2 + (i % 4) * 3, by = y + (h >= 8 ? (1 - i / 4) * 4 : 0);   // нижний ряд — отсеки 5–8
@@ -246,10 +247,10 @@ public class RackRenderer implements BlockEntityRenderer<RackBlockEntity> {
     private static void fixedModule(VertexConsumer vc, PoseStack pose, RackBlockEntity be, int kind, int slot, float y, int h,
                                     int light, long time) {
         float top = y + h - 0.2f, mid = y + h / 2f;
-        box(vc, pose, 1, y + 0.2f, 1, 15, top, 15, BODY, light);                    // корпус в глубину
-        box(vc, pose, 0, y + 0.2f, 0, 16, top, 1, FRONT, light);                    // лицо
-        box(vc, pose, 0, y + 0.8f, -0.6f, 0.8f, top - 0.6f, 0, EAR, light);
-        box(vc, pose, 15.2f, y + 0.8f, -0.6f, 16, top - 0.6f, 0, EAR, light);
+        box(vc, pose, 1.02f, y + 0.2f, 1, 14.98f, top, 15, BODY, light);              // корпус в глубину
+        box(vc, pose, 1.52f, y + 0.2f, 0.02f, 14.48f, top, 1, FRONT, light);          // лицо — между стойками рамы
+        box(vc, pose, 0.1f, y + 0.8f, -0.6f, 1.4f, top - 0.6f, -0.02f, EAR, light);
+        box(vc, pose, 14.6f, y + 0.8f, -0.6f, 15.9f, top - 0.6f, -0.02f, EAR, light);
         boolean bus = be.has(RackBlockEntity.SWITCH) || com.strikerr212.minepc.block.RackBlock.hasModule(be.getLevel(), be.getBlockPos(), RackBlockEntity.SWITCH);
         switch (kind) {
             case RackBlockEntity.SWITCH -> {
@@ -299,8 +300,8 @@ public class RackRenderer implements BlockEntityRenderer<RackBlockEntity> {
 
     private static void console(VertexConsumer vc, PoseStack pose, float y, float dz, float ease, int light) {
         // Лоток с клавиатурой
-        box(vc, pose, 1, y + 0.2f, dz + 1, 15, y + 0.7f, dz + 16, BODY, light);
-        box(vc, pose, 0, y + 0.2f, dz, 16, y + (ease > 0.5f ? 1.2f : 3.8f), dz + 1, FRONT, light);
+        box(vc, pose, 1.02f, y + 0.2f, dz + 1, 14.98f, y + 0.7f, dz + 15.9f, BODY, light);
+        box(vc, pose, 1.52f, y + 0.2f, dz + 0.02f, 14.48f, y + (ease > 0.5f ? 1.2f : 3.8f), dz + 1, FRONT, light);
         box(vc, pose, 6, y + 1.6f, dz - 0.5f, 10, y + 2.2f, dz, EAR, light);              // ручка
         if (ease > 0.5f) {
             box(vc, pose, 2, y + 0.7f, dz + 1.5f, 14, y + 1.1f, dz + 6, 0x24262B, light);  // клавиатура

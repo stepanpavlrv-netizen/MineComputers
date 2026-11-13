@@ -128,8 +128,10 @@ public class CableItem extends Item {
             if (player != null) player.displayClientMessage(Component.translatable("message.minepc.route.aerial_done", cord.length()), true);
             return InteractionResult.CONSUME;
         }
-        RoutePlanner.Route route = RoutePlanner.plan(level, from, pos, fiber);
-        if (route == null) return fail(player, "message.minepc.route.none");
+        RoutePlanner.Result found = RoutePlanner.find(level, from, pos, fiber);
+        RoutePlanner.Route route = found.route();
+        if (route == null) return fail(player, found.reason(),
+                level.getBlockState(found.stuck() != null ? found.stuck() : pos).getBlock().getName());
         int need = route.pieces().size();
         if (!creative && stack.getCount() < need) return fail(player, "message.minepc.route.short", need);
         RoutePlanner.lay(level, route, color, fiber, CableLabels.id(level, stack));
@@ -193,7 +195,7 @@ public class CableItem extends Item {
             face = ctx.getClickedFace().getOpposite();       // провод прижат к блоку, по которому щёлкнули
             pos = clicked.relative(ctx.getClickedFace());
             BlockState support = level.getBlockState(clicked);
-            if (!support.isFaceSturdy(level, clicked, ctx.getClickedFace())) return InteractionResult.FAIL;
+            if (!CableSupport.holds(level, clicked, ctx.getClickedFace())) return InteractionResult.FAIL;
             BlockState here = level.getBlockState(pos);
             if (!(here.getBlock() instanceof CableBlock)) {
                 if (!here.canBeReplaced(new BlockPlaceContext(ctx))) return InteractionResult.FAIL;

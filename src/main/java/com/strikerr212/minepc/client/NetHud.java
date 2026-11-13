@@ -83,6 +83,7 @@ public final class NetHud {
     private static BlockPos ghostFrom, ghostTo;
     private static long ghostAt;
     private static RoutePlanner.Route ghostRoute;
+    private static RoutePlanner.Result ghostResult;
 
     // ----- Мигание лампочек -----
     private static final Map<BlockPos, Long> active = new HashMap<>();
@@ -339,10 +340,18 @@ public final class NetHud {
             ghostFrom = from.immutable();
             ghostTo = target.immutable();
             ghostAt = now;
-            ghostRoute = RoutePlanner.plan(mc.level, from, target, cable.fiber());
+            ghostResult = RoutePlanner.find(mc.level, from, target, cable.fiber());
+            ghostRoute = ghostResult.route();
         }
         if (ghostRoute == null) {
-            lines.add(Component.translatable("hud.minepc.route_none").withStyle(s -> s.withColor(0xE05555)));
+            // Почему не вышло — и где застряли (клетка обведена красным)
+            lines.add(Component.translatable(ghostResult == null ? "hud.minepc.route_none" : ghostResult.reason(),
+                    mc.level.getBlockState(ghostResult != null && ghostResult.stuck() != null ? ghostResult.stuck() : target).getBlock().getName())
+                    .withStyle(s -> s.withColor(0xE05555)));
+            if (ghostResult != null && ghostResult.stuck() != null) {
+                highlight.add(new AABB(ghostResult.stuck()));
+                highlightColor = 0xE05555;
+            }
             return;
         }
         int need = ghostRoute.pieces().size();
