@@ -127,7 +127,10 @@ public final class TesterHud {
         for (AABB b : wireBoxes) fill(q, m, b.inflate(0.03), 1f, 0.55f, 0.1f, 0.6f * pulse * fade);
         boolean blink = (now / 5) % 2 == 0;
         if (blink) for (AABB b : openBoxes) fill(q, m, b, 0.95f, 0.2f, 0.2f, 0.35f * fade);
+        // «Без проверки глубины» у RenderType сама глубину не выключает — выключаем на время отрисовки
+        com.mojang.blaze3d.systems.RenderSystem.disableDepthTest();
         buffers.endBatch(XrayRenderTypes.QUADS);
+        com.mojang.blaze3d.systems.RenderSystem.enableDepthTest();
         VertexConsumer vc = buffers.getBuffer(XrayRenderTypes.LINES);
         for (AABB b : wireBoxes) LevelRenderer.renderLineBox(pose, vc, b.inflate(0.03), 1f, 0.62f, 0.15f, pulse * fade);
         for (AABB b : passiveBoxes) LevelRenderer.renderLineBox(pose, vc, b, 0.55f, 0.82f, 1f, 0.9f * fade);
@@ -140,7 +143,9 @@ public final class TesterHud {
             vc.addVertex(last, (float) l[1].x, (float) l[1].y, (float) l[1].z).setColor(1f, 0.6f, 0.15f, fade).setNormal(last, (float) n.x, (float) n.y, (float) n.z);
         }
         pose.popPose();
+        com.mojang.blaze3d.systems.RenderSystem.disableDepthTest();
         buffers.endBatch(XrayRenderTypes.LINES);
+        com.mojang.blaze3d.systems.RenderSystem.enableDepthTest();
     }
 
     /** Залитая коробка (все шесть граней). */
