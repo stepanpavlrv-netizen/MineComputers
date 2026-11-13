@@ -1399,13 +1399,6 @@ public class CiScreenshots {
         });
     }
 
-    private static void keyAt(BlockPos pos, String key) {
-        var server = Minecraft.getInstance().getSingleplayerServer();
-        server.execute(() -> {
-            if (server.overworld().getBlockEntity(pos) instanceof PcCaseBlockEntity be) be.input(TerminalInputPayload.KEY, key, false, false);
-        });
-    }
-
     private static void charsAt(BlockPos pos, String text) {
         var server = Minecraft.getInstance().getSingleplayerServer();
         server.execute(() -> {
