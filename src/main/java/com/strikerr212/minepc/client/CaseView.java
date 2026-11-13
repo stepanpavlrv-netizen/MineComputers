@@ -266,75 +266,260 @@ final class CaseView {
         g.drawString(font, b, cx - font.width(b) / 2, cy + 25, argb(sh(th.accent, 0.75)), false);
     }
 
+    // ----- плата 2.0: текстолит, дорожки, шелкография, мелкие компоненты, пять оформлений -----
+
+    /** Мелкий шрифт шелкографии 3×5. */
+    private static final java.util.Map<Character, String[]> MICRO = new java.util.HashMap<>();
+    static {
+        String[][] g = {
+                {"A", "###", "#.#", "###", "#.#", "#.#"}, {"C", "###", "#..", "#..", "#..", "###"}, {"D", "##.", "#.#", "#.#", "#.#", "##."},
+                {"E", "###", "#..", "##.", "#..", "###"}, {"I", "###", ".#.", ".#.", ".#.", "###"}, {"M", "#.#", "###", "###", "#.#", "#.#"},
+                {"P", "###", "#.#", "###", "#..", "#.."}, {"S", "###", "#..", "###", "..#", "###"}, {"T", "###", ".#.", ".#.", ".#.", ".#."},
+                {"U", "#.#", "#.#", "#.#", "#.#", "###"}, {"2", "##.", "..#", ".#.", "#..", "###"}, {".", "...", "...", "...", "...", ".#."}};
+        for (String[] e : g) MICRO.put(e[0].charAt(0), new String[]{e[1], e[2], e[3], e[4], e[5]});
+    }
+
+    private void micro(int x, int y, String text, int c) {
+        for (char ch : text.toCharArray()) {
+            String[] rows = MICRO.get(ch);
+            if (rows != null) {
+                for (int j = 0; j < 5; j++) for (int i = 0; i < 3; i++) if (rows[j].charAt(i) == '#') px(x + i, y + j, c);
+            }
+            x += 4;
+        }
+    }
+
+    private static double lum(int c) {
+        return (0.299 * ((c >> 16) & 255) + 0.587 * ((c >> 8) & 255) + 0.114 * (c & 255)) / 255.0;
+    }
+
+    /** Выпуклая деталь: тень на плату, светлая грань сверху-слева, тёмная снизу-справа. */
+    private void raised(int x0, int y0, int x1, int y1, int c, boolean shadow) {
+        if (shadow) {
+            box(x0 + 1, y1, x1 + 1, y1 + 1, 0x46000000);
+            box(x1, y0 + 1, x1 + 1, y1, 0x46000000);
+        }
+        box(x0, y0, x1, y1, c);
+        box(x0, y0, x1, y0 + 1, argb(sh(c, 1.22)));
+        box(x0, y0, x0 + 1, y1, argb(sh(c, 1.12)));
+        box(x0, y1 - 1, x1, y1, argb(sh(c, 0.72)));
+        box(x1 - 1, y0, x1, y1, argb(sh(c, 0.8)));
+    }
+
+    private void raised(int x0, int y0, int x1, int y1, int c) {
+        raised(x0, y0, x1, y1, c, true);
+    }
+
+    private void choke(int x, int y) {
+        raised(x, y, x + 4, y + 4, argb(0x6E7076));
+        px(x + 1, y + 1, argb(0x96989E));
+        box(x + 1, y + 2, x + 3, y + 3, argb(0x3C3E42));
+    }
+
+    private void cap(int x, int y, int top) {
+        box(x + 1, y + 3, x + 4, y + 4, 0x46000000);
+        box(x, y, x + 3, y + 3, top);
+        px(x + 1, y + 1, argb(sh(top, 0.6)));
+        px(x, y, argb(sh(top, 1.15)));
+    }
+
+    /** Диагональ под 45°: заливка треугольника по пикселям (угол срезан). */
+    private void corner(int x0, int y0, int size, boolean downRight, int c) {
+        for (int j = 0; j < size; j++) {
+            if (downRight) box(x0 + size - 1 - j, y0 + j, x0 + size, y0 + j + 1, c);
+            else box(x0, y0 + j, x0 + size - j, y0 + j + 1, c);
+        }
+    }
+
     private void drawBoard(MotherboardData board) {
         ItemStack mb = stack(SLOT_MOTHERBOARD);
+        int style = Math.max(0, Math.min(4, idx(mb, com.strikerr212.minepc.hardware.spec.MotherboardSpec.STYLE)));
         int pcb = argb(tint(mb, 3)), heat = argb(tint(mb, 1));
         int ledC = led(mb, 2);
-        box(BX0, BY0, BX1, BY1, pcb);
-        frame(BX0, BY0, BX1, BY1, argb(sh(pcb, 0.7)));
-        int trace = argb(sh(pcb, 1.25));
-        for (int i = 0; i < 6; i++) box(64 + i * 3, 60, 65 + i * 3, 70, trace);
-        for (int i = 0; i < 3; i++) box(26, 104 + i * 2, 70, 105 + i * 2, trace);
-        for (int i = 0; i < 4; i++) box(108, 28 + i * 3, 120, 29 + i * 3, trace);
-        int hole = argb(0xBEBEAA);
-        for (int[] p : new int[][]{{20, 25}, {125, 25}, {20, 108}, {125, 108}, {69, 25}, {69, 108}}) box(p[0], p[1], p[0] + 2, p[1] + 2, hole);
-        // задние разъёмы
-        box(BX0, 26, BX0 + 8, 62, argb(0x787C82));
-        for (int i = 0; i < 5; i++) box(BX0 + 1, 28 + i * 7, BX0 + 6, 32 + i * 7, argb(0x3C3E42));
-        // радиаторы питания вокруг сокета
-        box(29, 26, 67, 32, heat);
-        box(29, 32, 35, 62, heat);
-        for (int x = 29; x < 67; x += 3) box(x, 26, x + 1, 32, argb(sh(heat, 0.72)));
-        edge(29, 26, 67, 32, heat);
-        edge(29, 31, 35, 62, heat);
-        if (ledC != 0) box(29, 31, 67, 32, ledC);
-        // 8-pin процессора
-        box(23, 23, 29, 26, argb(0x141416));
-        // чипсет
-        box(91, 84, 111, 102, heat);
-        box(93, 86, 109, 100, argb(sh(heat, 1.15)));
-        edge(91, 84, 111, 102, heat);
-        if (ledC != 0) box(93, 99, 109, 100, ledC);
-        // 24-pin
-        box(124, 58, 128, 82, argb(0x141416));
-        for (int i = 0; i < 11; i++) px(126, 59 + i * 2, argb(0xC8BE3C));
-        // слоты PCIe
-        box(29, 82, 87, 85, argb(0x1C1C1E));
-        box(87, 82, 89, 85, argb(0xE6E6E6));
-        box(29, 98, 65, 101, argb(0x1C1C1E));
-        // сокет
-        if (!stack(SLOT_CPU).isEmpty() || shown(SLOT_CPU)) {
-            box(41, 36, 63, 58, argb(0xAAACB0));
-            box(43, 38, 61, 56, argb(0x3C3A34));
-            for (int y = 40; y < 55; y += 2) for (int x = 45; x < 60; x += 2) px(x, y, argb(0xC8AA5A));
+        boolean white = lum(pcb) > 0.85;
+        if (white) pcb = argb(0xD6D9DE);                 // «белая» плата — светло-серая с холодным оттенком
+        double lp = lum(pcb);
+        if (Math.abs(lum(heat) - lp) < 0.22) {           // радиатор цвета платы — сдвигаем, чтобы читался
+            heat = lp > 0.5 ? argb(sh(heat, 0.62)) : lum(heat) > 0.05 ? argb(sh(heat, 1.7)) : argb(0x787C82);
         }
-        // разъёмы памяти и M.2 — сколько есть на плате
+        int silk = lp > 0.55 ? argb(0x3C4046) : argb(0xE1E4E0);
+        int silkA = alpha(silk, 0x96);
+        int trace = argb(sh(pcb, lp > 0.55 ? 0.9 : 1.22));
+        // текстолит с зерном
+        box(BX0, BY0, BX1, BY1, pcb);
+        double k = lp > 0.55 ? 0.025 : 0.05;
+        int darker = argb(sh(pcb, 1 - k)), lighter = argb(sh(pcb, 1 + k));
+        for (int y = BY0; y < BY1; y++) {
+            for (int x = BX0; x < BX1; x++) {
+                int h = (x * 73856093) ^ (y * 19349663);
+                h ^= h >>> 13;
+                h *= 0x5bd1e995;
+                int r = (h >>> 8) & 255;
+                if (r < 20) px(x, y, darker);
+                else if (r < 33) px(x, y, lighter);
+            }
+        }
+        // свет спереди: у задней стенки и снизу темнее
+        for (int i = 0; i < 6; i++) box(BX0 + i, BY0, BX0 + i + 1, BY1, (26 - i * 4) << 24);
+        for (int i = 0; i < 5; i++) box(BX0, BY1 - 1 - i, BX1, BY1 - i, (24 - i * 4) << 24);
+        frame(BX0, BY0, BX1, BY1, argb(sh(pcb, 0.6)));
+        box(BX0 + 1, BY0 + 1, BX1 - 1, BY0 + 2, argb(sh(pcb, 1.15)));
+        // дорожки пучками
+        for (int i = 0; i < 6; i++) box(63, 41 + i * 2, 76, 42 + i * 2, trace);
+        for (int i = 0; i < 7; i++) box(44 + i * 2, 58, 45 + i * 2, 82, trace);
+        for (int i = 0; i < 4; i++) box(66 + i * 2, 58, 67 + i * 2, 69, trace);
+        for (int i = 0; i < 4; i++) box(111, 87 + i * 2, 121, 88 + i * 2, trace);
+        for (int i = 0; i < 3; i++) box(70, 102 + i * 2, 91, 103 + i * 2, trace);
+        // отверстия
+        for (int[] p : new int[][]{{20, 25}, {125, 25}, {20, 108}, {125, 108}, {69, 25}, {69, 108}}) {
+            box(p[0] - 1, p[1] - 1, p[0] + 3, p[1] + 3, argb(0xBEAA5A));
+            box(p[0], p[1], p[0] + 2, p[1] + 2, argb(0x141414));
+        }
+        // шелкография
+        frame(39, 34, 65, 60, silkA);
+        micro(42, 61, "CPU", silk);
+        micro(106, 28, "DIMM", silk);
+        micro(67, 88, "PCIE", silkA);
+        if (board.m2Slots() > 0) micro(72, 66, "M.2", silkA);
+        if (style < 4) micro(113, 84, "SATA", silk);
+        // звук — отчёркнут
+        for (int x = BX0 + 2; x < 36; x += 2) px(x, 88, silkA);
+        for (int y = 88; y < BY1 - 2; y += 2) px(36, y, silkA);
+        box(21, 92, 29, 100, argb(0x18181A));
+        frame(21, 92, 29, 100, argb(0x46464A));
+        for (int i = 0; i < 3; i++) cap(21 + i * 5, 103, argb(0xE6BE3C));
+        // задние разъёмы
+        raised(BX0, 26, BX0 + 8, 62, argb(0x787C82), false);
+        for (int i = 0; i < 5; i++) box(BX0 + 1, 28 + i * 7, BX0 + 6, 32 + i * 7, argb(0x323438));
+        // питание процессора
+        if (style == 0) {
+            for (int i = 0; i < 8; i++) choke(30 + i * 5, 26);
+            for (int i = 0; i < 5; i++) choke(30, 32 + i * 5);
+            for (int i = 0; i < 8; i++) box(31 + i * 5, 31, 33 + i * 5, 33, argb(0x18181A));
+        } else {
+            for (int i = 0; i < 7; i++) choke(32 + i * 5, 33);
+            for (int i = 0; i < 5; i++) choke(36, 34 + i * 5);
+            if (style == 1) {
+                raised(29, 26, 67, 31, heat);
+                raised(29, 31, 34, 62, heat);
+                for (int x = 31; x < 66; x += 3) box(x, 27, x + 1, 30, argb(sh(heat, 0.75)));
+            } else {
+                raised(28, 25, 68, 33, heat);
+                for (int x = 30; x < 67; x += 2) box(x, 26, x + 1, 32, argb(sh(heat, 0.78)));
+                raised(28, 33, 35, 63, heat);
+                for (int y = 35; y < 62; y += 2) box(29, y, 34, y + 1, argb(sh(heat, 0.78)));
+                if (style >= 3) {
+                    corner(28, 56, 7, true, pcb);                    // срез угла
+                    corner(61, 25, 7, false, pcb);
+                }
+            }
+        }
+        raised(23, 23, 29, 26, argb(0x161618), false);          // 8-pin
+        // кожух над задними разъёмами
+        if (style >= 2) {
+            int sc = style == 2 ? argb(0x282A2E) : heat;
+            box(BX0, BY0, 30, 46, sc);
+            for (int j = 0; j < 16; j++) box(BX0, 46 + j, 30 - j / 4, 47 + j, sc);
+            box(BX0, BY0, 30, BY0 + 1, argb(sh(sc, 1.25)));
+            for (int y = 26; y < 58; y += 4) box(19, y, 26, y + 1, argb(sh(sc, 0.8)));
+            if (style >= 3 && ledC != 0) box(28, 24, 30, 46, ledC);
+            if (style >= 3) micro(19, 48, "MC", argb(sh(sc, 1.5)));
+        }
+        // сокет
+        raised(41, 36, 63, 58, argb(0xAAACB0));
+        box(43, 38, 61, 56, argb(0x3C3A34));
+        for (int y = 40; y < 55; y += 2) for (int x = 45; x < 60; x += 2) px(x, y, argb(0xC8AA5A));
+        corner(41, 55, 3, false, argb(0xE6C85A));                // первый контакт
+        box(63, 42, 65, 44, argb(0xD2D2D2));                     // рычаг
+        for (int[] p : new int[][]{{66, 36}, {66, 52}, {38, 60}, {58, 60}, {110, 62}, {114, 62}, {118, 62}}) cap(p[0], p[1], argb(0xB4B8BE));
+        // слоты памяти: каналы в два цвета
         for (int i = 0; i < 4; i++) {
             int slot = ramSlot(i);
             if (!shown(slot)) continue;
-            int[] r = hit(slot);
-            box(r[0] + 2, 27, r[0] + 5, 71, argb(0x1C1C1E));
-            box(r[0] + 2, 27, r[0] + 5, 29, argb(0xE6E6E6));
-            box(r[0] + 2, 69, r[0] + 5, 71, argb(0xE6E6E6));
+            int x = hit(slot)[0];
+            int body = style == 0 || i % 2 == 0 ? argb(0x18181A) : white ? argb(0x3C3E44) : argb(0x5A5E64);
+            if (style >= 3) body = i % 2 == 0 ? argb(0x969AA0) : argb(0x3C3E42);
+            raised(x + 2, 27, x + 5, 71, body);
+            box(x + 2, 27, x + 5, 29, argb(0xE8E8E8));
+            box(x + 2, 69, x + 5, 71, argb(0xE8E8E8));
         }
+        // M.2
         for (int i = 0; i < M2_SLOTS; i++) {
             int slot = SLOT_M2 + i;
             if (!shown(slot)) continue;
             int[] r = hit(slot);
-            box(r[0] + 1, r[1] + 1, r[0] + 4, r[3] - 1, argb(0x1C1C1E));
-            box(r[2] - 3, r[1] + 2, r[2] - 1, r[1] + 4, hole);
+            if (style == 4) {
+                raised(r[0], r[1], r[2], r[3], heat);
+                box(r[0] + 2, r[1] + 3, r[2] - 2, r[1] + 4, argb(sh(heat, 0.75)));
+            } else {
+                box(r[0] + 1, r[1] + 1, r[0] + 4, r[3] - 1, argb(0x18181A));
+                box(r[2] - 3, r[1] + 2, r[2] - 1, r[1] + 4, argb(0xBEAA5A));
+                frame(r[0] + 5, r[1] + 1, r[2] - 4, r[3] - 1, silkA);
+            }
         }
+        // PCIe
+        if (style >= 3) {
+            raised(28, 81, 90, 86, argb(0xB0B4BA));
+            box(30, 82, 87, 85, argb(0x18181A));
+        } else {
+            raised(29, 82, 87, 85, argb(0x18181A));
+        }
+        box(87, 82, 89, 85, argb(0xE8E8E8));
+        raised(29, 98, 65, 101, argb(0x18181A));
+        // чипсет
+        if (style == 0) {
+            raised(95, 88, 107, 98, argb(sh(heat, 0.9)));
+        } else if (style <= 2) {
+            raised(91, 84, 111, 102, heat);
+            for (int x = 93; x < 110; x += 3) box(x, 85, x + 1, 101, argb(sh(heat, 0.8)));
+        } else {
+            raised(89, 83, 113, 104, heat);
+            corner(89, 83, 8, false, argb(sh(heat, 1.25)));
+            box(92, 97, 110, 99, ledC != 0 ? ledC : argb(sh(heat, 0.6)));
+            micro(98, 87, "MC", argb(sh(heat, lum(heat) < 0.5 ? 1.6 : 0.5)));
+        }
+        // 24-pin, SATA, разъёмы вентиляторов, BIOS, батарейка
+        raised(124, 58, 128, 82, argb(0x161618));
+        for (int i = 0; i < 11; i++) px(126, 59 + i * 2, argb(0xC8BE3C));
+        int sata = Math.min(6, board.sataPorts());
+        for (int s = 0; s < sata; s++) {
+            int x = 119 + (s % 2) * 5, y = 88 + (s / 2) * 5;
+            raised(x, y, x + 4, y + 4, style < 3 ? argb(0x28282C) : argb(0x464A50));
+            box(x + 1, y + 1, x + 3, y + 2, argb(0x0E0E10));
+        }
+        for (int[] p : new int[][]{{70, 23}, {116, 40}, {112, 108}}) raised(p[0], p[1], p[0] + 4, p[1] + 2, style < 2 ? argb(0xE8E8E8) : argb(0x1E1E20), false);
+        raised(112, 93, 116, 97, argb(0x141416));
+        box(102, 103, 107, 110, argb(0xB4B8BE));
+        box(101, 104, 108, 109, argb(0xB4B8BE));
+        box(102, 104, 107, 109, argb(0xD2D4D8));
+        // броня премиум: накладки на нижнюю половину с насечкой
+        if (style == 4) {
+            for (int[] p : new int[][]{{BX0, 88, 37, BY1}, {66, 102, 100, BY1}, {108, 98, BX1, BY1}}) {
+                raised(p[0], p[1], p[2], p[3], heat, false);
+                int notch = argb(sh(heat, 0.88));
+                for (int y = p[1] + 1; y < p[3] - 1; y++) for (int x = p[0] + 1; x < p[2] - 1; x++) if ((x + y) % 4 == 0) px(x, y, notch);
+            }
+            if (ledC != 0) box(BX1 - 2, 24, BX1 - 1, 110, ledC);
+        }
+        if (ledC != 0 && style >= 3) box(30, 33, 67, 34, ledC);
         // детали на плате
         if (!stack(SLOT_CPU).isEmpty()) cpu(hit(SLOT_CPU), stack(SLOT_CPU));
         for (int i = 0; i < 4; i++) {
             int slot = ramSlot(i);
-            if (!stack(slot).isEmpty()) ramStick(hit(slot), stack(slot));
+            if (!stack(slot).isEmpty()) {
+                int[] r = hit(slot);
+                box(r[0] + 2, 71, r[0] + 7, 72, 0x46000000);          // тень планки
+                ramStick(r, stack(slot));
+            }
         }
         for (int i = 0; i < M2_SLOTS; i++) {
             int slot = SLOT_M2 + i;
             if (!stack(slot).isEmpty()) m2(hit(slot), stack(slot));
         }
-        if (!stack(SLOT_GPU).isEmpty()) gpu(stack(SLOT_GPU));
+        if (!stack(SLOT_GPU).isEmpty()) {
+            box(23, 93 + idx(stack(SLOT_GPU), GpuSpec.THICKNESS) * 3 - 5, gpuEnd(stack(SLOT_GPU)) + 1, 94 + idx(stack(SLOT_GPU), GpuSpec.THICKNESS) * 3 - 5, 0x46000000);
+            gpu(stack(SLOT_GPU));
+        }
         if (!stack(SLOT_COOLER).isEmpty()) cooler(stack(SLOT_COOLER));
     }
 

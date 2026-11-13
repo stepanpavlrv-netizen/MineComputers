@@ -596,11 +596,16 @@ public class CiScreenshots {
             case 4068 -> shot(mc, "case_gui_board");
             case 4070 -> server.execute(() -> emptyCaseStep(server.overworld(), 2));
             case 4078 -> shot(mc, "case_gui_cpu");
-            case 4080 -> {
+            case 4080, 4088, 4096, 4104, 4112 -> {
+                int style = (ticks - 4080) / 8;
+                server.execute(() -> boardStyle(server.overworld(), style));
+            }
+            case 4086, 4094, 4102, 4110, 4118 -> shot(mc, "case_board_style" + (ticks - 4086) / 8);
+            case 4120 -> {
                 PcCaseScreen.ciTheme = null;
                 mc.setScreen(null);
             }
-            case 4086 -> mc.stop();
+            case 4126 -> mc.stop();
             default -> {
             }
         }
@@ -1062,6 +1067,24 @@ public class CiScreenshots {
             com.mojang.logging.LogUtils.getLogger().info("[CI-CASE2] вынуть плату: {} | кулер в пустой корпус: {}",
                     be.takeError(PcCaseBlockEntity.SLOT_MOTHERBOARD), be.placeError(PcCaseBlockEntity.SLOT_COOLER, HardwarePresets.cooler(1)));
         }
+    }
+
+    /** Плата 2.0: пять оформлений (бюджетная … премиум) на одной сборке. */
+    private static void boardStyle(ServerLevel level, int style) {
+        if (!(level.getBlockEntity(emptyCasePos) instanceof PcCaseBlockEntity be)) return;
+        var inv = (IItemHandlerModifiable) be.inventory();
+        ItemStack base = HardwarePresets.motherboard(3);
+        java.util.List<Integer> v = new java.util.ArrayList<>(base.get(com.strikerr212.minepc.registry.ModDataComponents.DESIGN.get()).values());
+        int[] pcb = {0, 3, 2, 2, 5};
+        v.set(com.strikerr212.minepc.hardware.spec.MotherboardSpec.STYLE, style);
+        v.set(com.strikerr212.minepc.hardware.spec.MotherboardSpec.PCB, pcb[style]);
+        v.set(com.strikerr212.minepc.hardware.spec.MotherboardSpec.SATA, style / 2);
+        v.set(com.strikerr212.minepc.hardware.spec.MotherboardSpec.M2, Math.min(2, style));
+        if (style >= 3) v.set(com.strikerr212.minepc.hardware.spec.MotherboardSpec.LED_ON, 1);
+        inv.setStackInSlot(PcCaseBlockEntity.SLOT_MOTHERBOARD, HardwarePresets.build(com.strikerr212.minepc.hardware.HardwareType.MOTHERBOARD, "", v));
+        if (style == 2) inv.setStackInSlot(PcCaseBlockEntity.SLOT_GPU, HardwarePresets.gpu(3));
+        if (style == 3) inv.setStackInSlot(PcCaseBlockEntity.SLOT_COOLER, HardwarePresets.cooler(3));
+        if (style == 4) be.togglePower();
     }
 
     private static void logSlots(String what, PcCaseBlockEntity be) {
