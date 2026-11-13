@@ -1,0 +1,7 @@
+{
+ "variants": {
+  "": {
+   "model": "minepc:block/wifi_access_point"
+  }
+ }
+}

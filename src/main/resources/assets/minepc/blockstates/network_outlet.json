@@ -1,0 +1,58 @@
+{
+ "variants": {
+  "face=floor,facing=north": {
+   "model": "minepc:block/network_outlet"
+  },
+  "face=wall,facing=north": {
+   "model": "minepc:block/network_outlet",
+   "x": 90
+  },
+  "face=ceiling,facing=north": {
+   "model": "minepc:block/network_outlet",
+   "x": 180,
+   "y": 180
+  },
+  "face=floor,facing=east": {
+   "model": "minepc:block/network_outlet",
+   "y": 90
+  },
+  "face=wall,facing=east": {
+   "model": "minepc:block/network_outlet",
+   "x": 90,
+   "y": 90
+  },
+  "face=ceiling,facing=east": {
+   "model": "minepc:block/network_outlet",
+   "x": 180,
+   "y": 270
+  },
+  "face=floor,facing=south": {
+   "model": "minepc:block/network_outlet",
+   "y": 180
+  },
+  "face=wall,facing=south": {
+   "model": "minepc:block/network_outlet",
+   "x": 90,
+   "y": 180
+  },
+  "face=ceiling,facing=south": {
+   "model": "minepc:block/network_outlet",
+   "x": 180,
+   "y": 0
+  },
+  "face=floor,facing=west": {
+   "model": "minepc:block/network_outlet",
+   "y": 270
+  },
+  "face=wall,facing=west": {
+   "model": "minepc:block/network_outlet",
+   "x": 90,
+   "y": 270
+  },
+  "face=ceiling,facing=west": {
+   "model": "minepc:block/network_outlet",
+   "x": 180,
+   "y": 90
+  }
+ }
+}

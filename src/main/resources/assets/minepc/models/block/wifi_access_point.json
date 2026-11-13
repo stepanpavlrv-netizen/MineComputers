@@ -1,0 +1,109 @@
+{
+ "parent": "minecraft:block/block",
+ "textures": {
+  "particle": "minepc:block/wifi_access_point",
+  "face": "minepc:block/wifi_access_point",
+  "body": "minecraft:block/white_concrete"
+ },
+ "elements": [
+  {
+   "from": [
+    4,
+    14,
+    3
+   ],
+   "to": [
+    12,
+    16,
+    13
+   ],
+   "faces": {
+    "down": {
+     "texture": "#face"
+    },
+    "north": {
+     "texture": "#body"
+    },
+    "south": {
+     "texture": "#body"
+    },
+    "east": {
+     "texture": "#body"
+    },
+    "west": {
+     "texture": "#body"
+    },
+    "up": {
+     "texture": "#body"
+    }
+   }
+  },
+  {
+   "from": [
+    3,
+    14.2,
+    4
+   ],
+   "to": [
+    13,
+    16,
+    12
+   ],
+   "faces": {
+    "down": {
+     "texture": "#face"
+    },
+    "north": {
+     "texture": "#body"
+    },
+    "south": {
+     "texture": "#body"
+    },
+    "east": {
+     "texture": "#body"
+    },
+    "west": {
+     "texture": "#body"
+    },
+    "up": {
+     "texture": "#body"
+    }
+   }
+  },
+  {
+   "from": [
+    5.5,
+    13.6,
+    5.5
+   ],
+   "to": [
+    10.5,
+    14,
+    10.5
+   ],
+   "faces": {
+    "down": {
+     "texture": "#face",
+     "uv": [
+      6,
+      6,
+      10,
+      10
+     ]
+    },
+    "north": {
+     "texture": "#body"
+    },
+    "south": {
+     "texture": "#body"
+    },
+    "east": {
+     "texture": "#body"
+    },
+    "west": {
+     "texture": "#body"
+    }
+   }
+  }
+ ]
+}

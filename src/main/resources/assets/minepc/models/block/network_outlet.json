@@ -1,0 +1,71 @@
+{
+ "parent": "minecraft:block/block",
+ "textures": {
+  "particle": "minepc:block/network_outlet",
+  "face": "minepc:block/network_outlet"
+ },
+ "elements": [
+  {
+   "from": [
+    4,
+    0,
+    4
+   ],
+   "to": [
+    12,
+    2,
+    12
+   ],
+   "faces": {
+    "up": {
+     "texture": "#face"
+    },
+    "down": {
+     "texture": "#face",
+     "uv": [
+      0,
+      0,
+      2,
+      2
+     ]
+    },
+    "north": {
+     "texture": "#face",
+     "uv": [
+      4,
+      0,
+      12,
+      2
+     ]
+    },
+    "south": {
+     "texture": "#face",
+     "uv": [
+      4,
+      0,
+      12,
+      2
+     ]
+    },
+    "east": {
+     "texture": "#face",
+     "uv": [
+      4,
+      0,
+      12,
+      2
+     ]
+    },
+    "west": {
+     "texture": "#face",
+     "uv": [
+      4,
+      0,
+      12,
+      2
+     ]
+    }
+   }
+  }
+ ]
+}

@@ -23,7 +23,8 @@ import java.util.Map;
  */
 public final class LanData extends SavedData {
 
-    public static final int COMPUTER = 0, DESK_SWITCH = 1, RACK_SWITCH = 2, ROUTER = 3, PANEL = 4, RADIO = 5, BRACKET = 6, RACK = 7;
+    public static final int COMPUTER = 0, DESK_SWITCH = 1, RACK_SWITCH = 2, ROUTER = 3, PANEL = 4, RADIO = 5, BRACKET = 6, RACK = 7,
+            OUTLET = 8;
 
     /** Портов у устройства: 16 под кабели (гнёзда по порядку, {@link LanDevice#sockets}) и 8 под патч-корды. */
     public static final int CABLE_PORTS = 16, CORD_PORTS = 8, PORTS = CABLE_PORTS + CORD_PORTS;
@@ -65,7 +66,12 @@ public final class LanData extends SavedData {
 
         /** Пассивное устройство: сигнал проходит насквозь (патч-панель, кронштейн воздушной линии). */
         public boolean passive() {
-            return type == PANEL || type == BRACKET;
+            return type == PANEL || type == BRACKET || type == OUTLET;
+        }
+
+        /** Розетка: сторона, к которой она прикручена (Direction.get3DDataValue). */
+        public int attached() {
+            return (mask >>> 8) & 7;
         }
     }
 
@@ -76,8 +82,12 @@ public final class LanData extends SavedData {
         }
     }
 
-    /** Патч-корд: короткий провод между портами двух устройств (порт 16+ у коммутатора, 0..3 у патч-панели). */
-    public record Cord(BlockPos a, int portA, BlockPos b, int portB, int color) {
+    /** Патч-корд: короткий провод между портами двух устройств (порт 16+); label — бирка (0 — нет). */
+    public record Cord(BlockPos a, int portA, BlockPos b, int portB, int color, int label) {
+        public Cord(BlockPos a, int portA, BlockPos b, int portB, int color) {
+            this(a, portA, b, portB, color, 0);
+        }
+
         public boolean touches(BlockPos p) {
             return a.equals(p) || b.equals(p);
         }
@@ -107,7 +117,31 @@ public final class LanData extends SavedData {
     private final List<Cord> cords = new ArrayList<>();
     /** Настройки портов: бит 0 — порт выключен, биты 1..5 — VLAN (0 — общий, 1..16 — цвет красителя + 1). */
     private final Map<Long, int[]> ports = new HashMap<>();
+    /** Бирки на проводах и кордах: номер бирки - 1 → имя. */
+    private final List<String> labels = new ArrayList<>();
     private ServerLevel level;
+
+    /** Самая длинная бирка, знаков. */
+    public static final int MAX_LABEL = 24;
+
+    /** Номер бирки для имени (новое имя — в словарь); пустое имя — 0. */
+    public int labelId(String name) {
+        if (name == null) return 0;
+        name = name.strip();
+        if (name.isEmpty()) return 0;
+        if (name.length() > MAX_LABEL) name = name.substring(0, MAX_LABEL);
+        int i = labels.indexOf(name);
+        if (i >= 0) return i + 1;
+        if (labels.size() >= 0xFFFE) return 0;
+        labels.add(name);
+        setDirty();
+        return labels.size();
+    }
+
+    /** Имя бирки по номеру ("" — нет такой). */
+    public String labelName(int id) {
+        return id <= 0 || id > labels.size() ? "" : labels.get(id - 1);
+    }
 
     public static LanData get(ServerLevel level) {
         LanData d = level.getDataStorage().computeIfAbsent(new Factory<>(LanData::new, LanData::load, null), "minepc_lan");
@@ -328,13 +362,15 @@ public final class LanData extends SavedData {
         list = tag.getList("cords", Tag.TAG_COMPOUND);
         for (int i = 0; i < list.size(); i++) {
             CompoundTag c = list.getCompound(i);
-            d.cords.add(new Cord(pos(c, "a"), c.getInt("pa"), pos(c, "b"), c.getInt("pb"), c.getInt("c")));
+            d.cords.add(new Cord(pos(c, "a"), c.getInt("pa"), pos(c, "b"), c.getInt("pb"), c.getInt("c"), c.getInt("n")));
         }
         list = tag.getList("ports", Tag.TAG_COMPOUND);
         for (int i = 0; i < list.size(); i++) {
             CompoundTag c = list.getCompound(i);
             d.ports.put(c.getLong("p"), Arrays.copyOf(c.getIntArray("v"), CONFIG_PORTS));
         }
+        list = tag.getList("labels", Tag.TAG_STRING);
+        for (int i = 0; i < list.size(); i++) d.labels.add(list.getString(i));
         return d;
     }
 
@@ -375,6 +411,7 @@ public final class LanData extends SavedData {
             c.putLong("b", cord.b().asLong());
             c.putInt("pb", cord.portB());
             c.putInt("c", cord.color());
+            if (cord.label() != 0) c.putInt("n", cord.label());
             list.add(c);
         }
         tag.put("cords", list);
@@ -386,6 +423,9 @@ public final class LanData extends SavedData {
             list.add(c);
         }
         tag.put("ports", list);
+        list = new ListTag();
+        for (String l : labels) list.add(net.minecraft.nbt.StringTag.valueOf(l));
+        tag.put("labels", list);
         return tag;
     }
 }

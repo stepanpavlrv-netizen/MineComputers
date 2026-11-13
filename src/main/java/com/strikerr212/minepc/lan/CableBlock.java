@@ -82,7 +82,7 @@ public class CableBlock extends BaseEntityBlock {
                 for (Wire w : new java.util.ArrayList<>(be.wires())) {
                     if (w.face == dir && !be.supported(w)) {
                         be.remove(w);
-                        if (level instanceof Level l) popResource(l, pos, CableBlockEntity.item(w));
+                        if (level instanceof Level l) popResource(l, pos, be.itemFor(w));
                     }
                 }
                 if (be.wires().isEmpty()) return Blocks.AIR.defaultBlockState();
@@ -134,7 +134,7 @@ public class CableBlock extends BaseEntityBlock {
                     be.remove(w);
                     be.reconnect();
                     be.reconnectNeighbours();
-                    if (!player.isCreative()) popResource(level, pos, CableBlockEntity.item(w));
+                    if (!player.isCreative()) popResource(level, pos, be.itemFor(w));
                     level.playSound(null, pos, SoundEvents.WOOL_BREAK, SoundSource.BLOCKS, 1f, 1f);
                 }
                 return false;

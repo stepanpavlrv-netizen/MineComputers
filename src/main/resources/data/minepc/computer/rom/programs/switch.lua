@@ -32,7 +32,9 @@ if not port then
     write((sides[p.side] or p.side) .. " " .. p.n)
     if p.vlan ~= "" then c(colors.yellow) write(" [" .. p.vlan .. "]") end
     c(colors.lightGray)
-    print("  " .. (p.enabled and "" or "выкл  ") .. (p.device ~= "" and p.device or "—"))
+    write("  " .. (p.enabled and "" or "выкл  ") .. (p.device ~= "" and p.device or "—"))
+    if p.label and p.label ~= "" then c(colors.white) write("  [" .. p.label .. "]") end
+    print()
   end
   c(colors.white)
   return

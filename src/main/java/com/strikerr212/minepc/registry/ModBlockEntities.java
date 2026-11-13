@@ -33,10 +33,12 @@ public class ModBlockEntities {
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<com.strikerr212.minepc.lan.LanBlockEntity>> LAN =
             BLOCK_ENTITIES.register("lan_device", () ->
                     BlockEntityType.Builder.of(com.strikerr212.minepc.lan.LanBlockEntity::new, ModBlocks.NETWORK_SWITCH.get(),
-                            ModBlocks.RACK_SWITCH.get(), ModBlocks.PATCH_PANEL.get(), ModBlocks.RADIO.get(), ModBlocks.BRACKET.get()).build(null));
+                            ModBlocks.RACK_SWITCH.get(), ModBlocks.PATCH_PANEL.get(), ModBlocks.RADIO.get(), ModBlocks.BRACKET.get(),
+                            ModBlocks.OUTLET.get()).build(null));
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<com.strikerr212.minepc.lan.RouterBlockEntity>> ROUTER =
             BLOCK_ENTITIES.register("wifi_router", () ->
-                    BlockEntityType.Builder.of(com.strikerr212.minepc.lan.RouterBlockEntity::new, ModBlocks.ROUTER.get()).build(null));
+                    BlockEntityType.Builder.of(com.strikerr212.minepc.lan.RouterBlockEntity::new, ModBlocks.ROUTER.get(),
+                            ModBlocks.ACCESS_POINT.get()).build(null));
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<com.strikerr212.minepc.lan.CableBlockEntity>> CABLE =
             BLOCK_ENTITIES.register("network_cable", () ->
                     BlockEntityType.Builder.of(com.strikerr212.minepc.lan.CableBlockEntity::new, ModBlocks.CABLE.get()).build(null));

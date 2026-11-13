@@ -146,6 +146,14 @@ public class ModBlocks {
             () -> new com.strikerr212.minepc.lan.MastBlock(BlockBehaviour.Properties.of()
                     .mapColor(MapColor.METAL).strength(1.5f, 6.0f).sound(SoundType.METAL).noOcclusion()
                     .lightLevel(s -> s.getValue(com.strikerr212.minepc.lan.MastBlock.TOP) ? 7 : 0)));
+    public static final DeferredBlock<com.strikerr212.minepc.lan.OutletBlock> OUTLET = BLOCKS.register("network_outlet",
+            () -> new com.strikerr212.minepc.lan.OutletBlock(BlockBehaviour.Properties.of()
+                    .mapColor(MapColor.SNOW).strength(0.6f).sound(SoundType.STONE).noOcclusion()
+                    .pushReaction(net.minecraft.world.level.material.PushReaction.DESTROY)));
+    public static final DeferredBlock<com.strikerr212.minepc.lan.AccessPointBlock> ACCESS_POINT = BLOCKS.register("wifi_access_point",
+            () -> new com.strikerr212.minepc.lan.AccessPointBlock(BlockBehaviour.Properties.of()
+                    .mapColor(MapColor.SNOW).strength(0.6f).sound(SoundType.METAL).noOcclusion().lightLevel(s -> 4)
+                    .pushReaction(net.minecraft.world.level.material.PushReaction.DESTROY)));
     public static final DeferredBlock<com.strikerr212.minepc.lan.RouterBlock> ROUTER = BLOCKS.register("wifi_router",
             () -> new com.strikerr212.minepc.lan.RouterBlock(BlockBehaviour.Properties.of()
                     .mapColor(MapColor.SNOW).strength(0.8f).sound(SoundType.METAL).noOcclusion().lightLevel(s -> 3)));

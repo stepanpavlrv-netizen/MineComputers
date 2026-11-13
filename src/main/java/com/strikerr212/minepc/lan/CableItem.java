@@ -117,7 +117,7 @@ public class CableItem extends Item {
             LanData data = LanData.get(server);
             int pa = freeCord(data, from), pb = freeCord(data, pos);
             if (pa < 0 || pb < 0) return fail(player, "message.minepc.route.bracket_full");
-            LanData.Cord cord = new LanData.Cord(from, pa, pos, pb, color);
+            LanData.Cord cord = new LanData.Cord(from, pa, pos, pb, color, CableLabels.id(level, stack));
             if (!creative && stack.getCount() < cord.length()) return fail(player, "message.minepc.route.short", cord.length());
             data.addCord(cord);
             CordList.refresh(server, from);
@@ -132,7 +132,7 @@ public class CableItem extends Item {
         if (route == null) return fail(player, "message.minepc.route.none");
         int need = route.pieces().size();
         if (!creative && stack.getCount() < need) return fail(player, "message.minepc.route.short", need);
-        RoutePlanner.lay(level, route, color, fiber);
+        RoutePlanner.lay(level, route, color, fiber, CableLabels.id(level, stack));
         if (!creative) stack.shrink(need);
         setRouteFrom(stack, null);
         level.playSound(null, pos, SoundEvents.WOOL_PLACE, SoundSource.BLOCKS, 1f, 1.1f);
@@ -212,6 +212,7 @@ public class CableItem extends Item {
         }
         int color = colorFor(ctx.getPlayer(), ctx.getHand());
         Wire wire = CableBlockEntity.make(color, fiber, face, lanes[0], lanes[1]);
+        wire.label = CableLabels.id(level, ctx.getItemInHand());
         be.add(wire);
         be.reconnect();
         be.reconnectNeighbours();
@@ -227,5 +228,8 @@ public class CableItem extends Item {
         tooltip.add(Component.translatable("tooltip.minepc.cable").withStyle(net.minecraft.ChatFormatting.GRAY));
         tooltip.add(Component.translatable("tooltip.minepc.cable_route").withStyle(net.minecraft.ChatFormatting.DARK_GRAY));
         if (fiber) tooltip.add(Component.translatable("tooltip.minepc.fiber").withStyle(net.minecraft.ChatFormatting.GOLD));
+        String label = CableLabels.of(stack);
+        tooltip.add(label.isEmpty() ? Component.translatable("tooltip.minepc.cable_label_hint").withStyle(net.minecraft.ChatFormatting.DARK_GRAY)
+                : Component.translatable("tooltip.minepc.cable_label", label).withStyle(net.minecraft.ChatFormatting.WHITE));
     }
 }

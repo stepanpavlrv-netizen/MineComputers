@@ -68,16 +68,31 @@ public class CableBlockEntity extends BlockEntity {
                 : com.strikerr212.minepc.registry.ModItems.CABLE.get());
     }
 
-    /** Предметы, которые выпадут, если блок сломать целиком: провода и блок-маскировка. */
+    /** Предмет из провода — с именем бирки, если она была. */
+    public net.minecraft.world.item.ItemStack itemFor(Wire w) {
+        return CableLabels.named(item(w), label(w));
+    }
+
+    /** Имя бирки провода ("" — без бирки). На сервере — из схемы сети, у игрока — из того, что прислал сервер. */
+    public String label(Wire w) {
+        if (w.label == 0) return "";
+        if (level != null && !level.isClientSide) return CableLabels.name(level, w.label);
+        return names.getOrDefault(w.label, "");
+    }
+
+    /** Имена бирок у игрока: номер → имя (сервер присылает вместе с проводами). */
+    private final java.util.Map<Integer, String> names = new java.util.HashMap<>();
+
+    /** Предметы, которые выпадут, если блок сломать целиком: провода (по виду и бирке) и блок-маскировка. */
     public List<net.minecraft.world.item.ItemStack> drops() {
         List<net.minecraft.world.item.ItemStack> out = new ArrayList<>();
-        int copper = 0, fiber = 0;
-        for (Wire w : wires) {
-            if (w.fiber) fiber++;
-            else copper++;
+        java.util.Map<String, Integer> count = new java.util.LinkedHashMap<>();
+        for (Wire w : wires) count.merge((w.fiber ? "f" : "c") + label(w), 1, Integer::sum);
+        for (var e : count.entrySet()) {
+            boolean fiber = e.getKey().charAt(0) == 'f';
+            out.add(CableLabels.named(new net.minecraft.world.item.ItemStack(fiber ? com.strikerr212.minepc.registry.ModItems.FIBER.get()
+                    : com.strikerr212.minepc.registry.ModItems.CABLE.get(), e.getValue()), e.getKey().substring(1)));
         }
-        if (copper > 0) out.add(new net.minecraft.world.item.ItemStack(com.strikerr212.minepc.registry.ModItems.CABLE.get(), copper));
-        if (fiber > 0) out.add(new net.minecraft.world.item.ItemStack(com.strikerr212.minepc.registry.ModItems.FIBER.get(), fiber));
         if (facade != null) out.add(new net.minecraft.world.item.ItemStack(facade.getBlock()));
         return out;
     }
@@ -428,6 +443,16 @@ public class CableBlockEntity extends BlockEntity {
             // Мир до 0.22: провода только на полу, 4 дорожки
             for (Tag t : tag.getList("wires", Tag.TAG_COMPOUND)) wires.addAll(Wire.load((CompoundTag) t));
         }
+        if (tag.contains("names")) {
+            CompoundTag n = tag.getCompound("names");
+            for (String k : n.getAllKeys()) {
+                try {
+                    names.put(Integer.parseInt(k), n.getString(k));
+                } catch (NumberFormatException ignored) {
+                    // не число — пропускаем
+                }
+            }
+        }
         facade = tag.contains("facade") ? net.minecraft.nbt.NbtUtils.readBlockState(
                 registries.lookupOrThrow(net.minecraft.core.registries.Registries.BLOCK), tag.getCompound("facade")) : null;
         if (facade != null && facade.isAir()) facade = null;
@@ -438,9 +463,14 @@ public class CableBlockEntity extends BlockEntity {
         }
     }
 
+    /** Игрокам — провода и имена их бирок (словарь бирок есть только на сервере). */
     @Override
     public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
-        return saveWithoutMetadata(registries);
+        CompoundTag tag = saveWithoutMetadata(registries);
+        CompoundTag n = new CompoundTag();
+        for (Wire w : wires) if (w.label != 0) n.putString(String.valueOf(w.label), label(w));
+        if (!n.isEmpty()) tag.put("names", n);
+        return tag;
     }
 
     @Override

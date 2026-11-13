@@ -42,6 +42,8 @@ public class ModNetwork {
                 }));
         registrar.playToClient(PortsInfoPayload.TYPE, PortsInfoPayload.STREAM_CODEC, (payload, context) ->
                 context.enqueueWork(() -> ClientAccess.onPortsInfo(payload)));
+        registrar.playToClient(TesterPayload.TYPE, TesterPayload.STREAM_CODEC, (payload, context) ->
+                context.enqueueWork(() -> ClientAccess.onTester(payload)));
         registrar.playToClient(LanActivityPayload.TYPE, LanActivityPayload.STREAM_CODEC, (payload, context) ->
                 context.enqueueWork(() -> ClientAccess.onLanActivity(payload)));
 
@@ -105,7 +107,8 @@ public class ModNetwork {
                     if (player.distanceToSqr(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5) > 8 * 8) return;
                     if (!(player.level().getBlockEntity(pos) instanceof com.strikerr212.minepc.lan.RouterBlockEntity router)) return;
                     if (!payload.refresh()) {
-                        String error = com.strikerr212.minepc.lan.RouterBlockEntity.validate(payload.ssid(), payload.password(), payload.radius());
+                        String error = com.strikerr212.minepc.lan.RouterBlockEntity.validate(payload.ssid(), payload.password(), payload.radius(),
+                                router.maxRadius());
                         if (error != null) {
                             player.displayClientMessage(net.minecraft.network.chat.Component.translatable(error), true);
                             return;

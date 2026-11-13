@@ -77,13 +77,20 @@ public class RouterScreen extends Screen {
         }).bounds(left + W - 32, top + 70, 22, 16).build());
         addRenderableWidget(Button.builder(Component.literal("−"), b -> radius = Math.max(RouterBlockEntity.MIN_RADIUS, radius - 4))
                 .bounds(left + W - 58, top + 96, 20, 16).build());
-        addRenderableWidget(Button.builder(Component.literal("+"), b -> radius = Math.min(RouterBlockEntity.MAX_RADIUS, radius + 4))
+        addRenderableWidget(Button.builder(Component.literal("+"), b -> radius = Math.min(maxRadius(), radius + 4))
                 .bounds(left + W - 32, top + 96, 20, 16).build());
         addRenderableWidget(Button.builder(Component.translatable("gui.minepc.router.save"), b -> save())
                 .bounds(left + 10, top + H - 26, 110, 18).build());
         addRenderableWidget(Button.builder(Component.translatable("gui.done"), b -> onClose())
                 .bounds(left + W - 120, top + H - 26, 110, 18).build());
         setInitialFocus(ssidBox);
+    }
+
+    /** У потолочной точки доступа радиус меньше, чем у роутера. */
+    private int maxRadius() {
+        var level = net.minecraft.client.Minecraft.getInstance().level;
+        return level != null && level.getBlockState(pos).getBlock() instanceof com.strikerr212.minepc.lan.AccessPointBlock
+                ? com.strikerr212.minepc.lan.AccessPointBlock.MAX_RADIUS : RouterBlockEntity.MAX_RADIUS;
     }
 
     private void save() {

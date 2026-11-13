@@ -1,0 +1,27 @@
+{
+ "type": "minecraft:crafting_shaped",
+ "category": "tools",
+ "pattern": [
+  " C ",
+  "RGR",
+  " Y "
+ ],
+ "key": {
+  "C": {
+   "item": "minepc:network_cable"
+  },
+  "R": {
+   "item": "minecraft:redstone"
+  },
+  "G": {
+   "item": "minecraft:glass_pane"
+  },
+  "Y": {
+   "item": "minecraft:yellow_dye"
+  }
+ },
+ "result": {
+  "id": "minepc:cable_tester",
+  "count": 1
+ }
+}

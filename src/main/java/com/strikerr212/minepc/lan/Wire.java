@@ -40,6 +40,8 @@ public final class Wire {
     public final int[] conn = new int[4];
     /** Вилка в каждую сторону: 0 — нет, 1..30 — порт устройства + 1, {@link #PLUG_PENDING} — порт не выбран. */
     public final int[] plug = new int[4];
+    /** Бирка (имя мотка с наковальни): номер в словаре схемы сети ({@link LanData#labelName}), 0 — без бирки. */
+    public int label;
 
     public Wire(int color, Direction face, int laneX, int laneY, int laneZ) {
         this.color = color;
@@ -140,6 +142,7 @@ public final class Wire {
         p |= (long) lane[0] << 8 | (long) lane[1] << 11 | (long) lane[2] << 14;
         for (int i = 0; i < 4; i++) p |= (long) (conn[i] & 3) << (17 + 2 * i);
         for (int i = 0; i < 4; i++) p |= (long) (plug[i] & 31) << (25 + 5 * i);
+        p |= (long) (label & 0xFFFF) << 45;
         return p;
     }
 
@@ -149,6 +152,7 @@ public final class Wire {
         w.fiber = (p & (1L << 4)) != 0;
         for (int i = 0; i < 4; i++) w.conn[i] = (int) (p >> (17 + 2 * i)) & 3;
         for (int i = 0; i < 4; i++) w.plug[i] = (int) (p >> (25 + 5 * i)) & 31;
+        w.label = (int) (p >>> 45) & 0xFFFF;
         return w;
     }
 

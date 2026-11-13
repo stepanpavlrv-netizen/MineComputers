@@ -37,6 +37,7 @@ public class CableModel extends BakedModelWrapper<BakedModel> {
     private static final ResourceLocation PLUG = ResourceLocation.fromNamespaceAndPath(MineComputers.MODID, "block/network_plug");
     private static final ResourceLocation FIBER = ResourceLocation.fromNamespaceAndPath(MineComputers.MODID, "block/network_fiber");
     private static final ResourceLocation FIBER_PLUG = ResourceLocation.fromNamespaceAndPath(MineComputers.MODID, "block/network_fiber_plug");
+    private static final ResourceLocation TAG = ResourceLocation.fromNamespaceAndPath(MineComputers.MODID, "block/cable_tag");
     private static final FaceBakery BAKERY = new FaceBakery();
     private static final Map<String, List<BakedQuad>> CACHE = new ConcurrentHashMap<>();
 
@@ -75,7 +76,7 @@ public class CableModel extends BakedModelWrapper<BakedModel> {
 
     private static List<BakedQuad> build(long[] packed, int[] sockets) {
         if (CACHE.size() > 4096) CACHE.clear();
-        TextureAtlasSprite copper = sprite(WIRE), copperPlug = sprite(PLUG), fiber = sprite(FIBER), fiberPlug = sprite(FIBER_PLUG);
+        TextureAtlasSprite copper = sprite(WIRE), copperPlug = sprite(PLUG), fiber = sprite(FIBER), fiberPlug = sprite(FIBER_PLUG), tag = sprite(TAG);
         List<BakedQuad> out = new ArrayList<>();
         for (int k = 0; k < packed.length; k++) {
             Wire w = Wire.unpack(packed[k]);
@@ -86,6 +87,7 @@ public class CableModel extends BakedModelWrapper<BakedModel> {
                 if (w.plug[i] == 0) continue;
                 int s = sockets != null && k * 4 + i < sockets.length ? sockets[k * 4 + i] : -1;
                 plugPath(out, w, ds[i], s, wire, plug);
+                if (w.label != 0) tag(out, w, ds[i], tag);
             }
         }
         return List.copyOf(out);
@@ -149,6 +151,28 @@ public class CableModel extends BakedModelWrapper<BakedModel> {
         r[al] = new float[]{sAlong - 0.5f, sAlong + 1.5f};
         r[y] = new float[]{Math.max(0, sY - 0.5f), sY + 1.5f};
         box(out, r, plug, -1);
+    }
+
+    /**
+     * Бирка у вилки: белая муфта на проводе у самого «колена» и флажок, торчащий от стены (пола, потолка) в комнату.
+     */
+    private static void tag(List<BakedQuad> out, Wire w, Direction d, TextureAtlasSprite sprite) {
+        int ax = d.getAxis().ordinal(), n = w.face.getAxis().ordinal(), third = 3 - ax - n;
+        boolean pos = d.getAxisDirection() == Direction.AxisDirection.POSITIVE;
+        boolean facePos = w.face.getAxisDirection() == Direction.AxisDirection.POSITIVE;
+        float[] along = pos ? new float[]{12.6f, 14.4f} : new float[]{1.6f, 3.4f};
+        float layer = facePos ? 15 : 0;                                   // провод прижат к грани: слой 0..1 или 15..16
+        float lane = Wire.LANE[w.lane[third]];
+        float[][] r = new float[3][];
+        // Муфта вокруг провода
+        r[ax] = along;
+        r[n] = new float[]{Math.max(0, layer - 0.4f), Math.min(16, layer + 1.4f)};
+        r[third] = new float[]{lane - 0.4f, lane + 1.4f};
+        box(out, r, sprite, -1);
+        // Флажок в комнату
+        r[n] = facePos ? new float[]{12.4f, 14.6f} : new float[]{1.4f, 3.6f};
+        r[third] = new float[]{lane + 0.35f, lane + 0.65f};
+        box(out, r, sprite, -1);
     }
 
     private static void box(List<BakedQuad> out, float[][] r, TextureAtlasSprite sprite, int tint) {

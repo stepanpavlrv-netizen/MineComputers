@@ -69,7 +69,7 @@ public final class NetHud {
     private static boolean ghostBlocked;
 
     // ----- Порты устройств с сервера -----
-    private record PortInfo(boolean link, String device, boolean enabled, int vlan, int length) {
+    private record PortInfo(boolean link, String device, boolean enabled, int vlan, int length, String label) {
     }
 
     private record DeviceInfo(long time, int kbit, Map<Integer, PortInfo> ports) {
@@ -94,7 +94,7 @@ public final class NetHud {
             if (f.length < 6) continue;
             try {
                 ports.put(Integer.parseInt(f[0]), new PortInfo(f[1].equals("1"), f[2], f[3].equals("1"),
-                        Integer.parseInt(f[4]), Integer.parseInt(f[5])));
+                        Integer.parseInt(f[4]), Integer.parseInt(f[5]), f.length > 6 ? f[6] : ""));
             } catch (NumberFormatException ignored) {
                 // строка не по формату — пропускаем
             }
@@ -164,7 +164,7 @@ public final class NetHud {
                 && !be.wires().isEmpty()) {
             Vec3 at = hit.getLocation().subtract(target.getX(), target.getY(), target.getZ()).scale(16);
             Wire w = be.nearest(at.x, at.y, at.z);
-            if (w != null) trace(mc.level, target, w);
+            if (w != null) trace(mc.level, target, w, be.label(w));
             return;
         }
         // Гнездо устройства
@@ -219,6 +219,7 @@ public final class NetHud {
                         .withStyle(s -> s.withColor(DyeColor.byId(p.vlan() - 1).getTextColor())));
             }
             if (!p.enabled()) lines.add(Component.translatable("hud.minepc.port_off").withStyle(s -> s.withColor(0xE05555)));
+            if (!p.label().isEmpty()) lines.add(Component.translatable("hud.minepc.port_label", p.label()).withStyle(s -> s.withColor(0xF2F3F5)));
         }
         // Подсветка гнезда
         LanDevice.Socket s = sockets.get(found);
@@ -254,7 +255,7 @@ public final class NetHud {
     }
 
     /** Отрезок провода: обход по проводам, загруженным у игрока. */
-    private static void trace(Level level, BlockPos start, Wire first) {
+    private static void trace(Level level, BlockPos start, Wire first, String label) {
         record Ref(BlockPos pos, Wire w) {
         }
         ArrayDeque<Ref> q = new ArrayDeque<>();
@@ -298,6 +299,7 @@ public final class NetHud {
         Component color = Component.translatable("color.minecraft." + DyeColor.byId(first.color).getName());
         lines.add(Component.translatable(first.fiber ? "hud.minepc.fiber_len" : "hud.minepc.wire_len", color, len, limit)
                 .withStyle(s -> s.withColor(len > limit ? 0xE05555 : 0xFFFFFF)));
+        if (!label.isEmpty()) lines.add(Component.translatable("hud.minepc.port_label", label).withStyle(s -> s.withColor(0xF2F3F5)));
         if (ends.isEmpty()) lines.add(Component.translatable("hud.minepc.wire_noends").withStyle(s -> s.withColor(0x9097A1)));
         for (Component e : ends) lines.add(Component.literal("→ ").append(e).withStyle(s -> s.withColor(0xB4BAC4)));
         highlightColor = len > limit ? 0xE05555 : 0xFFE15A;

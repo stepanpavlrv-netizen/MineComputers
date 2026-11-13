@@ -22,7 +22,7 @@ public class SwitchScreen extends Screen {
     private static final int BG = 0xF01D2026, PANEL = 0xFF272B33, LINE = 0xFF3A404B, FG = 0xFFE6E9EF, DIM = 0xFF8D95A3,
             GOOD = 0xFF5BD982, BAD = 0xFFE5534B, OFF = 0xFF555B66, PC = 0xFF7FD48A;
 
-    private record Row(int port, char side, int number, boolean link, String device, boolean enabled, int vlan) {
+    private record Row(int port, char side, int number, boolean link, String device, boolean enabled, int vlan, String label) {
     }
 
     private final BlockPos pos;
@@ -49,7 +49,7 @@ public class SwitchScreen extends Screen {
             if (f.length < 7) continue;
             try {
                 list.add(new Row(Integer.parseInt(f[0]), f[1].charAt(0), Integer.parseInt(f[2]), f[3].equals("1"), f[4],
-                        f[5].equals("1"), Integer.parseInt(f[6])));
+                        f[5].equals("1"), Integer.parseInt(f[6]), f.length > 7 ? f[7] : ""));
             } catch (RuntimeException ignored) {
             }
         }
@@ -121,7 +121,16 @@ public class SwitchScreen extends Screen {
                     : Component.translatable("gui.minepc.switch.dev." + r.device.split(" ")[0]).getString()
                     + (r.device.contains(" ") ? r.device.substring(r.device.indexOf(' ')) : "");
             int devColor = r.device.equals("!") ? BAD : r.device.startsWith("@") ? PC : DIM;
-            g.drawString(font, font.plainSubstrByWidth(dev, W - 92 - 84), left + 92, y + 2, devColor, false);
+            int devW = W - 92 - 84;
+            if (!r.label.isEmpty()) {
+                // Бирка кабеля — белая плашка справа от имени
+                String tag = font.plainSubstrByWidth(r.label, devW / 2);
+                int tw = font.width(tag) + 6, tx = left + 92 + devW - tw;
+                g.fill(tx, y + 1, tx + tw, y + 11, 0xFFE8EAED);
+                g.drawString(font, tag, tx + 3, y + 2, 0xFF2A2D33, false);
+                devW -= tw + 4;
+            }
+            g.drawString(font, font.plainSubstrByWidth(dev, devW), left + 92, y + 2, devColor, false);
             // VLAN: квадратик цвета (пусто — общий)
             int vx = left + W - 72;
             g.fill(vx, y + 1, vx + 11, y + 12, LINE);

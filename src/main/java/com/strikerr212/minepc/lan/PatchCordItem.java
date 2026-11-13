@@ -67,6 +67,13 @@ public class PatchCordItem extends Item {
                     best = i;
                 }
             }
+            if (d.type() == LanData.OUTLET) {
+                // Розетка: место для корда той линии, по гнезду которой кликнули
+                for (int port = LanData.CABLE_PORTS + OutletBlock.line(best); port < LanData.PORTS; port += 2) {
+                    if (!data.cordAt(pos, port)) return port;
+                }
+                return -1;
+            }
             int port = LanData.CABLE_PORTS + best % PatchPanelBlock.CHANNELS;
             return data.cordAt(pos, port) ? -1 : port;
         }
@@ -91,7 +98,7 @@ public class PatchCordItem extends Item {
         if (player != null && player.isShiftKeyDown() && first == null) {
             List<LanData.Cord> removed = data.removeCords(pos);
             for (LanData.Cord c : removed) {
-                Block.popResource(level, pos, new ItemStack(this));
+                Block.popResource(level, pos, CableLabels.cordDrop(level, c));
                 CordList.refresh(server, c.a().equals(pos) ? c.b() : c.a());
             }
             CordList.refresh(server, pos);
@@ -142,7 +149,7 @@ public class PatchCordItem extends Item {
                 .getItem() instanceof DyeItem dye) {
             color = dye.getDyeColor().getId();
         }
-        data.addCord(new LanData.Cord(a.immutable(), portA, pos.immutable(), port, color));
+        data.addCord(new LanData.Cord(a.immutable(), portA, pos.immutable(), port, color, CableLabels.id(level, stack)));
         CordList.refresh(server, a);
         CordList.refresh(server, pos);
         level.playSound(null, pos, com.strikerr212.minepc.registry.ModSounds.LAN_PLUG_IN.get(), SoundSource.BLOCKS, 0.9f, 0.95f);

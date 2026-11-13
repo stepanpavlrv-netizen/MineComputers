@@ -506,7 +506,41 @@ public class CiScreenshots {
             case 3588 -> shot(mc, "rack_bus_ports");
             case 3590 -> mc.setScreen(new TerminalScreen(new com.strikerr212.minepc.block.HostRef(rowPos, 1), rowPos.east()));
             case 3602 -> shot(mc, "console_tabs");
-            case 3606 -> mc.stop();
+            // Удобства сети: розетки сквозь стену, бирки, тестер, потолочная точка доступа и карта покрытия
+            case 3606 -> {
+                mc.setScreen(null);
+                server.execute(CiScreenshots::placeComfort);
+            }
+            case 3640 -> server.execute(() -> logComfort("сеть"));
+            case 3646 -> shot(mc, "lan_outlet");
+            case 3650 -> server.execute(() -> {
+                ServerPlayer p = server.getPlayerList().getPlayers().get(0);
+                ServerLevel level = server.overworld();
+                p.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, new ItemStack(com.strikerr212.minepc.registry.ModItems.CABLE_TESTER.get()));
+                p.teleportTo(level, comfort.getX() + 3.5, comfort.getY(), comfort.getZ() - 6.5, 0f, 18f);
+                var data = com.strikerr212.minepc.lan.LanData.get(level);
+                var used = com.strikerr212.minepc.lan.LanManager.usedPorts(data, comfortPcN, data.device(comfortPcN));
+                if (!used.isEmpty()) com.strikerr212.minepc.lan.CableTesterItem.testPort(level, p, p.getMainHandItem(), comfortPcN, used.get(0));
+            });
+            case 3664 -> shot(mc, "lan_tester");
+            case 3668 -> server.execute(() -> {
+                ServerPlayer p = server.getPlayerList().getPlayers().get(0);
+                net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(p,
+                        com.strikerr212.minepc.lan.SwitchPorts.openPayload(server.overworld(), comfortSwitch));
+            });
+            case 3678 -> shot(mc, "switch_labels");
+            case 3682 -> {
+                mc.setScreen(null);
+                server.execute(() -> {
+                    ServerPlayer p = server.getPlayerList().getPlayers().get(0);
+                    p.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, new ItemStack(com.strikerr212.minepc.registry.ModItems.WIFI_N.get()));
+                    p.teleportTo(server.overworld(), comfort.getX() + 0.7, comfort.getY(), comfort.getZ() + 1.8, -40f, 28f);
+                });
+            }
+            case 3700, 3745 -> typeAt(comfortLaptop, "wifi connect Office-AP");
+            case 3730 -> shot(mc, "wifi_coverage");
+            case 3775 -> server.execute(() -> logComfort("wifi"));
+            case 3780 -> mc.stop();
             default -> {
             }
         }
@@ -543,6 +577,103 @@ public class CiScreenshots {
         }
         if (level.getBlockEntity(r1.east()) instanceof com.strikerr212.minepc.block.RackBlockEntity r) fillModule(r.server(1), 4);
         p.teleportTo(level, r1.getX() + 1.0, r1.getY(), r1.getZ() - 3.4, 0f, 6f);
+    }
+
+    private static BlockPos comfort = BlockPos.ZERO, comfortPcN = BlockPos.ZERO, comfortPcS = BlockPos.ZERO, comfortSwitch = BlockPos.ZERO,
+            comfortOutN = BlockPos.ZERO, comfortOutS = BlockPos.ZERO, comfortAp = BlockPos.ZERO, comfortLaptop = BlockPos.ZERO,
+            comfortLoose = BlockPos.ZERO;
+
+    /** Проложить маршрут кабеля между устройствами с биркой; в журнал — длина или «нет пути». */
+    private static void route(ServerLevel level, BlockPos from, BlockPos to, String label) {
+        var r = com.strikerr212.minepc.lan.RoutePlanner.plan(level, from, to, false);
+        com.mojang.logging.LogUtils.getLogger().info("[CI-NET29] маршрут {} -> {} «{}»: {}", from.toShortString(), to.toShortString(), label,
+                r == null ? "нет пути" : r.length() + " клеток");
+        if (r != null) com.strikerr212.minepc.lan.RoutePlanner.lay(level, r, net.minecraft.world.item.DyeColor.BLUE.getId(), false,
+                com.strikerr212.minepc.lan.LanData.get(level).labelId(label));
+    }
+
+    /**
+     * Удобства сети: кирпичная стена с розетками на обеих сторонах; с севера — компьютер в розетку, с юга — розетка
+     * в коммутатор и сервер; провода с бирками; за стеной комната с потолком, точкой доступа и ноутбуком за перегородкой.
+     */
+    private static void placeComfort() {
+        var server = Minecraft.getInstance().getSingleplayerServer();
+        ServerPlayer p = server.getPlayerList().getPlayers().get(0);
+        ServerLevel level = p.serverLevel();
+        BlockPos b = rackPos.west(16);
+        comfort = b;
+        var air = net.minecraft.world.level.block.Blocks.AIR.defaultBlockState();
+        for (int dx = -3; dx <= 11; dx++) {
+            for (int dz = -8; dz <= 11; dz++) {
+                level.setBlockAndUpdate(b.offset(dx, -1, dz), net.minecraft.world.level.block.Blocks.SMOOTH_STONE.defaultBlockState());
+                for (int dy = 0; dy <= 5; dy++) level.setBlockAndUpdate(b.offset(dx, dy, dz), air);
+                if (dz == 0) for (int dy = 0; dy <= 3; dy++) level.setBlockAndUpdate(b.offset(dx, dy, dz), net.minecraft.world.level.block.Blocks.BRICKS.defaultBlockState());
+                if (dz >= 1) level.setBlockAndUpdate(b.offset(dx, 4, dz), net.minecraft.world.level.block.Blocks.STONE.defaultBlockState());
+                if (dx == 7 && dz >= 5) for (int dy = 0; dy <= 3; dy++) level.setBlockAndUpdate(b.offset(dx, dy, dz), net.minecraft.world.level.block.Blocks.BRICKS.defaultBlockState());
+            }
+        }
+        var outlet = ModBlocks.OUTLET.get().defaultBlockState()
+                .setValue(com.strikerr212.minepc.lan.OutletBlock.FACE, net.minecraft.world.level.block.state.properties.AttachFace.WALL);
+        comfortOutN = b.offset(3, 0, -1);
+        comfortOutS = b.offset(3, 0, 1);
+        level.setBlockAndUpdate(comfortOutN, outlet.setValue(com.strikerr212.minepc.lan.OutletBlock.FACING, Direction.NORTH));
+        level.setBlockAndUpdate(comfortOutS, outlet.setValue(com.strikerr212.minepc.lan.OutletBlock.FACING, Direction.SOUTH));
+        comfortPcN = b.offset(6, 0, -3);
+        pcWithMonitor(level, comfortPcN);
+        comfortSwitch = b.offset(1, 0, 4);
+        level.setBlockAndUpdate(comfortSwitch, ModBlocks.NETWORK_SWITCH.get().defaultBlockState()
+                .setValue(com.strikerr212.minepc.lan.SwitchBlock.FACING, Direction.NORTH));
+        comfortPcS = b.offset(4, 0, 8);
+        fillCase(level, comfortPcS, 3);
+        comfortAp = b.offset(3, 3, 6);
+        level.setBlockAndUpdate(comfortAp, ModBlocks.ACCESS_POINT.get().defaultBlockState());
+        if (level.getBlockEntity(comfortAp) instanceof com.strikerr212.minepc.lan.RouterBlockEntity r) r.apply("Office-AP", "", 16);
+        comfortLaptop = b.offset(9, 0, 8);
+        fillCase(level, comfortLaptop, 3);
+        if (level.getBlockEntity(comfortLaptop) instanceof PcCaseBlockEntity be) {
+            ((IItemHandlerModifiable) be.inventory()).setStackInSlot(PcCaseBlockEntity.SLOT_USB,
+                    new ItemStack(com.strikerr212.minepc.registry.ModItems.WIFI_N.get()));
+        }
+        route(level, comfortSwitch, comfortOutS, "Бухгалтерия");
+        route(level, comfortOutN, comfortPcN, "ПК-1");
+        route(level, comfortSwitch, comfortPcS, "Сервер");
+        // Кусок провода ни к чему не подключён: прозвонка покажет обрыв
+        comfortLoose = b.offset(0, 0, -6);
+        wire(level, comfortLoose, net.minecraft.world.item.DyeColor.ORANGE.getId(), 2, 2);
+        wire(level, comfortLoose.east(), net.minecraft.world.item.DyeColor.ORANGE.getId(), 2, 2);
+        reconnectArea(level, b.offset(-3, -1, -8), b.offset(11, 4, 11));
+        p.teleportTo(level, b.getX() + 3.5, b.getY(), b.getZ() - 2.3, 0f, 38f);
+    }
+
+    /** [CI-NET29]: связь сквозь стену, бирки на портах, прозвонка, Wi-Fi от точки доступа. */
+    private static void logComfort(String what) {
+        var server = Minecraft.getInstance().getSingleplayerServer();
+        ServerLevel level = server.overworld();
+        var log = com.mojang.logging.LogUtils.getLogger();
+        var lan = com.strikerr212.minepc.lan.LanManager.get(level);
+        var data = com.strikerr212.minepc.lan.LanData.get(level);
+        StringBuilder sb = new StringBuilder("[CI-NET29] " + what + ": pcN ->");
+        for (var r : lan.reach(level, comfortPcN)) sb.append(' ').append(r.pos().equals(comfortPcS) ? "pcS" : r.pos().toShortString()).append(" hops=").append(r.hops());
+        log.info(sb.toString());
+        log.info("[CI-NET29] розетки: N {} S {} пара={}", data.device(comfortOutN), data.device(comfortOutS),
+                comfortOutS.equals(com.strikerr212.minepc.lan.LanManager.outletPartner(data, comfortOutN)));
+        for (var port : com.strikerr212.minepc.lan.SwitchPorts.ports(level, comfortSwitch)) {
+            log.info("[CI-NET29] коммутатор порт {}: {} бирка «{}» длина {}", port.port(), port.device(), port.label(), port.length());
+        }
+        var used = com.strikerr212.minepc.lan.LanManager.usedPorts(data, comfortPcN, data.device(comfortPcN));
+        if (!used.isEmpty()) {
+            var t = com.strikerr212.minepc.lan.LanManager.trace(data, comfortPcN, used.get(0), null, 0);
+            log.info("[CI-NET29] прозвонка pcN порт {}: длина {} концов {} обрывов {} проводов {} пассивных {}", used.get(0) + 1,
+                    t.length(), t.ends().size(), t.open().size(), t.wires().size(), t.passives().size());
+        }
+        var loose = com.strikerr212.minepc.lan.LanManager.trace(data, null, 0, comfortLoose, 0);
+        log.info("[CI-NET29] прозвонка куска: длина {} концов {} обрывов {}", loose.length(), loose.ends().size(), loose.open().size());
+        var link = data.wifiOf(comfortLaptop);
+        int walls = com.strikerr212.minepc.lan.WifiSignal.walls(level, comfortLaptop, comfortAp);
+        log.info("[CI-NET29] Wi-Fi ноутбука: {} (к точке доступа: {}), стен до точки {}, сигнал по формуле {}%", link,
+                link != null && link.router().equals(comfortAp), walls,
+                com.strikerr212.minepc.lan.WifiSignal.signal(Math.sqrt(comfortLaptop.distSqr(comfortAp)), 16, walls,
+                        com.strikerr212.minepc.lan.WifiSignal.wallCost(level.getBlockState(comfortAp))));
     }
 
     /** [CI-BUS]: кого видит srv-x (место 1 нижней левой стойки ряда) и через сколько переходов. */

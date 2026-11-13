@@ -375,6 +375,7 @@ public final class CaseComputer implements Computer.Host {
                 m.put("device", dev.startsWith("@") ? dev.substring(1) : dev.equals("!") ? "слишком длинный кабель" : dev);
                 m.put("enabled", port.enabled());
                 m.put("vlan", com.strikerr212.minepc.lan.SwitchPorts.vlanName(port.vlan()));
+                m.put("label", port.label());
                 out.add(m);
             }
             return out;
@@ -451,17 +452,7 @@ public final class CaseComputer implements Computer.Host {
 
     /** Сколько непрозрачных блоков на прямой между двумя блоками (сами они не считаются). */
     static int walls(ServerLevel level, BlockPos a, BlockPos b) {
-        net.minecraft.world.phys.Vec3 from = net.minecraft.world.phys.Vec3.atCenterOf(a), to = net.minecraft.world.phys.Vec3.atCenterOf(b);
-        double len = from.distanceTo(to);
-        int steps = (int) Math.ceil(len * 4);
-        java.util.Set<BlockPos> seen = new java.util.HashSet<>();
-        int count = 0;
-        for (int i = 1; i < steps; i++) {
-            BlockPos p = BlockPos.containing(from.lerp(to, i / (double) steps));
-            if (p.equals(a) || p.equals(b) || !seen.add(p) || !level.isLoaded(p)) continue;
-            if (level.getBlockState(p).isSolidRender(level, p)) count++;
-        }
-        return count;
+        return com.strikerr212.minepc.lan.WifiSignal.walls(level, a, b);
     }
 
     /** Раз в секунду: какие сети слышно и подключиться к выбранной (самый сильный роутер с этим именем). */
@@ -487,12 +478,11 @@ public final class CaseComputer implements Computer.Host {
         String bestPassword = "";
         for (BlockPos r : data.routersNear(pos, adapter.range() + 1)) {
             if (!level.isLoaded(r) || !(level.getBlockEntity(r) instanceof com.strikerr212.minepc.lan.RouterBlockEntity router)) continue;
-            int effective = Math.min(adapter.range(), router.radius()) - 3 * walls(level, pos, r);
             double dist = Math.sqrt(pos.distSqr(r));
-            if (effective <= 0 || dist > effective) continue;
-            int signal = (int) Math.round(10 + 90 * (1 - dist / effective));
-            int factor = signal >= 60 ? 4 : signal >= 35 ? 2 : 1;
-            int mbit = Math.max(1, Math.min(adapter.mbit(), com.strikerr212.minepc.lan.RouterBlockEntity.RADIO_MBIT) * factor / 4);
+            int signal = com.strikerr212.minepc.lan.WifiSignal.signal(dist, Math.min(adapter.range(), router.radius()),
+                    walls(level, pos, r), com.strikerr212.minepc.lan.WifiSignal.wallCost(level.getBlockState(r)));
+            if (signal <= 0) continue;
+            int mbit = com.strikerr212.minepc.lan.WifiSignal.mbit(signal, adapter.mbit());
             Computer.WifiNet net = new Computer.WifiNet(router.ssid(), signal, router.secured(), mbit);
             Computer.WifiNet old = nets.get(net.ssid());
             if (old == null || old.signal() < signal) nets.put(net.ssid(), net);

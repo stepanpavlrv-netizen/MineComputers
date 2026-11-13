@@ -1,0 +1,19 @@
+{
+ "type": "minecraft:crafting_shapeless",
+ "category": "redstone",
+ "ingredients": [
+  {
+   "item": "minecraft:quartz"
+  },
+  {
+   "item": "minepc:network_cable"
+  },
+  {
+   "item": "minecraft:iron_nugget"
+  }
+ ],
+ "result": {
+  "id": "minepc:network_outlet",
+  "count": 2
+ }
+}

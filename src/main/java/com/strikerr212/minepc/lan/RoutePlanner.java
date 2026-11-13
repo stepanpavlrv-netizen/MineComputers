@@ -159,12 +159,19 @@ public final class RoutePlanner {
 
     /** Проложить маршрут: поставить клетки кабеля и провода, пересчитать соединения. */
     public static void lay(Level level, Route route, int color, boolean fiber) {
+        lay(level, route, color, fiber, 0);
+    }
+
+    /** Проложить маршрут; label — бирка проводов (0 — без бирки). */
+    public static void lay(Level level, Route route, int color, boolean fiber, int label) {
         for (Piece p : route.pieces) {
             if (!(level.getBlockState(p.cell).getBlock() instanceof CableBlock)) {
                 level.setBlockAndUpdate(p.cell, com.strikerr212.minepc.registry.ModBlocks.CABLE.get().defaultBlockState());
             }
             if (level.getBlockEntity(p.cell) instanceof CableBlockEntity be && be.free(p.face, p.a, p.b)) {
-                be.add(CableBlockEntity.make(color, fiber, p.face, p.a, p.b));
+                Wire w = CableBlockEntity.make(color, fiber, p.face, p.a, p.b);
+                w.label = label;
+                be.add(w);
             }
         }
         for (int pass = 0; pass < 2; pass++) {

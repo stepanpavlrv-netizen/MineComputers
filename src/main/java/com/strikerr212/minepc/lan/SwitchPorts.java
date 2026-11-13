@@ -21,8 +21,15 @@ public final class SwitchPorts {
     private SwitchPorts() {
     }
 
-    /** Порт: номер, сторона (F/B/L/R спереди/сзади/слева/справа, C — патч-корд), номер на стороне, есть связь, кто там, вкл, VLAN. */
-    public record Port(int port, char side, int number, boolean link, String device, boolean enabled, int vlan, int length) {
+    /**
+     * Порт: номер, сторона (F/B/L/R спереди/сзади/слева/справа, C — патч-корд), номер на стороне, есть связь, кто там,
+     * вкл, VLAN, длина кабеля и бирка на нём ("" — нет).
+     */
+    public record Port(int port, char side, int number, boolean link, String device, boolean enabled, int vlan, int length,
+                       String label) {
+        public Port(int port, char side, int number, boolean link, String device, boolean enabled, int vlan, int length) {
+            this(port, side, number, link, device, enabled, vlan, length, "");
+        }
     }
 
     /** Короткий постоянный номер коммутатора для программ (по координатам). */
@@ -81,7 +88,8 @@ public final class SwitchPorts {
                         || LanManager.RackBus.isNetwork(d.slotKind(LanManager.hostSlot(d, p.port())));
                 if (!net) continue;   // гнёзда серверов сзади — не порты шины
                 boolean wan = p.port() < LanData.CABLE_PORTS && d.slotKind(LanManager.hostSlot(d, p.port())) == LanManager.RackBus.ROUTER;
-                out.add(new Port(BUS_BASE + ri * PER_RACK + p.port(), wan ? 'W' : p.side(), p.number(), p.link(), p.device(), p.enabled(), p.vlan(), p.length()));
+                out.add(new Port(BUS_BASE + ri * PER_RACK + p.port(), wan ? 'W' : p.side(), p.number(), p.link(), p.device(), p.enabled(), p.vlan(),
+                        p.length(), p.label()));
             }
         }
         return out;
@@ -139,8 +147,9 @@ public final class SwitchPorts {
             if (seg != null && !seg.ok()) device = "!";
             else if (link) device = describe(level, data, seg);
             int cfg = data.portConfig(pos, port);
+            String label = seg == null ? "" : data.labelName(LanManager.portLabel(data, pos, port));
             out.add(new Port(port, side, number, link, device, LanData.portEnabled(cfg), LanData.portVlan(cfg),
-                    seg == null ? 0 : seg.length()));
+                    seg == null ? 0 : seg.length(), label));
         }
         return out;
     }
@@ -176,7 +185,8 @@ public final class SwitchPorts {
             if (b.length() > 0) b.append('\n');
             b.append(p.port()).append('\t').append(p.link() ? 1 : 0).append('\t')
                     .append(p.device().replace('\t', ' ').replace('\n', ' ')).append('\t')
-                    .append(p.enabled() ? 1 : 0).append('\t').append(p.vlan()).append('\t').append(p.length());
+                    .append(p.enabled() ? 1 : 0).append('\t').append(p.vlan()).append('\t').append(p.length())
+                    .append('\t').append(clean(p.label()));
         }
         LanData.Device d = LanData.get(level).device(pos);
         return new com.strikerr212.minepc.network.PortsInfoPayload(pos, d == null ? 0 : d.kbit(), b.toString());
@@ -188,10 +198,14 @@ public final class SwitchPorts {
             if (b.length() > 0) b.append('\n');
             b.append(p.port()).append('\t').append(p.side()).append('\t').append(p.number()).append('\t')
                     .append(p.link() ? 1 : 0).append('\t').append(p.device().replace('\t', ' ').replace('\n', ' ')).append('\t')
-                    .append(p.enabled() ? 1 : 0).append('\t').append(p.vlan());
+                    .append(p.enabled() ? 1 : 0).append('\t').append(p.vlan()).append('\t').append(clean(p.label()));
         }
         LanData.Device d = LanData.get(level).device(pos);
         return new SwitchOpenPayload(pos, d == null ? "" : kind(d), id(pos), b.toString());
+    }
+
+    private static String clean(String s) {
+        return s.replace('\t', ' ').replace('\n', ' ');
     }
 
     /** VLAN из Lua: число 0..16 или имя цвета ("red"); 0 — общий. */

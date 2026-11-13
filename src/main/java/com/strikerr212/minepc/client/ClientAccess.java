@@ -29,6 +29,10 @@ public final class ClientAccess {
         NetHud.onPortsInfo(payload);
     }
 
+    public static void onTester(com.strikerr212.minepc.network.TesterPayload payload) {
+        TesterHud.onResult(payload);
+    }
+
     public static void onLanActivity(com.strikerr212.minepc.network.LanActivityPayload payload) {
         NetHud.activity(payload.pos());
     }

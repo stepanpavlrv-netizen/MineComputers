@@ -47,7 +47,7 @@ public class CuttersItem extends Item {
             }
             for (Wire w : cut) {
                 be.remove(w);
-                back.add(CableBlockEntity.item(w));
+                back.add(be.itemFor(w));
             }
             if (be.wires().isEmpty()) {
                 level.removeBlock(pos, false);
@@ -59,8 +59,7 @@ public class CuttersItem extends Item {
             LanData data = LanData.get(server);
             List<LanData.Cord> removed = data.removeCords(pos);
             for (LanData.Cord c : removed) {
-                back.add(c.length() > 4 ? new ItemStack(com.strikerr212.minepc.registry.ModItems.CABLE.get(), c.length())
-                        : new ItemStack(com.strikerr212.minepc.registry.ModItems.PATCH_CORD.get()));
+                back.add(CableLabels.cordDrop(level, c));
                 CordList.refresh(server, c.a().equals(pos) ? c.b() : c.a());
             }
             CordList.refresh(server, pos);

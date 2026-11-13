@@ -28,10 +28,21 @@ public class RouterBlockEntity extends BlockEntity implements CordList.Holder {
 
     public RouterBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.ROUTER.get(), pos, state);
+        if (state.getBlock() instanceof AccessPointBlock) radius = AccessPointBlock.DEFAULT_RADIUS;
+    }
+
+    /** Потолочная точка доступа (а не настольный роутер). */
+    public boolean accessPoint() {
+        return getBlockState().getBlock() instanceof AccessPointBlock;
+    }
+
+    /** Самый большой радиус: у роутера 48, у точки доступа 24. */
+    public int maxRadius() {
+        return accessPoint() ? AccessPointBlock.MAX_RADIUS : MAX_RADIUS;
     }
 
     public String ssid() {
-        if (ssid.isEmpty()) ssid = String.format(Locale.ROOT, "MineNet-%04X", (worldPosition.hashCode() & 0xFFFF));
+        if (ssid.isEmpty()) ssid = String.format(Locale.ROOT, accessPoint() ? "MineAP-%04X" : "MineNet-%04X", (worldPosition.hashCode() & 0xFFFF));
         return ssid;
     }
 
@@ -49,17 +60,23 @@ public class RouterBlockEntity extends BlockEntity implements CordList.Holder {
 
     /** Проверка введённого игроком: null — всё хорошо, иначе ключ перевода с причиной. */
     public static String validate(String ssid, String password, int radius) {
+        return validate(ssid, password, radius, MAX_RADIUS);
+    }
+
+    public static String validate(String ssid, String password, int radius, int maxRadius) {
         if (ssid.isBlank() || ssid.length() > MAX_SSID) return "gui.minepc.router.bad_ssid";
         if (!password.isEmpty() && (password.length() < MIN_PASSWORD || password.length() > MAX_PASSWORD)) return "gui.minepc.router.bad_password";
-        if (radius < MIN_RADIUS || radius > MAX_RADIUS) return "gui.minepc.router.bad_radius";
+        if (radius < MIN_RADIUS || radius > maxRadius) return "gui.minepc.router.bad_radius";
         return null;
     }
 
     public void apply(String ssid, String password, int radius) {
         this.ssid = ssid.strip();
         this.password = password;
-        this.radius = radius;
+        this.radius = Math.max(MIN_RADIUS, Math.min(maxRadius(), radius));
         setChanged();
+        // Радиус нужен игрокам для карты покрытия
+        if (level != null) level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), net.minecraft.world.level.block.Block.UPDATE_CLIENTS);
     }
 
     @Override
@@ -76,21 +93,25 @@ public class RouterBlockEntity extends BlockEntity implements CordList.Holder {
         super.loadAdditional(tag, registries);
         ssid = tag.getString("ssid");
         password = tag.getString("password");
-        radius = tag.contains("radius") ? Math.max(MIN_RADIUS, Math.min(MAX_RADIUS, tag.getInt("radius"))) : 32;
+        radius = tag.contains("radius") ? Math.max(MIN_RADIUS, Math.min(MAX_RADIUS, tag.getInt("radius"))) : radius;
         cords.load(tag);
     }
 
-    /** Корды видны игрокам; пароль роутера игрокам не отправляем. */
+    /** Корды и радиус (для карты покрытия) видны игрокам; пароль роутера игрокам не отправляем. */
     @Override
     public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
         CompoundTag tag = new CompoundTag();
         cords.save(tag);
+        tag.putInt("radius", radius);
+        tag.putString("ssid", ssid());
         return tag;
     }
 
     @Override
     public void handleUpdateTag(CompoundTag tag, HolderLookup.Provider registries) {
         cords.load(tag);
+        if (tag.contains("radius")) radius = tag.getInt("radius");
+        if (tag.contains("ssid")) ssid = tag.getString("ssid");
     }
 
     @Override
@@ -102,6 +123,8 @@ public class RouterBlockEntity extends BlockEntity implements CordList.Holder {
     public void onDataPacket(net.minecraft.network.Connection net, net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket pkt,
                              HolderLookup.Provider registries) {
         cords.load(pkt.getTag());
+        if (pkt.getTag().contains("radius")) radius = pkt.getTag().getInt("radius");
+        if (pkt.getTag().contains("ssid")) ssid = pkt.getTag().getString("ssid");
     }
 
     @Override

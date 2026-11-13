@@ -78,6 +78,10 @@ public class ModItems {
     public static final DeferredItem<BlockItem> TRAY = ITEMS.registerSimpleBlockItem("cable_tray", ModBlocks.TRAY);
     public static final DeferredItem<BlockItem> PATCH_PANEL = ITEMS.registerSimpleBlockItem("patch_panel", ModBlocks.PATCH_PANEL);
     public static final DeferredItem<BlockItem> BRACKET = ITEMS.registerSimpleBlockItem("cable_bracket", ModBlocks.BRACKET);
+    public static final DeferredItem<BlockItem> OUTLET = ITEMS.registerSimpleBlockItem("network_outlet", ModBlocks.OUTLET);
+    public static final DeferredItem<BlockItem> ACCESS_POINT = ITEMS.registerSimpleBlockItem("wifi_access_point", ModBlocks.ACCESS_POINT);
+    public static final DeferredItem<com.strikerr212.minepc.lan.CableTesterItem> CABLE_TESTER = ITEMS.register("cable_tester",
+            () -> new com.strikerr212.minepc.lan.CableTesterItem(new Item.Properties().stacksTo(1)));
     public static final DeferredItem<BlockItem> SERVER_RACK = ITEMS.registerSimpleBlockItem("server_rack", ModBlocks.SERVER_RACK);
     public static final DeferredItem<com.strikerr212.minepc.item.RackModuleItem> SERVER_MODULE = ITEMS.register("server_module",
             () -> new com.strikerr212.minepc.item.RackModuleItem(new Item.Properties().stacksTo(1), com.strikerr212.minepc.block.RackBlockEntity.SERVER));

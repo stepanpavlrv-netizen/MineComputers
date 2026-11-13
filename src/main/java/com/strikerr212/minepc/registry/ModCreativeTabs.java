@@ -41,6 +41,8 @@ public class ModCreativeTabs {
                         output.accept(ModItems.NETWORK_SWITCH.get());
                         output.accept(ModItems.PATCH_CORD.get());
                         output.accept(ModItems.BRACKET.get());
+                        output.accept(ModItems.OUTLET.get());
+                        output.accept(ModItems.CABLE_TESTER.get());
                         output.accept(ModItems.SERVER_RACK.get());
                         output.accept(ModItems.SERVER_MODULE.get());
                         output.accept(ModItems.SERVER_MODULE_2U.get());
@@ -52,6 +54,7 @@ public class ModCreativeTabs {
                         output.accept(ModItems.BLANK_MODULE.get());
                         output.accept(ModItems.CUTTERS.get());
                         output.accept(ModItems.ROUTER.get());
+                        output.accept(ModItems.ACCESS_POINT.get());
                         output.accept(ModItems.WIFI_G.get());
                         output.accept(ModItems.WIFI_N.get());
                         output.accept(ModItems.WIFI_AC.get());
