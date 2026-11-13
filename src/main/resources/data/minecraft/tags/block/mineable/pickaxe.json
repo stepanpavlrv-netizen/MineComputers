@@ -4,6 +4,12 @@
     "minepc:assembly_table",
     "minepc:monitor",
     "minepc:keyboard",
-    "minepc:disk_drive"
+    "minepc:disk_drive",
+    "minepc:tower_section",
+    "minepc:tower_pin",
+    "minepc:tower_sector",
+    "minepc:tower_dish",
+    "minepc:network_outlet",
+    "minepc:wifi_access_point"
   ]
 }

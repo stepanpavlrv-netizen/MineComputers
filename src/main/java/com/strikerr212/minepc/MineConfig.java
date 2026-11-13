@@ -26,6 +26,8 @@ public final class MineConfig {
     private static final ModConfigSpec.BooleanValue BOOT_TIME;
     private static final ModConfigSpec.IntValue DISK_WEAR;
     private static final ModConfigSpec.DoubleValue DISK_LIFE_HOURS;
+    private static final ModConfigSpec.IntValue RADIO_LOS;
+    private static final ModConfigSpec.BooleanValue RADIO_WEATHER;
 
     static {
         ModConfigSpec.Builder b = new ModConfigSpec.Builder();
@@ -72,6 +74,13 @@ public final class MineConfig {
         DISK_LIFE_HOURS = b.comment("Сколько часов работы (настоящих) выдерживает жёсткий диск; SSD — в полтора раза дольше",
                         "Real hours of powered-on time a hard drive lasts; SSDs last 1.5 times longer")
                 .defineInRange("diskLifeHours", 40.0, 0.01, 100000.0);
+        RADIO_LOS = b.comment("Прямая видимость между радиовышками: 0 — не проверять, 1 — холм на пути только замедляет связь (по умолчанию),",
+                        "2 — холм на пути рвёт связь",
+                        "Line of sight between radio towers: 0 = off, 1 = terrain in the way only slows the link (default), 2 = terrain breaks it")
+                .defineInRange("radioLineOfSight", 1, 0, 2);
+        RADIO_WEATHER = b.comment("Погода: в дождь дальность радио меньше, в грозу молния может выбить модем без громоотвода на вышке",
+                        "Weather: rain shortens radio range, lightning can knock out a modem whose tower has no lightning rod")
+                .define("radioWeather", true);
         b.pop();
         SPEC = b.build();
     }
@@ -111,6 +120,8 @@ public final class MineConfig {
     public static boolean bootTime() { return get(BOOT_TIME, true); }
     public static int diskWear() { return get(DISK_WEAR, 1); }
     public static double diskLifeHours() { return get(DISK_LIFE_HOURS, 40.0); }
+    public static int radioLineOfSight() { return get(RADIO_LOS, 1); }
+    public static boolean radioWeather() { return get(RADIO_WEATHER, true); }
     public static int screenFps() { return get(SCREEN_FPS, 60); }
     public static int screenKbPerSecond() { return get(SCREEN_KB, 2048); }
 }

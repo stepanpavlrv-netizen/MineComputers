@@ -60,6 +60,10 @@ public class ModCreativeTabs {
                         output.accept(ModItems.WIFI_AC.get());
                         output.accept(ModItems.RADIO.get());
                         output.accept(ModItems.MAST.get());
+                        output.accept(ModItems.TOWER_SECTION.get());
+                        output.accept(ModItems.TOWER_PIN.get());
+                        output.accept(ModItems.TOWER_SECTOR.get());
+                        output.accept(ModItems.TOWER_DISH.get());
                         output.accept(ModItems.DISK_DRIVE.get());
                         output.accept(ModItems.FLOPPY_DISK.get());
                         output.accept(ModItems.FLASH_DRIVE.get());

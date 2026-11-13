@@ -1,0 +1,19 @@
+{
+ "variants": {
+  "facing=north": {
+   "model": "minepc:block/tower/sector"
+  },
+  "facing=east": {
+   "model": "minepc:block/tower/sector",
+   "y": 90
+  },
+  "facing=south": {
+   "model": "minepc:block/tower/sector",
+   "y": 180
+  },
+  "facing=west": {
+   "model": "minepc:block/tower/sector",
+   "y": 270
+  }
+ }
+}

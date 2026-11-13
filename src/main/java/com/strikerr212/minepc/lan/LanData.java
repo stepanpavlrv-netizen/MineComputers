@@ -69,6 +69,11 @@ public final class LanData extends SavedData {
             return type == PANEL || type == BRACKET || type == OUTLET;
         }
 
+        /** Радиомодем: вышка и антенны ({@link Tower#mask}). */
+        public int radio() {
+            return mask >>> 8;
+        }
+
         /** Розетка: сторона, к которой она прикручена (Direction.get3DDataValue). */
         public int attached() {
             return (mask >>> 8) & 7;
@@ -120,6 +125,30 @@ public final class LanData extends SavedData {
     /** Бирки на проводах и кордах: номер бирки - 1 → имя. */
     private final List<String> labels = new ArrayList<>();
     private ServerLevel level;
+
+    // ----- Радио: погода, выбитые молнией модемы, прямая видимость (не сохраняется) -----
+    /** Идёт дождь (дальность радио меньше). */
+    public boolean rain;
+    private final Map<Long, Long> radioDown = new HashMap<>();
+    private final Map<String, long[]> los = new HashMap<>();
+
+    public ServerLevel level() {
+        return level;
+    }
+
+    /** До какого тика модем выбит молнией (0 — работает). */
+    public long radioDownUntil(BlockPos pos) {
+        return radioDown.getOrDefault(pos.asLong(), 0L);
+    }
+
+    public Map<Long, Long> radioDown() {
+        return radioDown;
+    }
+
+    /** Кэш прямой видимости: ключ → {результат, тик}. */
+    public Map<String, long[]> losCache() {
+        return los;
+    }
 
     /** Самая длинная бирка, знаков. */
     public static final int MAX_LABEL = 24;

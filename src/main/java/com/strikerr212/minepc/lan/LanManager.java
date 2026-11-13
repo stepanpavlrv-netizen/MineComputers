@@ -260,10 +260,7 @@ public final class LanManager {
                 }
             }
             if (dev.type() == LanData.RADIO) {
-                for (BlockPos other : radioPeers(data, cur.pos, dev)) {
-                    LanData.Device od = data.device(other);
-                    v.enter(other, cur.vlan, cur.hops + 1, Math.min(cur.bits, od.bits()));
-                }
+                for (RadioLink l : radioLinks(data, cur.pos, dev)) v.enter(l.pos(), cur.vlan, cur.hops + 1, Math.min(cur.bits, l.bits()));
             }
             for (Segment s : segmentsAt(data, cur.pos)) {
                 if (!s.ok()) continue;
@@ -361,18 +358,167 @@ public final class LanManager {
         }
     }
 
-    /** Радиомодемы того же канала, до которых достаёт сигнал (дальность — меньшая из двух). */
+    /** Радиомодемы того же канала, до которых достаёт сигнал. */
     public static List<BlockPos> radioPeers(LanData data, BlockPos pos, LanData.Device dev) {
         List<BlockPos> out = new ArrayList<>();
-        int channel = dev.extra() >>> 16, range = dev.extra() & 0xFFFF;
+        for (RadioLink l : radioLinks(data, pos, dev)) out.add(l.pos());
+        return out;
+    }
+
+    /**
+     * Радиосвязь с другим модемом: куда, скорость (бит/с), через что (pin — штырь или антенна шкафа/мачта,
+     * sector — секторы, dish — тарелки) и прямая видимость (clear, weak — холм на пути, связь медленнее; off — не проверяем).
+     */
+    public record RadioLink(BlockPos pos, long bits, String via, String los) {
+    }
+
+    /** Скорость радио: штырь — как у модема (2 КБ/с), секторы — ×4, тарелки — ×16. */
+    public static final int SECTOR_SPEEDUP = 4, DISH_SPEEDUP = 16;
+
+    public static List<RadioLink> radioLinks(LanData data, BlockPos pos, LanData.Device dev) {
+        List<RadioLink> out = new ArrayList<>();
+        long now = data.level() == null ? 0 : data.level().getGameTime();
+        if (data.radioDownUntil(pos) > now) return out;
+        int channel = dev.extra() >>> 16;
         for (BlockPos other : data.devicesOfType(LanData.RADIO)) {
-            if (other.equals(pos)) continue;
+            if (other.equals(pos) || data.radioDownUntil(other) > now) continue;
             LanData.Device od = data.device(other);
             if (od == null || (od.extra() >>> 16) != channel) continue;
-            int r = Math.min(range, od.extra() & 0xFFFF);
-            if (other.distSqr(pos) <= (double) r * r) out.add(other);
+            RadioLink l = radioLink(data, pos, dev, other, od);
+            if (l != null) out.add(l);
         }
         return out;
+    }
+
+    /** В какую четверть круга смотрит направление от a к b (Direction.get2DDataValue). */
+    static int quadrant(BlockPos a, BlockPos b) {
+        return Direction.getNearest(b.getX() - a.getX(), 0, b.getZ() - a.getZ()).get2DDataValue();
+    }
+
+    private static RadioLink radioLink(LanData data, BlockPos a, LanData.Device da, BlockPos b, LanData.Device db) {
+        double dist = Math.sqrt(a.distSqr(b));
+        double weather = data.rain && com.strikerr212.minepc.MineConfig.radioWeather() ? 0.85 : 1.0;
+        int ma = da.radio(), mb = db.radio();
+        int qa = quadrant(a, b), qb = quadrant(b, a);
+        long bits = 0;
+        String via = "";
+        // Тарелки, повёрнутые друг на друга: вдвое дальше вышки и в 16 раз быстрее
+        if ((Tower.dishes(ma) & 1 << qa) != 0 && (Tower.dishes(mb) & 1 << qb) != 0) {
+            int r = 2 * Math.min(Tower.range(Tower.sections(ma)), Tower.range(Tower.sections(mb)));
+            if (dist <= r * weather) {
+                bits = RadioBlock.BITS * DISH_SPEEDUP;
+                via = "dish";
+            }
+        }
+        // Штырь или секторы (или антенна шкафа): дальность — меньшая из двух; секторы с обеих сторон — в 4 раза быстрее
+        if (bits == 0) {
+            boolean aOk = omni(ma) || (Tower.sectors(ma) & 1 << qa) != 0;
+            boolean bOk = omni(mb) || (Tower.sectors(mb) & 1 << qb) != 0;
+            int r = Math.min(da.extra() & 0xFFFF, db.extra() & 0xFFFF);
+            if (aOk && bOk && dist <= r * weather) {
+                boolean sectors = (Tower.sectors(ma) & 1 << qa) != 0 && (Tower.sectors(mb) & 1 << qb) != 0;
+                bits = RadioBlock.BITS * (sectors ? SECTOR_SPEEDUP : 1);
+                via = sectors ? "sector" : "pin";
+            }
+        }
+        if (bits == 0) return null;
+        int mode = com.strikerr212.minepc.MineConfig.radioLineOfSight();
+        if (mode == 0) return new RadioLink(b, bits, via, "off");
+        int los = lineOfSight(data, a, antennaHeight(ma), b, antennaHeight(mb));
+        if (los == 2 && mode == 2) return null;
+        if (los > 0) return new RadioLink(b, bits / 4, via, "weak");
+        return new RadioLink(b, bits, via, "clear");
+    }
+
+    /** Связь во все стороны: штырь на вышке, или вышка без штыря и секторов (антенна шкафа), или модем без вышки. */
+    private static boolean omni(int m) {
+        return !Tower.isTower(m) || Tower.hasPin(m) || (Tower.sectors(m) == 0 && Tower.dishes(m) == 0);
+    }
+
+    /** Высота антенн над модемом, блоков. */
+    private static int antennaHeight(int m) {
+        return Math.max(1, Tower.sections(m) + (Tower.hasPin(m) ? 2 : 1));
+    }
+
+    /**
+     * Прямая видимость между антеннами: рельеф по прямой между ними (раз в 8 блоков). 0 — видно, 1 — холм чуть
+     * выше линии (до 6 блоков), 2 — закрыто. Где чанк загружен — настоящая высота (с постройками), где нет — рельеф
+     * из генератора мира (чанки не грузим). Результат помнится 2 минуты.
+     */
+    public static int lineOfSight(LanData data, BlockPos a, int ha, BlockPos b, int hb) {
+        ServerLevel level = data.level();
+        if (level == null) return 0;
+        boolean swap = a.asLong() > b.asLong();
+        BlockPos p = swap ? b : a, q = swap ? a : b;
+        int hp = swap ? hb : ha, hq = swap ? ha : hb;
+        String key = p.asLong() + ":" + hp + ":" + q.asLong() + ":" + hq;
+        long now = level.getGameTime();
+        long[] cached = data.losCache().get(key);
+        if (cached != null && now - cached[1] < 2400) return (int) cached[0];
+        if (data.losCache().size() > 4096) data.losCache().clear();
+        double ya = p.getY() + hp + 0.5, yb = q.getY() + hq + 0.5;
+        double dx = q.getX() - p.getX(), dz = q.getZ() - p.getZ();
+        double len = Math.sqrt(dx * dx + dz * dz);
+        int steps = Math.max(2, (int) Math.ceil(len / 8));
+        double worst = Double.NEGATIVE_INFINITY;
+        var gen = level.getChunkSource().getGenerator();
+        var random = level.getChunkSource().randomState();
+        for (int i = 1; i < steps; i++) {
+            double t = i / (double) steps;
+            if (t * len < 4 || (1 - t) * len < 4) continue;          // у самих вышек — их же постройки
+            int x = (int) Math.floor(p.getX() + 0.5 + dx * t), z = (int) Math.floor(p.getZ() + 0.5 + dz * t);
+            int h = level.hasChunk(x >> 4, z >> 4)
+                    ? level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z)
+                    : gen.getBaseHeight(x, z, net.minecraft.world.level.levelgen.Heightmap.Types.WORLD_SURFACE_WG, level, random);
+            worst = Math.max(worst, h - (ya + (yb - ya) * t));
+        }
+        int result = worst <= 0 ? 0 : worst <= 6 ? 1 : 2;
+        data.losCache().put(key, new long[]{result, now});
+        return result;
+    }
+
+    // ======================= Погода и молнии =======================
+
+    /** Раз в 2 секунды: дождь (дальность радио), конец «выбитости» модемов; в грозу — молнии по вышкам без громоотвода. */
+    private void weather(ServerLevel level, long now) {
+        LanData data = LanData.get(level);
+        boolean on = com.strikerr212.minepc.MineConfig.radioWeather();
+        boolean rain = on && level.isRaining();
+        if (rain != data.rain) {
+            data.rain = rain;
+            version++;
+        }
+        if (data.radioDown().values().removeIf(t -> t <= now)) version++;
+        if (on && level.isThundering() && (now / 40) % 5 == 0) {          // раз в 10 секунд
+            for (BlockPos radio : data.devicesOfType(LanData.RADIO)) {
+                if (level.random.nextInt(16) == 0) strike(level, radio);
+            }
+        }
+    }
+
+    /**
+     * Молния в вышку модема. С громоотводом — разряд уходит в землю (модем работает), без него — модем выбит на
+     * минуту. true — выбит.
+     */
+    public static boolean strike(ServerLevel level, BlockPos radio) {
+        LanData data = LanData.get(level);
+        LanData.Device d = data.device(radio);
+        if (d == null || d.type() != LanData.RADIO) return false;
+        boolean rod = Tower.hasRod(d.radio());
+        if (level.isLoaded(radio)) {
+            Tower t = Tower.near(level, radio);
+            BlockPos top = t != null ? t.top().above(t.pin() ? 2 : 1) : radio.above(RadioBlock.masts(level, radio) + 1);
+            net.minecraft.world.entity.LightningBolt bolt = net.minecraft.world.entity.EntityType.LIGHTNING_BOLT.create(level);
+            if (bolt != null) {
+                bolt.moveTo(net.minecraft.world.phys.Vec3.atBottomCenterOf(top));
+                bolt.setVisualOnly(true);
+                level.addFreshEntity(bolt);
+            }
+        }
+        if (rod) return false;
+        data.radioDown().put(radio.asLong(), level.getGameTime() + 1200);
+        invalidate(level);
+        return true;
     }
 
     /** Коммутатор и стоечные коммутаторы, стоящие с ним вплотную (они работают как один). */
@@ -830,6 +976,7 @@ public final class LanManager {
     public void tick(ServerLevel level) {
         long now = level.getGameTime();
         if (now % 40 == 0) CordGuard.check(level);
+        if (now % 40 == 20) weather(level, now);
         Outgoing o;
         while ((o = outbox.poll()) != null) {
             PcCaseBlockEntity src = level.isLoaded(o.from.pos()) ? com.strikerr212.minepc.block.Hosts.get(level, o.from) : null;

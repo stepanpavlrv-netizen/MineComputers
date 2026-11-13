@@ -84,8 +84,22 @@ public class RadioBlock extends HorizontalDirectionalBlock implements LanDevice,
         return Math.min(MAX_MASTS, n);
     }
 
+    /**
+     * Дальность во все стороны (штырь или секторы — по высоте вышки; вышка без антенн или без вышки — антенна
+     * самого шкафа и секции мачты над ним, как раньше).
+     */
     public static int range(BlockGetter level, BlockPos pos) {
+        Tower t = Tower.near(level, pos);
+        if (t != null && (t.pin() || t.sectors() != 0)) return t.range();
         return BASE_RANGE + MAST_RANGE * masts(level, pos);
+    }
+
+    /** Вышка у модема → биты для схемы сети ({@link Tower#mask}); у модема с мачтой — высота мачты для прямой видимости. */
+    @Override
+    public int lanMaskExtra(Level level, BlockPos pos, BlockState state) {
+        Tower t = Tower.near(level, pos);
+        if (t != null) return t.mask();
+        return Math.min(63, masts(level, pos) + 1) << 11;
     }
 
     /** Канал = цвет: некрашеные — канал 0, крашеные — номер красителя + 1. */
@@ -135,13 +149,47 @@ public class RadioBlock extends HorizontalDirectionalBlock implements LanDevice,
             LanManager.updateDevice(level, pos);
             LanData data = LanData.get(server);
             LanData.Device d = data.device(pos);
-            int heard = d == null ? 0 : LanManager.radioPeers(data, pos, d).size();
             Paint p = state.getValue(Paint.PROPERTY);
             Component channel = p == Paint.NONE ? Component.translatable("message.minepc.radio.nochannel")
                     : Component.translatable("color.minecraft." + p.getSerializedName());
-            player.displayClientMessage(Component.translatable("message.minepc.radio.info", range(level, pos), masts(level, pos), channel, heard), false);
+            Tower t = Tower.near(level, pos);
+            if (t == null) {
+                player.displayClientMessage(Component.translatable("message.minepc.radio.info", range(level, pos), masts(level, pos), channel,
+                        d == null ? 0 : LanManager.radioLinks(data, pos, d).size()), false);
+            } else {
+                player.displayClientMessage(Component.translatable("message.minepc.radio.tower", t.sections(), antennas(t), range(level, pos),
+                        channel, Component.translatable(t.rod() ? "message.minepc.radio.rod_yes" : "message.minepc.radio.rod_no")), false);
+                if (t.dishes() != 0) player.displayClientMessage(Component.translatable("message.minepc.radio.dish_range", 2 * t.range()), false);
+            }
+            long down = data.radioDownUntil(pos) - level.getGameTime();
+            if (down > 0) player.displayClientMessage(Component.translatable("message.minepc.radio.down", (down + 19) / 20)
+                    .withStyle(net.minecraft.ChatFormatting.RED), false);
+            if (d != null) {
+                var links = LanManager.radioLinks(data, pos, d);
+                if (links.isEmpty()) player.displayClientMessage(Component.translatable("message.minepc.radio.none"), false);
+                for (var l : links) {
+                    player.displayClientMessage(Component.translatable("message.minepc.radio.link", l.pos().getX() + " " + l.pos().getY() + " " + l.pos().getZ(),
+                            (int) Math.sqrt(l.pos().distSqr(pos)), Component.translatable("message.minepc.radio.via." + l.via()),
+                            Math.round(l.bits() / 800.0 / 1024.0 * 10) / 10.0, Component.translatable("message.minepc.radio.los." + l.los())), false);
+                }
+            }
         }
         return InteractionResult.sidedSuccess(level.isClientSide);
+    }
+
+    /** Антенны вышки одной строкой: «штырь, 2 сектора, тарелка». */
+    private static Component antennas(Tower t) {
+        java.util.List<Component> parts = new java.util.ArrayList<>();
+        if (t.pin()) parts.add(Component.translatable("message.minepc.radio.ant_pin"));
+        if (t.sectors() != 0) parts.add(Component.translatable("message.minepc.radio.ant_sector", Integer.bitCount(t.sectors())));
+        if (t.dishes() != 0) parts.add(Component.translatable("message.minepc.radio.ant_dish", Integer.bitCount(t.dishes())));
+        if (parts.isEmpty()) return Component.translatable("message.minepc.radio.ant_none");
+        net.minecraft.network.chat.MutableComponent out = Component.empty();
+        for (int i = 0; i < parts.size(); i++) {
+            if (i > 0) out.append(", ");
+            out.append(parts.get(i));
+        }
+        return out;
     }
 
     @Override

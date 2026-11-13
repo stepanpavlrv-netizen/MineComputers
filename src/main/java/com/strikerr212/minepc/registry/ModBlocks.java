@@ -154,6 +154,19 @@ public class ModBlocks {
             () -> new com.strikerr212.minepc.lan.AccessPointBlock(BlockBehaviour.Properties.of()
                     .mapColor(MapColor.SNOW).strength(0.6f).sound(SoundType.METAL).noOcclusion().lightLevel(s -> 4)
                     .pushReaction(net.minecraft.world.level.material.PushReaction.DESTROY)));
+    // ----- Радиовышка -----
+    public static final DeferredBlock<com.strikerr212.minepc.lan.TowerSectionBlock> TOWER_SECTION = BLOCKS.register("tower_section",
+            () -> new com.strikerr212.minepc.lan.TowerSectionBlock(BlockBehaviour.Properties.of()
+                    .mapColor(MapColor.COLOR_RED).strength(2.0f, 6.0f).sound(SoundType.METAL).noOcclusion().noCollission()));
+    public static final DeferredBlock<com.strikerr212.minepc.lan.TowerPinBlock> TOWER_PIN = BLOCKS.register("tower_pin",
+            () -> new com.strikerr212.minepc.lan.TowerPinBlock(BlockBehaviour.Properties.of()
+                    .mapColor(MapColor.COLOR_BLACK).strength(1.0f, 6.0f).sound(SoundType.METAL).noOcclusion().lightLevel(s -> 3)));
+    public static final DeferredBlock<com.strikerr212.minepc.lan.TowerAntennaBlock> TOWER_SECTOR = BLOCKS.register("tower_sector",
+            () -> new com.strikerr212.minepc.lan.TowerAntennaBlock(BlockBehaviour.Properties.of()
+                    .mapColor(MapColor.SNOW).strength(1.0f, 6.0f).sound(SoundType.METAL).noOcclusion(), false));
+    public static final DeferredBlock<com.strikerr212.minepc.lan.TowerAntennaBlock> TOWER_DISH = BLOCKS.register("tower_dish",
+            () -> new com.strikerr212.minepc.lan.TowerAntennaBlock(BlockBehaviour.Properties.of()
+                    .mapColor(MapColor.SNOW).strength(1.0f, 6.0f).sound(SoundType.METAL).noOcclusion(), true));
     public static final DeferredBlock<com.strikerr212.minepc.lan.RouterBlock> ROUTER = BLOCKS.register("wifi_router",
             () -> new com.strikerr212.minepc.lan.RouterBlock(BlockBehaviour.Properties.of()
                     .mapColor(MapColor.SNOW).strength(0.8f).sound(SoundType.METAL).noOcclusion().lightLevel(s -> 3)));

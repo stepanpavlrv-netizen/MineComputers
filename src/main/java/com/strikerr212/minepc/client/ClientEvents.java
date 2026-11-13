@@ -121,6 +121,7 @@ public class ClientEvents {
         event.registerBlockEntityRenderer(ModBlockEntities.LAN.get(), CordRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.ROUTER.get(), CordRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.RACK.get(), RackRenderer::new);
+        event.registerBlockEntityRenderer(ModBlockEntities.TOWER_SECTION.get(), TowerLampRenderer::new);
     }
 
     @SubscribeEvent

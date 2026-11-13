@@ -540,7 +540,22 @@ public class CiScreenshots {
             case 3700, 3760, 3800 -> typeAt(comfortLaptop, "wifi connect Office-AP");
             case 3730 -> shot(mc, "wifi_coverage");
             case 3840 -> server.execute(() -> logComfort("wifi"));
-            case 3846 -> mc.stop();
+            // Дальняя связь: вышка 20 секций (тарелка, сектор, штырь, громоотвод), вторая вышка, модем за холмом, молния
+            case 3846 -> server.execute(CiScreenshots::placeTowers);
+            case 3880 -> server.execute(() -> logTowers("вышки"));
+            case 3900 -> shot(mc, "radio_tower");
+            case 3902 -> server.execute(() -> server.overworld().setDayTime(18000));
+            case 3912 -> shot(mc, "radio_tower_night");
+            case 3932 -> shot(mc, "radio_tower_night2");
+            case 3936 -> server.execute(() -> {
+                server.overworld().setDayTime(6000);
+                ServerLevel level = server.overworld();
+                boolean t2 = com.strikerr212.minepc.lan.LanManager.strike(level, towerModem2);
+                boolean t1 = com.strikerr212.minepc.lan.LanManager.strike(level, towerModem1);
+                com.mojang.logging.LogUtils.getLogger().info("[CI-TOWER] молния: вышка 2 (без громоотвода) выбита={}, вышка 1 (с громоотводом) выбита={}", t2, t1);
+                logTowers("после молнии");
+            });
+            case 3946 -> mc.stop();
             default -> {
             }
         }
@@ -643,6 +658,91 @@ public class CiScreenshots {
         wire(level, comfortLoose.east(), net.minecraft.world.item.DyeColor.ORANGE.getId(), 2, 2);
         reconnectArea(level, b.offset(-3, -1, -8), b.offset(11, 4, 11));
         p.teleportTo(level, b.getX() + 3.5, b.getY(), b.getZ() - 2.3, 0f, 38f);
+    }
+
+    private static BlockPos tower1 = BlockPos.ZERO, towerModem1 = BlockPos.ZERO, towerModem2 = BlockPos.ZERO, towerModem3 = BlockPos.ZERO;
+
+    /** Вышка из n секций на bottom, сверху — штырь (и громоотвод). */
+    private static void buildTower(ServerLevel level, BlockPos bottom, int n, boolean pin, boolean rod) {
+        var section = ModBlocks.TOWER_SECTION.get();
+        for (int i = 0; i < n; i++) {
+            BlockPos p = bottom.above(i);
+            level.setBlockAndUpdate(p, section.shaped(section.defaultBlockState(), level, p));
+        }
+        BlockPos top = bottom.above(n);
+        if (pin) {
+            level.setBlockAndUpdate(top, ModBlocks.TOWER_PIN.get().defaultBlockState());
+            top = top.above();
+        }
+        if (rod) level.setBlockAndUpdate(top, net.minecraft.world.level.block.Blocks.LIGHTNING_ROD.defaultBlockState());
+    }
+
+    private static void antenna(ServerLevel level, BlockPos section, Direction facing, boolean dish) {
+        level.setBlockAndUpdate(section.relative(facing), (dish ? ModBlocks.TOWER_DISH : ModBlocks.TOWER_SECTOR).get().defaultBlockState()
+                .setValue(com.strikerr212.minepc.lan.TowerAntennaBlock.FACING, facing));
+    }
+
+    /**
+     * Вышка 1: 20 секций, штырь, громоотвод, тарелка и сектор на восток. Вышка 2 в 120 блоках к востоку: 8 секций,
+     * штырь, тарелка на запад, без громоотвода. Модем 3 без вышки — за каменным столбом в 25 блоков (холм на пути).
+     */
+    private static void placeTowers() {
+        var server = Minecraft.getInstance().getSingleplayerServer();
+        ServerPlayer p = server.getPlayerList().getPlayers().get(0);
+        ServerLevel level = p.serverLevel();
+        p.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, ItemStack.EMPTY);
+        BlockPos t1 = rackPos.west(34);
+        tower1 = t1;
+        var air = net.minecraft.world.level.block.Blocks.AIR.defaultBlockState();
+        for (BlockPos q : BlockPos.betweenClosed(t1.offset(-3, -1, -3), t1.offset(3, -1, 3))) {
+            level.setBlockAndUpdate(q, net.minecraft.world.level.block.Blocks.SMOOTH_STONE.defaultBlockState());
+        }
+        for (BlockPos q : BlockPos.betweenClosed(t1.offset(-3, 0, -3), t1.offset(3, 24, 3))) level.setBlockAndUpdate(q, air);
+        buildTower(level, t1, 20, true, true);
+        antenna(level, t1.above(16), Direction.EAST, false);
+        antenna(level, t1.above(10), Direction.EAST, true);
+        towerModem1 = t1.west().north();
+        level.setBlockAndUpdate(towerModem1, ModBlocks.RADIO.get().defaultBlockState());
+        BlockPos t2 = t1.east(120);
+        for (BlockPos q : BlockPos.betweenClosed(t2.offset(-2, 0, -2), t2.offset(2, 12, 2))) level.setBlockAndUpdate(q, air);
+        level.setBlockAndUpdate(t2.below(), net.minecraft.world.level.block.Blocks.SMOOTH_STONE.defaultBlockState());
+        buildTower(level, t2, 8, true, false);
+        antenna(level, t2.above(6), Direction.WEST, true);
+        towerModem2 = t2.east().south();
+        level.setBlockAndUpdate(towerModem2, ModBlocks.RADIO.get().defaultBlockState());
+        BlockPos m3 = t1.east(60).south(40);
+        level.setBlockAndUpdate(m3, ModBlocks.RADIO.get().defaultBlockState());
+        towerModem3 = m3;
+        // Каменный столб посередине между вышкой 1 и модемом 3
+        BlockPos mid = t1.east(30).south(20);
+        for (BlockPos q : BlockPos.betweenClosed(mid.offset(-2, 0, -2), mid.offset(2, 24, 2))) {
+            level.setBlockAndUpdate(q, net.minecraft.world.level.block.Blocks.STONE.defaultBlockState());
+        }
+        for (BlockPos m : new BlockPos[]{towerModem1, towerModem2, towerModem3}) com.strikerr212.minepc.lan.LanManager.updateDevice(level, m);
+        p.teleportTo(level, t1.getX() - 9.5, t1.getY(), t1.getZ() - 21.5, -22f, -22f);
+    }
+
+    /** [CI-TOWER]: что видит каждый модем: через что, скорость, прямая видимость. */
+    private static void logTowers(String what) {
+        var server = Minecraft.getInstance().getSingleplayerServer();
+        ServerLevel level = server.overworld();
+        var data = com.strikerr212.minepc.lan.LanData.get(level);
+        var log = com.mojang.logging.LogUtils.getLogger();
+        var t = com.strikerr212.minepc.lan.Tower.near(level, towerModem1);
+        log.info("[CI-TOWER] {}: вышка 1 {}", what, t);
+        String[] names = {"m1", "m2", "m3"};
+        BlockPos[] ms = {towerModem1, towerModem2, towerModem3};
+        for (int i = 0; i < 3; i++) {
+            var d = data.device(ms[i]);
+            StringBuilder sb = new StringBuilder("[CI-TOWER] " + what + ": " + names[i] + " дальность " + (d == null ? -1 : d.extra() & 0xFFFF) + " ->");
+            if (d != null) {
+                for (var l : com.strikerr212.minepc.lan.LanManager.radioLinks(data, ms[i], d)) {
+                    int j = l.pos().equals(towerModem1) ? 0 : l.pos().equals(towerModem2) ? 1 : 2;
+                    sb.append(' ').append(names[j]).append(" через ").append(l.via()).append(' ').append(l.bits() / 800).append(" Б/с ").append(l.los());
+                }
+            }
+            log.info(sb.toString());
+        }
     }
 
     /** [CI-NET29]: связь сквозь стену, бирки на портах, прозвонка, Wi-Fi от точки доступа. */

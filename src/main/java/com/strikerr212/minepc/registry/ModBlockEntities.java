@@ -39,6 +39,9 @@ public class ModBlockEntities {
             BLOCK_ENTITIES.register("wifi_router", () ->
                     BlockEntityType.Builder.of(com.strikerr212.minepc.lan.RouterBlockEntity::new, ModBlocks.ROUTER.get(),
                             ModBlocks.ACCESS_POINT.get()).build(null));
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<com.strikerr212.minepc.lan.TowerSectionBlockEntity>> TOWER_SECTION =
+            BLOCK_ENTITIES.register("tower_section", () ->
+                    BlockEntityType.Builder.of(com.strikerr212.minepc.lan.TowerSectionBlockEntity::new, ModBlocks.TOWER_SECTION.get()).build(null));
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<com.strikerr212.minepc.lan.CableBlockEntity>> CABLE =
             BLOCK_ENTITIES.register("network_cable", () ->
                     BlockEntityType.Builder.of(com.strikerr212.minepc.lan.CableBlockEntity::new, ModBlocks.CABLE.get()).build(null));
