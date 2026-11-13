@@ -342,11 +342,12 @@ Ctrl+T — прервать программу, Ctrl+V — вставить те
 было)` и `io_player(адрес, игрок, пришёл)`. Стороны: `north south east west up down` или `север юг восток запад верх низ`.
 
 ```lua
-ioc.watch("ферма")
+ioc.watch("ворота")                    -- кнопка у двери — на южной стороне
 while true do
   local ev, who, side, level = os.pullEvent("io_change")
-  if side == "down" and level >= 14 then print("Сундук фермы полон") end
+  if side == "south" and level > 0 then ioc.pulse("ворота", "north", 15, 40) end   -- открыть на 2 секунды
 end
+-- сундук сверху: ioc.get("ферма").sides.up.fill — заполненность 0..15
 ```
 
 ## Железо и лимиты
