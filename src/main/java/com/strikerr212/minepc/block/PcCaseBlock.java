@@ -206,10 +206,23 @@ public class PcCaseBlock extends BaseEntityBlock implements com.strikerr212.mine
         return Kind.COMPUTER;
     }
 
-    /** Кабель можно подвести с любой стороны, кроме лицевой. */
+    /** Кабель втыкается только сзади — в сетевой разъём на задней панели. */
     @Override
     public boolean acceptsCable(BlockState state, Direction face) {
-        return face.getAxis().isHorizontal() && face != state.getValue(FACING);
+        return face == state.getValue(FACING).getOpposite();
+    }
+
+    /**
+     * Одно гнездо — сетевой разъём на задней панели: у заглушки I/O, слева вверху, если смотреть на корпус сзади
+     * (как на модели: x считается у корпуса, повёрнутого лицом на север).
+     */
+    @Override
+    public java.util.List<Socket> sockets(BlockState state) {
+        net.minecraft.world.phys.AABB box = com.strikerr212.minepc.lan.LanDevice.bounds(state.setValue(FACING, Direction.NORTH));
+        float x = (float) Math.floor(box.minX * 16 + (box.maxX - box.minX) * 16 * 0.2);
+        float y = (float) Math.floor(box.minY * 16 + (box.maxY - box.minY) * 16 * 0.7);
+        float depth = (float) (16 - box.maxZ * 16);
+        return java.util.List.of(com.strikerr212.minepc.lan.LanDevice.local(state.getValue(FACING), true, x, y, depth, true, false));
     }
 
     /** Скорость порта зависит от платы: 100 Мбит/с, 1 Гбит/с, 2,5 Гбит/с, 10 Гбит/с. Нет платы — нет порта. */

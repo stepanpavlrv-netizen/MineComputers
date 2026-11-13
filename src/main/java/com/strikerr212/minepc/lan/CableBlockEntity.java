@@ -395,9 +395,10 @@ public class CableBlockEntity extends BlockEntity {
     public void onLoad() {
         super.onLoad();
         if (level instanceof net.minecraft.server.level.ServerLevel server && !wires.isEmpty()) {
-            boolean pending = false;
-            for (Wire w : wires) for (int p : w.plug) if (p == Wire.PLUG_PENDING) pending = true;
-            if (pending) server.getServer().execute(this::reconnect);
+            // Вилки проверяем заново: порт мог пропасть (у корпуса гнездо теперь только сзади) или ещё не выбран
+            boolean plugged = false;
+            for (Wire w : wires) for (int p : w.plug) if (p != 0) plugged = true;
+            if (plugged) server.getServer().execute(this::reconnect);
             LanData.get(server).putCable(worldPosition, packed());
         }
     }
