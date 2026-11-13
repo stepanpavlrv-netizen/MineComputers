@@ -890,7 +890,7 @@
   "block.minepc.io_controller": "Контроллер ввода-вывода",
   "tooltip.minepc.io_controller": "Редстоун и датчики по сети: кабель сзади, каждая сторона — вход или выход",
   "tooltip.minepc.io_controller2": "Команда ioc на компьютере; переименуйте на наковальне — это имя в сети",
-  "gui.minepc.io.hint": "Плашка — вход/выход, шкала выхода — уровень",
+  "gui.minepc.io.hint": "Плашка — вход/выход, шкала — уровень",
   "gui.minepc.io.in": "вход",
   "gui.minepc.io.out": "выход",
   "gui.minepc.io.side.north": "Север",

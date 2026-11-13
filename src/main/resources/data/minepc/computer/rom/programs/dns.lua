@@ -9,7 +9,7 @@ local function color(c) if term.isColor() then term.setTextColor(c) end end
 local function list(rows)
   if #rows == 0 then print("Имён нет") return end
   for _, r in ipairs(rows) do
-    color(colors.yellow) write(string.format("%-24s ", r.name))
+    color(colors.yellow) write(r.name .. string.rep(" ", math.max(1, 25 - unicode.len(r.name))))
     color(colors.white) print(r.address:sub(1, 8))
   end
 end

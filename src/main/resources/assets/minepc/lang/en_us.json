@@ -890,7 +890,7 @@
   "block.minepc.io_controller": "I/O Controller",
   "tooltip.minepc.io_controller": "Redstone and sensors over the network: cable at the back, every side is an input or output",
   "tooltip.minepc.io_controller2": "Use the ioc command on a computer; rename it on an anvil to set its network name",
-  "gui.minepc.io.hint": "Badge toggles in/out, click the output bar to set its level",
+  "gui.minepc.io.hint": "Badge: in/out. Bar: output level",
   "gui.minepc.io.in": "in",
   "gui.minepc.io.out": "out",
   "gui.minepc.io.side.north": "North",

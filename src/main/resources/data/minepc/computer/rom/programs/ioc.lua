@@ -5,6 +5,7 @@ local ioc = require("ioc")
 local SIDE_RU = { north = "север", south = "юг", west = "запад", east = "восток", up = "верх", down = "низ" }
 
 local function color(c) if term.isColor() then term.setTextColor(c) end end
+local function pad(s, n) s = tostring(s) return s .. string.rep(" ", math.max(0, n - unicode.len(s))) end
 
 local function show(st)
   color(colors.yellow)
@@ -16,7 +17,7 @@ local function show(st)
     local extra = v.fill and ("  заполнен " .. v.fill .. "/15") or ""
     local block = v.block and ("  " .. v.block:gsub("^minecraft:", "")) or ""
     if v.mode == "out" then color(colors.lightBlue) else color(colors.orange) end
-    write(string.format("%-7s %-5s ", SIDE_RU[s], v.mode == "out" and "выход" or "вход"))
+    write(pad(SIDE_RU[s], 7) .. pad(v.mode == "out" and "выход" or "вход", 6))
     color(v.level > 0 and colors.red or colors.gray)
     write(bar)
     color(colors.white)
@@ -31,9 +32,9 @@ if not who then
   local list = ioc.list()
   if #list == 0 then print("Контроллеров в сети не видно") return end
   color(colors.yellow)
-  print(string.format("%-16s %-10s %s", "Имя", "Адрес", "Переходов"))
+  print(pad("Имя", 17) .. pad("Адрес", 10) .. "Переходов")
   color(colors.white)
-  for _, c in ipairs(list) do print(string.format("%-16s %-10s %d", c.name ~= "" and c.name or "-", c.address, c.hops)) end
+  for _, c in ipairs(list) do print(pad(c.name ~= "" and c.name or "-", 17) .. pad(c.address, 10) .. c.hops) end
   print("Подробнее: ioc <имя>")
   return
 end

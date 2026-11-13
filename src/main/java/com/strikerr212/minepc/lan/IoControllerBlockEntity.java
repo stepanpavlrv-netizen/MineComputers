@@ -42,6 +42,7 @@ public class IoControllerBlockEntity extends BlockEntity implements NetEndpoint,
             {"down", "bottom", "низ", "вниз"}, {"up", "top", "верх", "вверх"}, {"north", "север"}, {"south", "юг"},
             {"west", "запад"}, {"east", "восток"}};
     public static final int MAX_WATCHERS = 8, PLAYER_RADIUS = 6, LOG_LINES = 6;
+    private static final String[] SIDE_RU = {"низ", "верх", "север", "юг", "запад", "восток"};
 
     private String address = "";
     private String name = "";
@@ -150,7 +151,7 @@ public class IoControllerBlockEntity extends BlockEntity implements NetEndpoint,
         output[side] = out;
         if (!out) outLevel[side] = 0;
         changed(true);
-        note(SIDE_NAMES[side] + (out ? " → выход" : " → вход"));
+        note(SIDE_RU[side] + (out ? " → выход" : " → вход"));
         readInputs(false);
     }
 
@@ -160,7 +161,7 @@ public class IoControllerBlockEntity extends BlockEntity implements NetEndpoint,
         output[side] = true;
         pulseLeft[side] = 0;
         if (outLevel[side] == level && !modeChange) return;
-        note(SIDE_NAMES[side] + " " + outLevel[side] + " → " + level);
+        note(SIDE_RU[side] + " " + outLevel[side] + " → " + level);
         outLevel[side] = level;
         changed(true);
     }
@@ -204,7 +205,7 @@ public class IoControllerBlockEntity extends BlockEntity implements NetEndpoint,
                 inLevel[i] = v;
                 any = true;
                 if (notify) {
-                    note(SIDE_NAMES[i] + " вход " + old + " → " + v);
+                    note(SIDE_RU[i] + " вход " + old + " → " + v);
                     broadcast(new Object[]{"io_change", SIDE_NAMES[i], v, old});
                 }
             }
@@ -222,7 +223,7 @@ public class IoControllerBlockEntity extends BlockEntity implements NetEndpoint,
         for (int i = 0; i < 6; i++) {
             if (be.pulseLeft[i] > 0 && --be.pulseLeft[i] == 0) {
                 be.outLevel[i] = 0;
-                be.note(SIDE_NAMES[i] + " импульс закончился");
+                be.note(SIDE_RU[i] + ": импульс закончился");
                 be.changed(true);
             }
         }

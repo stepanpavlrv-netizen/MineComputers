@@ -611,7 +611,6 @@ public class CiScreenshots {
             case 4180 -> typeAt(drawPcA, "ioc ctl set north 15");
             case 4205 -> typeAt(drawPcA, "ioc ctl");
             case 4230 -> server.execute(CiScreenshots::logIo);
-            case 4236 -> shot(mc, "io_world");
             case 4240 -> mc.setScreen(new IoScreen(ioPos));
             case 4250 -> shot(mc, "io_gui");
             case 4252 -> {
