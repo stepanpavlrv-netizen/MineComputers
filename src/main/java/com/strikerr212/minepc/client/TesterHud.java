@@ -114,7 +114,7 @@ public final class TesterHud {
         if (mc.level == null) return;
         long now = mc.level.getGameTime();
         if (now > until || wireBoxes.isEmpty() && endBoxes.isEmpty() && openBoxes.isEmpty() && cordLines.isEmpty()) return;
-        float pulse = 0.55f + 0.45f * (float) Math.sin(now * 0.35);
+        float pulse = 0.75f + 0.25f * (float) Math.sin(now * 0.35);
         float fade = Math.min(1f, (until - now) / 40f);
         PoseStack pose = event.getPoseStack();
         Vec3 cam = event.getCamera().getPosition();
@@ -124,11 +124,12 @@ public final class TesterHud {
         // Заливка провода — оранжевая, пульсирует
         VertexConsumer q = buffers.getBuffer(XrayRenderTypes.QUADS);
         Matrix4f m = pose.last().pose();
-        for (AABB b : wireBoxes) fill(q, m, b.inflate(0.012), 1f, 0.55f, 0.1f, 0.55f * pulse * fade);
+        for (AABB b : wireBoxes) fill(q, m, b.inflate(0.03), 1f, 0.55f, 0.1f, 0.6f * pulse * fade);
         boolean blink = (now / 5) % 2 == 0;
         if (blink) for (AABB b : openBoxes) fill(q, m, b, 0.95f, 0.2f, 0.2f, 0.35f * fade);
         buffers.endBatch(XrayRenderTypes.QUADS);
         VertexConsumer vc = buffers.getBuffer(XrayRenderTypes.LINES);
+        for (AABB b : wireBoxes) LevelRenderer.renderLineBox(pose, vc, b.inflate(0.03), 1f, 0.62f, 0.15f, pulse * fade);
         for (AABB b : passiveBoxes) LevelRenderer.renderLineBox(pose, vc, b, 0.55f, 0.82f, 1f, 0.9f * fade);
         if (blink) for (AABB b : endBoxes) LevelRenderer.renderLineBox(pose, vc, b, 0.35f, 1f, 0.45f, fade);
         if (blink) for (AABB b : openBoxes) LevelRenderer.renderLineBox(pose, vc, b, 1f, 0.25f, 0.25f, fade);
@@ -166,7 +167,8 @@ public final class TesterHud {
         int w = font.width(Component.translatable("hud.minepc.tester.title"));
         for (Component c : screen) w = Math.max(w, font.width(c));
         int h = (screen.size() + 1) * 10 + 8;
-        int x = g.guiWidth() - w - 18, y = g.guiHeight() - h - 44;
+        // Справа посередине: не мешает строке над хотбаром и подсказкам у прицела
+        int x = g.guiWidth() - w - 14, y = Math.max(12, g.guiHeight() / 2 - h / 2 - 20);
         // Корпус тестера и экранчик
         g.fill(x - 8, y - 8, x + w + 8, y + h + 4, 0xFFE0A21B);
         g.fill(x - 6, y - 6, x + w + 6, y + h + 2, 0xFF2B2F33);

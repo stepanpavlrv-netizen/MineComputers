@@ -124,7 +124,7 @@ public class SwitchScreen extends Screen {
             int devW = W - 92 - 84;
             if (!r.label.isEmpty()) {
                 // Бирка кабеля — белая плашка справа от имени
-                String tag = font.plainSubstrByWidth(r.label, devW / 2);
+                String tag = font.plainSubstrByWidth(r.label, Math.max(devW / 2, devW - 60));
                 int tw = font.width(tag) + 6, tx = left + 92 + devW - tw;
                 g.fill(tx, y + 1, tx + tw, y + 11, 0xFFE8EAED);
                 g.drawString(font, tag, tx + 3, y + 2, 0xFF2A2D33, false);

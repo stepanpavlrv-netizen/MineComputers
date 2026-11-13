@@ -537,10 +537,10 @@ public class CiScreenshots {
                     p.teleportTo(server.overworld(), comfort.getX() + 0.7, comfort.getY(), comfort.getZ() + 1.8, -40f, 28f);
                 });
             }
-            case 3700, 3745 -> typeAt(comfortLaptop, "wifi connect Office-AP");
+            case 3700, 3760, 3800 -> typeAt(comfortLaptop, "wifi connect Office-AP");
             case 3730 -> shot(mc, "wifi_coverage");
-            case 3775 -> server.execute(() -> logComfort("wifi"));
-            case 3780 -> mc.stop();
+            case 3840 -> server.execute(() -> logComfort("wifi"));
+            case 3846 -> mc.stop();
             default -> {
             }
         }
@@ -669,6 +669,7 @@ public class CiScreenshots {
         var loose = com.strikerr212.minepc.lan.LanManager.trace(data, null, 0, comfortLoose, 0);
         log.info("[CI-NET29] прозвонка куска: длина {} концов {} обрывов {}", loose.length(), loose.ends().size(), loose.open().size());
         var link = data.wifiOf(comfortLaptop);
+        if (level.getBlockEntity(comfortLaptop) instanceof PcCaseBlockEntity lp) log.info("[CI-NET29] ноутбук: связь {}", lp.netLinkCode());
         int walls = com.strikerr212.minepc.lan.WifiSignal.walls(level, comfortLaptop, comfortAp);
         log.info("[CI-NET29] Wi-Fi ноутбука: {} (к точке доступа: {}), стен до точки {}, сигнал по формуле {}%", link,
                 link != null && link.router().equals(comfortAp), walls,
