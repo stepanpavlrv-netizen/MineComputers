@@ -919,5 +919,6 @@
   "gui.minepc.camera.stream": "Stream:",
   "gui.minepc.camera.drag": "Drag to turn,",
   "gui.minepc.camera.drag2": "wheel to zoom",
-  "gui.minepc.camera.hint": "Arrows/WASD turn, +/− zoom, Shift+click cycles back"
+  "gui.minepc.camera.hint": "Arrows/WASD turn, +/− zoom, Shift+click cycles back",
+  "message.minepc.cord.socket_busy": "This socket is taken — aim at a free one"
 }

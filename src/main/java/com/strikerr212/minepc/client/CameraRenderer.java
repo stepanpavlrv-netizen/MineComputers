@@ -31,6 +31,7 @@ public class CameraRenderer implements BlockEntityRenderer<CameraBlockEntity> {
     public void render(CameraBlockEntity be, float partialTick, PoseStack pose, MultiBufferSource buffers, int light, int overlay) {
         BlockState state = be.getBlockState();
         if (!(state.getBlock() instanceof CameraBlock)) return;
+        CordRenderer.renderCords(be, be.cords(), pose, buffers);
         float targetYaw = be.worldYaw(), targetPitch = be.pitch();
         if (Float.isNaN(be.renderYaw)) {
             be.renderYaw = targetYaw;
@@ -86,5 +87,11 @@ public class CameraRenderer implements BlockEntityRenderer<CameraBlockEntity> {
     @Override
     public boolean shouldRenderOffScreen(CameraBlockEntity be) {
         return false;
+    }
+
+    /** Патч-корды от камеры длинные — рамка отрисовки с запасом. */
+    @Override
+    public net.minecraft.world.phys.AABB getRenderBoundingBox(CameraBlockEntity be) {
+        return new net.minecraft.world.phys.AABB(be.getBlockPos()).inflate(5);
     }
 }

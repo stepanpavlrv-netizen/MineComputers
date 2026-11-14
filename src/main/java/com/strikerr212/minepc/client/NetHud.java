@@ -134,13 +134,18 @@ public final class NetHud {
         BlockPos target = hit instanceof BlockHitResult bhr && hit.getType() == HitResult.Type.BLOCK ? bhr.getBlockPos() : null;
         BlockState state = target == null ? null : mc.level.getBlockState(target);
 
-        // Патч-корд с первым концом: где он повиснет и не мешает ли блок
-        if (held.getItem() instanceof com.strikerr212.minepc.lan.PatchCordItem) {
+        // Патч-корд: в какое гнездо воткнётся (у коммутатора — то, в которое смотришь), где повиснет, не мешает ли блок
+        if (held.getItem() instanceof com.strikerr212.minepc.lan.PatchCordItem && target != null && state.getBlock() instanceof LanDevice) {
             var data = held.get(net.minecraft.core.component.DataComponents.CUSTOM_DATA);
-            if (data != null && data.copyTag().contains("cord_pos") && target != null && state.getBlock() instanceof LanDevice) {
+            int toPort = -1;
+            if (com.strikerr212.minepc.lan.PatchCordItem.intoSockets(state) && hit instanceof BlockHitResult bh) {
+                toPort = com.strikerr212.minepc.lan.PatchCordItem.socketAt(mc.level, target, state, bh.getLocation(), bh.getDirection());
+            }
+            if (data != null && data.copyTag().contains("cord_pos")) {
                 BlockPos from = BlockPos.of(data.copyTag().getLong("cord_pos"));
+                int fromPort = data.copyTag().getInt("cord_port");
                 if (!from.equals(target)) {
-                    BlockPos blocked = com.strikerr212.minepc.lan.CordShape.blocker(mc.level, from, target);
+                    BlockPos blocked = com.strikerr212.minepc.lan.CordShape.blocker(mc.level, from, fromPort, target, toPort);
                     if (blocked != null) {
                         lines.add(Component.translatable("hud.minepc.aerial_blocked", mc.level.getBlockState(blocked).getBlock().getName())
                                 .withStyle(s -> s.withColor(0xE05555)));
@@ -148,10 +153,11 @@ public final class NetHud {
                         highlightColor = 0xE05555;
                     }
                     ghostBlocked = blocked != null;
-                    ghost.addAll(com.strikerr212.minepc.lan.CordShape.points(mc.level, from, target));
-                    return;
+                    ghost.addAll(com.strikerr212.minepc.lan.CordShape.points(mc.level, from, fromPort, target, toPort));
+                    if (blocked != null) return;
                 }
             }
+            // дальше — обычная подсказка у гнезда: номер, что в нём, подсветка
         }
         // Идёт прокладка щелчками — подсказки у неё свои
         if (CableDrawClient.active()) return;

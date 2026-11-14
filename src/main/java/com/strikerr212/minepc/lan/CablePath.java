@@ -114,6 +114,7 @@ public final class CablePath {
     public static boolean socketFree(Level level, BlockPos dev, int port) {
         List<LanDevice.Socket> socks = LanDevice.socketsAt(level, dev);
         if (port < 0 || port >= socks.size()) return false;
+        if (CordList.inSocket(level, dev, port)) return false;     // в гнезде патч-корд
         Direction f = socks.get(port).face();
         if (level.getBlockEntity(dev.relative(f)) instanceof CableBlockEntity be) {
             for (Wire w : be.wires()) {

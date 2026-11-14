@@ -671,7 +671,18 @@ public class CiScreenshots {
             case 4690 -> typeAt(drawPcA, "exit()");
             case 4694 -> typeAt(drawPcA, "send shop.mine big.bin");
             case 4790 -> server.execute(() -> logScreens("[CI-SEND]"));
-            case 4800 -> mc.stop();
+            // Патч-корды в гнёзда коммутатора: втыкаются туда, куда целишься, и видны
+            case 4792 -> server.execute(CiScreenshots::placeCordScene);
+            case 4800 -> server.execute(() -> {
+                cordClick(cordA, 1);
+                cordClick(cordB, 4);
+                cordClick(cordA, 5);
+                cordClick(cordB, 0);
+                cordClick(cordA, 1);       // занятое гнездо — должен отказать
+            });
+            case 4812 -> logCords();
+            case 4822 -> shot(mc, "cord_sockets");
+            case 4830 -> mc.stop();
             default -> {
             }
         }
@@ -1105,6 +1116,56 @@ public class CiScreenshots {
     private static BlockPos emptyCasePos, ioPos, camPos;
 
     /** Камера на полу у компьютера A смотрит на коммутатор и контроллер. */
+    private static BlockPos cordA = BlockPos.ZERO, cordB = BlockPos.ZERO;
+
+    /** Как у игрока: настольный коммутатор на блоке земли и второй — на траве рядом. */
+    private static void placeCordScene() {
+        var server = Minecraft.getInstance().getSingleplayerServer();
+        ServerPlayer p = server.getPlayerList().getPlayers().get(0);
+        ServerLevel level = p.serverLevel();
+        BlockPos c = drawBase.offset(0, 0, -16);
+        for (int dx = -3; dx <= 6; dx++) {
+            for (int dz = -4; dz <= 5; dz++) {
+                level.setBlockAndUpdate(c.offset(dx, -1, dz), net.minecraft.world.level.block.Blocks.GRASS_BLOCK.defaultBlockState());
+                for (int dy = 0; dy <= 4; dy++) level.setBlockAndUpdate(c.offset(dx, dy, dz), net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
+            }
+        }
+        level.setBlockAndUpdate(c, net.minecraft.world.level.block.Blocks.DIRT.defaultBlockState());
+        cordA = c.above();
+        cordB = c.offset(2, 0, 0);
+        var sw = ModBlocks.NETWORK_SWITCH.get().defaultBlockState().setValue(com.strikerr212.minepc.lan.SwitchBlock.FACING, Direction.SOUTH);
+        level.setBlockAndUpdate(cordA, sw);
+        level.setBlockAndUpdate(cordB, sw);
+        p.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, new ItemStack(com.strikerr212.minepc.registry.ModItems.PATCH_CORD.get(), 8));
+        p.teleportTo(level, c.getX() + 1.5, c.getY(), c.getZ() + 3.2, 180f, 22f);
+    }
+
+    /** ПКМ патч-кордом в гнездо socket коммутатора pos — как игрок. */
+    private static void cordClick(BlockPos pos, int socket) {
+        var server = Minecraft.getInstance().getSingleplayerServer();
+        ServerPlayer p = server.getPlayerList().getPlayers().get(0);
+        ServerLevel level = p.serverLevel();
+        var state = level.getBlockState(pos);
+        var so = ((com.strikerr212.minepc.lan.LanDevice) state.getBlock()).sockets(level, pos, state).get(socket);
+        var hit = new net.minecraft.world.phys.BlockHitResult(com.strikerr212.minepc.lan.CordShape.socketPoint(pos, so), so.face(), pos, false);
+        ItemStack stack = p.getMainHandItem();
+        var r = stack.getItem().onItemUseFirst(stack, new net.minecraft.world.item.context.UseOnContext(p, net.minecraft.world.InteractionHand.MAIN_HAND, hit));
+        com.mojang.logging.LogUtils.getLogger().info("[CI-CORD] клик {} гнездо {} → {}", pos == cordA ? "A" : "B", socket + 1, r);
+    }
+
+    private static void logCords() {
+        var mc = Minecraft.getInstance();
+        var log = com.mojang.logging.LogUtils.getLogger();
+        for (BlockPos pos : new BlockPos[]{cordA, cordB}) {
+            if (mc.level.getBlockEntity(pos) instanceof com.strikerr212.minepc.lan.CordList.Holder h) {
+                for (var e : h.cords().ends()) log.info("[CI-CORD] у игрока {}: порт {} → {} порт {}", pos == cordA ? "A" : "B",
+                        e.port() + 1, e.other().equals(cordA) ? "A" : "B", e.otherPort() + 1);
+            } else {
+                log.info("[CI-CORD] у игрока нет блок-сущности {}", pos);
+            }
+        }
+    }
+
     private static void placeCam() {
         var server = Minecraft.getInstance().getSingleplayerServer();
         ServerLevel level = server.overworld();

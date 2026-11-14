@@ -19,6 +19,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.item.context.UseOnContext;
+import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
@@ -51,8 +52,58 @@ public class PatchCordItem extends Item {
         return pending(stack) != null;
     }
 
-    /** Порт для нового корда: у патч-панели — канал гнезда, по которому кликнули; у остальных — первый свободный. -1 — нет мест. */
-    private static int pickPort(LanData data, BlockPos pos, BlockState state, LanData.Device d, Vec3 hit, Direction clicked) {
+    /** Корд втыкается в настоящее гнездо на модели (а не в «невидимый» порт) — у коммутаторов. */
+    public static boolean intoSockets(BlockState state) {
+        return state.getBlock() instanceof SwitchBlock;
+    }
+
+    /**
+     * Гнездо, в которое смотрит игрок: ближайшее медное гнездо на той стороне, по которой кликнули (-1 — там гнёзд нет).
+     * Одна и та же логика у игрока (призрак корда) и на сервере.
+     */
+    public static int socketAt(BlockGetter level, BlockPos pos, BlockState state, Vec3 hit, Direction clicked) {
+        if (!(state.getBlock() instanceof LanDevice dev)) return -1;
+        List<LanDevice.Socket> socks = dev.sockets(level, pos, state);
+        int best = -1;
+        double bestD = Double.MAX_VALUE;
+        for (int i = 0; i < socks.size() && i < LanData.CABLE_PORTS; i++) {
+            LanDevice.Socket so = socks.get(i);
+            if (so.face() != clicked || !so.copper()) continue;
+            // как подсказка у гнезда: расстояние по осям стороны (вдоль и по высоте), в пикселях
+            Direction.Axis[] ax = LanDevice.faceAxes(so.face());
+            Vec3 at = hit.subtract(pos.getX(), pos.getY(), pos.getZ()).scale(16);
+            double d = Math.max(Math.abs(at.get(ax[0]) - (so.along() + 0.5)), Math.abs(at.get(ax[1]) - (so.height() + 0.5)));
+            if (d < bestD) {
+                bestD = d;
+                best = i;
+            }
+        }
+        return best;
+    }
+
+    /** Занято ли гнездо: в нём кабель с вилкой или другой корд. */
+    private static boolean socketBusy(LanData data, BlockPos pos, LanData.Device d, int port) {
+        return data.cordAt(pos, port) || LanManager.usedPorts(data, pos, d).contains(port);
+    }
+
+    /** Ответ pickPort: гнездо, в которое целились, занято. */
+    private static final int SOCKET_BUSY = -2;
+
+    /**
+     * Порт для нового корда: у коммутатора — гнездо, в которое целятся (если кликнули не по гнёздам — первое свободное);
+     * у патч-панели — канал гнезда, по которому кликнули; у остальных — первый свободный. -1 — нет мест.
+     */
+    private static int pickPort(LanData data, BlockPos pos, BlockState state, LanData.Device d, Vec3 hit, Direction clicked,
+                                net.minecraft.world.level.Level level) {
+        if (!d.passive() && intoSockets(state)) {
+            int s = socketAt(level, pos, state, hit, clicked);
+            if (s >= 0) return socketBusy(data, pos, d, s) ? SOCKET_BUSY : s;
+            List<LanDevice.Socket> socks = ((LanDevice) state.getBlock()).sockets(level, pos, state);
+            for (int i = 0; i < socks.size() && i < LanData.CABLE_PORTS; i++) {
+                if (socks.get(i).copper() && !socketBusy(data, pos, d, i)) return i;
+            }
+            return -1;
+        }
         if (d.passive() && state.getBlock() instanceof LanDevice dev) {
             List<LanDevice.Socket> socks = dev.sockets(state);
             double lx = (hit.x - pos.getX()) * 16, ly = (hit.y - pos.getY()) * 16, lz = (hit.z - pos.getZ()) * 16;
@@ -107,9 +158,10 @@ public class PatchCordItem extends Item {
             return InteractionResult.CONSUME;
         }
 
-        int port = pickPort(data, pos, state, d, ctx.getClickLocation(), ctx.getClickedFace());
+        int port = pickPort(data, pos, state, d, ctx.getClickLocation(), ctx.getClickedFace(), level);
         if (port < 0) {
-            if (player != null) player.displayClientMessage(Component.translatable("message.minepc.cord.busy"), true);
+            if (player != null) player.displayClientMessage(Component.translatable(port == SOCKET_BUSY
+                    ? "message.minepc.cord.socket_busy" : "message.minepc.cord.busy"), true);
             return InteractionResult.FAIL;
         }
         if (first == null) {
@@ -133,14 +185,15 @@ public class PatchCordItem extends Item {
             if (player != null) player.displayClientMessage(Component.translatable("message.minepc.cord.far"), true);
             return InteractionResult.FAIL;
         }
-        BlockPos blocked = CordShape.blocker(level, a, pos);
+        BlockPos blocked = CordShape.blocker(level, a, portA, pos, port);
         if (blocked != null) {
             if (player != null) player.displayClientMessage(Component.translatable("message.minepc.cord.blocked",
                     level.getBlockState(blocked).getBlock().getName(), blocked.getX() + " " + blocked.getY() + " " + blocked.getZ())
                     .withStyle(net.minecraft.ChatFormatting.RED), true);
             return InteractionResult.FAIL;
         }
-        if (data.device(a) == null || data.cordAt(a, portA)) {
+        if (data.device(a) == null || data.cordAt(a, portA)
+                || portA < LanData.CABLE_PORTS && LanManager.usedPorts(data, a, data.device(a)).contains(portA)) {
             if (player != null) player.displayClientMessage(Component.translatable("message.minepc.cord.gone"), true);
             return InteractionResult.FAIL;
         }

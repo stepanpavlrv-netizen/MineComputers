@@ -59,6 +59,13 @@ public final class CordList {
         ends = List.copyOf(list);
     }
 
+    /** Воткнут ли патч-корд прямо в гнездо port устройства (у игрока и на сервере — по копии у блока). */
+    public static boolean inSocket(net.minecraft.world.level.BlockGetter level, BlockPos dev, int port) {
+        if (!(level.getBlockEntity(dev) instanceof Holder h)) return false;
+        for (End e : h.cords().ends()) if (e.port() == port) return true;
+        return false;
+    }
+
     /** Переписать корды блока из схемы сети и отправить игрокам. */
     public static void refresh(ServerLevel level, BlockPos pos) {
         if (!level.isLoaded(pos) || !(level.getBlockEntity(pos) instanceof BlockEntity be) || !(be instanceof Holder h)) return;

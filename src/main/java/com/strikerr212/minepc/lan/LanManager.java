@@ -599,7 +599,6 @@ public final class LanManager {
                     if (l != 0) return l;
                 }
             }
-            return 0;
         }
         for (LanData.Cord c : data.cords(dev)) if (c.other(dev, port) != null) return c.label();
         return 0;
@@ -609,7 +608,8 @@ public final class LanManager {
     public static List<Integer> usedPorts(LanData data, BlockPos dev, LanData.Device d) {
         List<Integer> out = new ArrayList<>();
         for (PlugWire pw : plugWires(data, dev)) if (pw.port() < LanData.CABLE_PORTS && !out.contains(pw.port())) out.add(pw.port());
-        for (int port = LanData.CABLE_PORTS; port < LanData.PORTS; port++) if (data.cordAt(dev, port)) out.add(port);
+        // корды: и в своих портах, и прямо в гнёздах (у коммутатора корд втыкается в гнездо на модели)
+        for (int port = 0; port < LanData.PORTS; port++) if (!out.contains(port) && data.cordAt(dev, port)) out.add(port);
         java.util.Collections.sort(out);
         return out;
     }

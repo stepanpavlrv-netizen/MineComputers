@@ -65,7 +65,7 @@ public class CordRenderer<T extends BlockEntity & CordList.Holder> implements Bl
         VertexConsumer vc = null;
         for (int i = 0; i < sockets.size(); i++) {
             var s = sockets.get(i);
-            if (!plugged(level, pos, s.face(), i)) continue;
+            if (!plugged(level, pos, s.face(), i) && !com.strikerr212.minepc.lan.CordList.inSocket(level, pos, i)) continue;
             if (vc == null) vc = buffers.getBuffer(RenderType.entityCutoutNoCull(LED));
             boolean blink = NetHud.blinking(pos, i, time);
             int rgb = blink ? 0xFFB020 : 0x50FF78;
@@ -102,8 +102,8 @@ public class CordRenderer<T extends BlockEntity & CordList.Holder> implements Bl
         VertexConsumer vc = buffers.getBuffer(RenderType.entityCutoutNoCull(TEXTURE));
         for (CordList.End e : list.ends()) {
             if (e.other().asLong() < pos.asLong()) continue;          // этот корд рисует другой конец
-            Vec3 a = com.strikerr212.minepc.lan.CordShape.anchor(level, pos, e.other()).subtract(pos.getX(), pos.getY(), pos.getZ());
-            Vec3 b = com.strikerr212.minepc.lan.CordShape.anchor(level, e.other(), pos).subtract(pos.getX(), pos.getY(), pos.getZ());
+            Vec3 a = com.strikerr212.minepc.lan.CordShape.anchor(level, pos, e.port(), e.other()).subtract(pos.getX(), pos.getY(), pos.getZ());
+            Vec3 b = com.strikerr212.minepc.lan.CordShape.anchor(level, e.other(), e.otherPort(), pos).subtract(pos.getX(), pos.getY(), pos.getZ());
             int rgb = DyeColor.byId(e.color()).getTextureDiffuseColor();
             int r = (rgb >> 16) & 255, g = (rgb >> 8) & 255, bl = rgb & 255;
             BlockPos mid = BlockPos.containing(pos.getX() + (a.x + b.x) / 2, pos.getY() + Math.min(a.y, b.y), pos.getZ() + (a.z + b.z) / 2);

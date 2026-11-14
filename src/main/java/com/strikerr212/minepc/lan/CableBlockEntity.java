@@ -405,6 +405,7 @@ public class CableBlockEntity extends BlockEntity {
             int k = o.index(d);
             if (k >= 0 && o.port(k) >= 0 && o.port(k) < taken.length) taken[o.port(k)] = true;
         }
+        for (int s = 0; s < taken.length; s++) if (CordList.inSocket(level, dev, s)) taken[s] = true;   // там патч-корд
         int old = w.port(i);
         if (old >= 0 && old < sockets.size() && !taken[old] && fits(sockets.get(old), d, w)) return old + 1;
         // Где провод подходит к стороне устройства: по оси вдоль стороны и по высоте

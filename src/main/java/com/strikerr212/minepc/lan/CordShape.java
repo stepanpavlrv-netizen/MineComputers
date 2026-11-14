@@ -29,7 +29,16 @@ public final class CordShape {
      * лицевой стороне (корд петлёй идёт спереди); у остальных — сбоку, ближе к другому концу.
      */
     public static Vec3 anchor(BlockGetter level, BlockPos pos, BlockPos toward) {
+        return anchor(level, pos, -1, toward);
+    }
+
+    /** То же, но для корда в порту port: если это гнездо на модели (у коммутатора) — вилка торчит прямо из него. */
+    public static Vec3 anchor(BlockGetter level, BlockPos pos, int port, BlockPos toward) {
         BlockState s = level.getBlockState(pos);
+        if (port >= 0 && port < LanData.CABLE_PORTS && s.getBlock() instanceof LanDevice dev) {
+            java.util.List<LanDevice.Socket> socks = dev.sockets(level, pos, s);
+            if (port < socks.size()) return socketPoint(pos, socks.get(port));
+        }
         if (s.getBlock() instanceof BracketBlock) {
             return new Vec3(pos.getX() + 0.5, pos.getY() + 0.62, pos.getZ() + 0.5);
         }
@@ -56,6 +65,29 @@ public final class CordShape {
         return c;
     }
 
+    /** Точка чуть впереди гнезда (в мировых координатах): туда втыкается вилка. */
+    public static Vec3 socketPoint(BlockPos pos, LanDevice.Socket so) {
+        Direction f = so.face();
+        boolean posDir = f.getAxisDirection() == Direction.AxisDirection.POSITIVE;
+        double plane = (posDir ? 16 - so.depth() + 1.0 : so.depth() - 1.0) / 16;   // на пиксель наружу от лицевой плоскости
+        double along = (so.along() + 0.5) / 16, h = (so.height() + 0.5) / 16;
+        double x, y, z;
+        if (f.getAxis() == Direction.Axis.Y) {
+            x = along;
+            z = h;
+            y = plane;
+        } else if (f.getAxis() == Direction.Axis.Z) {
+            x = along;
+            y = h;
+            z = plane;
+        } else {
+            z = along;
+            y = h;
+            x = plane;
+        }
+        return new Vec3(pos.getX() + x, pos.getY() + y, pos.getZ() + z);
+    }
+
     /** Провисание посередине, блоков: патч-корд висит петлёй, воздушная линия натянута. */
     public static double sag(double dist) {
         return dist > 5 ? 0.1 + 0.025 * dist : 0.2 + 0.12 * dist;
@@ -74,7 +106,12 @@ public final class CordShape {
 
     /** Точки провода между двумя устройствами. */
     public static List<Vec3> points(BlockGetter level, BlockPos a, BlockPos b) {
-        return points(anchor(level, a, b), anchor(level, b, a));
+        return points(level, a, -1, b, -1);
+    }
+
+    /** Точки корда между портом portA устройства a и портом portB устройства b. */
+    public static List<Vec3> points(BlockGetter level, BlockPos a, int portA, BlockPos b, int portB) {
+        return points(anchor(level, a, portA, b), anchor(level, b, portB, a));
     }
 
     /**
@@ -82,7 +119,11 @@ public final class CordShape {
      * не считаются. Проверяются и точки, и отрезки между ними — тонкие блоки (плиты, панели) тоже мешают.
      */
     public static BlockPos blocker(BlockGetter level, BlockPos a, BlockPos b) {
-        List<Vec3> pts = points(level, a, b);
+        return blocker(level, a, -1, b, -1);
+    }
+
+    public static BlockPos blocker(BlockGetter level, BlockPos a, int portA, BlockPos b, int portB) {
+        List<Vec3> pts = points(level, a, portA, b, portB);
         for (int i = 0; i + 1 < pts.size(); i++) {
             Vec3 p0 = pts.get(i), p1 = pts.get(i + 1);
             for (int k = 0; k < 4; k++) {

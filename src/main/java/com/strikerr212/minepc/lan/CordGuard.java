@@ -36,7 +36,7 @@ public final class CordGuard {
         for (LanData.Cord c : LanData.get(level).allCords()) {
             if (!CordShape.bounds(c.a(), c.b()).contains(Vec3.atCenterOf(pos))) continue;
             if (!level.isLoaded(c.a()) || !level.isLoaded(c.b())) continue;
-            if (pos.equals(CordShape.blocker(level, c.a(), c.b()))) {
+            if (pos.equals(CordShape.blocker(level, c.a(), c.portA(), c.b(), c.portB()))) {
                 event.setCanceled(true);
                 if (event.getEntity() instanceof Player p) {
                     p.displayClientMessage(Component.translatable("message.minepc.cord.in_way")
@@ -53,7 +53,7 @@ public final class CordGuard {
         List<LanData.Cord> broken = new ArrayList<>();
         for (LanData.Cord c : data.allCords()) {
             if (!level.isLoaded(c.a()) || !level.isLoaded(c.b())) continue;
-            if (CordShape.blocker(level, c.a(), c.b()) != null) broken.add(c);
+            if (CordShape.blocker(level, c.a(), c.portA(), c.b(), c.portB()) != null) broken.add(c);
         }
         for (LanData.Cord c : broken) {
             data.allCords().remove(c);
