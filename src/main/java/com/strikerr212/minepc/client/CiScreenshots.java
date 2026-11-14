@@ -1181,7 +1181,7 @@ public class CiScreenshots {
             e.setNoAi(true);
             level.addFreshEntity(e);
         }
-        if (cow != null) cow.moveTo(g.getX() + 2.5, g.getY(), g.getZ() - 4.5, 60f, 0f);
+        if (cow != null) cow.moveTo(g.getX() + 2.5, g.getY(), g.getZ() - 4.5, 90f, 0f);
         if (sheep != null) sheep.moveTo(g.getX() - 2.5, g.getY(), g.getZ() - 5.5, -30f, 0f);
         // камера на каменном столбике, смотрит на север
         level.setBlockAndUpdate(g.offset(0, 0, 3), net.minecraft.world.level.block.Blocks.STONE.defaultBlockState());
@@ -1207,12 +1207,14 @@ public class CiScreenshots {
                 com.strikerr212.minepc.lan.BlockTextures.ready(), n,
                 com.strikerr212.minepc.lan.BlockTextures.get(net.minecraft.world.level.block.Blocks.SHORT_GRASS) != null
                         && com.strikerr212.minepc.lan.BlockTextures.get(net.minecraft.world.level.block.Blocks.SHORT_GRASS).cross);
-        if (level.getBlockEntity(gardenCam) instanceof com.strikerr212.minepc.lan.CameraBlockEntity cam) {
-            long t0 = System.nanoTime();
-            int[] px = cam.render(320, 180);
-            com.mojang.logging.LogUtils.getLogger().info("[CI-TEX] кадр 320×180: {} мс, снимок {}", (System.nanoTime() - t0) / 1_000_000,
-                    px != null);
-        }
+        Minecraft.getInstance().getSingleplayerServer().execute(() -> {
+            if (level.getBlockEntity(gardenCam) instanceof com.strikerr212.minepc.lan.CameraBlockEntity cam) {
+                cam.render(320, 180);
+                long t0 = System.nanoTime();
+                for (int k = 0; k < 5; k++) cam.render(320, 180);
+                com.mojang.logging.LogUtils.getLogger().info("[CI-TEX] кадр 320×180: {} мс", (System.nanoTime() - t0) / 5_000_000);
+            }
+        });
     }
 
     private static BlockPos cordA = BlockPos.ZERO, cordB = BlockPos.ZERO;

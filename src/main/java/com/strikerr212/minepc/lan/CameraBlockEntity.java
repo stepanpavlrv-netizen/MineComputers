@@ -502,7 +502,7 @@ public class CameraBlockEntity extends BlockEntity implements NetEndpoint, CordL
                 part(cx, cz, 0.5, 0.5, y + h * 0.75, y + h, alongX, c1, c2, SPOTS);
                 part(cx, cz, 0.3, 0.5, y + h * 0.3, y + h * 0.75, alongX, c1, c2, SPOTS);
                 part(cx, cz, 0.5, 0.5, y, y + h * 0.3, alongX, c1, c2, SPOTS);
-            } else if (e instanceof net.minecraft.world.entity.LivingEntity && h >= 1.3 && w <= 0.9) {
+            } else if (e instanceof net.minecraft.world.entity.LivingEntity && h >= 1.3 && h >= w * 2.2) {
                 // человекоподобные: зомби, скелет, житель, эндермен…
                 humanoid(cx, cz, y, h, w, alongX, c2, c1, shade(c1, 0.7f), PLAIN);
             } else if (e instanceof net.minecraft.world.entity.LivingEntity && h < 1.8) {
