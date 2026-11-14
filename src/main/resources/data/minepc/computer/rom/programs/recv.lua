@@ -26,11 +26,14 @@ local ok, err = pcall(function()
     if p == port and id then
       local key = from .. ":" .. tostring(id)
       if kind == "file_begin" then
-        files[key] = { name = tostring(ev[7]), size = tonumber(ev[8]) or 0, parts = {} }
+        files[key] = { name = tostring(ev[7]), size = tonumber(ev[8]) or 0, parts = {}, got = 0 }
         print("От " .. from:sub(1, 8) .. ": " .. files[key].name .. " (" .. files[key].size .. " байт)")
         net.send(from, port, "file_ok", id)
       elseif kind == "file_part" and files[key] then
-        files[key].parts[ev[7]] = ev[8]
+        local f = files[key]
+        if f.parts[ev[7]] == nil then f.got = f.got + 1 end
+        f.parts[ev[7]] = ev[8]
+        if f.got % 8 == 0 then net.send(from, port, "file_ack", id, f.got) end   -- отправитель шлёт дальше
       elseif kind == "file_end" and files[key] then
         local f = files[key]
         files[key] = nil
@@ -39,7 +42,7 @@ local ok, err = pcall(function()
         local content = missing and "" or table.concat(f.parts, "", 1, count)
         if missing or data.crc32(content) ~= ev[8] or #content ~= f.size then
           printError("  " .. f.name .. ": файл повреждён, не сохранён")
-          net.send(from, port, "file_done", id, false, "контрольная сумма не совпала")
+          net.send(from, port, "file_done", id, false, missing and "дошли не все части" or "контрольная сумма не совпала")
         else
           local path = freeName(f.name)
           local h = fs.open(path, "wb")

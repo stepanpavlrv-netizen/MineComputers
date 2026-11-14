@@ -70,14 +70,25 @@ public final class LanManager {
     private record Outgoing(HostRef from, String target, int port, Object[] payload, int bytes) {
     }
 
-    private record Delivery(long tick, HostRef to, String from, int port, int hops, Object[] payload, int bytes) {
+    private record Delivery(long tick, long seq, HostRef to, String from, int port, int hops, Object[] payload, int bytes) {
     }
+
+    /** Линия между двумя компьютерами: до какого тика (дробного) она занята уже отправленными сообщениями. */
+    private record Pipe(HostRef from, HostRef to) {
+    }
+
+    /** Больше этого (в тиках) очередь в линии не копится — лишнее теряется, как в настоящей сети. */
+    private static final int MAX_BACKLOG = 30 * Computer.TICKS_PER_SECOND;
+    private final Map<Pipe, Double> pipes = new HashMap<>();
+    private long deliverySeq;
 
     private volatile long version;
     private long cachedVersion = -1;
     private final Map<HostRef, Result> reachCache = new HashMap<>();
     private final ConcurrentLinkedQueue<Outgoing> outbox = new ConcurrentLinkedQueue<>();
-    private final PriorityQueue<Delivery> pending = new PriorityQueue<>((a, b) -> Long.compare(a.tick, b.tick));
+    /** По тику доставки, а при равенстве — в порядке отправки: сообщения не обгоняют друг друга. */
+    private final PriorityQueue<Delivery> pending = new PriorityQueue<>((a, b) ->
+            a.tick != b.tick ? Long.compare(a.tick, b.tick) : Long.compare(a.seq, b.seq));
 
     // ======================= Устройства =======================
 
@@ -993,12 +1004,20 @@ public final class LanManager {
                 NetEndpoint dst = level.isLoaded(r.pos) ? com.strikerr212.minepc.block.Hosts.endpoint(level, r.host()) : null;
                 if (dst == null) continue;
                 if (!matches(target, dst.address(), dst.label())) continue;
-                // Задержка: по тику на коммутатор, плюс время передачи по самой медленной связи
-                long bytesPerTick = Math.max(1, r.bits / 800 / Computer.TICKS_PER_SECOND);
-                long delay = r.hops + o.bytes / bytesPerTick;
-                pending.add(new Delivery(now + delay, r.host(), fromAddr, o.port, r.hops, o.payload, o.bytes));
+                // Сообщения между двумя компьютерами идут по линии друг за другом: следующее начинает передаваться,
+                // когда ушло предыдущее (по самой медленной связи на пути), плюс по тику на каждый коммутатор.
+                // Так большие куски не отстают от маленьких, а скорость линии — настоящая.
+                double bytesPerTick = Math.max(1.0, r.bits / 800.0 / Computer.TICKS_PER_SECOND);
+                Pipe pipe = new Pipe(o.from, r.host());
+                double start = Math.max(now, pipes.getOrDefault(pipe, 0.0));
+                if (start - now > MAX_BACKLOG) continue;          // линия забита — сообщение теряется
+                double end = start + o.bytes / bytesPerTick;
+                pipes.put(pipe, end);
+                pending.add(new Delivery((long) Math.floor(end) + r.hops, deliverySeq++, r.host(), fromAddr, o.port, r.hops,
+                        o.payload, o.bytes));
             }
         }
+        if (now % 200 == 0 && !pipes.isEmpty()) pipes.values().removeIf(t -> t < now);
         while (!pending.isEmpty() && pending.peek().tick <= now) {
             Delivery d = pending.poll();
             NetEndpoint dst = level.isLoaded(d.to.pos()) ? com.strikerr212.minepc.block.Hosts.endpoint(level, d.to) : null;

@@ -38,19 +38,38 @@ local who = ok[2]
 print("Отправляю " .. name .. " (" .. #content .. " байт) → " .. who:sub(1, 8))
 
 local CHUNK = 4096
+local WINDOW = 16            -- столько кусков может быть в пути без подтверждения (recv подтверждает каждые 8)
 local parts = math.max(1, math.ceil(#content / CHUNK))
 local started = os.clock()
 local _, y = term.getCursorPos()
+local acked, lost = 0, false
+local function progress()
+  term.setCursorPos(1, y)
+  term.clearLine()
+  write(string.format("%d%%", math.floor(acked * 100 / parts)))
+end
 for i = 1, parts do
-  net.send(who, port, "file_part", id, i, content:sub((i - 1) * CHUNK + 1, i * CHUNK))
-  if i % 4 == 0 or i == parts then
-    term.setCursorPos(1, y)
-    term.clearLine()
-    write(string.format("%d%%", math.floor(i * 100 / parts)))
+  while i - acked > WINDOW do
+    local ack = wait("file_ack", 10)
+    if not ack then lost = true break end
+    acked = math.max(acked, tonumber(ack[7]) or 0)
+    progress()
   end
+  if lost then break end
+  net.send(who, port, "file_part", id, i, content:sub((i - 1) * CHUNK + 1, i * CHUNK))
+end
+if lost then
+  print()
+  printError("Получатель перестал отвечать — передача прервана")
+  finish()
+  return
 end
 net.send(who, port, "file_end", id, parts, data.crc32(content))
-local done = wait("file_done", 5)
+-- Ждём, пока дойдёт хвост: оставшиеся в пути куски по скорости линии, с запасом
+local speed = math.max(1, net.speed())
+local done = wait("file_done", 5 + (WINDOW * CHUNK) / speed * 2)
+acked = parts
+progress()
 print()
 if done and done[7] then
   local seconds = math.max(0.05, os.clock() - started)

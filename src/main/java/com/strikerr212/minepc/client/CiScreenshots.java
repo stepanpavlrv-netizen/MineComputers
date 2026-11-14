@@ -661,7 +661,17 @@ public class CiScreenshots {
                 });
             }
             case 4645 -> shot(mc, "camera_block");
-            case 4650 -> mc.stop();
+            // Передача большого файла: send не должен терять куски (раньше маленький file_end обгонял их)
+            case 4648 -> typeAt(drawPcB, "clear");
+            case 4650 -> typeAt(drawPcB, "recv");
+            case 4652 -> typeAt(drawPcA, "clear");
+            case 4654 -> typeAt(drawPcA, "lua");
+            case 4658 -> typeAt(drawPcA, "local t={} for i=1,50000 do t[i]=string.char(i%256,(i*7)%256,(i*13)%256,(i*31)%256) end"
+                    + " local f=fs.open(\"big.bin\",\"wb\") f.write(table.concat(t)) f.close() print(fs.getSize(\"big.bin\"))");
+            case 4690 -> typeAt(drawPcA, "exit()");
+            case 4694 -> typeAt(drawPcA, "send shop.mine big.bin");
+            case 4790 -> server.execute(() -> logScreens("[CI-SEND]"));
+            case 4800 -> mc.stop();
             default -> {
             }
         }
