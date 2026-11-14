@@ -185,7 +185,6 @@ while true do
     elseif k == "up" or k == "w" then act(camera.turn, 0, 5)
     elseif k == "down" or k == "s" then act(camera.turn, 0, -5)
     elseif k == "tab" and #cells > 1 then focus = focus % #cells + 1
-    elseif k == "q" then break
     end
   elseif e == "char" then
     local ch = ev[2]
@@ -196,7 +195,7 @@ while true do
     elseif ch == "p" or ch == "з" then act(camera.set, "patrol", not info.patrol)
     elseif ch == "r" or ch == "к" then act(camera.set, "res", (info.res or 4) % RES_N + 1)
     elseif ch == "f" or ch == "а" then act(camera.set, "fps", nextFps(info.fps or 10))
-    elseif ch == "й" then break
+    elseif ch == "q" or ch == "й" then break
     end
   elseif e == "mouse_click" then
     dragX, dragY = ev[3], ev[4]
