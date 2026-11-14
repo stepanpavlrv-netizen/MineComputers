@@ -332,7 +332,7 @@ public class CameraBlockEntity extends BlockEntity implements NetEndpoint, CordL
                 }
                 BlockState st = level.getBlockState(p);
                 int cell = 0;
-                if (!st.isAir()) {
+                if (!st.isAir() && !(st.getBlock() instanceof CameraBlock)) {   // камеры (и своя тоже) не заслоняют вид
                     FluidState fl = st.getFluidState();
                     if (!fl.isEmpty() && (fl.is(Fluids.WATER) || fl.is(Fluids.FLOWING_WATER))) {
                         cell = 0x3F76E4 | CameraRender.SOLID | CameraRender.WATER;

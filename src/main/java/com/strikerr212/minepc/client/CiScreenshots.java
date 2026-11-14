@@ -654,9 +654,10 @@ public class CiScreenshots {
             case 4630 -> shot(mc, "camera_gui");
             case 4632 -> {
                 mc.setScreen(null);
+                if (mc.player != null) mc.player.getInventory().selected = 8;   // пустая рука — без подсказок кабеля
                 server.execute(() -> {
                     ServerPlayer p = server.getPlayerList().getPlayers().get(0);
-                    p.teleportTo(server.overworld(), camPos.getX() + 0.5, camPos.getY() + 0.1, camPos.getZ() - 1.6, 0f, 25f);
+                    p.teleportTo(server.overworld(), camPos.getX() + 2.1, camPos.getY(), camPos.getZ() - 1.1, 45f, 28f);
                 });
             }
             case 4645 -> shot(mc, "camera_block");

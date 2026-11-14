@@ -52,7 +52,7 @@ public class CameraRenderer implements BlockEntityRenderer<CameraBlockEntity> {
         // объектив (выступает вперёд)
         box(v, p, -1.8f * s, -1.6f * s, -4.3f * s, 1.8f * s, 1.6f * s, -3.5f * s, LENS, DARK, light, overlay);
         // козырёк
-        box(v, p, -3f * s, 2f * s, -4.9f * s, 3f * s, 2.6f * s, 3.5f * s, BODY, DARK, light, overlay);
+        box(v, p, -3f * s, 2f * s, -4.9f * s, 3f * s, 2.6f * s, 3.5f * s, BODY, BODY, light, overlay);
         // задняя крышка
         box(v, p, -2.1f * s, -1.6f * s, 3.5f * s, 2.1f * s, 1.6f * s, 4.1f * s, DARK, DARK, light, overlay);
         // лампа записи — светится сама
