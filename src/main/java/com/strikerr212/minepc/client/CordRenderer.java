@@ -108,8 +108,10 @@ public class CordRenderer<T extends BlockEntity & CordList.Holder> implements Bl
             int r = (rgb >> 16) & 255, g = (rgb >> 8) & 255, bl = rgb & 255;
             BlockPos mid = BlockPos.containing(pos.getX() + (a.x + b.x) / 2, pos.getY() + Math.min(a.y, b.y), pos.getZ() + (a.z + b.z) / 2);
             int light = LevelRenderer.getLightColor(level, mid);
-            var pts = com.strikerr212.minepc.lan.CordShape.points(a, com.strikerr212.minepc.lan.CordShape.outward(level, pos, e.port()),
-                    b, com.strikerr212.minepc.lan.CordShape.outward(level, e.other(), e.otherPort()));
+            var pts = new java.util.ArrayList<Vec3>();
+            for (Vec3 w : com.strikerr212.minepc.lan.CordShape.points(level, pos, e.port(), e.other(), e.otherPort())) {
+                pts.add(w.subtract(pos.getX(), pos.getY(), pos.getZ()));
+            }
             for (int i = 1; i < pts.size(); i++) tube(vc, pose.last(), pts.get(i - 1), pts.get(i), r, g, bl, light, i);
             // вилки на концах
             VertexConsumer plug = buffers.getBuffer(RenderType.entityCutoutNoCull(PLUG));

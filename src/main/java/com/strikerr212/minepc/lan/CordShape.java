@@ -127,7 +127,35 @@ public final class CordShape {
 
     /** Точки корда между портом portA устройства a и портом portB устройства b. */
     public static List<Vec3> points(BlockGetter level, BlockPos a, int portA, BlockPos b, int portB) {
-        return points(anchor(level, a, portA, b), outward(level, a, portA), anchor(level, b, portB, a), outward(level, b, portB));
+        Vec3 pa = anchor(level, a, portA, b), na = outward(level, a, portA);
+        Vec3 pb = anchor(level, b, portB, a), nb = outward(level, b, portB);
+        List<Vec3> pts = points(pa, na, pb, nb);
+        // Ниже пола под нижним концом корд не провисает — ложится на него (а не уходит в землю)
+        Vec3 low = pa.y < pb.y ? pa.add(na.scale(LEAD)) : pb.add(nb.scale(LEAD));
+        double floor = na.lengthSqr() + nb.lengthSqr() > 0 ? floorUnder(level, low) : Double.NEGATIVE_INFINITY;
+        if (floor > Double.NEGATIVE_INFINITY) {
+            double min = Math.min(floor + 0.045, Math.min(pa.y, pb.y));
+            for (int i = 0; i < pts.size(); i++) {
+                Vec3 p = pts.get(i);
+                if (p.y < min) pts.set(i, new Vec3(p.x, min, p.z));
+            }
+        }
+        return pts;
+    }
+
+    /** Верх ближайшей твёрдой поверхности под точкой (в пределах блока с небольшим), иначе -∞. */
+    private static double floorUnder(BlockGetter level, Vec3 p) {
+        BlockPos cell = BlockPos.containing(p);
+        for (int k = 0; k <= 1; k++) {
+            BlockPos c = cell.below(k);
+            BlockState st = level.getBlockState(c);
+            if (st.isAir() || st.getBlock() instanceof CableBlock) continue;
+            VoxelShape sh = st.getCollisionShape(level, c);
+            if (sh.isEmpty()) continue;
+            double top = c.getY() + sh.max(Direction.Axis.Y);
+            if (top <= p.y + 1e-3) return top;
+        }
+        return Double.NEGATIVE_INFINITY;
     }
 
     /**
