@@ -1,0 +1,298 @@
+[14Nov2026 13:27:41.770] [main/INFO] [cpw.mods.modlauncher.Launcher/MODLAUNCHER]: ModLauncher running: args [--launchTarget, forgeclientdev, --version, 21.1.265, --assetIndex, 17, --assetsDir, /home/runner/.gradle/caches/neoformruntime/assets, --gameDir, ., --fml.fmlVersion, 4.0.45, --fml.mcVersion, 1.21.1, --fml.neoForgeVersion, 21.1.265, --fml.neoFormVersion, 20240808.144430, --quickPlaySingleplayer, ci]
+[14Nov2026 13:27:41.771] [main/INFO] [cpw.mods.modlauncher.Launcher/MODLAUNCHER]: JVM identified as Eclipse Adoptium OpenJDK 64-Bit Server VM 21.0.13+9-LTS
+[14Nov2026 13:27:41.773] [main/INFO] [cpw.mods.modlauncher.Launcher/MODLAUNCHER]: ModLauncher 11.0.5+main.901c6ea8 starting: java version 21.0.13 by Eclipse Adoptium; OS Linux arch amd64 version 7.0.0-1016-aws
+[14Nov2026 13:27:41.848] [main/INFO] [net.neoforged.fml.loading.ImmediateWindowHandler/]: Loading ImmediateWindowProvider fmlearlywindow
+[14Nov2026 13:27:41.944] [main/INFO] [EARLYDISPLAY/]: Trying GL version 4.6
+[14Nov2026 13:27:41.961] [main/INFO] [EARLYDISPLAY/]: Trying GL version 4.5
+[14Nov2026 13:27:41.976] [main/INFO] [EARLYDISPLAY/]: Requested GL version 4.5 got version 4.5
+[14Nov2026 13:27:42.087] [main/INFO] [mixin/]: SpongePowered MIXIN Subsystem Version=0.8.7 Source=union:/home/runner/.gradle/caches/modules-2/files-2.1/net.fabricmc/sponge-mixin/0.16.4+mixin.0.8.7/26d01f0567ab46e9ca0d2ed89d0ecc11aadbd433/sponge-mixin-0.16.4+mixin.0.8.7.jar%23128!/ Service=ModLauncher Env=CLIENT
+[14Nov2026 13:27:42.141] [pool-2-thread-1/INFO] [EARLYDISPLAY/]: GL info: llvmpipe (LLVM 21.1.8, 256 bits) GL version 4.5 (Core Profile) Mesa 26.0.8-1ubuntu0.3, Mesa
+[14Nov2026 13:27:42.367] [main/INFO] [net.neoforged.fml.loading.moddiscovery.locators.JarInJarDependencyLocator/]: Found 2 dependencies adding them to mods collection
+[14Nov2026 13:27:42.368] [main/INFO] [net.neoforged.fml.loading.moddiscovery.ModDiscoverer/]: 
+     Mod List:
+		Name Version (Mod Id)
+
+		MineComputers 0.36.0 (minepc)
+		Minecraft 1.21.1 (minecraft)
+		NeoForge 21.1.265 (neoforge)
+[14Nov2026 13:27:42.852] [main/INFO] [cpw.mods.modlauncher.LaunchServiceHandler/MODLAUNCHER]: Launching target 'forgeclientdev' with arguments [--version, 21.1.265, --gameDir, ., --assetsDir, /home/runner/.gradle/caches/neoformruntime/assets, --assetIndex, 17, --quickPlaySingleplayer, ci]
+[14Nov2026 13:27:44.264] [Datafixer Bootstrap/INFO] [com.mojang.datafixers.DataFixerBuilder/]: 229 Datafixer optimizations took 304 milliseconds
+[14Nov2026 13:27:44.435] [pool-7-thread-1/INFO] [MixinExtras|Service/]: Initializing MixinExtras via com.llamalad7.mixinextras.service.MixinExtrasServiceImpl(version=0.5.5).
+[14Nov2026 13:27:48.455] [main/WARN] [net.minecraft.commands.Commands/]: Ambiguity between arguments [teleport, location] and [teleport, destination] with inputs: [0.1 -0.5 .9, 0 0 0]
+[14Nov2026 13:27:48.457] [main/WARN] [net.minecraft.commands.Commands/]: Ambiguity between arguments [teleport, location] and [teleport, targets] with inputs: [0.1 -0.5 .9, 0 0 0]
+[14Nov2026 13:27:48.459] [main/WARN] [net.minecraft.commands.Commands/]: Ambiguity between arguments [teleport, destination] and [teleport, targets] with inputs: [Player, 0123, @e, dd12be42-52a9-4a91-a8a1-11c01849e498]
+[14Nov2026 13:27:48.460] [main/WARN] [net.minecraft.commands.Commands/]: Ambiguity between arguments [teleport, targets] and [teleport, destination] with inputs: [Player, 0123, dd12be42-52a9-4a91-a8a1-11c01849e498]
+[14Nov2026 13:27:48.461] [main/WARN] [net.minecraft.commands.Commands/]: Ambiguity between arguments [teleport, targets, location] and [teleport, targets, destination] with inputs: [0.1 -0.5 .9, 0 0 0]
+[14Nov2026 13:27:48.566] [Render thread/WARN] [net.minecraft.server.packs.VanillaPackResourcesBuilder/]: Assets URL 'union:/home/runner/work/MineComputers/MineComputers/build/moddev/artifacts/neoforge-21.1.265.jar%23179!/assets/.mcassetsroot' uses unexpected schema
+[14Nov2026 13:27:48.566] [Render thread/WARN] [net.minecraft.server.packs.VanillaPackResourcesBuilder/]: Assets URL 'union:/home/runner/work/MineComputers/MineComputers/build/moddev/artifacts/neoforge-21.1.265.jar%23179!/data/.mcassetsroot' uses unexpected schema
+[14Nov2026 13:27:48.584] [Render thread/INFO] [com.mojang.authlib.yggdrasil.YggdrasilAuthenticationService/]: Environment: Environment[sessionHost=https://sessionserver.mojang.com, servicesHost=https://api.minecraftservices.com, name=PROD]
+[14Nov2026 13:27:48.589] [Render thread/INFO] [net.minecraft.client.Minecraft/]: Setting user: Dev
+[14Nov2026 13:27:48.669] [Render thread/INFO] [net.minecraft.client.Minecraft/]: Backend library: LWJGL version 3.3.3+5
+[14Nov2026 13:27:49.040] [modloading-worker-0/INFO] [net.neoforged.neoforge.common.NeoForgeMod/NEOFORGE-MOD]: NeoForge mod loading, version 21.1.265, for MC 1.21.1
+[14Nov2026 13:27:49.120] [modloading-worker-0/INFO] [com.strikerr212.minepc.MineComputers/]: MineComputers is loading! Lua (Cobalt) ready: 42
+[14Nov2026 13:27:50.071] [Render thread/INFO] [net.neoforged.neoforge.gametest.GameTestHooks/]: Enabled Gametest Namespaces: [minepc]
+[14Nov2026 13:27:50.206] [Render thread/INFO] [net.minecraft.server.packs.resources.ReloadableResourceManager/]: Reloading ResourceManager: vanilla, mod_resources, mod/minepc, mod/neoforge
+[14Nov2026 13:27:50.374] [Worker-Main-3/INFO] [net.minecraft.client.gui.font.providers.UnihexProvider/]: Found unifont_all_no_pua-15.1.05.hex, loading
+[14Nov2026 13:27:50.951] [Worker-Main-3/INFO] [net.minecraft.client.gui.font.providers.UnihexProvider/]: Found unifont_jp_patch-15.1.05.hex, loading
+[14Nov2026 13:27:53.047] [Render thread/WARN] [net.minecraft.client.sounds.SoundEngine/]: Missing sound for event: minecraft:item.goat_horn.play
+[14Nov2026 13:27:53.047] [Render thread/WARN] [net.minecraft.client.sounds.SoundEngine/]: Missing sound for event: minecraft:entity.goat.screaming.horn_break
+[14Nov2026 13:27:53.056] [Render thread/INFO] [com.mojang.blaze3d.audio.Library/]: OpenAL initialized on device Wave File Writer
+[14Nov2026 13:27:53.057] [Render thread/INFO] [net.minecraft.client.sounds.SoundEngine/SOUNDS]: Sound engine started
+[14Nov2026 13:27:53.210] [Render thread/INFO] [net.minecraft.client.renderer.texture.TextureAtlas/]: Created: 1024x1024x4 minecraft:textures/atlas/blocks.png-atlas
+[14Nov2026 13:27:53.231] [Render thread/INFO] [net.minecraft.client.renderer.texture.TextureAtlas/]: Created: 256x256x4 minecraft:textures/atlas/signs.png-atlas
+[14Nov2026 13:27:53.231] [Render thread/INFO] [net.minecraft.client.renderer.texture.TextureAtlas/]: Created: 512x512x4 minecraft:textures/atlas/shield_patterns.png-atlas
+[14Nov2026 13:27:53.232] [Render thread/INFO] [net.minecraft.client.renderer.texture.TextureAtlas/]: Created: 512x512x4 minecraft:textures/atlas/banner_patterns.png-atlas
+[14Nov2026 13:27:53.233] [Render thread/INFO] [net.minecraft.client.renderer.texture.TextureAtlas/]: Created: 1024x1024x4 minecraft:textures/atlas/armor_trims.png-atlas
+[14Nov2026 13:27:53.238] [Render thread/INFO] [net.minecraft.client.renderer.texture.TextureAtlas/]: Created: 128x64x4 minecraft:textures/atlas/decorated_pot.png-atlas
+[14Nov2026 13:27:53.238] [Render thread/INFO] [net.minecraft.client.renderer.texture.TextureAtlas/]: Created: 256x256x4 minecraft:textures/atlas/chest.png-atlas
+[14Nov2026 13:27:53.238] [Render thread/INFO] [net.minecraft.client.renderer.texture.TextureAtlas/]: Created: 512x256x4 minecraft:textures/atlas/shulker_boxes.png-atlas
+[14Nov2026 13:27:53.238] [Render thread/INFO] [net.minecraft.client.renderer.texture.TextureAtlas/]: Created: 512x256x4 minecraft:textures/atlas/beds.png-atlas
+[14Nov2026 13:27:53.410] [Render thread/INFO] [net.minecraft.client.renderer.texture.TextureAtlas/]: Created: 512x256x0 minecraft:textures/atlas/particles.png-atlas
+[14Nov2026 13:27:53.412] [Render thread/INFO] [net.minecraft.client.renderer.texture.TextureAtlas/]: Created: 512x256x0 minecraft:textures/atlas/paintings.png-atlas
+[14Nov2026 13:27:53.412] [Render thread/INFO] [net.minecraft.client.renderer.texture.TextureAtlas/]: Created: 256x128x0 minecraft:textures/atlas/mob_effects.png-atlas
+[14Nov2026 13:27:53.412] [Render thread/INFO] [net.minecraft.client.renderer.texture.TextureAtlas/]: Created: 64x64x0 minecraft:textures/atlas/map_decorations.png-atlas
+[14Nov2026 13:27:53.413] [Render thread/INFO] [net.minecraft.client.renderer.texture.TextureAtlas/]: Created: 1024x512x0 minecraft:textures/atlas/gui.png-atlas
+[14Nov2026 13:27:53.439] [Render thread/WARN] [net.minecraft.client.renderer.ShaderInstance/]: Shader rendertype_entity_translucent_emissive could not find sampler named Sampler2 in the specified shader program.
+[14Nov2026 13:27:53.501] [Render thread/INFO] [net.neoforged.neoforge.client.entity.animation.json.AnimationLoader/]: Loaded 0 entity animations
+[14Nov2026 13:27:54.247] [Render thread/INFO] [net.minecraft.world.item.crafting.RecipeManager/]: Loaded 1378 recipes
+[14Nov2026 13:27:54.358] [Render thread/INFO] [net.minecraft.advancements.AdvancementTree/]: Loaded 1399 advancements
+[14Nov2026 13:27:54.832] [Server thread/INFO] [net.minecraft.client.server.IntegratedServer/]: Starting integrated minecraft server version 1.21.1
+[14Nov2026 13:27:54.832] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: Generating keypair
+[14Nov2026 13:27:55.087] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: Preparing start region for dimension minecraft:overworld
+[14Nov2026 13:27:55.325] [progressListener/INFO] [net.minecraft.server.level.progress.LoggerChunkProgressListener/]: Подготовка области возрождения: 0%
+[14Nov2026 13:27:55.399] [Server thread/INFO] [net.neoforged.neoforge.server.permission.PermissionAPI/]: Successfully initialized permission handler neoforge:default_handler
+[14Nov2026 13:27:55.408] [progressListener/INFO] [net.minecraft.server.level.progress.LoggerChunkProgressListener/]: Time elapsed: 305 ms
+[14Nov2026 13:27:55.430] [Server thread/INFO] [net.minecraft.client.server.IntegratedServer/]: Changing view distance to 4, from 10
+[14Nov2026 13:27:55.431] [Server thread/INFO] [net.minecraft.client.server.IntegratedServer/]: Changing simulation distance to 5, from 0
+[14Nov2026 13:27:56.063] [Server thread/INFO] [net.minecraft.server.players.PlayerList/]: Dev[local:E:0ac7fa76] logged in with entity id 1 at (-3.5, -60.0, 9.5)
+[14Nov2026 13:27:56.086] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: Dev присоединился к игре
+[14Nov2026 13:27:56.276] [Render thread/INFO] [net.minecraft.advancements.AdvancementTree/]: Loaded 2 advancements
+[14Nov2026 13:27:56.633] [MineComputers camera textures/INFO] [com.strikerr212.minepc.client.BlockTextureBaker/]: MineComputers: текстуры для камер — 967 блоков, 862 картинок, 143 КБ
+[14Nov2026 13:28:51.767] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-LAN] -7, -60, 32 -> -4, -60, 28 hops=1 -9, -60, 38 hops=2 -1, -60, 32 hops=1
+[14Nov2026 13:28:51.767] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-LAN] -1, -60, 32 -> -7, -60, 32 hops=1 -4, -60, 28 hops=1 -9, -60, 38 hops=2
+[14Nov2026 13:28:51.767] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-LAN] -4, -60, 28 -> -7, -60, 32 hops=1 -9, -60, 38 hops=2 -1, -60, 32 hops=1
+[14Nov2026 13:28:51.768] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-LAN] -9, -60, 38 -> -7, -60, 32 hops=2 -4, -60, 28 hops=2 -1, -60, 32 hops=2
+[14Nov2026 13:28:59.254] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-LAN] -7, -60, 32 -> -4, -60, 28 hops=1 -9, -60, 38 hops=2 -1, -60, 32 hops=1
+[14Nov2026 13:28:59.255] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-LAN] -1, -60, 32 -> -7, -60, 32 hops=1 -4, -60, 28 hops=1 -9, -60, 38 hops=2
+[14Nov2026 13:28:59.255] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-LAN] -4, -60, 28 -> -7, -60, 32 hops=1 -9, -60, 38 hops=2 -1, -60, 32 hops=1
+[14Nov2026 13:28:59.255] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-LAN] -9, -60, 38 -> -7, -60, 32 hops=2 -4, -60, 28 hops=2 -1, -60, 32 hops=2
+[14Nov2026 13:29:00.149] [Render thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI] экран: com.strikerr212.minepc.client.RouterScreen@54c77b89
+[14Nov2026 13:29:00.805] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-ROUTE] маршрут 7 клеток, проводов 9, дорожка 3
+[14Nov2026 13:29:15.498] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-LAN2] 10, -60, 34 -> 17, -60, 31 hops=2 bits=1000000000
+[14Nov2026 13:29:15.498] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-LAN2] 17, -60, 31 -> 10, -60, 34 hops=2 bits=1000000000
+[14Nov2026 13:29:15.498] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-LAN2] 18, -60, 36 -> 25, -60, 36 hops=0 bits=1000000000
+[14Nov2026 13:29:15.498] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-LAN2] 25, -60, 36 -> 18, -60, 36 hops=0 bits=1000000000
+[14Nov2026 13:29:15.498] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-LAN2] 8, -60, 27 -> 22, -60, 27 hops=0 bits=1000000000
+[14Nov2026 13:29:15.498] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-LAN2] 22, -60, 27 -> 8, -60, 27 hops=0 bits=1000000000
+[14Nov2026 13:29:15.498] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-LAN2] 13, -60, 29 -> 19, -60, 29 hops=0 bits=1000000000
+[14Nov2026 13:29:15.498] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-LAN2] 19, -60, 29 -> 13, -60, 29 hops=0 bits=1000000000
+[14Nov2026 13:29:15.513] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-LAN2] радио Device[type=5, kbit=1638, mask=1572867, extra=983790] слышит [BlockPos{x=313, y=-60, z=36}]
+[14Nov2026 13:29:15.527] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-LAN2] порты R1: [Port[port=11, side=F, number=12, link=true, device=rack, enabled=true, vlan=6, length=6, label=], Port[port=16, side=C, number=1, link=true, device=@rack-e, enabled=true, vlan=6, length=4, label=]]
+[14Nov2026 13:29:16.146] [Render thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI] экран: com.strikerr212.minepc.client.SwitchScreen@7a8a8e73
+[14Nov2026 13:29:19.746] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-CORD] до камня: линий 2, блок на пути null
+[14Nov2026 13:29:20.996] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-CORD] после камня: линий 2, K3 видит 1
+[14Nov2026 13:29:43.257] [Render thread/INFO] [com.strikerr212.minepc.MineComputers/]: CI экран: за 5.0 с отправлено 206 кадров (41.2/с), получено 206 (41.2/с), игра рисует 81 кадров/с
+[14Nov2026 13:29:43.257] [Render thread/INFO] [com.strikerr212.minepc.MineComputers/]: CI звук: пакетов 44, кусочков звука 1193, OpenAL работает, задержка «пакет → звук» в среднем 25.8 мс
+[14Nov2026 13:29:43.257] [Render thread/INFO] [com.strikerr212.minepc.MineComputers/]: CI экран: из них от компьютера с игрой 150 (30.0/с)
+[14Nov2026 13:29:43.257] [Render thread/INFO] [com.strikerr212.minepc.MineComputers/]: CI экран 160x50, нижняя строка: ♥ 100 Патроны 26 Роботы 4/8 29 кадров/с
+[14Nov2026 13:30:03.748] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-HOTSWAP] до: state=1 psu=2 | вынут БП2=true диск=true ЦП2=false ОЗУ=false последний БП=false | после: state=1 psu=1
+[14Nov2026 13:30:04.251] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-HOTSWAP] вернули БП2=true диск=true | state=1 psu=2
+[14Nov2026 13:30:05.156] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-RACK] srv-a -> -18, -60, 32#1 hops=1
+[14Nov2026 13:30:05.169] [Render thread/INFO] [net.minecraft.advancements.AdvancementTree/]: Loaded 13 advancements
+[14Nov2026 13:30:11.550] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-BMC] srv-b state=1 log=день 1 12:00  блок питания 1 вставлен | день 1 12:00  блок питания 2 вставлен | день 1 12:00  диск в отсеке 1 вставлен | день 1 12:00  диск в отсеке 2 вставлен | день 1 12:00  питание включено | день 1 12:00  блок питания 2 вынут | день 1 12:00  диск в отсеке 2 извлечён | день 1 12:00  блок питания 2 вставлен | день 1 12:00  диск в отсеке 2 вставлен | день 1 12:00  BMC: выключение по сети (srv-a) | день 1 12:00  питание выключено | день 1 12:00  неверный пароль BMC (srv-a) | день 1 12:00  BMC: включение по сети (srv-a) | день 1 12:00  питание включено
+[14Nov2026 13:30:11.649] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-SECRETS] в данных для игроков пароль=false ключ bmc_password=false | в сохранении открытым текстом=false | пароль подходит=true чужой=false | старый открытый=true
+[14Nov2026 13:30:19.048] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-RAID] после отказа: state=1 log=день 1 12:00  питание включено | день 1 12:00  RAID: создан RAID 5 (с чётностью) из 4 дисков | день 1 12:00  диск в отсеке 3 просит замены (износ 92%) | день 1 12:00  диск в отсеке 2 отказал | день 1 12:00  RAID: из массива выпал диск 2 — работает без резерва
+[14Nov2026 13:30:21.152] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-RAID] замена: вынут=true вставлен=true восстанавливается отсек=2
+[14Nov2026 13:30:43.746] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-RAID] итог: день 1 12:00  диск в отсеке 2 извлечён | день 1 12:00  диск в отсеке 2 вставлен | день 1 12:00  RAID: восстановление на диск в отсеке 2 | день 1 12:00  RAID: восстановление на отсек 2 завершено
+[14Nov2026 13:30:54.256] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-BUS] шина: srv-x -> srv-y hops=1 srv-z hops=1 | linked=true link=1
+[14Nov2026 13:30:54.755] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-BUS] VLAN red у srv-z, роутер есть: srv-x -> srv-y hops=1 srv-z hops=2 | linked=true link=1
+[14Nov2026 13:30:56.559] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-NET29] маршрут -33, -60, 36 -> -31, -60, 33 «Бухгалтерия»: 4 клеток
+[14Nov2026 13:30:56.559] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-NET29] маршрут -31, -60, 31 -> -28, -60, 29 «ПК-1»: 4 клеток
+[14Nov2026 13:30:56.561] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-NET29] маршрут -33, -60, 36 -> -30, -60, 40 «Сервер»: 10 клеток
+[14Nov2026 13:30:58.245] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-NET29] сеть: pcN -> pcS hops=1
+[14Nov2026 13:30:58.245] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-NET29] розетки: N Device[type=8, kbit=10000000, mask=778, extra=0] S Device[type=8, kbit=10000000, mask=522, extra=0] пара=true
+[14Nov2026 13:30:58.246] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-NET29] коммутатор порт 0:  бирка «» длина 0
+[14Nov2026 13:30:58.246] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-NET29] коммутатор порт 1:  бирка «» длина 0
+[14Nov2026 13:30:58.246] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-NET29] коммутатор порт 2:  бирка «» длина 0
+[14Nov2026 13:30:58.246] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-NET29] коммутатор порт 3:  бирка «» длина 0
+[14Nov2026 13:30:58.246] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-NET29] коммутатор порт 4: @e67fbe98 бирка «Сервер» длина 10
+[14Nov2026 13:30:58.246] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-NET29] коммутатор порт 5: @568273b9 бирка «Бухгалтерия» длина 8
+[14Nov2026 13:30:58.248] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-NET29] прозвонка pcN порт 1: длина 8 концов 1 обрывов 0 проводов 8 пассивных 2
+[14Nov2026 13:30:58.248] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-NET29] прозвонка куска: длина 2 концов 0 обрывов 2
+[14Nov2026 13:30:58.248] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-NET29] ноутбук: связь 0
+[14Nov2026 13:30:58.248] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-NET29] Wi-Fi ноутбука: null (к точке доступа: false), стен до точки 1, сигнал по формуле 58%
+[14Nov2026 13:31:08.248] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-NET29] wifi: pcN -> pcS hops=1
+[14Nov2026 13:31:08.248] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-NET29] розетки: N Device[type=8, kbit=10000000, mask=778, extra=0] S Device[type=8, kbit=10000000, mask=522, extra=0] пара=true
+[14Nov2026 13:31:08.248] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-NET29] коммутатор порт 0:  бирка «» длина 0
+[14Nov2026 13:31:08.248] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-NET29] коммутатор порт 1:  бирка «» длина 0
+[14Nov2026 13:31:08.248] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-NET29] коммутатор порт 2:  бирка «» длина 0
+[14Nov2026 13:31:08.248] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-NET29] коммутатор порт 3:  бирка «» длина 0
+[14Nov2026 13:31:08.248] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-NET29] коммутатор порт 4: @e67fbe98 бирка «Сервер» длина 10
+[14Nov2026 13:31:08.248] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-NET29] коммутатор порт 5: @568273b9 бирка «Бухгалтерия» длина 8
+[14Nov2026 13:31:08.248] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-NET29] прозвонка pcN порт 1: длина 8 концов 1 обрывов 0 проводов 8 пассивных 2
+[14Nov2026 13:31:08.248] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-NET29] прозвонка куска: длина 2 концов 0 обрывов 2
+[14Nov2026 13:31:08.248] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-NET29] ноутбук: связь 234
+[14Nov2026 13:31:08.250] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-NET29] Wi-Fi ноутбука: WifiLink[computer=BlockPos{x=-25, y=-60, z=40}, router=BlockPos{x=-31, y=-57, z=38}, mbit=150, signal=58] (к точке доступа: true), стен до точки 1, сигнал по формуле 58%
+[14Nov2026 13:31:10.258] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-TOWER] вышки: вышка 1 Tower[bottom=BlockPos{x=-52, y=-60, z=32}, sections=20, top=BlockPos{x=-52, y=-41, z=32}, pin=true, sectors=8, dishes=8, rod=true]
+[14Nov2026 13:31:10.258] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-TOWER] вышки: m1 дальность 1800 -> m2 через dish 32768 Б/с clear m3 через pin 512 Б/с weak
+[14Nov2026 13:31:10.259] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-TOWER] вышки: m2 дальность 600 -> m3 через pin 2048 Б/с clear m1 через dish 32768 Б/с clear
+[14Nov2026 13:31:10.259] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-TOWER] вышки: m3 дальность 250 -> m2 через pin 2048 Б/с clear m1 через pin 512 Б/с weak
+[14Nov2026 13:31:14.753] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-TOWER] молния: вышка 2 (без громоотвода) выбита=true, вышка 1 (с громоотводом) выбита=false
+[14Nov2026 13:31:14.754] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-TOWER] после молнии: вышка 1 Tower[bottom=BlockPos{x=-52, y=-60, z=32}, sections=20, top=BlockPos{x=-52, y=-41, z=32}, pin=true, sectors=8, dishes=8, rod=true]
+[14Nov2026 13:31:14.754] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-TOWER] после молнии: m1 дальность 1800 -> m3 через pin 512 Б/с weak
+[14Nov2026 13:31:14.754] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-TOWER] после молнии: m2 дальность 600 ->
+[14Nov2026 13:31:14.754] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-TOWER] после молнии: m3 дальность 250 -> m1 через pin 512 Б/с weak
+[14Nov2026 13:31:17.049] [Render thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-DRAW] призрак: кусков 15, длина 15, ошибки []
+[14Nov2026 13:31:17.253] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-DRAW] A -> коммутатор (сам): ok=true длина 10 ошибки [] грани ddddeedwwddd
+[14Nov2026 13:31:17.258] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-DRAW] B -> коммутатор (щелчками): ok=true длина 11 ошибки []
+[14Nov2026 13:31:17.265] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-DRAW] A -> B hops=1 | кабеля в руке 43
+[14Nov2026 13:31:17.745] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-POWER] топовый MS-S: 128 ядер, 8000 МГц, TDP 394 Вт; стоковый MS-S: 86 Вт
+[14Nov2026 13:31:17.746] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-POWER] srv-b: блоков 2, вместе 1700 Вт, нагрузка 343 Вт, резерв 1
+[14Nov2026 13:31:17.746] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-POWER] 2 × топ на 2 × 1600: нагрузка ~938 Вт, тянет true, резерв true
+[14Nov2026 13:31:18.455] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-CASE2] пустой: видно 0 8 9 10 11 12 15 16
+[14Nov2026 13:31:19.246] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-CASE2] плата ур. 1: видно 0 1 3 4 7 8 9 10 11 12 15 16 | плата: память 2, M.2 0
+[14Nov2026 13:31:19.746] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-CASE2] процессор: видно 0 1 2 3 4 7 8 9 10 11 12 15 16 | плата: память 2, M.2 0
+[14Nov2026 13:31:19.746] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-CASE2] вынуть плату: message.minepc.board_busy | кулер в пустой корпус: null
+[14Nov2026 13:31:27.754] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-IO] лампа горит: true | вход юг 15 | сундук сверху 5 | адрес 30aa5f40 | выход север 15
+[14Nov2026 13:31:27.755] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-IO] A -> -25, -60, 54 -34, -60, 50
+[14Nov2026 13:31:27.755] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-IO] | MineComputers BIOS
+[14Nov2026 13:31:27.755] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-IO] | Процессор ур. 3, ядер: 8, 3.5 МГц, Lua
+[14Nov2026 13:31:27.755] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-IO] | Память: 4096 КБ, скорость: 6785600 команд/с
+[14Nov2026 13:31:27.755] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-IO] | Введите help, чтобы увидеть список команд.
+[14Nov2026 13:31:27.755] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-IO] | /> ioc
+[14Nov2026 13:31:27.755] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-IO] | Имя              Адрес     Переходов
+[14Nov2026 13:31:27.755] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-IO] | ctl              30aa5f40  1
+[14Nov2026 13:31:27.755] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-IO] | Подробнее: ioc <имя>
+[14Nov2026 13:31:27.755] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-IO] | /> ioc ctl set north 15
+[14Nov2026 13:31:27.755] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-IO] | ctl  30aa5f40
+[14Nov2026 13:31:27.755] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-IO] | север  выход ############### 15  redstone_lamp
+[14Nov2026 13:31:27.755] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-IO] | юг     вход  ############### 15  redstone_block
+[14Nov2026 13:31:27.755] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-IO] | запад  вход  ...............  0  minepc:network_cable
+[14Nov2026 13:31:27.755] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-IO] | восток вход  ...............  0
+[14Nov2026 13:31:27.755] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-IO] | верх   вход  ...............  0  заполнен 5/15  chest
+[14Nov2026 13:31:27.755] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-IO] | низ    вход  ...............  0  smooth_stone
+[14Nov2026 13:31:27.755] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-IO] | Игроки рядом: Dev   свет: 14   12:00
+[14Nov2026 13:31:27.755] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-IO] | /> ioc ctl
+[14Nov2026 13:31:27.755] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-IO] | ctl  30aa5f40
+[14Nov2026 13:31:27.755] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-IO] | север  выход ############### 15  redstone_lamp
+[14Nov2026 13:31:27.755] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-IO] | юг     вход  ############### 15  redstone_block
+[14Nov2026 13:31:27.755] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-IO] | запад  вход  ...............  0  minepc:network_cable
+[14Nov2026 13:31:27.755] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-IO] | восток вход  ...............  0
+[14Nov2026 13:31:27.755] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-IO] | верх   вход  ...............  0  заполнен 5/15  chest
+[14Nov2026 13:31:27.755] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-IO] | низ    вход  ...............  0  smooth_stone
+[14Nov2026 13:31:27.755] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-IO] | Игроки рядом: Dev   свет: 14   12:00
+[14Nov2026 13:31:27.755] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-IO] | />
+[14Nov2026 13:31:33.749] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-WEB] компьютер A
+[14Nov2026 13:31:33.750] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-WEB] |  < > R  mine://shop.mine
+[14Nov2026 13:31:33.750] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-WEB] | Добро пожаловать на мой сайт!
+[14Nov2026 13:31:33.750] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-WEB] | Этот сайт работает на компьютере shop.mine.
+[14Nov2026 13:31:33.750] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-WEB] | Страницы лежат в папке /www: откройте edit /www/index.page и поменяйте этот текст.
+[14Nov2026 13:31:33.750] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-WEB] | ------------------------------------------------------------------------------------------------------------------------
+[14Nov2026 13:31:33.750] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-WEB] | Что умеет разметка
+[14Nov2026 13:31:33.750] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-WEB] | Решётка и пробел в начале строки — заголовок, две решётки — подзаголовок,
+[14Nov2026 13:31:33.750] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-WEB] | три минуса — черта, знак «больше» — цитата.
+[14Nov2026 13:31:33.750] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-WEB] | | Это цитата.
+[14Nov2026 13:31:33.750] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-WEB] | Цвет — имя в фигурных скобках: green, orange, lightBlue; пустые скобки — обычный.
+[14Nov2026 13:31:33.750] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-WEB] | Ссылка: страница «Привет»
+[14Nov2026 13:31:33.750] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-WEB] | ------------------------------------------------------------------------------------------------------------------------
+[14Nov2026 13:31:33.750] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-WEB] | Форма
+[14Nov2026 13:31:33.750] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-WEB] | Как вас зовут? [                ]
+[14Nov2026 13:31:33.750] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-WEB] | [ Поздороваться ]
+[14Nov2026 13:31:33.750] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-WEB] | Tab ссылки  Enter открыть  g адрес  r обновить  b назад  q выход
+[14Nov2026 13:31:33.750] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-WEB] компьютер B
+[14Nov2026 13:31:33.750] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-WEB] | MineComputers BIOS
+[14Nov2026 13:31:33.750] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-WEB] | Процессор ур. 3, ядер: 8, 3.5 МГц, Lua
+[14Nov2026 13:31:33.750] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-WEB] | Память: 4096 КБ, скорость: 6785600 команд/с
+[14Nov2026 13:31:33.750] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-WEB] | Введите help, чтобы увидеть список команд.
+[14Nov2026 13:31:33.750] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-WEB] | /> dns register shop
+[14Nov2026 13:31:33.750] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-WEB] | Имя shop.mine теперь ваше. Запустите сайт: httpd
+[14Nov2026 13:31:33.750] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-WEB] | /> httpd
+[14Nov2026 13:31:33.750] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-WEB] | Сайт работает в фоне (процесс 2). Страницы — в /www.
+[14Nov2026 13:31:33.750] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-WEB] | Адрес: shop.mine
+[14Nov2026 13:31:33.750] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-WEB] | />
+[14Nov2026 13:31:40.249] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-MAIL] компьютер A
+[14Nov2026 13:31:40.249] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-MAIL] | /> mail send admin@shop.mine Привет
+[14Nov2026 13:31:40.249] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-MAIL] | Текст (точка в отдельной строке — отправить):
+[14Nov2026 13:31:40.249] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-MAIL] | Как дела?
+[14Nov2026 13:31:40.249] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-MAIL] | .
+[14Nov2026 13:31:40.249] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-MAIL] | Отправлено: доставлено
+[14Nov2026 13:31:40.249] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-MAIL] | />
+[14Nov2026 13:31:40.249] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-MAIL] компьютер B
+[14Nov2026 13:31:40.250] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-MAIL] | MineComputers BIOS
+[14Nov2026 13:31:40.250] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-MAIL] | Процессор ур. 3, ядер: 8, 3.5 МГц, Lua
+[14Nov2026 13:31:40.250] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-MAIL] | Память: 4096 КБ, скорость: 6785600 команд/с
+[14Nov2026 13:31:40.250] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-MAIL] | Введите help, чтобы увидеть список команд.
+[14Nov2026 13:31:40.250] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-MAIL] | /> dns register shop
+[14Nov2026 13:31:40.250] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-MAIL] | Имя shop.mine теперь ваше. Запустите сайт: httpd
+[14Nov2026 13:31:40.250] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-MAIL] | /> httpd
+[14Nov2026 13:31:40.250] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-MAIL] | Сайт работает в фоне (процесс 2). Страницы — в /www.
+[14Nov2026 13:31:40.250] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-MAIL] | Адрес: shop.mine
+[14Nov2026 13:31:40.250] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-MAIL] | /> maild
+[14Nov2026 13:31:40.250] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-MAIL] | Почта работает в фоне (процесс 3). Ваш адрес: <имя>@shop.mine
+[14Nov2026 13:31:40.250] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-MAIL] | /> mail
+[14Nov2026 13:31:40.250] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-MAIL] |  1 * 9fc2262f     Привет
+[14Nov2026 13:31:40.250] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-MAIL] | Прочитать: mail read <номер>
+[14Nov2026 13:31:40.250] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-MAIL] | />
+[14Nov2026 13:31:46.553] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-CAM] после просмотра: угол -118.1301 наклон -12.0 снимок true кадр 192×108 поток 155520 Б/с
+[14Nov2026 13:31:46.554] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-CAM] компьютер A
+[14Nov2026 13:31:46.554] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-CAM] | />
+[14Nov2026 13:31:46.554] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-CAM] компьютер B
+[14Nov2026 13:31:46.554] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-CAM] | MineComputers BIOS
+[14Nov2026 13:31:46.554] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-CAM] | Процессор ур. 3, ядер: 8, 3.5 МГц, Lua
+[14Nov2026 13:31:46.554] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-CAM] | Память: 4096 КБ, скорость: 6785600 команд/с
+[14Nov2026 13:31:46.554] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-CAM] | Введите help, чтобы увидеть список команд.
+[14Nov2026 13:31:46.554] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-CAM] | /> dns register shop
+[14Nov2026 13:31:46.554] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-CAM] | Имя shop.mine теперь ваше. Запустите сайт: httpd
+[14Nov2026 13:31:46.554] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-CAM] | /> httpd
+[14Nov2026 13:31:46.554] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-CAM] | Сайт работает в фоне (процесс 2). Страницы — в /www.
+[14Nov2026 13:31:46.554] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-CAM] | Адрес: shop.mine
+[14Nov2026 13:31:46.554] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-CAM] | /> maild
+[14Nov2026 13:31:46.554] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-CAM] | Почта работает в фоне (процесс 3). Ваш адрес: <имя>@shop.mine
+[14Nov2026 13:31:46.554] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-CAM] | /> mail
+[14Nov2026 13:31:46.554] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-CAM] |  1 * 9fc2262f     Привет
+[14Nov2026 13:31:46.554] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-CAM] | Прочитать: mail read <номер>
+[14Nov2026 13:31:46.554] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-CAM] | />
+[14Nov2026 13:31:55.753] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-SEND] компьютер A
+[14Nov2026 13:31:55.753] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-SEND] | /> lua
+[14Nov2026 13:31:55.753] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-SEND] | Интерактивный Lua. exit() — выход.
+[14Nov2026 13:31:55.753] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-SEND] | lua> 56,(i*31)%256) end local f=fs.open("big.bin","wb") f.write(table.concat(t)) f.close() print(fs.getSize("big.bin"))
+[14Nov2026 13:31:55.753] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-SEND] | 200000
+[14Nov2026 13:31:55.753] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-SEND] | lua> exit()
+[14Nov2026 13:31:55.753] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-SEND] | /> send shop.mine big.bin
+[14Nov2026 13:31:55.753] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-SEND] | Отправляю big.bin (200000 байт) → 54986b38
+[14Nov2026 13:31:55.753] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-SEND] | 100%
+[14Nov2026 13:31:55.753] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-SEND] | Готово: 200000 байт за 0.6 с (324.7 КБ/с)
+[14Nov2026 13:31:55.753] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-SEND] | />
+[14Nov2026 13:31:55.754] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-SEND] компьютер B
+[14Nov2026 13:31:55.754] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-SEND] | /> recv
+[14Nov2026 13:31:55.754] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-SEND] | Жду файлы на порту 21 (Ctrl+T — выход)
+[14Nov2026 13:31:55.754] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-SEND] | От 9fc2262f: big.bin (200000 байт)
+[14Nov2026 13:31:55.754] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-SEND] |   сохранён: big.bin
+[14Nov2026 13:31:56.248] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-CORD] клик A гнездо 2 → CONSUME (кордов 0, мешает null )
+[14Nov2026 13:31:56.249] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-CORD] клик B гнездо 5 → CONSUME (кордов 1, мешает null )
+[14Nov2026 13:31:56.249] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-CORD] клик A гнездо 6 → CONSUME (кордов 1, мешает null )
+[14Nov2026 13:31:56.249] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-CORD] клик B гнездо 1 → CONSUME (кордов 2, мешает null )
+[14Nov2026 13:31:56.249] [Server thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-CORD] клик A гнездо 2 → FAIL (кордов 2, мешает null )
+[14Nov2026 13:31:56.852] [Render thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-CORD] у игрока A: порт 2 → B порт 5
+[14Nov2026 13:31:56.852] [Render thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-CORD] у игрока A: порт 6 → B порт 1
+[14Nov2026 13:31:56.852] [Render thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-CORD] у игрока B: порт 5 → A порт 2
+[14Nov2026 13:31:56.852] [Render thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-CORD] у игрока B: порт 1 → A порт 6
+[14Nov2026 13:31:59.252] [Render thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-CORD] у игрока A: порт 2 → B порт 5
+[14Nov2026 13:31:59.252] [Render thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-CORD] у игрока A: порт 6 → B порт 1
+[14Nov2026 13:31:59.252] [Render thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-CORD] у игрока B: порт 5 → A порт 2
+[14Nov2026 13:31:59.252] [Render thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-CORD] у игрока B: порт 1 → A порт 6
+[14Nov2026 13:32:02.747] [Render thread/INFO] [com.strikerr212.minepc.client.CiScreenshots/]: [CI-TEX] таблица текстур: готова true, блоков с текстурой 967, трава true
+[14Nov2026 13:32:04.467] [Render thread/INFO] [net.minecraft.client.Minecraft/]: Stopping!
+[14Nov2026 13:32:04.504] [Server thread/INFO] [net.minecraft.server.network.ServerGamePacketListenerImpl/]: Dev lost connection: Отключение
+[14Nov2026 13:32:04.505] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: Dev покинул игру
+[14Nov2026 13:32:04.518] [Server thread/INFO] [net.minecraft.server.network.ServerCommonPacketListenerImpl/]: Stopping singleplayer server as player logged out
+[14Nov2026 13:32:04.551] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: Stopping server
+[14Nov2026 13:32:04.553] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: Saving players
+[14Nov2026 13:32:04.553] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: Saving worlds
+[14Nov2026 13:32:06.746] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: Saving chunks for level 'ServerLevel[world]'/minecraft:overworld
+[14Nov2026 13:32:06.788] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: Saving chunks for level 'ServerLevel[world]'/minecraft:the_nether
+[14Nov2026 13:32:06.790] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: Saving chunks for level 'ServerLevel[world]'/minecraft:the_end
+[14Nov2026 13:32:06.796] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: ThreadedAnvilChunkStorage (ci): All chunks are saved
+[14Nov2026 13:32:06.796] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: ThreadedAnvilChunkStorage (DIM-1): All chunks are saved
+[14Nov2026 13:32:06.796] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: ThreadedAnvilChunkStorage (DIM1): All chunks are saved
+[14Nov2026 13:32:06.796] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: ThreadedAnvilChunkStorage: All dimensions are saved
