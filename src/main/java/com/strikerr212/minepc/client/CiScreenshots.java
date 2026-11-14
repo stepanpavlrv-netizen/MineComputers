@@ -681,8 +681,9 @@ public class CiScreenshots {
                 cordClick(cordA, 1);       // занятое гнездо — должен отказать
             });
             case 4812 -> logCords();
+            case 4860 -> logCords();      // после проверки CordGuard (раз в 2 с): корды на месте
             case 4822 -> shot(mc, "cord_sockets");
-            case 4830 -> mc.stop();
+            case 4870 -> mc.stop();
             default -> {
             }
         }
@@ -1150,7 +1151,10 @@ public class CiScreenshots {
         var hit = new net.minecraft.world.phys.BlockHitResult(com.strikerr212.minepc.lan.CordShape.socketPoint(pos, so), so.face(), pos, false);
         ItemStack stack = p.getMainHandItem();
         var r = stack.getItem().onItemUseFirst(stack, new net.minecraft.world.item.context.UseOnContext(p, net.minecraft.world.InteractionHand.MAIN_HAND, hit));
-        com.mojang.logging.LogUtils.getLogger().info("[CI-CORD] клик {} гнездо {} → {}", pos == cordA ? "A" : "B", socket + 1, r);
+        var data = com.strikerr212.minepc.lan.LanData.get(level);
+        BlockPos why = pos == cordB ? com.strikerr212.minepc.lan.CordShape.blocker(level, cordA, 1, cordB, socket) : null;
+        com.mojang.logging.LogUtils.getLogger().info("[CI-CORD] клик {} гнездо {} → {} (кордов {}, мешает {} {})", pos == cordA ? "A" : "B",
+                socket + 1, r, data.cords(cordA).size(), why, why == null ? "" : level.getBlockState(why).getBlock().getName().getString());
     }
 
     private static void logCords() {

@@ -65,6 +65,22 @@ public final class CordShape {
         return c;
     }
 
+    /** Насколько вилка с проводом торчит прямо из гнезда, прежде чем провод начнёт провисать, блоков. */
+    public static final double LEAD = 0.25;
+
+    /** Куда смотрит гнездо, из которого выходит корд (ZERO — корд не из гнезда, провисает сразу). */
+    public static Vec3 outward(BlockGetter level, BlockPos pos, int port) {
+        BlockState s = level.getBlockState(pos);
+        if (port >= 0 && port < LanData.CABLE_PORTS && s.getBlock() instanceof LanDevice dev) {
+            java.util.List<LanDevice.Socket> socks = dev.sockets(level, pos, s);
+            if (port < socks.size()) {
+                Direction f = socks.get(port).face();
+                return new Vec3(f.getStepX(), f.getStepY(), f.getStepZ());
+            }
+        }
+        return Vec3.ZERO;
+    }
+
     /** Точка чуть впереди гнезда (в мировых координатах): туда втыкается вилка. */
     public static Vec3 socketPoint(BlockPos pos, LanDevice.Socket so) {
         Direction f = so.face();
@@ -111,7 +127,21 @@ public final class CordShape {
 
     /** Точки корда между портом portA устройства a и портом portB устройства b. */
     public static List<Vec3> points(BlockGetter level, BlockPos a, int portA, BlockPos b, int portB) {
-        return points(anchor(level, a, portA, b), anchor(level, b, portB, a));
+        return points(anchor(level, a, portA, b), outward(level, a, portA), anchor(level, b, portB, a), outward(level, b, portB));
+    }
+
+    /**
+     * Корд из гнёзд: из каждого гнезда сначала прямо наружу на {@link #LEAD} (как вилка с жёстким хвостиком), дальше
+     * провисает. na, nb — куда смотрят гнёзда (ZERO — без хвостика).
+     */
+    public static List<Vec3> points(Vec3 a, Vec3 na, Vec3 b, Vec3 nb) {
+        boolean leadA = na.lengthSqr() > 0, leadB = nb.lengthSqr() > 0;
+        if (!leadA && !leadB) return points(a, b);
+        List<Vec3> out = new ArrayList<>(SEGMENTS + 3);
+        if (leadA) out.add(a);
+        out.addAll(points(leadA ? a.add(na.scale(LEAD)) : a, leadB ? b.add(nb.scale(LEAD)) : b));
+        if (leadB) out.add(b);
+        return out;
     }
 
     /**
