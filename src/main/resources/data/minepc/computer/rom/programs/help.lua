@@ -11,8 +11,8 @@ local topics = {
   { "сеть", "ip, peers, ping, chat, wifi, send/recv, switch, bmc, ioc" },
   { "майннет", "browse, httpd, dns, mail, get, cam" },
   { "sh", "новая командная строка (exit — назад)" },
-  { "ps, top, kill N", "процессы, нагрузка, остановить" },
-  { "reboot / shutdown", "перезагрузить / выключить" },
+  { "ps, top, kill", "процессы; reboot, shutdown" },
+  { "вход", "users passwd sudo journal sshd connect" },
 }
 local w = term.getSize()
 for _, t in ipairs(topics) do

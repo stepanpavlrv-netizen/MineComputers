@@ -416,13 +416,52 @@ elseif bootStartup == nil and not bios and fs.exists("/startup.lua") then
   os.run({}, "/startup.lua")
 end
 
+-- Вход: если на компьютере есть пользователи (users add), без пароля командной строки не будет
+local function loginPrompt()
+  if not auth or auth.open() or auth.user() then return end
+  term.setBackgroundColor(colors.black)
+  term.clear()
+  term.setCursorPos(1, 1)
+  local name = (os.getComputerLabel and os.getComputerLabel()) or ""
+  if term.isColor() then term.setTextColor(colors.yellow) end
+  print("Вход" .. (name ~= "" and (" в " .. name) or ""))
+  term.setTextColor(colors.white)
+  while true do
+    write("Пользователь: ")
+    local ok1, user = pcall(read)
+    write("Пароль: ")
+    local ok2, pw = pcall(read, "*")
+    if ok1 and ok2 and user and user ~= "" then
+      local ok, why, wait, n = auth.login(user, pw or "")
+      if ok then
+        print("Здравствуйте, " .. user .. "!")
+        return
+      end
+      if why == "locked" then
+        printError("Слишком много ошибок — вход закрыт на " .. math.ceil((wait or 600) / 60) .. " мин")
+      elseif why == "wait" then
+        printError("Подождите " .. (wait or 2) .. " с")
+      else
+        printError("Неверный пароль (" .. (n or 1) .. " из 5)")
+      end
+      if wait and wait > 0 then os.sleep(math.min(wait, 3)) end
+    end
+  end
+end
+
 while true do
   _NATIVE_SHELL = nil
+  loginPrompt()
   local ok = os.run({}, "/rom/shell.lua")
   if ok then
-    os.shutdown()       -- команда exit в оболочке выключает компьютер
-    os.pullEventRaw()
+    if auth and not auth.open() and not auth.user() then
+      -- вышли из своего сеанса (exit, logout) — снова вход
+    else
+      os.shutdown()       -- команда exit в оболочке выключает компьютер
+      os.pullEventRaw()
+    end
+  else
+    print("Оболочка завершилась с ошибкой, перезапуск...")
+    os.sleep(1)
   end
-  print("Оболочка завершилась с ошибкой, перезапуск...")
-  os.sleep(1)
 end

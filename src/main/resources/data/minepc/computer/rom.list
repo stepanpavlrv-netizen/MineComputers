@@ -24,6 +24,7 @@ programs/cam.lua
 programs/cat.lua
 programs/chat.lua
 programs/clear.lua
+programs/connect.lua
 programs/cp.lua
 programs/dns.lua
 programs/drives.lua
@@ -35,6 +36,7 @@ programs/httpd.lua
 programs/info.lua
 programs/ioc.lua
 programs/ip.lua
+programs/journal.lua
 programs/kill.lua
 programs/label.lua
 programs/ls.lua
@@ -44,6 +46,7 @@ programs/maild.lua
 programs/mkdir.lua
 programs/music.lua
 programs/mv.lua
+programs/passwd.lua
 programs/peers.lua
 programs/ping.lua
 programs/ps.lua
@@ -54,7 +57,10 @@ programs/rm.lua
 programs/send.lua
 programs/sh.lua
 programs/shutdown.lua
+programs/sshd.lua
+programs/sudo.lua
 programs/switch.lua
 programs/top.lua
+programs/users.lua
 programs/wifi.lua
 shell.lua

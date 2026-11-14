@@ -405,6 +405,11 @@ public final class CaseComputer implements Computer.Host {
     }
 
     @Override
+    public com.strikerr212.minepc.computer.Accounts accounts() {
+        return be.accounts();
+    }
+
+    @Override
     public Object[] dns(String command, String name) {
         return onServer(level -> {
             var reg = com.strikerr212.minepc.lan.DnsRegistry.get(level);

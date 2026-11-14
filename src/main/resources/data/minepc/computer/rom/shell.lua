@@ -63,6 +63,8 @@ function shell.run(...)
     if fs.isDir(target) then dir = target else printError("Нет такой папки") end
     return true
   elseif name == "exit" then
+    -- на компьютере с пользователями exit — выход из своего сеанса, а не выключение
+    if not parent and auth and not auth.open() and auth.user() then auth.logout() end
     running = false
     return true
   end
@@ -106,7 +108,8 @@ end
 
 while running do
   if term.isColor() then term.setTextColor(colors.yellow) end
-  write(shell.dir() .. "> ")
+  local who = auth and auth.user()
+  write((who and (who .. ":") or "") .. shell.dir() .. "> ")
   term.setTextColor(colors.white)
   local ok, line = pcall(read, nil, history, complete)
   if not ok then line = "" end      -- Ctrl+T в командной строке просто сбрасывает ввод

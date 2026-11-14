@@ -65,6 +65,11 @@ public final class Computer {
         /** DNS: register/unregister имя, lookup имя, names — свои имена, all — все. {ok, текст или данные}. */
         default Object[] dns(String command, String name) { return new Object[]{false, "Нет сети"}; }
 
+        // ----- Пользователи и журнал входов -----
+
+        /** Пользователи, сохраняемые вместе с компьютером (null — хранить только в памяти). */
+        default Accounts accounts() { return null; }
+
         // ----- Камеры наблюдения -----
 
         /** Камера в сети по имени или адресу (null — не найдена). */
@@ -413,6 +418,43 @@ public final class Computer {
 
     // ======================= События =======================
 
+    // ======================= Пользователи =======================
+
+    private final Accounts localAccounts = new Accounts();
+    /** Пропуска удалённых сеансов: пропуск → пользователь (до перезагрузки). */
+    private final java.util.concurrent.ConcurrentHashMap<String, String> tokens = new java.util.concurrent.ConcurrentHashMap<>();
+
+    /** Пользователи компьютера (у корпуса — сохраняются с ним, иначе — только пока работает). */
+    public Accounts accounts() {
+        Accounts a = host.accounts();
+        return a != null ? a : localAccounts;
+    }
+
+    /** Отметка времени для журнала: день и время в игре. */
+    String journalTime() {
+        double t = host.timeOfDay();
+        int hh = (int) t, mm = (int) ((t - hh) * 60);
+        return String.format("д.%d %02d:%02d", host.day(), hh, mm);
+    }
+
+    String issueToken(String user) {
+        String t = java.util.UUID.randomUUID().toString();
+        if (tokens.size() > 64) tokens.clear();
+        tokens.put(t, user);
+        return t;
+    }
+
+    String tokenUser(String token) {
+        return token == null ? null : tokens.get(token);
+    }
+
+    /** Событие всем процессам компьютера. */
+    void queueAll(String name, Object... args) {
+        if (state != State.RUNNING) return;
+        queueEvent(name, args);
+        for (LuaMachine m : machines) if (m != main) m.events.offer(event(name, args));
+    }
+
     /** Добавить событие главному процессу: имя и значения (строки, числа, логические, null). */
     public void queueEvent(String name, Object... args) {
         if (state != State.RUNNING) return;
@@ -468,7 +510,9 @@ public final class Computer {
             throw new LuaMachine.Crash("Слишком много процессов (не больше " + limits.maxProcesses() + ")");
         }
         int pid = nextPid++;
-        machines.add(new LuaMachine(this, pid, parent == null ? 0 : parent.pid, new EventQueue(), path, args));
+        LuaMachine child = new LuaMachine(this, pid, parent == null ? 0 : parent.pid, new EventQueue(), path, args);
+        child.user = parent == null ? null : parent.user;      // процесс работает от имени того, кто его запустил
+        machines.add(child);
         return pid;
     }
 

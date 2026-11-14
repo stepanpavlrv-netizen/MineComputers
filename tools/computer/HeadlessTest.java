@@ -371,6 +371,7 @@ public class HeadlessTest {
         testStats();
         testNet();
         testWifi();
+        testAuth();
 
         System.out.println(failures == 0 ? "ВСЁ ХОРОШО" : "ОШИБОК: " + failures);
         System.exit(failures == 0 ? 0 : 1);
@@ -398,6 +399,85 @@ public class HeadlessTest {
         c.fileSystem().mount("", new DirMount(dir, 64 * 1024, "SSD"));
         c.terminal().resize(50, 16);
         return c;
+    }
+
+    /** Пользователи, вход по сети (sshd/connect), sudo, журнал, блокировка после 5 ошибок. */
+    static void testAuth() throws Exception {
+        System.out.println("── пользователи и вход по сети ──");
+        // Блокировка и хранение — прямо на Accounts, со своим временем
+        Accounts acc = new Accounts();
+        expect("первый пользователь добавлен", acc.add("steve", "pass1", false) == null && acc.isAdmin("steve"));
+        int[] alerts = {0};
+        long t = 0;
+        Accounts.Check r = null;
+        for (int i = 0; i < 5; i++) {
+            r = acc.login("steve", "bad", "10.6.0.3", "t", t, f -> alerts[0]++);
+            t += 7000;
+        }
+        expect("5 ошибок — адрес закрыт и пришёл сигнал", r != null && r.reason().equals("locked") && alerts[0] == 1);
+        expect("закрыт и для верного пароля", acc.login("steve", "pass1", "10.6.0.3", "t", t, null).reason().equals("locked"));
+        expect("с другого адреса пускает", acc.login("steve", "pass1", "10.0.0.5", "t", t, null).ok());
+        expect("через 10 минут снова пускает", acc.login("steve", "pass1", "10.6.0.3", "t", t + Accounts.LOCK_MS, null).ok());
+        Accounts acc2 = new Accounts();
+        acc2.load(acc.save());
+        expect("пользователи и журнал сохраняются", acc2.matches("steve", "pass1") && !acc2.matches("steve", "bad")
+                && acc2.journal(50).stream().anyMatch(l -> l.contains("закрыт")));
+        expect("пароль хранится отпечатком", !acc.save().contains("pass1"));
+
+        Computer[] box = new Computer[2];
+        box[0] = netComputer("aaaaaaaa-1111-4000-8000-000000000000", box, 1, "beta");
+        box[1] = netComputer("bbbbbbbb-2222-4000-8000-000000000000", box, 0, "alpha");
+        for (Computer c : box) c.turnOn();
+        for (int i = 0; i < 200; i++) {
+            for (Computer c : box) c.tick();
+            Thread.sleep(2);
+            pc = box[1];
+            if (screen().contains("/>")) break;
+        }
+        // beta: пользователь и sshd
+        pc = box[1];
+        command("users add admin");
+        command("secret1");
+        command("secret1");
+        command("sshd");
+        for (int i = 0; i < 20; i++) { for (Computer c : box) c.tick(); Thread.sleep(2); }
+        show("beta: users add, sshd");
+        expect("users add: администратор добавлен", flat().contains("добавлен (администратор)"));
+        expect("sshd запустился", flat().contains("Вход по сети работает"));
+        // alpha: неверный пароль, потом верный
+        pc = box[0];
+        for (int i = 0; i < 200 && !screen().contains("/>"); i++) { for (Computer c : box) c.tick(); Thread.sleep(2); }
+        command("connect beta admin");
+        command("wrong");
+        for (int i = 0; i < 60 && !flat().contains("из 5"); i++) { for (Computer c : box) c.tick(); Thread.sleep(3); }
+        expect("connect: неверный пароль (1 из 5)", flat().contains("Неверный пароль (1 из 5)"));
+        Thread.sleep(2200);                 // следующая попытка — не раньше чем через 2 с
+        command("clear");
+        command("connect beta admin");
+        command("secret1");
+        for (int i = 0; i < 60 && !flat().contains("Вы вошли"); i++) { for (Computer c : box) c.tick(); Thread.sleep(3); }
+        expect("connect: вошли", flat().contains("Вы вошли на beta как admin"));
+        command("users");
+        for (int i = 0; i < 60 && !flat().contains("Пользователи:"); i++) { for (Computer c : box) c.tick(); Thread.sleep(3); }
+        expect("команда выполнилась там, вывод здесь", flat().contains("Пользователи:") && flat().contains("admin (администратор)"));
+        command("sudo journal");
+        for (int i = 0; i < 60 && !flat().contains("Пароль admin"); i++) { for (Computer c : box) c.tick(); Thread.sleep(3); }
+        command("secret1");
+        for (int i = 0; i < 60 && !flat().contains("вход admin с"); i++) { for (Computer c : box) c.tick(); Thread.sleep(3); }
+        show("alpha: connect, users, sudo journal");
+        expect("sudo по сети: пароль спросили здесь, журнал показали", flat().contains("вход admin с aaaaaaaa"));
+        expect("в журнале — неверный пароль", flat().contains("неверный пароль admin"));
+        command("exit");
+        for (int i = 0; i < 20; i++) { for (Computer c : box) c.tick(); Thread.sleep(2); }
+        expect("exit закрывает сеанс", flat().contains("Сеанс закрыт"));
+        // beta: выход из своего сеанса — снова вход
+        pc = box[1];
+        command("clear");
+        command("exit");
+        for (int i = 0; i < 40 && !flat().contains("Пользователь:"); i++) { for (Computer c : box) c.tick(); Thread.sleep(3); }
+        show("beta: exit");
+        expect("exit на компьютере с пользователями — к входу, а не выключение", flat().contains("Пользователь:") && box[1].state() == Computer.State.RUNNING);
+        for (Computer c : box) c.shutdown();
     }
 
     static void testNet() throws Exception {

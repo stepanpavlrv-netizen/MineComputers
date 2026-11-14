@@ -166,6 +166,8 @@ public class PcCaseBlockEntity extends BlockEntity implements com.strikerr212.mi
     private final CaseInventory inventory = new CaseInventory(this);
     private final CaseComputer pc = new CaseComputer(this);
     private final Bmc bmc = new Bmc(this);
+    /** Пользователи компьютера и журнал входов (живут с корпусом, игрокам не уходят). */
+    private final com.strikerr212.minepc.computer.Accounts accounts = new com.strikerr212.minepc.computer.Accounts();
     /** Модуль серверной стойки: не стоит в мире сам, живёт внутри {@link RackBlockEntity}; slot — место в стойке. */
     private final boolean module;
     private final int rackSlot;
@@ -184,6 +186,10 @@ public class PcCaseBlockEntity extends BlockEntity implements com.strikerr212.mi
     }
 
     /** BMC серверной платы (у обычной платы он есть как объект, но не работает: {@link Bmc#present()}). */
+    public com.strikerr212.minepc.computer.Accounts accounts() {
+        return accounts;
+    }
+
     public Bmc bmc() {
         return bmc;
     }
@@ -438,6 +444,7 @@ public class PcCaseBlockEntity extends BlockEntity implements com.strikerr212.mi
 
     public static void serverTick(Level level, BlockPos pos, BlockState state, PcCaseBlockEntity be) {
         if (level instanceof ServerLevel server) be.pc.tick(server, pos);
+        if (be.accounts.takeDirty()) be.setChanged();
     }
 
     /** Кнопка питания. Возвращает сообщение для игрока или null. */
@@ -1062,6 +1069,7 @@ public class PcCaseBlockEntity extends BlockEntity implements com.strikerr212.mi
         tag.putInt("state", pc.stateCode());
         cords.save(tag);
         bmc.save(tag);
+        if (!accounts.open() || !accounts.journal(1).isEmpty()) tag.putString("accounts", accounts.save());
         tag.putInt("rebuild_bay", pc.rebuildBay());
         if (!pc.wifiSsid().isEmpty()) {
             tag.putString("wifi_ssid", pc.wifiSsid());
@@ -1091,6 +1099,7 @@ public class PcCaseBlockEntity extends BlockEntity implements com.strikerr212.mi
         clientState = tag.getInt("state");
         cords.load(tag);
         bmc.load(tag);
+        accounts.load(tag.getString("accounts"));
         clientRebuild = tag.contains("rebuild_bay") ? tag.getInt("rebuild_bay") : -1;
         if (!sameLayout && !prefix) {
             // Сохранение из старой версии мода: раскладываем детали по новым слотам
@@ -1137,6 +1146,7 @@ public class PcCaseBlockEntity extends BlockEntity implements com.strikerr212.mi
         tag.remove("wifi_password");
         tag.remove("bmc_password");
         tag.remove("bmc_log");
+        tag.remove("accounts");
         return tag;
     }
 

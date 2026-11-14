@@ -150,6 +150,7 @@ final class LuaApis {
         g.rawset("data", OcApis.data(m));
         g.rawset("net", net(c));
         g.rawset("camera", camera(c));
+        g.rawset("auth", auth(c, m));
         g.rawset("sound", SoundApis.sound(c));
         g.rawset("switch", switchApi(c));
         g.rawset("bios", biosApi(c));
@@ -216,6 +217,178 @@ final class LuaApis {
     private static Varargs camCmd(Computer c, Varargs a, String cmd) throws LuaError {
         String target = text(a.arg(1).checkLuaString());
         return camResult(c.host().cameraCommand(target, cmd, a.arg(2).optDouble(0), a.arg(3).optDouble(0)));
+    }
+
+    // ======================= Пользователи, вход, sudo, журнал =======================
+
+    /** Может ли процесс управлять пользователями: компьютер открыт или это администратор после sudo. */
+    private static boolean canAdmin(Computer c, LuaMachine m) {
+        Accounts acc = c.accounts();
+        return acc.open() || (m.user != null && acc.isAdmin(m.user) && m.elevated);
+    }
+
+    private static Varargs fail(String msg) {
+        return varargsOf(Constants.NIL, str(msg));
+    }
+
+    private static Varargs okOr(String err) {
+        return err == null ? Constants.TRUE : fail(err);
+    }
+
+    private static Varargs checkResult(Accounts.Check r) {
+        if (r.ok()) return Constants.TRUE;
+        return varargsOf(new LuaValue[]{Constants.NIL, str(r.reason()), valueOf(r.waitSeconds()), valueOf(r.fails())});
+    }
+
+    private static LuaTable auth(Computer c, LuaMachine m) {
+        LuaTable t = new LuaTable();
+        java.util.function.Consumer<String> alert = from -> c.queueAll("auth_alert", from);
+        RegisteredFunction.bind(t, new RegisteredFunction[]{
+                // Пользователей нет — компьютер открыт для всех
+                RegisteredFunction.ofV("open", (s, a) -> valueOf(c.accounts().open())),
+                RegisteredFunction.ofV("user", (s, a) -> m.user == null ? Constants.NIL : str(m.user)),
+                RegisteredFunction.ofV("isAdmin", (s, a) -> valueOf(canAdmin(c, m))),
+                RegisteredFunction.ofV("elevated", (s, a) -> valueOf(m.elevated)),
+                RegisteredFunction.ofV("users", (s, a) -> {
+                    LuaTable out = new LuaTable();
+                    int i = 1;
+                    for (Accounts.User u : c.accounts().list()) {
+                        LuaTable r = new LuaTable();
+                        r.rawset("name", str(u.name()));
+                        r.rawset("admin", valueOf(u.admin()));
+                        out.rawset(i++, r);
+                    }
+                    return out;
+                }),
+                // Вход с клавиатуры этого компьютера
+                RegisteredFunction.ofV("login", (s, a) -> {
+                    String name = text(a.arg(1).checkLuaString()), pw = text(a.arg(2).checkLuaString());
+                    Accounts.Check r = c.accounts().login(name, pw, "local", c.journalTime(), System.currentTimeMillis(), alert);
+                    if (r.ok()) {
+                        m.user = name;
+                        m.elevated = false;
+                    }
+                    return checkResult(r);
+                }),
+                RegisteredFunction.ofV("logout", (s, a) -> {
+                    if (m.user != null) c.accounts().log(c.journalTime(), "выход " + m.user);
+                    m.user = null;
+                    m.elevated = false;
+                    return Constants.NONE;
+                }),
+                // Для служб удалённого входа: проверить пароль с адреса from и выдать пропуск
+                RegisteredFunction.ofV("check", (s, a) -> {
+                    String name = text(a.arg(1).checkLuaString()), pw = text(a.arg(2).checkLuaString());
+                    String from = a.arg(3).isNil() ? "?" : text(a.arg(3).checkLuaString());
+                    if (from.equals("local")) from = "?local";
+                    Accounts.Check r = c.accounts().login(name, pw, from, c.journalTime(), System.currentTimeMillis(), alert);
+                    if (!r.ok()) return checkResult(r);
+                    return str(c.issueToken(name));
+                }),
+                // Работать от имени пользователя по пропуску (без повышенных прав)
+                RegisteredFunction.ofV("as", (s, a) -> {
+                    if (a.arg(1).isNil()) {          // снова ни от чьего имени
+                        m.user = null;
+                        m.elevated = false;
+                        return Constants.TRUE;
+                    }
+                    String u = c.tokenUser(text(a.arg(1).checkLuaString()));
+                    if (u == null || !c.accounts().exists(u)) return Constants.FALSE;
+                    m.user = u;
+                    m.elevated = false;
+                    return Constants.TRUE;
+                }),
+                RegisteredFunction.ofV("sudo", (s, a) -> {
+                    Accounts acc = c.accounts();
+                    if (acc.open()) {
+                        m.elevated = true;
+                        return Constants.TRUE;
+                    }
+                    if (m.user == null) return fail("Сначала войдите");
+                    String pw = text(a.arg(1).checkLuaString());
+                    if (!acc.matches(m.user, pw)) {
+                        acc.log(c.journalTime(), "sudo: неверный пароль " + m.user);
+                        return fail("Неверный пароль");
+                    }
+                    if (!acc.isAdmin(m.user)) {
+                        acc.log(c.journalTime(), "sudo: " + m.user + " — не администратор");
+                        return fail(m.user + " — не администратор");
+                    }
+                    m.elevated = true;
+                    acc.log(c.journalTime(), "sudo " + m.user);
+                    return Constants.TRUE;
+                }),
+                RegisteredFunction.ofV("unsudo", (s, a) -> {
+                    m.elevated = false;
+                    return Constants.NONE;
+                }),
+                RegisteredFunction.ofV("add", (s, a) -> {
+                    if (!canAdmin(c, m)) return fail("Нужны права администратора: sudo");
+                    String name = text(a.arg(1).checkLuaString()), pw = text(a.arg(2).checkLuaString());
+                    boolean admin = a.arg(3).toBoolean();
+                    boolean first = c.accounts().open();
+                    String err = c.accounts().add(name, pw, admin);
+                    if (err == null) {
+                        c.accounts().log(c.journalTime(), "добавлен пользователь " + name + (admin || first ? " (администратор)" : ""));
+                        if (first && m.user == null) m.user = name;    // первый пользователь — сразу вошёл
+                    }
+                    return okOr(err);
+                }),
+                RegisteredFunction.ofV("remove", (s, a) -> {
+                    if (!canAdmin(c, m)) return fail("Нужны права администратора: sudo");
+                    String name = text(a.arg(1).checkLuaString());
+                    String err = c.accounts().remove(name);
+                    if (err == null) c.accounts().log(c.journalTime(), "удалён пользователь " + name);
+                    return okOr(err);
+                }),
+                RegisteredFunction.ofV("setAdmin", (s, a) -> {
+                    if (!canAdmin(c, m)) return fail("Нужны права администратора: sudo");
+                    String name = text(a.arg(1).checkLuaString());
+                    String err = c.accounts().setAdmin(name, a.arg(2).toBoolean());
+                    if (err == null) c.accounts().log(c.journalTime(), name + (a.arg(2).toBoolean() ? " — администратор" : " — обычный пользователь"));
+                    return okOr(err);
+                }),
+                // Сменить пароль: свой — зная старый, чужой — администратору после sudo
+                RegisteredFunction.ofV("passwd", (s, a) -> {
+                    Accounts acc = c.accounts();
+                    String name = text(a.arg(1).checkLuaString()), pw = text(a.arg(2).checkLuaString());
+                    boolean self = name.equals(m.user);
+                    if (!canAdmin(c, m)) {
+                        if (!self) return fail("Чужой пароль меняет администратор: sudo");
+                        String old = a.arg(3).isNil() ? "" : text(a.arg(3).checkLuaString());
+                        if (!acc.matches(name, old)) {
+                            acc.log(c.journalTime(), "passwd: неверный старый пароль " + name);
+                            return fail("Неверный старый пароль");
+                        }
+                    }
+                    String err = acc.setPassword(name, pw);
+                    if (err == null) acc.log(c.journalTime(), "пароль изменён: " + name);
+                    return okOr(err);
+                }),
+                RegisteredFunction.ofV("journal", (s, a) -> {
+                    if (!canAdmin(c, m)) return fail("Журнал смотрит администратор: sudo journal");
+                    int n = a.arg(1).isNil() ? 50 : Math.max(1, Math.min(200, a.arg(1).checkInteger()));
+                    LuaTable out = new LuaTable();
+                    int i = 1;
+                    for (String line : c.accounts().journal(n)) out.rawset(i++, str(line));
+                    return out;
+                }),
+                // Записать в журнал от имени программы (службы входа, файрвол)
+                RegisteredFunction.ofV("note", (s, a) -> {
+                    String msg = text(a.arg(1).checkLuaString());
+                    if (msg.length() > 120) msg = msg.substring(0, 120);
+                    c.accounts().log(c.journalTime(), msg);
+                    return Constants.NONE;
+                }),
+                // Куда слать письмо при атаке (имя@компьютер)
+                RegisteredFunction.ofV("notify", (s, a) -> {
+                    if (a.arg(1).isNil()) return str(c.accounts().notifyAddress());
+                    if (!canAdmin(c, m)) return fail("Нужны права администратора: sudo");
+                    c.accounts().setNotify(text(a.arg(1).checkLuaString()));
+                    return Constants.TRUE;
+                }),
+        });
+        return t;
     }
 
     private static Varargs camResult(Object[] r) {

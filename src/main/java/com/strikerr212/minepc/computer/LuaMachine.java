@@ -53,6 +53,9 @@ final class LuaMachine {
 
     final Computer computer;
     final int pid, parentPid;
+    /** Чей это сеанс: имя пользователя (null — не вошли) и повышены ли права (sudo). */
+    volatile String user;
+    volatile boolean elevated;
     final EventQueue events;
     final String programPath;
     final Object[] programArgs;
