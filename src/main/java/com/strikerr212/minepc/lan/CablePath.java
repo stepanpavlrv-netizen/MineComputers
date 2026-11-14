@@ -213,6 +213,8 @@ public final class CablePath {
         List<Problem> problems = new ArrayList<>();
         for (Point p : points) {
             if (!p.socket() && !surface(level, p.cell(), p.face())) problems.add(new Problem(p.cell(), "message.minepc.draw.no_support"));
+            // Перед гнездом пусто (розетка высоко на стене) — провод повис бы в воздухе
+            if (p.socket() && !surface(level, p.cell(), p.face())) problems.add(new Problem(p.cell(), "message.minepc.draw.socket_air"));
             if (p.socket() && !surface(level, p.cell(), p.face())) problems.add(new Problem(p.cell(), "message.minepc.draw.socket_blocked"));
         }
         if (!problems.isEmpty() || points.size() < 2) return new Result(pieces, problems);

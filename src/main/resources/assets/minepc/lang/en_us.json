@@ -920,5 +920,6 @@
   "gui.minepc.camera.drag": "Drag to turn,",
   "gui.minepc.camera.drag2": "wheel to zoom",
   "gui.minepc.camera.hint": "Arrows/WASD turn, +/− zoom, Shift+click cycles back",
-  "message.minepc.cord.socket_busy": "This socket is taken — aim at a free one"
+  "message.minepc.cord.socket_busy": "This socket is taken — aim at a free one",
+  "message.minepc.draw.socket_air": "Nothing to lay the cable on in front of this socket — put a block under it or use a patch cord"
 }

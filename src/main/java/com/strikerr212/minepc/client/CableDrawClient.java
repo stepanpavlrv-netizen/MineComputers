@@ -284,7 +284,7 @@ public final class CableDrawClient {
     }
 
     private static AABB socketBox(BlockPos pos, LanDevice.Socket s) {
-        Vec3 c = CablePath.socketCenter(s);
+        Vec3 c = CablePath.socketCenter(s).scale(1 / 16.0);   // центр гнезда — в пикселях блока
         return new AABB(c, c).inflate(1.1 / 16).move(pos.getX(), pos.getY(), pos.getZ());
     }
 

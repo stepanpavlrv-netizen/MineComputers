@@ -920,5 +920,6 @@
   "gui.minepc.camera.drag": "Тяните мышью",
   "gui.minepc.camera.drag2": "по картинке",
   "gui.minepc.camera.hint": "Стрелки/WASD — поворот, +/− — зум, Shift+щелчок — назад по списку",
-  "message.minepc.cord.socket_busy": "Это гнездо занято — наведись на свободное"
+  "message.minepc.cord.socket_busy": "Это гнездо занято — наведись на свободное",
+  "message.minepc.draw.socket_air": "Перед гнездом не на что положить провод — поставь блок под ним или воткни патч-корд"
 }
