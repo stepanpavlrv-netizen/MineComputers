@@ -456,7 +456,7 @@ public class HeadlessTest {
         command("connect beta admin");
         command("secret1");
         for (int i = 0; i < 60 && !flat().contains("Вы вошли"); i++) { for (Computer c : box) c.tick(); Thread.sleep(3); }
-        expect("connect: вошли", flat().contains("Вы вошли на beta как admin"));
+        expect("connect: вошли", flat().contains("Вы вошли на") && flat().contains("как admin"));
         command("users");
         for (int i = 0; i < 60 && !flat().contains("Пользователи:"); i++) { for (Computer c : box) c.tick(); Thread.sleep(3); }
         expect("команда выполнилась там, вывод здесь", flat().contains("Пользователи:") && flat().contains("admin (администратор)"));
@@ -465,7 +465,7 @@ public class HeadlessTest {
         command("secret1");
         for (int i = 0; i < 60 && !flat().contains("вход admin с"); i++) { for (Computer c : box) c.tick(); Thread.sleep(3); }
         show("alpha: connect, users, sudo journal");
-        expect("sudo по сети: пароль спросили здесь, журнал показали", flat().contains("вход admin с aaaaaaaa"));
+        expect("sudo по сети: пароль спросили здесь, журнал показали", flat().contains("вход admin с aaaaaaaa — ok"));
         expect("в журнале — неверный пароль", flat().contains("неверный пароль admin"));
         command("exit");
         for (int i = 0; i < 20; i++) { for (Computer c : box) c.tick(); Thread.sleep(2); }

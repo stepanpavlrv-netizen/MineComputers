@@ -218,7 +218,7 @@ local function serve()
           if auth.open() then
             net.send(from, reply, "SSH_FAIL", id, "open")
           else
-            local token, why, wait, fails = auth.check(user, pw, from)
+            local token, why, wait, fails = auth.check(user, pw, from:sub(1, 8))
             if token then
               local sid = string.format("%08x", math.random(0, 2147483647))
               sessions[sid] = { id = sid, token = token, user = user, from = from, reply = reply, dir = "",
@@ -241,7 +241,7 @@ local function serve()
       elseif kind == "SSH_BYE" then
         local s = sessions[ev[7]]
         if s and s.from == from then
-          auth.note("выход " .. s.user .. " с " .. from)
+          auth.note("выход " .. s.user .. " с " .. from:sub(1, 8))
           sessions[ev[7]] = nil
         end
       end
