@@ -57,6 +57,16 @@ public final class ClientAccess {
     }
 
     /** Окно роутера: открыть или (если уже открыто) обновить список подключённых. */
+    /** Окно камеры: живое изображение и управление. */
+    public static void openCamera(net.minecraft.core.BlockPos pos) {
+        Minecraft.getInstance().setScreen(new CameraScreen(pos));
+    }
+
+    /** Кадр для окна камеры пришёл с сервера. */
+    public static void cameraFrame(com.strikerr212.minepc.network.CameraFramePayload payload) {
+        if (Minecraft.getInstance().screen instanceof CameraScreen s) s.frame(payload);
+    }
+
     /** Окно контроллера ввода-вывода (данные — из блок-сущности, она синхронизируется сама). */
     public static void openIoController(net.minecraft.core.BlockPos pos) {
         Minecraft.getInstance().setScreen(new IoScreen(pos));

@@ -1,0 +1,104 @@
+{
+ "textures": {
+  "m": "minepc:block/camera_mount",
+  "particle": "minepc:block/camera_mount"
+ },
+ "elements": [
+  {
+   "from": [
+    5,
+    7,
+    15
+   ],
+   "to": [
+    11,
+    13,
+    16
+   ],
+   "faces": {
+    "north": {
+     "texture": "#m"
+    },
+    "south": {
+     "texture": "#m"
+    },
+    "east": {
+     "texture": "#m"
+    },
+    "west": {
+     "texture": "#m"
+    },
+    "up": {
+     "texture": "#m"
+    },
+    "down": {
+     "texture": "#m"
+    }
+   }
+  },
+  {
+   "from": [
+    7.5,
+    9.5,
+    11
+   ],
+   "to": [
+    8.5,
+    10.5,
+    15
+   ],
+   "faces": {
+    "north": {
+     "texture": "#m"
+    },
+    "south": {
+     "texture": "#m"
+    },
+    "east": {
+     "texture": "#m"
+    },
+    "west": {
+     "texture": "#m"
+    },
+    "up": {
+     "texture": "#m"
+    },
+    "down": {
+     "texture": "#m"
+    }
+   }
+  },
+  {
+   "from": [
+    7,
+    9,
+    9
+   ],
+   "to": [
+    9,
+    11,
+    11
+   ],
+   "faces": {
+    "north": {
+     "texture": "#m"
+    },
+    "south": {
+     "texture": "#m"
+    },
+    "east": {
+     "texture": "#m"
+    },
+    "west": {
+     "texture": "#m"
+    },
+    "up": {
+     "texture": "#m"
+    },
+    "down": {
+     "texture": "#m"
+    }
+   }
+  }
+ ]
+}

@@ -42,6 +42,9 @@ public class ModBlockEntities {
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<com.strikerr212.minepc.lan.IoControllerBlockEntity>> IO_CONTROLLER =
             BLOCK_ENTITIES.register("io_controller", () ->
                     BlockEntityType.Builder.of(com.strikerr212.minepc.lan.IoControllerBlockEntity::new, ModBlocks.IO_CONTROLLER.get()).build(null));
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<com.strikerr212.minepc.lan.CameraBlockEntity>> CAMERA =
+            BLOCK_ENTITIES.register("camera", () ->
+                    BlockEntityType.Builder.of(com.strikerr212.minepc.lan.CameraBlockEntity::new, ModBlocks.CAMERA.get()).build(null));
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<com.strikerr212.minepc.lan.TowerSectionBlockEntity>> TOWER_SECTION =
             BLOCK_ENTITIES.register("tower_section", () ->
                     BlockEntityType.Builder.of(com.strikerr212.minepc.lan.TowerSectionBlockEntity::new, ModBlocks.TOWER_SECTION.get()).build(null));

@@ -640,7 +640,27 @@ public class CiScreenshots {
             case 4480 -> server.execute(() -> logScreens("[CI-MAIL]"));
             case 4482 -> shot(mc, "mail_sent");
             case 4484 -> mc.setScreen(null);
-            case 4490 -> mc.stop();
+            case 4488 -> server.execute(CiScreenshots::placeCam);
+            case 4494 -> server.execute(CiScreenshots::cableCam);
+            case 4504 -> typeAt(drawPcA, "cam");
+            case 4524 -> typeAt(drawPcA, "cam двор");
+            case 4528 -> mc.setScreen(new TerminalScreen(drawPcA));
+            case 4570 -> shot(mc, "cam_view");
+            case 4572, 4574, 4576, 4578 -> keyAt(drawPcA, "left");
+            case 4600 -> shot(mc, "cam_view_turned");
+            case 4602 -> charsAt(drawPcA, "q");
+            case 4606 -> server.execute(() -> logCam("после просмотра"));
+            case 4608 -> mc.setScreen(new CameraScreen(camPos));
+            case 4630 -> shot(mc, "camera_gui");
+            case 4632 -> {
+                mc.setScreen(null);
+                server.execute(() -> {
+                    ServerPlayer p = server.getPlayerList().getPlayers().get(0);
+                    p.teleportTo(server.overworld(), camPos.getX() + 0.5, camPos.getY() + 0.1, camPos.getZ() - 1.6, 0f, 25f);
+                });
+            }
+            case 4645 -> shot(mc, "camera_block");
+            case 4650 -> mc.stop();
             default -> {
             }
         }
@@ -1071,7 +1091,49 @@ public class CiScreenshots {
                 2 * top.tdp() + 150 <= 3200, 2 * top.tdp() + 150 <= 1600);
     }
 
-    private static BlockPos emptyCasePos, ioPos;
+    private static BlockPos emptyCasePos, ioPos, camPos;
+
+    /** Камера на полу у компьютера A смотрит на коммутатор и контроллер. */
+    private static void placeCam() {
+        var server = Minecraft.getInstance().getSingleplayerServer();
+        ServerLevel level = server.overworld();
+        camPos = drawPcA.offset(-2, 0, 2);
+        level.setBlockAndUpdate(camPos, ModBlocks.CAMERA.get().defaultBlockState()
+                .setValue(com.strikerr212.minepc.lan.CameraBlock.FACE, net.minecraft.world.level.block.state.properties.AttachFace.FLOOR)
+                .setValue(com.strikerr212.minepc.lan.CameraBlock.FACING, Direction.NORTH));
+        if (level.getBlockEntity(camPos) instanceof com.strikerr212.minepc.lan.CameraBlockEntity cam) {
+            cam.setLabel("двор");
+            double dx = ioPos.getX() - camPos.getX(), dz = ioPos.getZ() - camPos.getZ();
+            float worldYaw = (float) Math.toDegrees(Math.atan2(dx, -dz));
+            cam.look(worldYaw - cam.baseYaw(), -12);
+            cam.setRes(4);
+            cam.setFps(2);
+        }
+    }
+
+    private static void cableCam() {
+        var server = Minecraft.getInstance().getSingleplayerServer();
+        ServerPlayer p = server.getPlayerList().getPlayers().get(0);
+        ServerLevel level = p.serverLevel();
+        var a = drawSocket(level, camPos, false);
+        var b = drawSocket(level, drawSwitch, false);
+        p.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, new ItemStack(com.strikerr212.minepc.registry.ModItems.CABLE.get(), 64));
+        if (a == null || b == null) {
+            com.mojang.logging.LogUtils.getLogger().info("[CI-CAM] нет гнезда: камера={} коммутатор={}", a, b);
+            return;
+        }
+        com.strikerr212.minepc.lan.CableLaying.lay(p, net.minecraft.world.InteractionHand.MAIN_HAND, List.of(a, b));
+    }
+
+    private static void logCam(String when) {
+        var level = Minecraft.getInstance().getSingleplayerServer().overworld();
+        var log = com.mojang.logging.LogUtils.getLogger();
+        if (level.getBlockEntity(camPos) instanceof com.strikerr212.minepc.lan.CameraBlockEntity cam) {
+            log.info("[CI-CAM] {}: угол {} наклон {} снимок {} кадр {}×{} поток {} Б/с", when, cam.yaw(), cam.pitch(),
+                    cam.snapshot() != null, cam.width(), cam.height(), cam.bytesPerSecond());
+        }
+        logScreens("[CI-CAM]");
+    }
 
     /** Контроллер ввода-вывода у коммутатора сцены проводов: лампа на севере, редстоун-блок на юге, сундук сверху. */
     private static void placeIo() {

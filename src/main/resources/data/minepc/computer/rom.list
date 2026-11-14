@@ -20,6 +20,7 @@ openos/uuid.lua
 programs/bmc.lua
 programs/browse.lua
 programs/bunker.lua
+programs/cam.lua
 programs/cat.lua
 programs/chat.lua
 programs/clear.lua

@@ -65,6 +65,17 @@ public final class Computer {
         /** DNS: register/unregister имя, lookup имя, names — свои имена, all — все. {ok, текст или данные}. */
         default Object[] dns(String command, String name) { return new Object[]{false, "Нет сети"}; }
 
+        // ----- Камеры наблюдения -----
+
+        /** Камера в сети по имени или адресу (null — не найдена). */
+        default CameraFeed camera(String target) { return null; }
+
+        /** Камеры в сети: {name, address, hops, link}. */
+        default java.util.List<java.util.Map<Object, Object>> cameras() { return java.util.List.of(); }
+
+        /** Повернуть/настроить: look, turn, zoom, res, fps, night, patrol, name. {ok, данные камеры или ошибка}. */
+        default Object[] cameraCommand(String target, String command, double a, double b) { return new Object[]{false, "Нет сети"}; }
+
         // ----- BMC (управление сервером по сети) -----
 
         /**
@@ -654,6 +665,59 @@ public final class Computer {
     }
 
     private final java.util.concurrent.atomic.AtomicInteger nextIoRequest = new java.util.concurrent.atomic.AtomicInteger(1);
+
+    /** Камеры, которые программы этого компьютера смотрят: последний кадр и когда его брали. */
+    private static final class CamState {
+        CameraFeed feed;
+        long resolvedAt;
+        long frameAt;
+        int[] frame;
+        int fw, fh;
+        boolean ready;
+    }
+
+    private final java.util.Map<String, CamState> cams = new java.util.HashMap<>();
+
+    /**
+     * Кадр камеры в буфер точек (растянутый на прямоугольник x, y, w, h). Кадр с камеры обновляется не чаще, чем
+     * позволяют её частота и линия; в остальное время рисуется прежний. Возвращает реальную частоту или ошибку.
+     */
+    Object cameraDraw(String target, int[] dst, int dw, int dh, int x, int y, int w, int h) {
+        CamState st;
+        synchronized (cams) {
+            st = cams.computeIfAbsent(target, k -> new CamState());
+            if (cams.size() > 16) cams.keySet().removeIf(k -> !k.equals(target));
+        }
+        long now = System.nanoTime();
+        if (st.feed == null || now - st.resolvedAt > 3_000_000_000L) {
+            st.feed = host.camera(target);
+            st.resolvedAt = now;
+            if (st.feed == null) return "Камера «" + target + "» не найдена: нет в сети или до неё нет связи";
+        }
+        CameraFeed f = st.feed;
+        int fw = f.width(), fh = f.height(), fps = f.effectiveFps();
+        if (st.frame == null || st.fw != fw || st.fh != fh) {
+            st.frame = new int[fw * fh];
+            st.fw = fw;
+            st.fh = fh;
+            st.frameAt = 0;
+            st.ready = false;
+        }
+        if (now - st.frameAt >= 1_000_000_000L / Math.max(1, fps)) {
+            if (f.render(st.frame, fw, fh)) st.ready = true;
+            st.frameAt = now;
+        }
+        if (!st.ready) return -1;    // снимок мира ещё собирается
+        int x0 = Math.max(0, x), y0 = Math.max(0, y), x1 = Math.min(dw, x + w), y1 = Math.min(dh, y + h);
+        for (int yy = y0; yy < y1; yy++) {
+            int sy = (int) ((long) (yy - y) * fh / h);
+            int srow = sy * fw, drow = yy * dw;
+            for (int xx = x0; xx < x1; xx++) {
+                dst[drow + xx] = st.frame[srow + (int) ((long) (xx - x) * fw / w)];
+            }
+        }
+        return fps;
+    }
 
     /**
      * Команда контроллеру ввода-вывода (служебный порт, как ping): ответ придёт событием io_state(адрес, номер, данные)

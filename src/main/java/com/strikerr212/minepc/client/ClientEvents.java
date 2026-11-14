@@ -122,6 +122,7 @@ public class ClientEvents {
         event.registerBlockEntityRenderer(ModBlockEntities.ROUTER.get(), CordRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.RACK.get(), RackRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.TOWER_SECTION.get(), TowerLampRenderer::new);
+        event.registerBlockEntityRenderer(ModBlockEntities.CAMERA.get(), CameraRenderer::new);
     }
 
     @SubscribeEvent

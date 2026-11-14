@@ -227,6 +227,17 @@ final class Canvas {
                     m.spend(cv.px.length / 32 + 8);
                     return valueOf(changed);
                 }),
+                // Кадр камеры наблюдения: canvas:camera(имя, [x, y, w, h]) → частота или nil, ошибка
+                RegisteredFunction.ofV("camera", (s, a) -> {
+                    int o = base(a, t);
+                    String target = LuaApis.text(a.arg(o + 1).checkLuaString());
+                    int x = a.arg(o + 2).optInteger(0), y = a.arg(o + 3).optInteger(0);
+                    int fw = a.arg(o + 4).optInteger(cv.w - x), fh = a.arg(o + 5).optInteger(cv.h - y);
+                    Object r = c.cameraDraw(target, cv.px, cv.w, cv.h, x, y, Math.max(1, fw), Math.max(1, fh));
+                    m.spend(Math.max(1, fw) * Math.max(1, fh) / 16 + 16);
+                    if (r instanceof String err) return org.squiddev.cobalt.ValueFactory.varargsOf(Constants.NIL, LuaApis.str(err));
+                    return valueOf((Integer) r);
+                }),
                 RegisteredFunction.ofV("free", (s, a) -> {
                     gpu.freeCanvas(cv);
                     return Constants.NONE;

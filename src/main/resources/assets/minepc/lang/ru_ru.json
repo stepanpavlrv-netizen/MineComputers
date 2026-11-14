@@ -903,5 +903,21 @@
   "gui.minepc.io.players": "Игроки рядом: %s",
   "gui.minepc.io.nobody": "никого",
   "gui.minepc.io.light": "Свет: %s",
-  "gui.minepc.io.log_empty": "Журнал пуст"
+  "gui.minepc.io.log_empty": "Журнал пуст",
+  "block.minepc.camera": "Камера наблюдения",
+  "tooltip.minepc.camera": "Видео по сети: кабель — к пластине крепления. Голова поворачивается",
+  "tooltip.minepc.camera2": "ПКМ — окно камеры; на компьютере — cam <имя>. Имя — переименуйте на наковальне",
+  "gui.minepc.camera.center": "Прямо",
+  "gui.minepc.camera.zoom_in": "Приблизить",
+  "gui.minepc.camera.zoom_out": "Отдалить",
+  "gui.minepc.camera.fps": "%s к/с",
+  "gui.minepc.camera.night_on": "Ночь: вкл",
+  "gui.minepc.camera.night_off": "Ночь: выкл",
+  "gui.minepc.camera.patrol_on": "Патруль: вкл",
+  "gui.minepc.camera.patrol_off": "Патруль: выкл",
+  "gui.minepc.camera.loading": "Собираю картинку…",
+  "gui.minepc.camera.stream": "Поток:",
+  "gui.minepc.camera.drag": "Тяните мышью",
+  "gui.minepc.camera.drag2": "по картинке",
+  "gui.minepc.camera.hint": "Стрелки/WASD — поворот, +/− — зум, Shift+щелчок — назад по списку"
 }

@@ -107,6 +107,10 @@ public class ModBlocks {
             () -> new com.strikerr212.minepc.lan.IoControllerBlock(BlockBehaviour.Properties.of()
                     .mapColor(MapColor.METAL).strength(2.0f, 6.0f).sound(SoundType.METAL).requiresCorrectToolForDrops()));
 
+    public static final DeferredBlock<com.strikerr212.minepc.lan.CameraBlock> CAMERA = BLOCKS.register("camera",
+            () -> new com.strikerr212.minepc.lan.CameraBlock(BlockBehaviour.Properties.of()
+                    .mapColor(MapColor.METAL).strength(1.5f, 6.0f).sound(SoundType.METAL).noOcclusion().requiresCorrectToolForDrops()));
+
     public static final DeferredBlock<KeyboardBlock> KEYBOARD_STAND = BLOCKS.register("keyboard_stand",
             () -> new KeyboardBlock(BlockBehaviour.Properties.of()
                     .mapColor(MapColor.COLOR_GRAY)

@@ -903,5 +903,21 @@
   "gui.minepc.io.players": "Players nearby: %s",
   "gui.minepc.io.nobody": "nobody",
   "gui.minepc.io.light": "Light: %s",
-  "gui.minepc.io.log_empty": "Log is empty"
+  "gui.minepc.io.log_empty": "Log is empty",
+  "block.minepc.camera": "Security Camera",
+  "tooltip.minepc.camera": "Video over the network: plug the cable into the mount plate. The head turns",
+  "tooltip.minepc.camera2": "Right-click for the camera window; on a computer run cam <name>. Rename on an anvil to set its name",
+  "gui.minepc.camera.center": "Center",
+  "gui.minepc.camera.zoom_in": "Zoom in",
+  "gui.minepc.camera.zoom_out": "Zoom out",
+  "gui.minepc.camera.fps": "%s fps",
+  "gui.minepc.camera.night_on": "Night: on",
+  "gui.minepc.camera.night_off": "Night: off",
+  "gui.minepc.camera.patrol_on": "Patrol: on",
+  "gui.minepc.camera.patrol_off": "Patrol: off",
+  "gui.minepc.camera.loading": "Building the picture…",
+  "gui.minepc.camera.stream": "Stream:",
+  "gui.minepc.camera.drag": "Drag to turn,",
+  "gui.minepc.camera.drag2": "wheel to zoom",
+  "gui.minepc.camera.hint": "Arrows/WASD turn, +/− zoom, Shift+click cycles back"
 }

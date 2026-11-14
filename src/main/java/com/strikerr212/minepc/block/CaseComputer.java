@@ -324,6 +324,86 @@ public final class CaseComputer implements Computer.Host {
         }
     }
 
+    // ======================= Камеры =======================
+
+    @Override
+    public com.strikerr212.minepc.computer.CameraFeed camera(String target) {
+        return onServer(level -> {
+            var cam = findCamera(level, target);
+            return cam == null ? null : new com.strikerr212.minepc.lan.CameraFeedImpl(cam.cam, cam.bits / 800);
+        }, null);
+    }
+
+    private record FoundCamera(com.strikerr212.minepc.lan.CameraBlockEntity cam, long bits, int hops) {
+    }
+
+    private FoundCamera findCamera(ServerLevel level, String target) {
+        for (var r : LanManager.get(level).reach(level, be.hostRef())) {
+            var e = level.isLoaded(r.pos()) ? Hosts.endpoint(level, r.host()) : null;
+            if (e instanceof com.strikerr212.minepc.lan.CameraBlockEntity cam && LanManager.matches(target, cam.address(), cam.label())) {
+                return new FoundCamera(cam, r.bits(), r.hops());
+            }
+        }
+        return null;
+    }
+
+    @Override
+    public List<Map<Object, Object>> cameras() {
+        return onServer(level -> {
+            List<Map<Object, Object>> out = new ArrayList<>();
+            for (var r : LanManager.get(level).reach(level, be.hostRef())) {
+                var e = level.isLoaded(r.pos()) ? Hosts.endpoint(level, r.host()) : null;
+                if (e instanceof com.strikerr212.minepc.lan.CameraBlockEntity cam) {
+                    Map<Object, Object> m = new java.util.LinkedHashMap<>();
+                    m.put("name", cam.label());
+                    m.put("address", cam.address());
+                    m.put("hops", r.hops());
+                    m.put("link", r.bits() / 800);
+                    m.put("width", cam.width());
+                    m.put("height", cam.height());
+                    m.put("fps", cam.frameRate());
+                    out.add(m);
+                }
+            }
+            return out;
+        }, List.of());
+    }
+
+    @Override
+    public Object[] cameraCommand(String target, String command, double a, double b) {
+        return onServer(level -> {
+            var found = findCamera(level, target);
+            if (found == null) return new Object[]{false, "Камера «" + target + "» не найдена: нет в сети или до неё нет связи"};
+            var cam = found.cam;
+            switch (command) {
+                case "info" -> {
+                }
+                case "look" -> cam.look((float) a, (float) b);
+                case "turn" -> cam.turn((float) a, (float) b);
+                case "zoom" -> cam.setFov((float) a);
+                case "res" -> cam.setRes((int) a - 1);       // 1 — 64×36 … 7 — 320×180
+                case "fps" -> {
+                    int best = 0;
+                    for (int i = 0; i < com.strikerr212.minepc.lan.CameraBlockEntity.FPS.length; i++) {
+                        if (Math.abs(com.strikerr212.minepc.lan.CameraBlockEntity.FPS[i] - a) < Math.abs(com.strikerr212.minepc.lan.CameraBlockEntity.FPS[best] - a)) best = i;
+                    }
+                    cam.setFps(best);
+                }
+                case "night" -> cam.setNight(a != 0);
+                case "patrol" -> cam.setPatrol(a != 0);
+                default -> {
+                    if (command.startsWith("name:")) cam.setLabel(command.substring(5));
+                    else return new Object[]{false, "Неизвестная настройка: " + command};
+                }
+            }
+            Map<Object, Object> m = cam.info();
+            m.put("link", found.bits / 800);
+            m.put("hops", found.hops);
+            m.put("stream", cam.bytesPerSecond());
+            return new Object[]{true, m};
+        }, new Object[]{false, "Сервер не ответил"});
+    }
+
     @Override
     public Object[] dns(String command, String name) {
         return onServer(level -> {

@@ -127,6 +127,36 @@ public class ModNetwork {
                             com.strikerr212.minepc.lan.RouterBlock.openPayload(player.serverLevel(), pos, router));
                 }));
 
+        // Камера: поворот и настройки из окна, кадры для превью
+        registrar.playToServer(CameraActionPayload.TYPE, CameraActionPayload.STREAM_CODEC, (payload, context) ->
+                context.enqueueWork(() -> {
+                    if (!(context.player() instanceof net.minecraft.server.level.ServerPlayer player)) return;
+                    BlockPos pos = payload.pos();
+                    if (player.distanceToSqr(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5) > 8 * 8) return;
+                    if (!(player.level().getBlockEntity(pos) instanceof com.strikerr212.minepc.lan.CameraBlockEntity cam)) return;
+                    switch (payload.action()) {
+                        case CameraActionPayload.TURN -> cam.turn(payload.a(), payload.b());
+                        case CameraActionPayload.LOOK -> cam.look(payload.a(), payload.b());
+                        case CameraActionPayload.ZOOM -> cam.setFov(payload.a());
+                        case CameraActionPayload.RES -> cam.setRes((int) payload.a());
+                        case CameraActionPayload.FPS -> cam.setFps((int) payload.a());
+                        case CameraActionPayload.NIGHT -> cam.setNight(payload.a() != 0);
+                        case CameraActionPayload.PATROL -> cam.setPatrol(payload.a() != 0);
+                        case CameraActionPayload.FRAME -> {
+                            cam.watched();
+                            int w = Math.min(cam.width(), 160), h = Math.min(cam.height(), 90);
+                            int[] px = cam.render(w, h);
+                            net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(player, px == null
+                                    ? new CameraFramePayload(pos, 0, 0, new byte[0])
+                                    : new CameraFramePayload(pos, w, h, CameraFramePayload.pack(px)));
+                        }
+                        default -> {
+                        }
+                    }
+                }));
+        registrar.playToClient(CameraFramePayload.TYPE, CameraFramePayload.STREAM_CODEC, (payload, context) ->
+                context.enqueueWork(() -> com.strikerr212.minepc.client.ClientAccess.cameraFrame(payload)));
+
         // Контроллер ввода-вывода: стороны из окна
         registrar.playToServer(IoActionPayload.TYPE, IoActionPayload.STREAM_CODEC, (payload, context) ->
                 context.enqueueWork(() -> {

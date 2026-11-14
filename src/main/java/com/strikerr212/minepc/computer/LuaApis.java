@@ -149,6 +149,7 @@ final class LuaApis {
         g.rawset("unicode", OcApis.unicode());
         g.rawset("data", OcApis.data(m));
         g.rawset("net", net(c));
+        g.rawset("camera", camera(c));
         g.rawset("sound", SoundApis.sound(c));
         g.rawset("switch", switchApi(c));
         g.rawset("bios", biosApi(c));
@@ -186,6 +187,40 @@ final class LuaApis {
         }
         if (size > Computer.NET_MAX_PACKET) throw error("Сообщение больше 8 КБ (" + size + " байт) — разбейте на части");
         return valueOf(c.netSend(target, port, payload, size));
+    }
+
+    /** Камеры наблюдения: список, поворот, настройки. Кадр — canvas:camera(имя, ...). */
+    private static LuaTable camera(Computer c) {
+        LuaTable t = new LuaTable();
+        RegisteredFunction.bind(t, new RegisteredFunction[]{
+                RegisteredFunction.ofV("list", (s, a) -> toLua(c.host().cameras())),
+                RegisteredFunction.ofV("info", (s, a) -> camCmd(c, a, "info")),
+                RegisteredFunction.ofV("look", (s, a) -> camCmd(c, a, "look")),
+                RegisteredFunction.ofV("turn", (s, a) -> camCmd(c, a, "turn")),
+                RegisteredFunction.ofV("zoom", (s, a) -> camCmd(c, a, "zoom")),
+                RegisteredFunction.ofV("set", (s, a) -> {
+                    String target = text(a.arg(1).checkLuaString());
+                    String key = text(a.arg(2).checkLuaString());
+                    LuaValue v = a.arg(3);
+                    double num = v.isBoolean() ? (v.toBoolean() ? 1 : 0) : v.isNumber() ? v.toDouble() : 0;
+                    if (key.equals("name")) {
+                        Object[] r = c.host().cameraCommand(target, "name:" + (v.isNil() ? "" : text(v.checkLuaString())), 0, 0);
+                        return camResult(r);
+                    }
+                    return camResult(c.host().cameraCommand(target, key, num, 0));
+                }),
+        });
+        return t;
+    }
+
+    private static Varargs camCmd(Computer c, Varargs a, String cmd) throws LuaError {
+        String target = text(a.arg(1).checkLuaString());
+        return camResult(c.host().cameraCommand(target, cmd, a.arg(2).optDouble(0), a.arg(3).optDouble(0)));
+    }
+
+    private static Varargs camResult(Object[] r) {
+        if (!(Boolean) r[0]) return varargsOf(Constants.NIL, toLua(r[1]));
+        return toLua(r[1]);
     }
 
     private static LuaTable net(Computer c) {
