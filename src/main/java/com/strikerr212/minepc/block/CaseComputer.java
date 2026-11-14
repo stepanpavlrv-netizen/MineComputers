@@ -1218,7 +1218,7 @@ public final class CaseComputer implements Computer.Host {
             if ((linkCode & 1) == 0) return null;   // BMC отвечает только по проводу
             String t = target.toLowerCase(java.util.Locale.ROOT);
             PcCaseBlockEntity found = null;
-            for (var r : com.strikerr212.minepc.lan.com.strikerr212.minepc.lan.LanManager.get(level).reach(level, be.hostRef())) {
+            for (var r : com.strikerr212.minepc.lan.LanManager.get(level).reach(level, be.hostRef())) {
                 PcCaseBlockEntity o = level.isLoaded(r.pos()) ? Hosts.get(level, r.pos(), r.slot()) : null;
                 if (o == null) continue;
                 if (o.label().equalsIgnoreCase(target) || !t.isEmpty() && (o.address().startsWith(t) || o.bmc().address().startsWith(t))) {
