@@ -338,9 +338,9 @@ public final class CaseComputer implements Computer.Host {
     }
 
     private FoundCamera findCamera(ServerLevel level, String target) {
-        for (var r : LanManager.get(level).reach(level, be.hostRef())) {
+        for (var r : com.strikerr212.minepc.lan.LanManager.get(level).reach(level, be.hostRef())) {
             var e = level.isLoaded(r.pos()) ? Hosts.endpoint(level, r.host()) : null;
-            if (e instanceof com.strikerr212.minepc.lan.CameraBlockEntity cam && LanManager.matches(target, cam.address(), cam.label())) {
+            if (e instanceof com.strikerr212.minepc.lan.CameraBlockEntity cam && com.strikerr212.minepc.lan.LanManager.matches(target, cam.address(), cam.label())) {
                 return new FoundCamera(cam, r.bits(), r.hops());
             }
         }
@@ -351,7 +351,7 @@ public final class CaseComputer implements Computer.Host {
     public List<Map<Object, Object>> cameras() {
         return onServer(level -> {
             List<Map<Object, Object>> out = new ArrayList<>();
-            for (var r : LanManager.get(level).reach(level, be.hostRef())) {
+            for (var r : com.strikerr212.minepc.lan.LanManager.get(level).reach(level, be.hostRef())) {
                 var e = level.isLoaded(r.pos()) ? Hosts.endpoint(level, r.host()) : null;
                 if (e instanceof com.strikerr212.minepc.lan.CameraBlockEntity cam) {
                     Map<Object, Object> m = new java.util.LinkedHashMap<>();
@@ -1218,7 +1218,7 @@ public final class CaseComputer implements Computer.Host {
             if ((linkCode & 1) == 0) return null;   // BMC отвечает только по проводу
             String t = target.toLowerCase(java.util.Locale.ROOT);
             PcCaseBlockEntity found = null;
-            for (var r : com.strikerr212.minepc.lan.LanManager.get(level).reach(level, be.hostRef())) {
+            for (var r : com.strikerr212.minepc.lan.com.strikerr212.minepc.lan.LanManager.get(level).reach(level, be.hostRef())) {
                 PcCaseBlockEntity o = level.isLoaded(r.pos()) ? Hosts.get(level, r.pos(), r.slot()) : null;
                 if (o == null) continue;
                 if (o.label().equalsIgnoreCase(target) || !t.isEmpty() && (o.address().startsWith(t) || o.bmc().address().startsWith(t))) {

@@ -202,7 +202,7 @@ final class LuaApis {
                     String target = text(a.arg(1).checkLuaString());
                     String key = text(a.arg(2).checkLuaString());
                     LuaValue v = a.arg(3);
-                    double num = v.isBoolean() ? (v.toBoolean() ? 1 : 0) : v.isNumber() ? v.toDouble() : 0;
+                    double num = v instanceof LuaBoolean ? (v.toBoolean() ? 1 : 0) : v.isNumber() ? v.toDouble() : 0;
                     if (key.equals("name")) {
                         Object[] r = c.host().cameraCommand(target, "name:" + (v.isNil() ? "" : text(v.checkLuaString())), 0, 0);
                         return camResult(r);
