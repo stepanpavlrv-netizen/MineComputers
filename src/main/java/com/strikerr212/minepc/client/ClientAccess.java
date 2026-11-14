@@ -62,6 +62,11 @@ public final class ClientAccess {
         Minecraft.getInstance().setScreen(new CameraScreen(pos));
     }
 
+    /** Сервер просит текстуры блоков для камер. */
+    public static void cameraTexturesRequested() {
+        BlockTextureBaker.requested();
+    }
+
     /** Кадр для окна камеры пришёл с сервера. */
     public static void cameraFrame(com.strikerr212.minepc.network.CameraFramePayload payload) {
         if (Minecraft.getInstance().screen instanceof CameraScreen s) s.frame(payload);

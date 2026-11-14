@@ -144,11 +144,19 @@ public class ModNetwork {
                         case CameraActionPayload.PATROL -> cam.setPatrol(payload.a() != 0);
                         case CameraActionPayload.FRAME -> {
                             cam.watched();
-                            int w = Math.min(cam.width(), 160), h = Math.min(cam.height(), 90);
-                            int[] px = cam.render(w, h);
-                            net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(player, px == null
-                                    ? new CameraFramePayload(pos, 0, 0, new byte[0])
-                                    : new CameraFramePayload(pos, w, h, CameraFramePayload.pack(px)));
+                            // окно камеры — 256×144: больше не нужно; рисуем не в потоке сервера, чтобы мир не тормозил
+                            int w = Math.min(cam.width(), 256), h = Math.min(cam.height(), 144);
+                            if (!cam.framing.compareAndSet(false, true)) return;
+                            com.strikerr212.minepc.lan.CameraBlockEntity.RENDER.execute(() -> {
+                                try {
+                                    int[] px = cam.render(w, h);
+                                    net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(player, px == null
+                                            ? new CameraFramePayload(pos, 0, 0, new byte[0])
+                                            : new CameraFramePayload(pos, w, h, CameraFramePayload.pack(px)));
+                                } finally {
+                                    cam.framing.set(false);
+                                }
+                            });
                         }
                         default -> {
                         }
@@ -156,6 +164,14 @@ public class ModNetwork {
                 }));
         registrar.playToClient(CameraFramePayload.TYPE, CameraFramePayload.STREAM_CODEC, (payload, context) ->
                 context.enqueueWork(() -> com.strikerr212.minepc.client.ClientAccess.cameraFrame(payload)));
+        // Текстуры блоков для камер: сервер просит, игрок присылает кусками
+        registrar.playBidirectional(CameraTexturesPayload.TYPE, CameraTexturesPayload.STREAM_CODEC, (payload, context) -> {
+            if (context.flow() == net.minecraft.network.protocol.PacketFlow.CLIENTBOUND) {
+                context.enqueueWork(com.strikerr212.minepc.client.ClientAccess::cameraTexturesRequested);
+            } else if (context.player() instanceof net.minecraft.server.level.ServerPlayer player) {
+                context.enqueueWork(() -> com.strikerr212.minepc.lan.CameraTextureSync.chunk(player, payload));
+            }
+        });
 
         // Контроллер ввода-вывода: стороны из окна
         registrar.playToServer(IoActionPayload.TYPE, IoActionPayload.STREAM_CODEC, (payload, context) ->

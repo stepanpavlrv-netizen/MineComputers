@@ -26,6 +26,12 @@ public class ClientEvents {
      * Свойства v0, v1, v2 — по ним JSON-модель выбирает вариант геометрии
      * (тип крышки, число слотов, длина видеокарты...). Вариант N → значение N*0.1 + 0.05.
      */
+    /** Ресурсы перезагрузились (пакет ресурсов, F3+T) — текстуры для камер собрать заново. */
+    @SubscribeEvent
+    public static void onReloadListeners(net.neoforged.neoforge.client.event.RegisterClientReloadListenersEvent event) {
+        event.registerReloadListener((net.minecraft.server.packs.resources.ResourceManagerReloadListener) rm -> BlockTextureBaker.invalidate());
+    }
+
     @SubscribeEvent
     public static void onClientSetup(FMLClientSetupEvent event) {
         event.enqueueWork(() -> {

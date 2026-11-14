@@ -10,7 +10,6 @@ import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.MobCategory;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
@@ -22,6 +21,7 @@ import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.level.material.Fluids;
 import net.minecraft.world.level.material.MapColor;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.shapes.VoxelShape;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -267,6 +267,18 @@ public class CameraBlockEntity extends BlockEntity implements NetEndpoint, CordL
         return out;
     }
 
+    /** Кадр для окна уже рисуется — следующий запрос подождёт (не копим очередь). */
+    public final java.util.concurrent.atomic.AtomicBoolean framing = new java.util.concurrent.atomic.AtomicBoolean();
+
+    /** Кадры для окон камер рисуются здесь, а не в потоке сервера. */
+    public static final java.util.concurrent.ExecutorService RENDER = java.util.concurrent.Executors.newFixedThreadPool(
+            Math.max(1, Math.min(2, Runtime.getRuntime().availableProcessors() / 2)), r -> {
+                Thread t = new Thread(r, "MineComputers camera");
+                t.setDaemon(true);
+                t.setPriority(Thread.NORM_PRIORITY - 1);
+                return t;
+            });
+
     public static void serverTick(Level level, BlockPos pos, BlockState state, CameraBlockEntity be) {
         be.age++;
         long now = level.getGameTime();
@@ -316,69 +328,224 @@ public class CameraBlockEntity extends BlockEntity implements NetEndpoint, CordL
         float day = 1f - server.getSkyDarken() / 11f;
         s.daylight = Math.max(0.05f, day);
         s.sky = level.isRaining() ? 0x8A96A6 : 0x87B4F0;
+        s.tex = BlockTextures.table();
+        // солнце: восходит на востоке, в полдень — над головой; тени пересчитываются раз в 5 с
+        double a = level.getSunAngle(1f);
+        s.sunX = (float) -Math.sin(a);
+        s.sunY = (float) Math.cos(a);
+        s.sunZ = 0.12f;
+        float len = (float) Math.sqrt(s.sunX * s.sunX + s.sunY * s.sunY + s.sunZ * s.sunZ);
+        s.sunX /= len;
+        s.sunY /= len;
+        s.sunZ /= len;
+        if (be.age % 100 == 0) s.resetShadows();
     }
 
     private void buildSlice(ServerLevel level, CameraRender.Snapshot s, int y) {
         BlockPos.MutableBlockPos p = new BlockPos.MutableBlockPos();
         int wy = s.oy + y;
+        CameraRender.Tex[] table = BlockTextures.table();
         for (int z = 0; z < s.sz; z++) {
             for (int x = 0; x < s.sx; x++) {
                 p.set(s.ox + x, wy, s.oz + z);
                 int idx = s.index(x, y, z);
                 if (!level.isLoaded(p)) {
                     s.cells[idx] = 0;
+                    s.blocks[idx] = 0;
+                    s.shape[idx] = 0;
                     s.light[idx] = 0;
                     continue;
                 }
                 BlockState st = level.getBlockState(p);
-                int cell = 0;
+                int cell = 0, shape = 0;
+                char block = 0;
                 if (!st.isAir() && !(st.getBlock() instanceof CameraBlock)) {   // камеры (и своя тоже) не заслоняют вид
                     FluidState fl = st.getFluidState();
-                    if (!fl.isEmpty() && (fl.is(Fluids.WATER) || fl.is(Fluids.FLOWING_WATER))) {
+                    int id = net.minecraft.core.registries.BuiltInRegistries.BLOCK.getId(st.getBlock());
+                    CameraRender.Tex tex = id >= 0 && id < table.length ? table[id] : null;
+                    if (!fl.isEmpty() && (fl.is(Fluids.WATER) || fl.is(Fluids.FLOWING_WATER))
+                            && (tex == null || st.getCollisionShape(level, p).isEmpty())) {
                         cell = 0x3F76E4 | CameraRender.SOLID | CameraRender.WATER;
-                    } else if (!fl.isEmpty()) {
+                    } else if (!fl.isEmpty() && tex == null) {
                         cell = 0xD96415 | CameraRender.SOLID;                  // лава
-                    } else if (!st.getCollisionShape(level, p).isEmpty() || st.is(net.minecraft.tags.BlockTags.LEAVES)) {
-                        MapColor mc = st.getMapColor(level, p);
-                        int col = mc == MapColor.NONE ? 0 : mc.col;
-                        if (col != 0) cell = col | CameraRender.SOLID;          // стекло (без цвета) — прозрачное
+                    } else if (tex != null && tex.cross) {
+                        cell = tex.average() | CameraRender.PLANT;             // трава, цветы — крестом
+                        block = (char) (id + 1);
+                    } else {
+                        VoxelShape col = st.getCollisionShape(level, p);
+                        VoxelShape outline = col.isEmpty() ? st.getShape(level, p) : col;
+                        boolean leaves = st.is(net.minecraft.tags.BlockTags.LEAVES);
+                        // блок виден: твёрдый, листва — или у него есть текстура и форма (факел, рельсы, снег)
+                        if (!col.isEmpty() || leaves || (tex != null && !outline.isEmpty())) {
+                            MapColor mc = st.getMapColor(level, p);
+                            int c = mc == MapColor.NONE ? 0 : mc.col;
+                            if (tex != null) {
+                                cell = (c != 0 ? c : tex.average()) | CameraRender.SOLID;
+                                block = (char) (id + 1);
+                            } else if (c != 0) {
+                                cell = c | CameraRender.SOLID;          // стекло без текстур (без цвета) — прозрачное
+                            }
+                            if (cell != 0 && !leaves && !outline.isEmpty()) shape = shapeOf(outline.bounds());
+                        }
                     }
                 }
                 s.cells[idx] = cell;
+                s.blocks[idx] = block;
+                s.shape[idx] = shape;
                 int bl = level.getBrightness(LightLayer.BLOCK, p), sk = level.getBrightness(LightLayer.SKY, p);
                 s.light[idx] = (byte) (bl << 4 | sk);
             }
         }
     }
 
+    /** Коробка блока в шестнадцатых; 0 — целый блок. */
+    private static int shapeOf(AABB b) {
+        int x0 = clamp16((int) Math.floor(b.minX * 16 + 1e-4)), y0 = clamp16((int) Math.floor(b.minY * 16 + 1e-4)), z0 = clamp16((int) Math.floor(b.minZ * 16 + 1e-4));
+        int x1 = clamp16((int) Math.ceil(b.maxX * 16 - 1e-4) - 1), y1 = clamp16((int) Math.ceil(b.maxY * 16 - 1e-4) - 1), z1 = clamp16((int) Math.ceil(b.maxZ * 16 - 1e-4) - 1);
+        if (x0 == 0 && y0 == 0 && z0 == 0 && x1 == 15 && y1 == 15 && z1 == 15) return 0;
+        return CameraRender.packShape(x0, y0, z0, Math.max(x0, x1), Math.max(y0, y1), Math.max(z0, z1));
+    }
+
+    private static int clamp16(int v) {
+        return Math.max(0, Math.min(15, v));
+    }
+
     private void snapEntities(ServerLevel level, CameraRender.Snapshot s) {
         AABB area = new AABB(s.ox, s.oy, s.oz, s.ox + s.sx, s.oy + s.sy, s.oz + s.sz);
         List<Entity> list = level.getEntities((Entity) null, area, e -> !e.isSpectator() && !e.isInvisible());
-        float[] out = new float[Math.min(64, list.size()) * 7];
+        EntityParts parts = new EntityParts();
         int n = 0;
         for (Entity e : list) {
-            if (n >= 64) break;
-            AABB b = e.getBoundingBox();
-            int kind;
-            if (e instanceof Player) kind = CameraRender.ENT_PLAYER;
-            else if (e instanceof ItemEntity) kind = CameraRender.ENT_ITEM;
-            else {
-                MobCategory c = e.getType().getCategory();
-                kind = c == MobCategory.MONSTER ? CameraRender.ENT_MONSTER
-                        : c == MobCategory.CREATURE || c == MobCategory.AMBIENT ? CameraRender.ENT_ANIMAL
-                        : c.name().startsWith("WATER") || c == MobCategory.AXOLOTLS ? CameraRender.ENT_WATER : CameraRender.ENT_OTHER;
-            }
-            int k = n * 7;
-            out[k] = (float) b.minX;
-            out[k + 1] = (float) b.minY;
-            out[k + 2] = (float) b.minZ;
-            out[k + 3] = (float) b.maxX;
-            out[k + 4] = (float) b.maxY;
-            out[k + 5] = (float) b.maxZ;
-            out[k + 6] = kind;
-            n++;
+            if (n++ >= 64) break;
+            parts.add(e);
         }
-        s.entities = n * 7 == out.length ? out : java.util.Arrays.copyOf(out, n * 7);
+        s.entities = parts.toArray();
+    }
+
+    /**
+     * Существа для кадра — простыми фигурами из частей: голова, тело, ноги (у животных — четыре и голова впереди),
+     * цветами яйца призыва (пятна — вторым цветом). Игрок — в цветах Стива.
+     */
+    private static final class EntityParts {
+        private float[] out = new float[256];
+        private int len;
+
+        private void put(float v) {
+            if (len == out.length) out = java.util.Arrays.copyOf(out, out.length * 2);
+            out[len++] = v;
+        }
+
+        float[] toArray() {
+            return java.util.Arrays.copyOf(out, len);
+        }
+
+        private int head;
+        private int count;
+
+        private void begin(AABB b) {
+            head = len;
+            put((float) b.minX);
+            put((float) b.minY);
+            put((float) b.minZ);
+            put((float) b.maxX);
+            put((float) b.maxY);
+            put((float) b.maxZ);
+            put(0);
+            count = 0;
+        }
+
+        private void end() {
+            out[head + 6] = count;
+        }
+
+        /** Часть: коробка с центром (cx, cz) по горизонтали, размерами along × across (вдоль взгляда и поперёк), по высоте y0..y1. */
+        private void part(double cx, double cz, double along, double across, double y0, double y1, boolean alongX, int col, int col2, int pattern) {
+            double hx = (alongX ? along : across) / 2, hz = (alongX ? across : along) / 2;
+            put((float) (cx - hx));
+            put((float) y0);
+            put((float) (cz - hz));
+            put((float) (cx + hx));
+            put((float) y1);
+            put((float) (cz + hz));
+            put(col);
+            put(col2);
+            put(pattern);
+            count++;
+        }
+
+        void add(Entity e) {
+            AABB b = e.getBoundingBox();
+            double w = b.getXsize(), h = b.getYsize();
+            double cx = (b.minX + b.maxX) / 2, cz = (b.minZ + b.maxZ) / 2, y = b.minY;
+            float yaw = e instanceof net.minecraft.world.entity.LivingEntity le ? le.yBodyRot : e.getYRot();
+            double fx = -Math.sin(Math.toRadians(yaw)), fz = Math.cos(Math.toRadians(yaw));
+            boolean alongX = Math.abs(fx) > Math.abs(fz);
+            double sx = alongX ? Math.signum(fx) : 0, sz = alongX ? 0 : Math.signum(fz);
+            int c1 = 0x9A9A9A, c2 = 0x6A6A6A;
+            var egg = net.minecraft.world.item.SpawnEggItem.byId(e.getType());
+            if (egg != null) {
+                c1 = egg.getColor(0) & 0xFFFFFF;
+                c2 = egg.getColor(1) & 0xFFFFFF;
+            }
+            // дальний край коробки для рамки: голова животного торчит вперёд
+            begin(b.inflate(0.4, 0.05, 0.4));
+            if (e instanceof Player) {
+                humanoid(cx, cz, y, h, w, alongX, 0xC8946A, 0x3AAFA9, 0x46409A, PLAIN);
+            } else if (e instanceof ItemEntity item) {
+                int col = 0xE8C840;
+                if (item.getItem().getItem() instanceof net.minecraft.world.item.BlockItem bi) {
+                    MapColor m = bi.getBlock().defaultMapColor();
+                    if (m != MapColor.NONE) col = m.col;
+                }
+                part(cx, cz, 0.25, 0.25, y, y + 0.25, alongX, col, col, PLAIN);
+            } else if (e instanceof net.minecraft.world.entity.monster.Creeper) {
+                part(cx, cz, 0.5, 0.5, y + h * 0.75, y + h, alongX, c1, c2, SPOTS);
+                part(cx, cz, 0.3, 0.5, y + h * 0.3, y + h * 0.75, alongX, c1, c2, SPOTS);
+                part(cx, cz, 0.5, 0.5, y, y + h * 0.3, alongX, c1, c2, SPOTS);
+            } else if (e instanceof net.minecraft.world.entity.LivingEntity && h >= 1.3 && w <= 0.9) {
+                // человекоподобные: зомби, скелет, житель, эндермен…
+                humanoid(cx, cz, y, h, w, alongX, c2, c1, shade(c1, 0.7f), PLAIN);
+            } else if (e instanceof net.minecraft.world.entity.LivingEntity && h < 1.8) {
+                // четвероногие: тело, четыре ноги, голова впереди
+                double legH = h * 0.42, len = Math.max(w, 0.4) * 1.15;
+                part(cx, cz, len, w, y + legH, y + h * 0.82, alongX, c1, c2, SPOTS);
+                double lx = len * 0.32, lz = w * 0.28, leg = Math.min(0.28, w * 0.3);
+                for (int k = 0; k < 4; k++) {
+                    double a = (k < 2 ? 1 : -1) * lx, c = (k % 2 == 0 ? 1 : -1) * lz;
+                    double px = cx + (alongX ? a : c), pz = cz + (alongX ? c : a);
+                    part(px, pz, leg, leg, y, y + legH, alongX, shade(c1, 0.8f), c2, PLAIN);
+                }
+                double head = Math.min(0.55, h * 0.45);
+                part(cx + sx * (len / 2 + head * 0.35), cz + sz * (len / 2 + head * 0.35), head, head * 0.95,
+                        y + h - head, y + h + head * 0.05, alongX, c2 == 0 ? c1 : mixColor(c1, c2), c2, PLAIN);
+            } else {
+                part(cx, cz, w, w, y, y + h, alongX, c1, c2, PLAIN);
+            }
+            end();
+        }
+
+        private void humanoid(double cx, double cz, double y, double h, double w, boolean alongX, int headCol, int bodyCol, int legCol, int pat) {
+            double u = h / 1.8;   // рост в долях роста игрока
+            double hs = 0.5 * u;
+            part(cx, cz, hs, hs, y + h - hs, y + h, alongX, headCol, headCol, pat);
+            part(cx, cz, 0.28 * u, 0.5 * u, y + h * 0.375, y + h - hs, alongX, bodyCol, bodyCol, pat);
+            // руки по бокам тела
+            double side = 0.375 * u;
+            double ax = alongX ? 0 : side, az = alongX ? side : 0;
+            part(cx + ax, cz + az, 0.24 * u, 0.24 * u, y + h * 0.42, y + h - hs, alongX, headCol, headCol, pat);
+            part(cx - ax, cz - az, 0.24 * u, 0.24 * u, y + h * 0.42, y + h - hs, alongX, headCol, headCol, pat);
+            part(cx, cz, 0.26 * u, 0.48 * u, y, y + h * 0.375, alongX, legCol, legCol, pat);
+        }
+
+        private static final int PLAIN = CameraRender.PATTERN_PLAIN, SPOTS = CameraRender.PATTERN_SPOTS;
+
+        private static int shade(int c, float k) {
+            return (int) (((c >> 16) & 255) * k) << 16 | (int) (((c >> 8) & 255) * k) << 8 | (int) ((c & 255) * k);
+        }
+
+        private static int mixColor(int a, int b) {
+            return (((a >> 16) & 255) + ((b >> 16) & 255)) / 2 << 16 | (((a >> 8) & 255) + ((b >> 8) & 255)) / 2 << 8 | ((a & 255) + (b & 255)) / 2;
+        }
     }
 
     /** Таблица для программ. */

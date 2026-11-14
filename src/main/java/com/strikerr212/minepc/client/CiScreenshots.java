@@ -683,7 +683,19 @@ public class CiScreenshots {
             case 4812 -> logCords();
             case 4860 -> logCords();      // после проверки CordGuard (раз в 2 с): корды на месте
             case 4822 -> shot(mc, "cord_sockets");
-            case 4870 -> mc.stop();
+            // Камера с настоящими текстурами: сад в полдень
+            case 4872 -> server.execute(CiScreenshots::placeGarden);
+            case 4880 -> mc.setScreen(null);
+            case 4884 -> mc.setScreen(new CameraScreen(gardenCam));
+            case 4930 -> {
+                logGarden();
+                shot(mc, "camera_textured");
+            }
+            case 4934 -> server.execute(() -> {
+                if (server.overworld().getBlockEntity(gardenCam) instanceof com.strikerr212.minepc.lan.CameraBlockEntity cam) cam.setRes(0);
+            });
+            case 4960 -> shot(mc, "camera_textured_64");
+            case 4964 -> mc.stop();
             default -> {
             }
         }
@@ -1117,6 +1129,92 @@ public class CiScreenshots {
     private static BlockPos emptyCasePos, ioPos, camPos;
 
     /** Камера на полу у компьютера A смотрит на коммутатор и контроллер. */
+    private static BlockPos gardenCam = BlockPos.ZERO;
+
+    /** Сад для камеры: дерево, трава и цветы, кирпичная стенка с окном, дорожка из плит, корова и овца. */
+    private static void placeGarden() {
+        var server = Minecraft.getInstance().getSingleplayerServer();
+        ServerPlayer p = server.getPlayerList().getPlayers().get(0);
+        ServerLevel level = p.serverLevel();
+        BlockPos g = drawBase.offset(0, 0, -34);
+        for (int dx = -12; dx <= 12; dx++) {
+            for (int dz = -16; dz <= 6; dz++) {
+                level.setBlockAndUpdate(g.offset(dx, -1, dz), net.minecraft.world.level.block.Blocks.GRASS_BLOCK.defaultBlockState());
+                for (int dy = 0; dy <= 7; dy++) level.setBlockAndUpdate(g.offset(dx, dy, dz), net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
+            }
+        }
+        java.util.Random r = new java.util.Random(7);
+        for (int k = 0; k < 140; k++) {
+            BlockPos f = g.offset(r.nextInt(25) - 12, 0, r.nextInt(20) - 15);
+            var flower = switch (r.nextInt(9)) {
+                case 0 -> net.minecraft.world.level.block.Blocks.POPPY;
+                case 1 -> net.minecraft.world.level.block.Blocks.DANDELION;
+                case 2 -> net.minecraft.world.level.block.Blocks.CORNFLOWER;
+                default -> net.minecraft.world.level.block.Blocks.SHORT_GRASS;
+            };
+            level.setBlockAndUpdate(f, flower.defaultBlockState());
+        }
+        // дерево
+        BlockPos t = g.offset(4, 0, -8);
+        for (int dx = -2; dx <= 2; dx++) for (int dz = -2; dz <= 2; dz++) for (int dy = 3; dy <= 5; dy++) {
+            if (Math.abs(dx) == 2 && Math.abs(dz) == 2 && dy == 5) continue;
+            level.setBlockAndUpdate(t.offset(dx, dy, dz), net.minecraft.world.level.block.Blocks.OAK_LEAVES.defaultBlockState()
+                    .setValue(net.minecraft.world.level.block.LeavesBlock.PERSISTENT, true));
+        }
+        for (int dy = 0; dy <= 4; dy++) level.setBlockAndUpdate(t.above(dy), net.minecraft.world.level.block.Blocks.OAK_LOG.defaultBlockState());
+        // стенка с окном
+        for (int dx = -6; dx <= -2; dx++) for (int dy = 0; dy <= 3; dy++) {
+            boolean win = dy >= 1 && dy <= 2 && (dx == -5 || dx == -4 || dx == -3);
+            var b = win ? net.minecraft.world.level.block.Blocks.GLASS : dy == 0 ? net.minecraft.world.level.block.Blocks.COBBLESTONE
+                    : net.minecraft.world.level.block.Blocks.BRICKS;
+            level.setBlockAndUpdate(g.offset(dx, dy, -9), b.defaultBlockState());
+        }
+        // дорожка из плит и фонарь
+        for (int dz = -1; dz >= -7; dz--) level.setBlockAndUpdate(g.offset(0, 0, dz), net.minecraft.world.level.block.Blocks.OAK_SLAB.defaultBlockState());
+        level.setBlockAndUpdate(g.offset(1, 0, -7), net.minecraft.world.level.block.Blocks.OAK_FENCE.defaultBlockState());
+        level.setBlockAndUpdate(g.offset(1, 1, -7), net.minecraft.world.level.block.Blocks.LANTERN.defaultBlockState());
+        // животные
+        var cow = net.minecraft.world.entity.EntityType.COW.create(level);
+        var sheep = net.minecraft.world.entity.EntityType.SHEEP.create(level);
+        for (var e : new net.minecraft.world.entity.Mob[]{cow, sheep}) {
+            if (e == null) continue;
+            e.setNoAi(true);
+            level.addFreshEntity(e);
+        }
+        if (cow != null) cow.moveTo(g.getX() + 2.5, g.getY(), g.getZ() - 4.5, 60f, 0f);
+        if (sheep != null) sheep.moveTo(g.getX() - 2.5, g.getY(), g.getZ() - 5.5, -30f, 0f);
+        // камера на каменном столбике, смотрит на север
+        level.setBlockAndUpdate(g.offset(0, 0, 3), net.minecraft.world.level.block.Blocks.STONE.defaultBlockState());
+        gardenCam = g.offset(0, 1, 3);
+        level.setBlockAndUpdate(gardenCam, ModBlocks.CAMERA.get().defaultBlockState()
+                .setValue(com.strikerr212.minepc.lan.CameraBlock.FACE, net.minecraft.world.level.block.state.properties.AttachFace.FLOOR)
+                .setValue(com.strikerr212.minepc.lan.CameraBlock.FACING, Direction.NORTH));
+        if (level.getBlockEntity(gardenCam) instanceof com.strikerr212.minepc.lan.CameraBlockEntity cam) {
+            cam.setLabel("сад");
+            cam.look(0 - cam.baseYaw(), -8);
+            cam.setRes(6);
+            cam.setFps(2);
+        }
+        level.setDayTime(5000);
+        p.teleportTo(level, g.getX() + 0.5, g.getY(), g.getZ() + 5.5, 180f, 10f);
+    }
+
+    private static void logGarden() {
+        var level = Minecraft.getInstance().getSingleplayerServer().overworld();
+        int n = 0;
+        for (var t : com.strikerr212.minepc.lan.BlockTextures.table()) if (t != null) n++;
+        com.mojang.logging.LogUtils.getLogger().info("[CI-TEX] таблица текстур: готова {}, блоков с текстурой {}, трава {}",
+                com.strikerr212.minepc.lan.BlockTextures.ready(), n,
+                com.strikerr212.minepc.lan.BlockTextures.get(net.minecraft.world.level.block.Blocks.SHORT_GRASS) != null
+                        && com.strikerr212.minepc.lan.BlockTextures.get(net.minecraft.world.level.block.Blocks.SHORT_GRASS).cross);
+        if (level.getBlockEntity(gardenCam) instanceof com.strikerr212.minepc.lan.CameraBlockEntity cam) {
+            long t0 = System.nanoTime();
+            int[] px = cam.render(320, 180);
+            com.mojang.logging.LogUtils.getLogger().info("[CI-TEX] кадр 320×180: {} мс, снимок {}", (System.nanoTime() - t0) / 1_000_000,
+                    px != null);
+        }
+    }
+
     private static BlockPos cordA = BlockPos.ZERO, cordB = BlockPos.ZERO;
 
     /** Как у игрока: настольный коммутатор на блоке земли и второй — на траве рядом. */
