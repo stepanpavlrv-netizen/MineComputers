@@ -24,7 +24,8 @@ public final class DriveStorage {
         Path folder = folder(server, id);
         // Дискета с программой из деревни: в первый раз на неё записываются файлы программы
         String program = stack.get(com.strikerr212.minepc.registry.ModDataComponents.PROGRAM.get());
-        if (program != null && !java.nio.file.Files.exists(folder)) {
+        // Программная дискета: файлы пишутся при первом подключении и обновляются, если мод новее дискеты
+        if (program != null && com.strikerr212.minepc.computer.ProgramDisks.outdated(folder, program)) {
             try {
                 com.strikerr212.minepc.computer.ProgramDisks.populate(folder, program);
             } catch (java.io.IOException e) {

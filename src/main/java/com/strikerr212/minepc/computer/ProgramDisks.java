@@ -56,10 +56,39 @@ public final class ProgramDisks {
         return out;
     }
 
-    /** Записать файлы программы id в папку дискеты. */
+    private static final java.util.Map<String, String> PRINTS = new java.util.concurrent.ConcurrentHashMap<>();
+
+    /** Отпечаток файлов программы в этой версии мода: изменились — дискету надо обновить. */
+    public static String fingerprint(String id) throws IOException {
+        String cached = PRINTS.get(id);
+        if (cached != null) return cached;
+        java.util.zip.CRC32 crc = new java.util.zip.CRC32();
+        for (String f : files(id)) {
+            crc.update(f.getBytes(StandardCharsets.UTF_8));
+            try (InputStream in = ProgramDisks.class.getResourceAsStream(BASE + "disks/" + id + "/" + f)) {
+                if (in != null) crc.update(in.readAllBytes());
+            }
+        }
+        String v = Long.toHexString(crc.getValue());
+        PRINTS.put(id, v);
+        return v;
+    }
+
+    /** Файлы на дискете старые (дискету записала прошлая версия мода) или их нет. */
+    public static boolean outdated(Path folder, String id) {
+        try {
+            Path mark = folder.resolve(".version");
+            return !Files.exists(mark) || !Files.readString(mark, StandardCharsets.UTF_8).trim().equals(fingerprint(id));
+        } catch (IOException e) {
+            return true;
+        }
+    }
+
+    /** Записать файлы программы id в папку дискеты (свои файлы игрока на дискете не трогаются). */
     public static void populate(Path folder, String id) throws IOException {
         if (get(id) == null) return;
         Files.createDirectories(folder);
+        Files.writeString(folder.resolve(".version"), fingerprint(id), StandardCharsets.UTF_8);
         for (String f : files(id)) {
             Path dst = folder.resolve(f).normalize();
             if (!dst.startsWith(folder)) continue;
