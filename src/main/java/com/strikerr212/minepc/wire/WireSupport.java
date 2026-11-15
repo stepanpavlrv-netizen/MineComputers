@@ -99,7 +99,10 @@ public final class WireSupport {
             if (j - i >= 3) {
                 // висим от последней опоры до следующей (или до самого конца провода)
                 Pt to = j < pts.size() ? pts.get(j) : pts.get(pts.size() - 1);
-                out.add(new Pt(to.x(), to.y(), to.z(), true, true));
+                Pt from = out.get(out.size() - 1);
+                List<Pt> lying = j < pts.size() ? relay(v, from, to) : null;
+                if (lying != null) out.addAll(lying);         // рядом есть опора — провод просто ложится по ней
+                else out.add(new Pt(to.x(), to.y(), to.z(), true, true));
                 changedAny = true;
                 i = j < pts.size() ? j + 1 : j;
             } else {
@@ -138,6 +141,28 @@ public final class WireSupport {
             if (k < n - 1) hh[k] = hang.get(k);
         }
         return new WireLine(l.id, l.fiber, l.color, l.label, xs, ys, zs, hh, l.devA, l.portA, l.devB, l.portB);
+    }
+
+    /**
+     * Провод потерял опору, но рядом есть другая (стену убрали — под ней пол): короткий путь по опорам между двумя
+     * точками провода, не сильно длиннее прямого. null — такого нет, провод провисает.
+     */
+    private static List<Pt> relay(WireRouter.Voxels v, Pt a, Pt b) {
+        if (((a.x() & a.y() & a.z() & b.x() & b.y() & b.z()) & 1) == 0) return null;   // точки не в центрах пикселей
+        int ax = (a.x() - 1) >> 1, ay = (a.y() - 1) >> 1, az = (a.z() - 1) >> 1, bx = (b.x() - 1) >> 1, by = (b.y() - 1) >> 1, bz = (b.z() - 1) >> 1;
+        int straight = Math.abs(ax - bx) + Math.abs(ay - by) + Math.abs(az - bz);
+        if (straight > 256) return null;
+        WireRouter.Result r = WireRouter.route(v, ax, ay, az, -1, bx, by, bz, true, 6000);
+        if (r == null || !r.reached()) return null;
+        int len = 0;
+        for (int k = 1; k < r.nodes(); k++) {
+            if (r.hang()[k - 1]) return null;
+            len += Math.abs(r.xs()[k] - r.xs()[k - 1]) + Math.abs(r.ys()[k] - r.ys()[k - 1]) + Math.abs(r.zs()[k] - r.zs()[k - 1]);
+        }
+        if (len > straight * 2 + 16) return null;
+        List<Pt> out = new ArrayList<>();
+        for (int k = 1; k < r.nodes(); k++) out.add(new Pt(WireGeom.unit(r.xs()[k]), WireGeom.unit(r.ys()[k]), WireGeom.unit(r.zs()[k]), true, false));
+        return out;
     }
 
     private static boolean sameDir(int[] a, int[] b, int[] c) {
