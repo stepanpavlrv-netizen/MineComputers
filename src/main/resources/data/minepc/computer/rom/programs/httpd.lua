@@ -1,6 +1,6 @@
 -- Сайт этого компьютера: раздаёт папку /www по сети (порт 80) и работает в фоне.
---   httpd        — запустить (в фоне, на свободном ядре)
---   httpd stop   — остановить
+--   httpd        — запустить (в фоне; дальше включается сам при запуске компьютера)
+--   httpd stop   — остановить (и не запускать при включении)
 --   httpd log    — последние запросы
 -- Страницы: /www/index.page (разметка — см. help в browse), картинки и файлы — как есть,
 -- /www/*.lua — страница-программа: получает request (path, params, from), возвращает текст страницы.
@@ -13,6 +13,24 @@ local function running()
   for _, p in ipairs(computer.processes()) do
     if p.path == SELF and p.pid ~= computer.pid() then return p.pid end
   end
+end
+
+--- Запускать при включении: строка в /etc/services
+local function autostart(on)
+  local line = SELF .. " serve"
+  local lines, have = {}, false
+  local f = fs.exists("/etc/services") and fs.open("/etc/services", "r")
+  if f then
+    for l in (f.readAll() or ""):gmatch("[^\r\n]+") do
+      if l == line then have = true end
+      if l ~= line then lines[#lines + 1] = l end
+    end
+    f.close()
+  end
+  if on then lines[#lines + 1] = line elseif not have then return end
+  pcall(fs.makeDir, "/etc")
+  local w = fs.open("/etc/services", "w")
+  if w then w.write(table.concat(lines, "\n") .. (#lines > 0 and "\n" or "")) w.close() end
 end
 
 local function sample()
@@ -114,15 +132,17 @@ if cmd == "serve" then
   serve()
 elseif cmd == "stop" then
   local pid = running()
+  autostart(false)
   if pid and computer.kill(pid) then print("Сайт остановлен") else print("Сайт не запущен") end
 elseif cmd == "log" then
   print(read(LOG) or "Журнал пуст")
 elseif cmd == nil or cmd == "start" then
   local pid = running()
+  autostart(true)
   if pid then print("Сайт уже работает (процесс " .. pid .. ")") return end
   sample()
   pid = computer.spawn(SELF, "serve")
-  print("Сайт работает в фоне (процесс " .. pid .. "). Страницы — в /www.")
+  print("Сайт работает в фоне (процесс " .. pid .. "), включается сам при запуске компьютера. Страницы — в /www.")
   local ok, names = net.dns("names")
   local list = {}
   if ok then for _, n in ipairs(names) do list[#list + 1] = n.name end end

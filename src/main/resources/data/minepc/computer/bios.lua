@@ -410,6 +410,18 @@ if not fs.exists("/rom/shell.lua") then
   while true do os.pullEvent() end
 end
 
+-- Службы: строки /etc/services («путь аргументы») запускаются в фоне при каждом включении (сайт, почта)
+if fs.exists("/etc/services") and computer.spawn then
+  local f = fs.open("/etc/services", "r")
+  local text = f and f.readAll() or ""
+  if f then f.close() end
+  for line in text:gmatch("[^\r\n]+") do
+    local words = {}
+    for w in line:gmatch("%S+") do words[#words + 1] = w end
+    if words[1] and fs.exists(words[1]) then pcall(computer.spawn, table.unpack(words)) end
+  end
+end
+
 if bootStartup then
   os.run({}, bootStartup)
 elseif bootStartup == nil and not bios and fs.exists("/startup.lua") then

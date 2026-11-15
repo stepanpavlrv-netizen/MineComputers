@@ -157,6 +157,25 @@ function A.startServices()
   end
 end
 
+--- Фоновая программа при каждом включении компьютера: строка «путь аргументы» в /etc/services (её читает BIOS).
+function A.autostart(line, on)
+  local lines, have = {}, false
+  local f = fs.exists("/etc/services") and fs.open("/etc/services", "r")
+  if f then
+    for l in (f.readAll() or ""):gmatch("[^\r\n]+") do
+      if l == line then have = true else lines[#lines + 1] = l end
+    end
+    f.close()
+  end
+  if on then lines[#lines + 1] = line elseif not have then return true end
+  pcall(fs.makeDir, "/etc")
+  local w = fs.open("/etc/services", "w")
+  if not w then return false end
+  w.write(table.concat(lines, "\n") .. (#lines > 0 and "\n" or ""))
+  w.close()
+  return true
+end
+
 --- Найти программу по полю (например, по расширению файла, которое она открывает).
 function A.forExt(ext)
   for _, e in ipairs(A.installed()) do

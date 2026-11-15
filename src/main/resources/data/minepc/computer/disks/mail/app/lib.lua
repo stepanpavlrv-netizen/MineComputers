@@ -21,7 +21,9 @@ function M.running()
 end
 
 function M.start()
-  if not M.running() then computer.spawn(M.MAILD, "serve") end
+  if wired.apps.autostart then wired.apps.autostart(M.MAILD .. " serve", true) end
+  if not M.running() then return pcall(computer.spawn, M.MAILD, "serve") end
+  return true
 end
 
 function M.parse(path)

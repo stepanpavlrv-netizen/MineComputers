@@ -139,9 +139,9 @@ return function()
     x = c.button(x, 1, "+", "newpage") + 2
     local on = httpdRunning()
     local rx = c.w - 1
-    local pub = on and "◉ Опубликовать" or "◉ Опубликовать"
+    local pub = on and "■ Остановить сайт" or "◉ Опубликовать"
     rx = rx - G.len(pub) - 2
-    c.button(rx, 1, pub, "publish", "primary")
+    c.button(rx, 1, pub, on and "unpublish" or "publish", on and "normal" or "primary")
     rx = rx - 13
     c.button(rx, 1, "▷ Просмотр", "preview")
     rx = rx - 13
@@ -260,8 +260,23 @@ return function()
         else msg = "Нужен Браузер (дискета из деревни)" end
       elseif a == "publish" then
         savePage()
-        if not httpdRunning() then computer.spawn(HTTPD, "serve") end
-        wm.notify({ title = "◉ Сайт опубликован", text = siteName() .. " — его видно по всей сети" })
+        local ok, err = true, nil
+        if not httpdRunning() then ok, err = pcall(computer.spawn, HTTPD, "serve") end
+        if ok then
+          wired.apps.autostart(HTTPD .. " serve", true)
+          local okn, names = net.dns("names")
+          local addr = (okn and names and names[1]) and names[1].name or siteName()
+          wm.notify({ title = "◉ Сайт опубликован", text = addr .. " — открывается в Браузере на любом компьютере сети и включается сам при запуске" })
+          if not (okn and names and names[1]) then msg = "Займите имя .mine — по нему сайт найдут" end
+        else
+          msg = "Не запустился: " .. tostring(err)
+        end
+        retitle()
+      elseif a == "unpublish" then
+        local pid = httpdRunning()
+        if pid then pcall(computer.kill, pid) end
+        wired.apps.autostart(HTTPD .. " serve", false)
+        msg = "Сайт остановлен"
         retitle()
       elseif a == "dns" then
         wm.prompt("Имя сайта", "Имя в Майннете (например shop):", "", function(v)

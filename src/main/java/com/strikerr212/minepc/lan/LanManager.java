@@ -1014,6 +1014,11 @@ public final class LanManager {
                 target = DnsRegistry.get(level).lookup(target);
                 if (target == null) continue;
             }
+            // Себе самому (свой сайт, своя почта): сообщение не уходит в сеть, приходит через тик
+            if (target != null && matches(target, fromAddr, src.label())) {
+                pending.add(new Delivery(now + 1, deliverySeq++, o.from, fromAddr, o.port, 0, o.payload, o.bytes));
+                continue;
+            }
             for (Reach r : reach(level, o.from)) {
                 // Компьютер в незагруженном чанке выключен — ему некому ответить (провода по дороге — неважно)
                 NetEndpoint dst = level.isLoaded(r.pos) ? com.strikerr212.minepc.block.Hosts.endpoint(level, r.host()) : null;

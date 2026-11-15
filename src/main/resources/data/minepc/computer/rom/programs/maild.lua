@@ -8,6 +8,23 @@ local function running()
     if p.path == SELF and p.pid ~= computer.pid() then return p.pid end
   end
 end
+--- Запускать при включении: строка в /etc/services
+local function autostart(on)
+  local line = SELF .. " serve"
+  local lines, have = {}, false
+  local f = fs.exists("/etc/services") and fs.open("/etc/services", "r")
+  if f then
+    for l in (f.readAll() or ""):gmatch("[^\r\n]+") do
+      if l == line then have = true end
+      if l ~= line then lines[#lines + 1] = l end
+    end
+    f.close()
+  end
+  if on then lines[#lines + 1] = line elseif not have then return end
+  pcall(fs.makeDir, "/etc")
+  local w = fs.open("/etc/services", "w")
+  if w then w.write(table.concat(lines, "\n") .. (#lines > 0 and "\n" or "")) w.close() end
+end
 if cmd == "serve" then
   net.open(PORT)
   while true do
@@ -34,9 +51,11 @@ if cmd == "serve" then
   end
 elseif cmd == "stop" then
   local pid = running()
+  autostart(false)
   if pid and computer.kill(pid) then print("Почта остановлена") else print("Почта не запущена") end
 else
   local pid = running()
+  autostart(true)
   if pid then print("Почта уже работает (процесс " .. pid .. ")") return end
   pid = computer.spawn(SELF, "serve")
   local host = net.hostname()

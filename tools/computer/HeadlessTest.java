@@ -647,6 +647,23 @@ public class HeadlessTest {
         expect("send/recv: файл дошёл байт в байт", same);
         pc = box[0];
         expect("send: сообщил о готовности", screen().contains("Готово: 20000 байт"));
+
+        // Сайт, запущенный из программы (как «Опубликовать» в Сайтостроителе): вторая страница по ссылке без .page
+        Files.createDirectories(dirB.resolve("www"));
+        Files.writeString(dirB.resolve("www/index.page"), "# Главная\n[Вторая](two)\n", java.nio.charset.StandardCharsets.UTF_8);
+        Files.writeString(dirB.resolve("www/two.page"), "# Вторая страница\n[Назад](/)\n", java.nio.charset.StandardCharsets.UTF_8);
+        pc = box[1];
+        box[1].terminate();
+        for (int i = 0; i < 20; i++) { for (Computer c : box) c.tick(); Thread.sleep(2); }
+        command("lua");
+        command("print('SPAWN', computer.spawn('/rom/programs/httpd.lua', 'serve'))");
+        for (int i = 0; i < 20; i++) { for (Computer c : box) c.tick(); Thread.sleep(2); }
+        pc = box[0];
+        command("lua");
+        command("local http = require('http'); local b, code = http.get('beta/' .. http.resolve('beta/', 'two'):match('/(.*)$')); print('SITE', code, b)");
+        for (int i = 0; i < 300 && !screen().contains("SITE"); i++) { for (Computer c : box) c.tick(); Thread.sleep(2); }
+        show("сайт из программы");
+        expect("httpd, запущенный computer.spawn, отдаёт вторую страницу по ссылке «two»", screen().contains("SITE") && screen().contains("Вторая страница"));
         pc = saved;
     }
 

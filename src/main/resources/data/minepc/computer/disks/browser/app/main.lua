@@ -10,7 +10,7 @@ local function fetch(url, params, progress)
   if url:match("^file:") then
     local path = url:gsub("^file:", "")
     local f = fs.open(path, "r")
-    if not f then return nil, "Нет файла " .. path end
+    if not f then return nil, "Нет файла " .. path .. (path:match("^/www/") and " — проверьте ссылку: страница называется так же, как файл в /www (без .page можно)" or "") end
     local body = f.readAll() or ""
     f.close()
     local ctype = path:match("%.page$") and "page" or ((path:match("%.txt$") or path:match("%.md$")) and "text" or "file")
@@ -49,6 +49,30 @@ local function fetch(url, params, progress)
   local body = {}
   for i = 1, total do body[i] = parts[i] or "" end
   return table.concat(body), status, ctype
+end
+
+--- Адрес ссылки со страницы base. У страниц с диска (file:) — как у сайта: «/о-нас» в /www — это /www/о-нас.page.
+local function resolve(base, link)
+  link = tostring(link or "")
+  if base and base:match("^file:") and not link:match("^mine://") and not link:find("^[%w%-%.]+%.mine") then
+    local bpath = base:gsub("^file:", "")
+    local target
+    if link:sub(1, 1) == "/" then
+      target = (bpath:match("^/www/") and "/www" or "") .. link
+    else
+      target = "/" .. fs.combine(fs.getDir(bpath), link)
+    end
+    target = target:gsub("/+$", "")
+    if target == "" then target = "/" end
+    if fs.isDir(target) then
+      target = fs.combine(target, "index.page")
+      target = "/" .. target
+    elseif not fs.exists(target) and fs.exists(target .. ".page") then
+      target = target .. ".page"
+    end
+    return "file:" .. target
+  end
+  return http.resolve(base, link)
 end
 
 local function loadBookmarks()
@@ -100,8 +124,7 @@ return function(start)
   local function wantImages(t)
     for _, b in ipairs(t.blocks) do
       if b.kind == "image" then
-        local url = t.url:match("^file:") and ("file:" .. fs.combine(fs.getDir((t.url:gsub("^file:", ""))), b.src))
-          or http.resolve(t.url, b.src)
+        local url = resolve(t.url, b.src)
         local key = (t.base or "") .. "|" .. b.src
         if images[key] == nil then
           images[key] = false
@@ -177,11 +200,11 @@ return function(start)
 
   local function activate(t, s)
     if not s then return end
-    if s.kind == "link" then open(http.resolve(t.url, s.target))
+    if s.kind == "link" then open(resolve(t.url, s.target))
     elseif s.kind == "button" then
       local params = {}
       for k, v in pairs(t.fields) do params[k] = v end
-      open(http.resolve(t.url, s.target), params)
+      open(resolve(t.url, s.target), params)
     elseif s.kind == "field" then t.focus = s end
   end
 
