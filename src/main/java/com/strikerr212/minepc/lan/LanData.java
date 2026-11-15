@@ -450,6 +450,15 @@ public final class LanData extends SavedData {
         if (wifi.remove(computer.asLong()) != null && level != null) LanManager.invalidate(level);
     }
 
+    /** Клетки со старыми проводами-блоками (для перевода в провода 3.0). */
+    public List<Long> cableCells() {
+        return new ArrayList<>(cables.keySet());
+    }
+
+    public void removeCord(Cord c) {
+        if (cords.remove(c)) bump();
+    }
+
     public int cableCount() {
         return cables.size();
     }

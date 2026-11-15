@@ -237,6 +237,7 @@ public class CiScreenshots {
                     ServerPlayer p = server.getPlayerList().getPlayers().get(0);
                     net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(p,
                             com.strikerr212.minepc.lan.SwitchPorts.openPayload(p.serverLevel(), lanBase));
+                    logMigrate(p.serverLevel(), "старая сеть");
                     logLan2();
                 });
             }
@@ -588,6 +589,12 @@ public class CiScreenshots {
             case 4038 -> server.execute(() -> server.getPlayerList().getPlayers().get(0).teleportTo(server.overworld(),
                     drawBase.getX() + 5.5, drawBase.getY() + 2.5, drawBase.getZ() - 4.5, -20f, 35f));
             case 4040 -> shot(mc, "wire_done");
+            // Провода 3.0, шаг 2: воздушная линия между кронштейнами; убрали стену — провод над ней провисает
+            case 4041 -> server.execute(CiScreenshots::wiresStep2);
+            case 4043 -> {
+                server.execute(CiScreenshots::logSag);
+                shot(mc, "wire_sag");
+            }
             case 4044 -> server.execute(() -> placeEmptyCase(server.overworld()));
             case 4048 -> server.execute(() -> openEmptyCase(server.overworld()));
             case 4052 -> {
@@ -1008,6 +1015,71 @@ public class CiScreenshots {
         });
     }
 
+    private static long sagLine = -1;
+    private static int sagBefore;
+
+    /** [CI-WIRE2]: воздушная линия кронштейн ~~ кронштейн (и слишком длинная — отказ); стену под проводом A убрали. */
+    private static void wiresStep2() {
+        var server = Minecraft.getInstance().getSingleplayerServer();
+        ServerPlayer p = server.getPlayerList().getPlayers().get(0);
+        ServerLevel level = p.serverLevel();
+        var log = com.mojang.logging.LogUtils.getLogger();
+        var data = com.strikerr212.minepc.lan.LanData.get(level);
+        BlockState bracket = ModBlocks.BRACKET.get().defaultBlockState()
+                .setValue(com.strikerr212.minepc.lan.BracketBlock.FACE, net.minecraft.world.level.block.state.properties.AttachFace.FLOOR);
+        BlockPos k1 = drawBase.offset(1, 3, 8), k2 = drawBase.offset(11, 3, 8);
+        for (BlockPos k : new BlockPos[]{k1, k2}) {
+            for (int dy = 1; dy <= 3; dy++) level.setBlockAndUpdate(k.below(dy), net.minecraft.world.level.block.Blocks.SPRUCE_LOG.defaultBlockState());
+            level.setBlockAndUpdate(k, bracket);
+            com.strikerr212.minepc.lan.LanManager.updateDevice(level, k);
+        }
+        var a = com.strikerr212.minepc.wire.WirePlan.Anchor.socket(k1, 0);
+        var b = com.strikerr212.minepc.wire.WirePlan.Anchor.socket(k2, 0);
+        var plan = com.strikerr212.minepc.wire.WirePlan.build(level, data::line, false, a, List.of(), b, 60000);
+        log.info("[CI-WIRE2] пролёт: ok {}, узлов {}, висит {}, {}", plan.ok(), plan.xs().length, plan.hang().length > 0 && plan.hang()[0], plan.problem());
+        int before = data.lines().size();
+        com.strikerr212.minepc.wire.WireService.lay(p, new com.strikerr212.minepc.network.WireLayPayload(false, a, List.of(), b));
+        log.info("[CI-WIRE2] воздушная линия: проводов {}→{}", before, data.lines().size());
+        // слишком длинный пролёт
+        BlockPos k3 = drawBase.offset(-3, 3, -30);
+        level.setBlockAndUpdate(k3, bracket);
+        var far = com.strikerr212.minepc.wire.WirePlan.build(level, data::line, false, com.strikerr212.minepc.wire.WirePlan.Anchor.socket(k3, 0),
+                List.of(), b, 60000);
+        log.info("[CI-WIRE2] пролёт 40 блоков: ok {}, {}", far.ok(), far.problem());
+        level.removeBlock(k3, false);
+        // провод A → коммутатор лежит через стену: убрать стену — он должен провиснуть
+        for (var l : data.linesAt(drawPcA)) {
+            sagLine = l.id;
+            int h = 0;
+            for (boolean x : l.hang) if (x) h++;
+            sagBefore = h;
+        }
+        for (int dz = -5; dz <= 9; dz++) {
+            for (int dy = 0; dy <= 1; dy++) level.setBlockAndUpdate(drawBase.offset(5, dy, dz), net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
+        }
+    }
+
+    private static void logSag() {
+        var server = Minecraft.getInstance().getSingleplayerServer();
+        ServerLevel level = server.overworld();
+        var log = com.mojang.logging.LogUtils.getLogger();
+        var data = com.strikerr212.minepc.lan.LanData.get(level);
+        var l = data.line(sagLine);
+        log.info("[CI-WIRE2] стену убрали: провод A {}, висящих отрезков {}→{}, узлов {}", l == null ? "пропал" : "цел", sagBefore,
+                l == null ? 0 : java.util.stream.IntStream.range(0, l.hang.length).filter(i -> l.hang[i]).count(), l == null ? 0 : l.nodes());
+        var lan = com.strikerr212.minepc.lan.LanManager.get(level);
+        StringBuilder sb = new StringBuilder("[CI-WIRE2] связь A ->");
+        for (var r : lan.reach(level, drawPcA)) sb.append(' ').append(r.pos().equals(drawPcB) ? "B" : r.pos().toShortString());
+        log.info(sb.toString());
+    }
+
+    /** [CI-MIGRATE]: что осталось от старых проводов после перевода на провода 3.0. */
+    private static void logMigrate(ServerLevel level, String what) {
+        var data = com.strikerr212.minepc.lan.LanData.get(level);
+        com.mojang.logging.LogUtils.getLogger().info("[CI-MIGRATE] {}: старых кордов {}, клеток старого провода {}, проводов 3.0 {}", what,
+                data.allCords().size(), data.cableCount(), data.lines().size());
+    }
+
     /** [CI-DRAW]: проложить оба провода (как будто щелчками) и проверить связь A ↔ B через коммутатор. */
     private static void layDraw() {
         var server = Minecraft.getInstance().getSingleplayerServer();
@@ -1345,6 +1417,11 @@ public class CiScreenshots {
     private static void logCords() {
         var mc = Minecraft.getInstance();
         var log = com.mojang.logging.LogUtils.getLogger();
+        for (var l : com.strikerr212.minepc.wire.WireStore.all()) {
+            boolean near = (l.devA != null && (l.devA.equals(cordA) || l.devA.equals(cordB))) || (l.devB != null && (l.devB.equals(cordA) || l.devB.equals(cordB)));
+            if (near) log.info("[CI-CORD] у игрока провод {}: {} порт {} → {} порт {}, узлов {}, м {}", l.id,
+                    cordA.equals(l.devA) ? "A" : "B", l.portA + 1, cordA.equals(l.devB) ? "A" : "B", l.portB + 1, l.nodes(), l.meters());
+        }
         for (BlockPos pos : new BlockPos[]{cordA, cordB}) {
             if (mc.level.getBlockEntity(pos) instanceof com.strikerr212.minepc.lan.CordList.Holder h) {
                 for (var e : h.cords().ends()) log.info("[CI-CORD] у игрока {}: порт {} → {} порт {}", pos == cordA ? "A" : "B",

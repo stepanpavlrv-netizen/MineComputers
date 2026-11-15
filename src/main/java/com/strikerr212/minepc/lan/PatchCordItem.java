@@ -34,7 +34,7 @@ import java.util.List;
  */
 public class PatchCordItem extends Item {
 
-    public static final double MAX_LENGTH = 4.5;
+    public static final double MAX_LENGTH = 8;
 
     public PatchCordItem(Properties properties) {
         super(properties);
@@ -83,7 +83,12 @@ public class PatchCordItem extends Item {
 
     /** Занято ли гнездо: в нём кабель с вилкой или другой корд. */
     private static boolean socketBusy(LanData data, BlockPos pos, LanData.Device d, int port) {
-        return data.cordAt(pos, port) || LanManager.usedPorts(data, pos, d).contains(port);
+        return taken(data, pos, port) || LanManager.usedPorts(data, pos, d).contains(port);
+    }
+
+    /** Занят ли порт: старым кордом или проводом 3.0. */
+    private static boolean taken(LanData data, BlockPos pos, int port) {
+        return data.cordAt(pos, port) || data.lineAt(pos, port) != null;
     }
 
     /** Ответ pickPort: гнездо, в которое целились, занято. */
@@ -121,14 +126,14 @@ public class PatchCordItem extends Item {
             if (d.type() == LanData.OUTLET) {
                 // Розетка: место для корда той линии, по гнезду которой кликнули
                 for (int port = LanData.CABLE_PORTS + OutletBlock.line(best); port < LanData.PORTS; port += 2) {
-                    if (!data.cordAt(pos, port)) return port;
+                    if (!taken(data, pos, port)) return port;
                 }
                 return -1;
             }
             int port = LanData.CABLE_PORTS + best % PatchPanelBlock.CHANNELS;
-            return data.cordAt(pos, port) ? -1 : port;
+            return taken(data, pos, port) ? -1 : port;
         }
-        for (int port = LanData.CABLE_PORTS; port < LanData.PORTS; port++) if (!data.cordAt(pos, port)) return port;
+        for (int port = LanData.CABLE_PORTS; port < LanData.PORTS; port++) if (!taken(data, pos, port)) return port;
         return -1;
     }
 
@@ -147,14 +152,24 @@ public class PatchCordItem extends Item {
         CompoundTag first = pending(stack);
 
         if (player != null && player.isShiftKeyDown() && first == null) {
+            // короткие провода 3.0 (патч-корды) от этого устройства — тоже снять
+            int lines = 0;
+            for (var l : List.copyOf(data.linesAt(pos))) {
+                if (l.meters() > MAX_LENGTH + 1) continue;
+                data.removeLine(l.id);
+                ItemStack drop = new ItemStack(this);
+                if (!l.label.isEmpty()) drop.set(DataComponents.CUSTOM_NAME, Component.literal(l.label));
+                Block.popResource(level, pos, drop);
+                lines++;
+            }
             List<LanData.Cord> removed = data.removeCords(pos);
             for (LanData.Cord c : removed) {
                 Block.popResource(level, pos, CableLabels.cordDrop(level, c));
                 CordList.refresh(server, c.a().equals(pos) ? c.b() : c.a());
             }
             CordList.refresh(server, pos);
-            if (!removed.isEmpty()) level.playSound(null, pos, com.strikerr212.minepc.registry.ModSounds.LAN_PLUG_OUT.get(), SoundSource.BLOCKS, 0.9f, 1.0f);
-            if (player != null) player.displayClientMessage(Component.translatable("message.minepc.cord.removed", removed.size()), true);
+            if (!removed.isEmpty() || lines > 0) level.playSound(null, pos, com.strikerr212.minepc.registry.ModSounds.LAN_PLUG_OUT.get(), SoundSource.BLOCKS, 0.9f, 1.0f);
+            if (player != null) player.displayClientMessage(Component.translatable("message.minepc.cord.removed", removed.size() + lines), true);
             return InteractionResult.CONSUME;
         }
 
@@ -192,7 +207,7 @@ public class PatchCordItem extends Item {
                     .withStyle(net.minecraft.ChatFormatting.RED), true);
             return InteractionResult.FAIL;
         }
-        if (data.device(a) == null || data.cordAt(a, portA)
+        if (data.device(a) == null || taken(data, a, portA)
                 || portA < LanData.CABLE_PORTS && LanManager.usedPorts(data, a, data.device(a)).contains(portA)) {
             if (player != null) player.displayClientMessage(Component.translatable("message.minepc.cord.gone"), true);
             return InteractionResult.FAIL;
@@ -202,9 +217,8 @@ public class PatchCordItem extends Item {
                 .getItem() instanceof DyeItem dye) {
             color = dye.getDyeColor().getId();
         }
-        data.addCord(new LanData.Cord(a.immutable(), portA, pos.immutable(), port, color, CableLabels.id(level, stack)));
-        CordList.refresh(server, a);
-        CordList.refresh(server, pos);
+        // Провода 3.0: патч-корд — обычный провод из гнезда в гнездо
+        data.putLine(com.strikerr212.minepc.wire.WireLines.cord(level, data.newLineId(), a, portA, pos, port, color, CableLabels.of(stack)));
         level.playSound(null, pos, com.strikerr212.minepc.registry.ModSounds.LAN_PLUG_IN.get(), SoundSource.BLOCKS, 0.9f, 0.95f);
         if (player == null || !player.getAbilities().instabuild) stack.shrink(1);
         if (player != null) player.displayClientMessage(Component.translatable("message.minepc.cord.done"), true);

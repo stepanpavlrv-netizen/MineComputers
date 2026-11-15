@@ -939,5 +939,7 @@
   "hud.minepc.wire.continue": "Free end — extend the wire",
   "hud.minepc.wire.status": "Wire: %s m",
   "hud.minepc.wire.grow": "Join with this wire",
-  "hud.minepc.wire.hint": "RMB — point · on socket/end — done · twice — free end"
+  "hud.minepc.wire.hint": "RMB — point · on socket/end — done · twice — free end",
+  "message.minepc.wire.span_far": "Span is longer than 24 blocks — put a bracket in between",
+  "message.minepc.wire.span_blocked": "The span touches blocks — the wire must hang freely"
 }

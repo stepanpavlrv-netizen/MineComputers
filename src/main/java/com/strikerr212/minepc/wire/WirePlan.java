@@ -165,6 +165,10 @@ public final class WirePlan {
         Start st = start(level, lines, from, fiber, err);
         if (st == null) return fail(err[0]);
         WireRouter.Voxels v = new LevelVoxels(level);
+        // Воздушная линия: от кронштейна к кронштейну без точек по дороге — один провисающий пролёт
+        if (to != null && clicks.isEmpty() && from.kind() == SOCKET && to.kind() == SOCKET && bracket(level, from.dev()) && bracket(level, to.dev())) {
+            return aerial(level, v, st.prefix().get(0), from.dev(), to, fiber);
+        }
         List<int[]> nodes = new ArrayList<>(st.prefix());
         List<Boolean> hang = new ArrayList<>();
         int[] cur = st.px();
@@ -198,6 +202,38 @@ public final class WirePlan {
             hang.add(false);
         }
         if (nodes.size() < 2) return fail("message.minepc.wire.too_short");
+        return result(nodes, hang, true, null, null);
+    }
+
+    private static boolean bracket(BlockGetter level, BlockPos pos) {
+        return level.getBlockState(pos).getBlock() instanceof com.strikerr212.minepc.lan.BracketBlock;
+    }
+
+    /** Пролёт между кронштейнами: не длиннее {@link com.strikerr212.minepc.lan.BracketBlock#MAX_SPAN}, дуга не задевает блоки. */
+    private static Result aerial(BlockGetter level, WireRouter.Voxels v, int[] a, BlockPos devA, Anchor to, boolean fiber) {
+        if (fiber) return fail("message.minepc.route.aerial_fiber");
+        LanDevice.Socket so = WireGeom.socket(level, to.dev(), to.port());
+        if (so == null) return fail("message.minepc.wire.no_socket");
+        int[] b = WireGeom.socketNode(to.dev(), so);
+        net.minecraft.world.phys.Vec3 pa = new net.minecraft.world.phys.Vec3(a[0] / 32.0, a[1] / 32.0, a[2] / 32.0);
+        net.minecraft.world.phys.Vec3 pb = new net.minecraft.world.phys.Vec3(b[0] / 32.0, b[1] / 32.0, b[2] / 32.0);
+        if (pa.distanceTo(pb) > com.strikerr212.minepc.lan.BracketBlock.MAX_SPAN) {
+            return new Result(new int[]{a[0], b[0]}, new int[]{a[1], b[1]}, new int[]{a[2], b[2]}, new boolean[]{true}, 0, false,
+                    WireGeom.pixelOf(pb), "message.minepc.wire.span_far");
+        }
+        List<net.minecraft.world.phys.Vec3> pts = com.strikerr212.minepc.lan.CordShape.points(pa, pb);
+        for (int i = 1; i + 1 < pts.size(); i++) {
+            net.minecraft.world.phys.Vec3 p = pts.get(i);
+            BlockPos cell = BlockPos.containing(p);
+            if (cell.equals(devA) || cell.equals(to.dev())) continue;
+            int[] px = WireGeom.pixelOf(p);
+            if (v.solid(px[0], px[1], px[2])) {
+                return new Result(new int[]{a[0], b[0]}, new int[]{a[1], b[1]}, new int[]{a[2], b[2]}, new boolean[]{true}, 0, false, px,
+                        "message.minepc.wire.span_blocked");
+            }
+        }
+        List<int[]> nodes = new ArrayList<>(List.of(a, b));
+        List<Boolean> hang = new ArrayList<>(List.of(true));
         return result(nodes, hang, true, null, null);
     }
 
