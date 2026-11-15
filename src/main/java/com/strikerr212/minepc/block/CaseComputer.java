@@ -700,11 +700,9 @@ public final class CaseComputer implements Computer.Host {
                 cells, Perf.vramCells(gpu), boot, com.strikerr212.minepc.MineConfig.maxProcesses());
     }
 
-    /** Самый большой экран: сколько тянет видеокарта и сколько помещается на мониторе. */
+    /** Самый большой экран — сколько тянет видеокарта (любой монитор показывает всё, большой — крупнее). */
     private int[] maxScreen() {
-        int[] gpu = Perf.screenSize(gpuTier);
-        int[] wall = Perf.wallSize(wallCols, wallRows);
-        return new int[]{Math.min(gpu[0], wall[0]), Math.min(gpu[1], wall[1])};
+        return Perf.screenSize(gpuTier);
     }
 
     /** Настроить железо компьютера: скорость, экран, накопители. */
@@ -721,7 +719,7 @@ public final class CaseComputer implements Computer.Host {
         computer.setLimits(limits);
         int opsPerSecond = limits.opsPerTick() * Computer.TICKS_PER_SECOND;
 
-        // Экран: без видеокарты и видеоядра — монохромный текст, дальше больше и в цвете (самый большой — на стене мониторов)
+        // Экран: без видеокарты и видеоядра — монохромный текст, дальше больше и в цвете
         GpuData gpu = in.graphics();
         gpuTier = gpu == null ? 0 : gpu.tier();
         int[] size = maxScreen();

@@ -946,5 +946,6 @@
   "tooltip.minepc.program_disk": "Wired install disk",
   "tooltip.minepc.program_disk_hint": "Insert it: Wired will offer to install",
   "tooltip.minepc.program_disk_wired": "Boot from it or run /disk/install",
-  "gui.minepc.router.unsaved": "Unsaved changes — press Save or Done"
+  "gui.minepc.router.unsaved": "Unsaved changes — press Save or Done",
+  "tooltip.minepc.screen_px": "Screen: up to %s characters (%s pixels for games)"
 }

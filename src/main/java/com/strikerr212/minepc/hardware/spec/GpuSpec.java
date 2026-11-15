@@ -109,7 +109,7 @@ public class GpuSpec extends PartSpec {
             lines.add(line("tooltip.minepc.cooling", Units.watts(d.coolingW())));
         }
         int[] screen = Perf.screenSize(d.tier());
-        lines.add(perfLine(screen[0] > 160 ? "tooltip.minepc.screen_wall" : "tooltip.minepc.screen", screen[0] + "×" + screen[1]));
+        lines.add(perfLine("tooltip.minepc.screen_px", screen[0] + "×" + screen[1], screen[0] + "×" + screen[1] * 2));
         // Скорость отрисовки — по настоящей мощности: чип, частота, видеопамять и охлаждение
         double level = Perf.level(Perf.gpuEffectiveTflops(d), Perf.STOCK_GPU_TFLOPS);
         int cells = Perf.gpuCellsPerSecond(level);

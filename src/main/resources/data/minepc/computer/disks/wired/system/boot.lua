@@ -1,4 +1,4 @@
--- Wired 1.1 — графическая система MineComputers.
+-- Wired 1.2 — графическая система MineComputers.
 -- Запускается из /startup.lua. Удалить /startup.lua — компьютер снова загрузится в командную строку.
 local ROOT = "/wired"
 local CFG = ROOT .. "/settings.cfg"
@@ -8,10 +8,10 @@ if not term.isColor() then
   return
 end
 
-_G.wired = { VERSION = "1.1", root = ROOT }
+_G.wired = { VERSION = "1.2", root = ROOT }
 
 local function loadSettings()
-  local s = { scale = 100, theme = "dark", accent = 0xff4f5e, wallpaper = "wires" }
+  local s = { scale = "auto", theme = "dark", accent = 0xff4f5e, wallpaper = "wires" }
   if fs.exists(CFG) then
     local f = fs.open(CFG, "r")
     local text = f and f.readAll() or ""
@@ -19,7 +19,13 @@ local function loadSettings()
     local fn = load("return " .. text, "settings", "t", {})
     local ok, t = pcall(fn or function() end)
     if ok and type(t) == "table" then for k, v in pairs(t) do s[k] = v end end
+    -- до Wired 1.2 масштаб по умолчанию был 100 %: теперь «авто» (под экран видеокарты)
+    if (s.v or 1) < 2 then
+      if s.scale == 100 then s.scale = "auto" end
+      s.v = 2
+    end
   end
+  s.v = 2
   return s
 end
 
@@ -53,9 +59,17 @@ local gpu = wired.gfx.gpu
 local maxW, maxH = gpu.maxResolution()
 local wm = wired.wm
 
+--- Масштаб в процентах; «авто» — чтобы рабочая область была около 160 столбцов (на больших видеокартах — крупнее).
+function wired.scalePercent()
+  local s = wired.settings.scale
+  if type(s) == "number" then return s end
+  local auto = math.floor(maxW / 160 * 100 / 25 + 0.5) * 25
+  return math.max(100, math.min(300, auto))
+end
+
 --- Масштаб: при 200 % система рисует вдвое меньше клеток — и всё вдвое крупнее.
 function wired.applyScale()
-  local s = wired.settings.scale or 100
+  local s = wired.scalePercent()
   local w = math.max(40, math.min(maxW, math.floor(maxW * 100 / s)))
   local h = math.max(12, math.min(maxH, math.floor(maxH * 100 / s)))
   local cw, ch = wired.gfx.screenSize()
@@ -142,7 +156,7 @@ local ok, err = pcall(function()
 end)
 
 wired.gfx.release()
-pcall(gpu.setResolution, maxW, maxH)
+pcall(gpu.setResolution, math.min(160, maxW), math.min(50, maxH))   -- командная строка — как после включения
 term.setBackgroundColor(colors.black)
 term.setTextColor(colors.white)
 term.clear()

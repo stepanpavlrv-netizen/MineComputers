@@ -28,14 +28,16 @@ return function(arg)
     c.text(x, 2, "Масштаб", T.fg)
     c.text(x, 3, G.cut("Всё на экране — текст, значки и окна — крупнее", c.w - x), T.dim)
     local bx = x
-    for _, v in ipairs({ 100, 125, 150, 200 }) do
-      bx = c.button(bx, 5, v .. " %", "scale", v == (s.scale or 100) and "primary" or "normal", v) + 1
+    local auto = type(s.scale) ~= "number"
+    bx = c.button(bx, 5, "Авто" .. (auto and (" · " .. wired.scalePercent() .. " %") or ""), "scale", auto and "primary" or "normal", "auto") + 1
+    for _, v in ipairs({ 100, 125, 150, 200, 250, 300 }) do
+      bx = c.button(bx, 5, v .. " %", "scale", v == s.scale and "primary" or "normal", v) + 1
     end
     local mw, mh = G.gpu.maxResolution()
     c.text(x, 7, G.cut("Экран " .. mw .. "×" .. mh .. " · рабочая область " .. G.W .. "×" .. G.H, c.w - x), T.faint)
     c.text(x, 10, "Подсказка", T.fg)
-    c.text(x, 11, G.cut("На большой стене мониторов ставьте 150–200 %: текст", c.w - x), T.dim)
-    c.text(x, 12, G.cut("станет читаемым издалека.", c.w - x), T.dim)
+    c.text(x, 11, G.cut("«Авто» подбирает масштаб под видеокарту: на ур. 5 (экран 320×100)", c.w - x), T.dim)
+    c.text(x, 12, G.cut("это 200 %. Игры всё равно рисуют во весь экран.", c.w - x), T.dim)
   end
 
   local function drawLook(c, x)
