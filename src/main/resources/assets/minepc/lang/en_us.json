@@ -941,5 +941,9 @@
   "hud.minepc.wire.grow": "Join with this wire",
   "hud.minepc.wire.hint": "RMB — point · on socket/end — done · twice — free end",
   "message.minepc.wire.span_far": "Span is longer than 24 blocks — put a bracket in between",
-  "message.minepc.wire.span_blocked": "The span touches blocks — the wire must hang freely"
+  "message.minepc.wire.span_blocked": "The span touches blocks — the wire must hang freely",
+  "item.minepc.floppy_disk.program": "Floppy Disk \"%s\"",
+  "tooltip.minepc.program_disk": "Wired install disk",
+  "tooltip.minepc.program_disk_hint": "Insert it: Wired will offer to install",
+  "tooltip.minepc.program_disk_wired": "Boot from it or run /disk/install"
 }

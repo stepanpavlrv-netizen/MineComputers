@@ -1,0 +1,7 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "minepc:item/floppy_disk_program",
+    "layer1": "minepc:item/floppy_disk_stripe"
+  }
+}

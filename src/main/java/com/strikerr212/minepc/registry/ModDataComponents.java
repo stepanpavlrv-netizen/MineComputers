@@ -32,6 +32,13 @@ public class ModDataComponents {
                     .networkSynchronized(ByteBufCodecs.STRING_UTF8)
                     .build());
 
+    /** Программа на дискете из деревни (например, "wired"): при первом подключении её файлы появляются на дискете. */
+    public static final DeferredHolder<DataComponentType<?>, DataComponentType<String>> PROGRAM =
+            COMPONENTS.register("program", () -> DataComponentType.<String>builder()
+                    .persistent(Codec.STRING)
+                    .networkSynchronized(ByteBufCodecs.STRING_UTF8)
+                    .build());
+
     public static void register(IEventBus eventBus) {
         COMPONENTS.register(eventBus);
     }

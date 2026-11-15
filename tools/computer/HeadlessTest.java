@@ -372,6 +372,7 @@ public class HeadlessTest {
         testNet();
         testWifi();
         testAuth();
+        testWired();
 
         System.out.println(failures == 0 ? "ВСЁ ХОРОШО" : "ОШИБОК: " + failures);
         System.exit(failures == 0 ? 0 : 1);
@@ -399,6 +400,84 @@ public class HeadlessTest {
         c.fileSystem().mount("", new DirMount(dir, 64 * 1024, "SSD"));
         c.terminal().resize(50, 16);
         return c;
+    }
+
+    static void mouse(int x, int y) throws Exception {
+        pc.queueEvent("mouse_click", 1, x, y);
+        pc.queueEvent("mouse_up", 1, x, y);
+        ticks(4);
+    }
+
+    static boolean waitFor(String text, int maxTicks) throws Exception {
+        for (int i = 0; i < maxTicks && !screen().contains(text); i++) ticks(1);
+        return screen().contains(text);
+    }
+
+    static int[] findOnScreen(String text) {
+        Terminal t = pc.terminal();
+        for (int y = 0; y < t.height(); y++) {
+            int i = t.line(y).indexOf(text);
+            if (i >= 0) return new int[]{i + 1, y + 1};
+        }
+        return null;
+    }
+
+    /** Wired: установка с дискеты, вход, рабочий стол, Проводник, «Пуск», Терминал в окне. */
+    static void testWired() throws Exception {
+        System.out.println("── Wired ──");
+        Path dir = Files.createTempDirectory("minepc_wired");
+        Path disk = Files.createTempDirectory("minepc_wdisk");
+        Files.delete(disk);
+        ProgramDisks.populate(disk, "wired");
+        expect("на дискете файлы Wired", Files.exists(disk.resolve("system/boot.lua")) && Files.exists(disk.resolve("install.lua")));
+        Computer c = new Computer(new Computer.Host() {});
+        c.setInfo(new Computer.Info("Тест", 4, 2800, "Lua", 4096, 4_000_000, "ГП", 1000));
+        c.setOpsPerTick(400000);
+        c.fileSystem().mount("rom", ComputerRom.mount());
+        c.fileSystem().mount("", new DirMount(dir, 2 * 1024 * 1024, "SSD"));
+        c.fileSystem().mount("disk", new DirMount(disk, 512 * 1024, "Дискета"));
+        c.terminal().setLimit(160, 50);
+        c.terminal().resize(160, 50);
+        pc = c;
+        c.turnOn();
+        waitFor("/>", 300);
+        command("/disk/install");
+        waitFor("Enter — продолжить", 100);
+        key("enter", false);
+        waitFor("Имя", 60);
+        command("admin");
+        command("secret1");
+        command("secret1");
+        boolean done = waitFor("Wired установлена", 400);
+        expect("установка: файлы в /wired и /startup.lua", done && Files.exists(dir.resolve("wired/boot.lua")) && Files.exists(dir.resolve("startup.lua")));
+        boolean login = waitFor("Пользователь", 600);
+        show("Wired: вход");
+        expect("после перезагрузки — вход Wired", login && screen().contains("WIRED"));
+        type("admin");
+        key("enter", false);
+        type("secret1");
+        key("enter", false);
+        boolean desk = waitFor("Проводник", 200);
+        expect("рабочий стол: значки и «Пуск»", desk && screen().contains("WIRED") && screen().contains("Терминал"));
+        int[] icon = findOnScreen("Проводник");
+        if (icon != null) {
+            mouse(icon[0] + 2, icon[1] - 2);
+            mouse(icon[0] + 2, icon[1] - 2);
+        }
+        expect("Проводник открылся", waitFor("Проводник — Домой", 100));
+        mouse(3, 49);
+        expect("«Пуск»: программы и папки", waitFor("ПРОГРАММЫ", 60) && screen().contains("ПАПКИ"));
+        int[] term = findOnScreen("> Терминал");
+        if (term != null) mouse(term[0] + 3, term[1]);
+        boolean shell = waitFor("/home>", 100);
+        if (shell) {
+            type("ls /");
+            key("enter", false);
+            ticks(20);
+        }
+        show("Wired: Проводник и Терминал");
+        expect("Терминал в окне: команды работают", shell && screen().contains("wired"));
+        c.shutdown();
     }
 
     /** Пользователи, вход по сети (sshd/connect), sudo, журнал, блокировка после 5 ошибок. */

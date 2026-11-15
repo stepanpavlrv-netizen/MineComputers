@@ -68,6 +68,10 @@ public class ModCreativeTabs {
                         output.accept(ModItems.TOWER_DISH.get());
                         output.accept(ModItems.DISK_DRIVE.get());
                         output.accept(ModItems.FLOPPY_DISK.get());
+                        for (var program : com.strikerr212.minepc.computer.ProgramDisks.ALL) {
+                            output.accept(com.strikerr212.minepc.item.DriveItem.withProgram(
+                                    new net.minecraft.world.item.ItemStack(ModItems.FLOPPY_DISK.get()), program.id()));
+                        }
                         output.accept(ModItems.FLASH_DRIVE.get());
                         // стоковые детали: 5 уровней каждого вида
                         for (int tier = 1; tier <= HardwarePresets.MAX_TIER; tier++) output.accept(HardwarePresets.motherboard(tier));

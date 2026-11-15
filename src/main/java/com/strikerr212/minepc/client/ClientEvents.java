@@ -35,6 +35,9 @@ public class ClientEvents {
     @SubscribeEvent
     public static void onClientSetup(FMLClientSetupEvent event) {
         event.enqueueWork(() -> {
+            // Дискета с программой — модель с цветной наклейкой
+            ItemProperties.register(ModItems.FLOPPY_DISK.get(), ResourceLocation.fromNamespaceAndPath(MineComputers.MODID, "program"),
+                    (stack, level, entity, seed) -> com.strikerr212.minepc.item.DriveItem.program(stack) != null ? 1f : 0f);
             for (var item : ModItems.HARDWARE) {
                 for (int dim = 0; dim < 3; dim++) {
                     final int d = dim;
@@ -56,6 +59,10 @@ public class ClientEvents {
      */
     @SubscribeEvent
     public static void registerItemColors(RegisterColorHandlersEvent.Item event) {
+        event.register((stack, tintIndex) -> {
+            var p = com.strikerr212.minepc.item.DriveItem.program(stack);
+            return tintIndex == 1 && p != null ? 0xFF000000 | p.color() : -1;
+        }, ModItems.FLOPPY_DISK.get());
         ItemColor colors = (stack, tintIndex) -> {
             if (tintIndex < 1 || tintIndex > 3 || !(stack.getItem() instanceof HardwareItem hardware)) {
                 return 0xFFFFFFFF;

@@ -52,8 +52,34 @@ public class DriveItem extends Item {
         return id;
     }
 
+    /** Программа на дискете из деревни или null. */
+    public static com.strikerr212.minepc.computer.ProgramDisks.Program program(ItemStack stack) {
+        return com.strikerr212.minepc.computer.ProgramDisks.get(stack.get(ModDataComponents.PROGRAM.get()));
+    }
+
+    /** Дискета с программой — с цветной наклейкой. */
+    public static ItemStack withProgram(ItemStack stack, String program) {
+        stack.set(ModDataComponents.PROGRAM.get(), program);
+        return stack;
+    }
+
+    @Override
+    public Component getName(ItemStack stack) {
+        var p = program(stack);
+        if (p != null && !stack.has(net.minecraft.core.component.DataComponents.CUSTOM_NAME)) {
+            return Component.translatable("item.minepc.floppy_disk.program", p.name() + " " + p.version());
+        }
+        return super.getName(stack);
+    }
+
     @Override
     public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
+        var p = program(stack);
+        if (p != null) {
+            tooltip.add(Component.translatable("tooltip.minepc.program_disk").withStyle(ChatFormatting.AQUA));
+            tooltip.add(Component.translatable(p.id().equals("wired") ? "tooltip.minepc.program_disk_wired" : "tooltip.minepc.program_disk_hint")
+                    .withStyle(ChatFormatting.DARK_GRAY));
+        }
         tooltip.add(Component.translatable("tooltip.minepc.capacity", Units.bytes(capacity).copy().withStyle(ChatFormatting.WHITE))
                 .withStyle(ChatFormatting.GRAY));
         tooltip.add(Component.translatable(kind == Kind.FLOPPY ? "tooltip.minepc.floppy_hint" : "tooltip.minepc.flash_hint")

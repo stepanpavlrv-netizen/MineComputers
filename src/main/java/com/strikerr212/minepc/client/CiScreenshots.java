@@ -708,7 +708,38 @@ public class CiScreenshots {
                 if (server.overworld().getBlockEntity(gardenCam) instanceof com.strikerr212.minepc.lan.CameraBlockEntity cam) cam.setRes(0);
             });
             case 4960 -> shot(mc, "camera_textured_64");
-            case 4964 -> mc.stop();
+            // Wired: установка с дискеты из деревни, вход, рабочий стол, Проводник, «Пуск», Терминал в окне
+            case 4966 -> {
+                mc.setScreen(null);
+                server.execute(CiScreenshots::placeWired);
+            }
+            case 5000 -> typeAt(wiredPos, "/disk/install");
+            case 5012 -> keyAt(wiredPos, "enter");
+            case 5018 -> typeAt(wiredPos, "admin");
+            case 5022 -> typeAt(wiredPos, "secret1");
+            case 5026 -> typeAt(wiredPos, "secret1");
+            case 5030 -> mc.setScreen(new TerminalScreen(wiredPos));
+            case 5050 -> {
+                server.execute(() -> logWired("установка"));
+                shot(mc, "wired_install");
+            }
+            case 5300 -> {
+                server.execute(() -> logWired("после перезагрузки"));
+                shot(mc, "wired_login");
+            }
+            case 5302 -> typeAt(wiredPos, "admin");
+            case 5306 -> typeAt(wiredPos, "secret1");
+            case 5330 -> shot(mc, "wired_desktop");
+            case 5332, 5333 -> server.execute(() -> clickText(wiredPos, "Проводник", 2, -2));
+            case 5340 -> server.execute(() -> clickText(wiredPos, "◆ WIRED", 1, 0));
+            case 5350 -> shot(mc, "wired_menu");
+            case 5352 -> server.execute(() -> clickText(wiredPos, "> Терминал", 3, 0));
+            case 5366 -> typeAt(wiredPos, "ls /");
+            case 5380 -> {
+                server.execute(() -> logWired("окна"));
+                shot(mc, "wired_windows");
+            }
+            case 5384 -> mc.stop();
             default -> {
             }
         }
@@ -1954,6 +1985,70 @@ public class CiScreenshots {
             t.add(com.strikerr212.minepc.lan.TrayBlockEntity.make(net.minecraft.world.item.DyeColor.ORANGE.getId(), false));
             t.add(com.strikerr212.minepc.lan.TrayBlockEntity.make(net.minecraft.world.item.DyeColor.YELLOW.getId(), true));
         }
+    }
+
+    private static BlockPos wiredPos;
+
+    /** Компьютер ур. 5 с монитором и дисководом, в дисководе — дискета «Wired 1.0» (как из сундука деревни). */
+    private static void placeWired() {
+        var server = Minecraft.getInstance().getSingleplayerServer();
+        ServerPlayer p = server.getPlayerList().getPlayers().get(0);
+        ServerLevel level = p.serverLevel();
+        BlockPos b = drawBase.offset(4, 0, 14);
+        for (int dx = -3; dx <= 3; dx++) {
+            for (int dz = -4; dz <= 2; dz++) {
+                level.setBlockAndUpdate(b.offset(dx, -1, dz), net.minecraft.world.level.block.Blocks.SMOOTH_STONE.defaultBlockState());
+                for (int dy = 0; dy <= 3; dy++) level.setBlockAndUpdate(b.offset(dx, dy, dz), net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
+            }
+        }
+        wiredPos = b;
+        level.setBlockAndUpdate(b.east(), ModBlocks.DISK_DRIVE.get().defaultBlockState().setValue(DeviceBlock.FACING, Direction.NORTH));
+        if (level.getBlockEntity(b.east()) instanceof com.strikerr212.minepc.block.DiskDriveBlockEntity drive) {
+            drive.setDisk(com.strikerr212.minepc.item.DriveItem.withProgram(new ItemStack(com.strikerr212.minepc.registry.ModItems.FLOPPY_DISK.get()), "wired"));
+        }
+        level.setBlockAndUpdate(b, ModBlocks.PC_CASE.get().defaultBlockState().setValue(PcCaseBlock.FACING, Direction.NORTH));
+        level.setBlockAndUpdate(b.above(), ModBlocks.MONITOR.get().defaultBlockState()
+                .setValue(com.strikerr212.minepc.block.MonitorBlock.KEYBOARD, true).setValue(DeviceBlock.FACING, Direction.NORTH));
+        if (level.getBlockEntity(b) instanceof PcCaseBlockEntity be) {
+            var inv = (IItemHandlerModifiable) be.inventory();
+            inv.setStackInSlot(PcCaseBlockEntity.SLOT_MOTHERBOARD, HardwarePresets.motherboard(5));
+            inv.setStackInSlot(PcCaseBlockEntity.SLOT_CPU, HardwarePresets.cpu(5));
+            inv.setStackInSlot(PcCaseBlockEntity.SLOT_COOLER, HardwarePresets.cooler(5));
+            inv.setStackInSlot(PcCaseBlockEntity.SLOT_RAM, HardwarePresets.ram(5));
+            inv.setStackInSlot(PcCaseBlockEntity.SLOT_RAM + 1, HardwarePresets.ram(5));
+            inv.setStackInSlot(PcCaseBlockEntity.SLOT_GPU, HardwarePresets.gpu(5));
+            inv.setStackInSlot(PcCaseBlockEntity.SLOT_PSU, HardwarePresets.psu(5));
+            inv.setStackInSlot(PcCaseBlockEntity.SLOT_M2, HardwarePresets.ssd(5));
+            be.togglePower();
+        }
+        p.teleportTo(level, b.getX() + 0.5, b.getY(), b.getZ() - 3.5, 0f, 10f);
+    }
+
+    private static void logWired(String tag) {
+        var level = Minecraft.getInstance().getSingleplayerServer().overworld();
+        var log = com.mojang.logging.LogUtils.getLogger();
+        if (level.getBlockEntity(wiredPos) instanceof PcCaseBlockEntity pc) {
+            log.info("[CI-WIRED] {}", tag);
+            for (String line : pc.screenLines()) if (!line.isBlank()) log.info("[CI-WIRED] | {}", line.stripTrailing());
+        }
+    }
+
+    /** Щелчок мышью по надписи на экране компьютера (со сдвигом dx, dy от её начала). */
+    private static void clickText(BlockPos pos, String text, int dx, int dy) {
+        var level = Minecraft.getInstance().getSingleplayerServer().overworld();
+        if (!(level.getBlockEntity(pos) instanceof PcCaseBlockEntity pc)) return;
+        var lines = pc.screenLines();
+        for (int y = 0; y < lines.size(); y++) {
+            int i = lines.get(y).indexOf(text);
+            if (i >= 0) {
+                int x = i + 1 + dx, yy = y + 1 + dy;
+                pc.mouse(TerminalInputPayload.MOUSE_DOWN, 1, x, yy);
+                pc.mouse(TerminalInputPayload.MOUSE_UP, 1, x, yy);
+                com.mojang.logging.LogUtils.getLogger().info("[CI-WIRED] щелчок «{}» в {},{}", text, x, yy);
+                return;
+            }
+        }
+        com.mojang.logging.LogUtils.getLogger().info("[CI-WIRED] на экране нет «{}»", text);
     }
 
     private static void pcWithMonitor(ServerLevel level, BlockPos pos) {

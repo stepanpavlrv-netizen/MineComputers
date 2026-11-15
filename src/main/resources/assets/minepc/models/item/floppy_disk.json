@@ -2,5 +2,13 @@
   "parent": "minecraft:item/generated",
   "textures": {
     "layer0": "minepc:item/floppy_disk"
-  }
+  },
+  "overrides": [
+    {
+      "predicate": {
+        "minepc:program": 1
+      },
+      "model": "minepc:item/floppy_disk_program"
+    }
+  ]
 }

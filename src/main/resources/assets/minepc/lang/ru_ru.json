@@ -941,5 +941,9 @@
   "hud.minepc.wire.grow": "Срастить с этим проводом",
   "hud.minepc.wire.hint": "ПКМ — точка · по гнезду или концу — готово · дважды — свободный конец",
   "message.minepc.wire.span_far": "Пролёт длиннее 24 блоков — поставьте кронштейн посередине",
-  "message.minepc.wire.span_blocked": "Пролёт задевает блоки — провод должен висеть свободно"
+  "message.minepc.wire.span_blocked": "Пролёт задевает блоки — провод должен висеть свободно",
+  "item.minepc.floppy_disk.program": "Дискета «%s»",
+  "tooltip.minepc.program_disk": "Установочный диск Wired",
+  "tooltip.minepc.program_disk_hint": "Вставь в дисковод — Wired предложит установить",
+  "tooltip.minepc.program_disk_wired": "Загрузись с неё или набери /disk/install"
 }

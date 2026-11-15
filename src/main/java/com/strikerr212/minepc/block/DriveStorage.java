@@ -21,6 +21,16 @@ public final class DriveStorage {
     /** Подключить накопитель из предмета: выдаёт номер, если его ещё нет. */
     public static DirMount mount(MinecraftServer server, ItemStack stack, long capacity, String label) {
         String id = DriveItem.ensureId(stack);
-        return new DirMount(folder(server, id), capacity, label);
+        Path folder = folder(server, id);
+        // Дискета с программой из деревни: в первый раз на неё записываются файлы программы
+        String program = stack.get(com.strikerr212.minepc.registry.ModDataComponents.PROGRAM.get());
+        if (program != null && !java.nio.file.Files.exists(folder)) {
+            try {
+                com.strikerr212.minepc.computer.ProgramDisks.populate(folder, program);
+            } catch (java.io.IOException e) {
+                com.mojang.logging.LogUtils.getLogger().warn("Дискета «{}» не записалась: {}", program, e.toString());
+            }
+        }
+        return new DirMount(folder, capacity, label);
     }
 }

@@ -1,0 +1,18 @@
+# Файлы дискет с программами. Обновляется tools/computer/update_rom_list.py
+wired/install.lua
+wired/readme.txt
+wired/startup.lua
+wired/system/apps/files.lua
+wired/system/apps/installer.lua
+wired/system/apps/settings.lua
+wired/system/apps/taskmgr.lua
+wired/system/apps/terminal.lua
+wired/system/boot.lua
+wired/system/lib/apps.lua
+wired/system/lib/gfx.lua
+wired/system/lib/icons.lua
+wired/system/lib/theme.lua
+wired/system/lib/ui.lua
+wired/system/lib/vterm.lua
+wired/system/lib/wallpaper.lua
+wired/system/lib/wm.lua
