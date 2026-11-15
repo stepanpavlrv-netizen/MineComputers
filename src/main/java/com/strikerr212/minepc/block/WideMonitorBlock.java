@@ -53,8 +53,8 @@ public class WideMonitorBlock extends BaseMonitorBlock {
         this.left = left;
         this.right = right;
         // Клавиатура перед экраном, посередине пары: половина в левом блоке, половина в правом
-        this.leftKb = left.copy().add(9, 0, 0.5, 16, 1.5, 6);
-        this.rightKb = right.copy().add(0, 0, 0.5, 7, 1.5, 6);
+        this.leftKb = left.copy().add(0, 0, 0.5, 7, 1.5, 4.5);
+        this.rightKb = right.copy().add(9, 0, 0.5, 16, 1.5, 4.5);
         registerDefaultState(defaultBlockState().setValue(HALF, Half.LEFT).setValue(MonitorBlock.KEYBOARD, false));
     }
 

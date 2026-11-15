@@ -774,7 +774,7 @@ public class CiScreenshots {
             }
             case 5650 -> shot(mc, "wall_mounts");
             case 5652 -> server.execute(() -> server.getPlayerList().getPlayers().get(0).teleportTo(server.overworld(),
-                    mountPos.getX() + 3.5, mountPos.getY(), mountPos.getZ() - 1.0, 0f, -42f));
+                    mountPos.getX() + 3.5, mountPos.getY(), mountPos.getZ() - 2.0, 0f, -14f));
             case 5680 -> shot(mc, "wall_mounts_below");
             case 5684 -> mc.stop();
             default -> {
