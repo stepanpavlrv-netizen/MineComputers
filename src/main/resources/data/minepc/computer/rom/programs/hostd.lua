@@ -21,127 +21,57 @@ local PORT = 2121
 local DEFAULT_QUOTA = 512 * 1024
 local lower = unicode and unicode.lower or string.lower
 
-local function running(path)
-  for _, p in ipairs(computer.processes()) do
-    if p.path == path and p.pid ~= computer.pid() then return p.pid end
-  end
-end
-
-local function autostart(line, on)
-  local lines, have = {}, false
-  local f = fs.exists("/etc/services") and fs.open("/etc/services", "r")
-  if f then
-    for l in (f.readAll() or ""):gmatch("[^\r\n]+") do
-      if l == line then have = true else lines[#lines + 1] = l end
-    end
-    f.close()
-  end
-  if on then lines[#lines + 1] = line elseif not have then return end
-  pcall(fs.makeDir, "/etc")
-  local w = fs.open("/etc/services", "w")
-  if w then w.write(table.concat(lines, "\n") .. (#lines > 0 and "\n" or "")) w.close() end
-end
-
-local function loadDb()
-  local db = { users = {} }
-  if fs.exists(DB) then
-    local f = fs.open(DB, "r")
-    local fn = load("return " .. (f.readAll() or ""), "hosting", "t", {})
-    f.close()
-    local ok, t = pcall(fn or function() end)
-    if ok and type(t) == "table" and type(t.users) == "table" then db = t end
-  end
-  return db
-end
-
-local function saveDb(db)
-  pcall(fs.makeDir, "/etc")
-  local f = fs.open(DB, "w")
-  if f then f.write(textutils.serialize(db)) f.close() end
-end
-
-local function hash(s) return data.toHex(data.sha256(s)) end
-
-local function size(path)
-  if not fs.exists(path) then return 0, 0 end
-  if not fs.isDir(path) then return fs.getSize(path) or 0, 1 end
-  local total, n = 0, 0
-  for _, name in ipairs(fs.list(path)) do
-    local s, c = size(fs.combine(path, name))
-    total, n = total + s, n + c
-  end
-  return total, n
-end
-
-local function used(user)
-  local total = 0
-  for site in pairs(user.sites or {}) do total = total + size(SITES .. "/" .. site) + size(MAIL .. "/" .. site) end
-  return total
-end
+local H = require("hostadm")
+local running, autostart, loadDb, saveDb, hash, size, used = H.proc, H.autostart, H.load, H.save, H.hash, H.size, H.used
 
 -- Панель клиента: страница-программа на сайте сервера (httpd → /www/hosting.lua)
 local PANEL = [==[
--- Панель хостинга (создал hostd): вход клиента, его сайты, почта и место
+-- Панель хостинга (пишет hostd при запуске): вход клиента, его сайты, посещения, почта и место
+local H = require("hostadm")
 local p = request.params
-local function sz(n) return textutils.formatSize(n) end
-local function size(path)
-  if not fs.exists(path) then return 0 end
-  if not fs.isDir(path) then return fs.getSize(path) or 0 end
-  local t = 0
-  for _, n in ipairs(fs.list(path)) do t = t + size(fs.combine(path, n)) end
-  return t
-end
-local form = "Логин [?login:логин]
-Пароль [?password:пароль]
-[!Войти](/hosting.lua)"
+local sz = textutils.formatSize
+local form = "Логин [?login:логин]\nПароль [?password:пароль]\n[!Войти](/hosting.lua)"
 if not p.login or p.login == "" then
-  return "# Хостинг
-Сайты и почта клиентов этого сервера.
----
-" .. form ..
-    "
----
-> Аккаунт выдаёт владелец сервера. Загрузить сайт: {lightBlue}deploy <сервер> <сайт>{} или «На хостинг» в Сайтостроителе."
+  return "# Хостинг\nСайты и почта клиентов этого сервера.\n---\n" .. form ..
+    "\n---\n> Аккаунт выдаёт владелец сервера. Загрузить сайт: {lightBlue}deploy <сервер> <сайт>{} или «На хостинг» в Сайтостроителе."
 end
-local f = fs.open("/etc/hosting.db", "r")
-local fn = f and load("return " .. (f.readAll() or ""), "db", "t", {})
-if f then f.close() end
-local ok, db = pcall(fn or function() end)
-local u = ok and type(db) == "table" and db.users and db.users[p.login]
-if not u or u.pass ~= data.toHex(data.sha256(p.password or "")) then
-  return "# Хостинг
-{red}Неверный логин или пароль{}
----
-" .. form
+local u = H.load().users[p.login]
+if not u or u.pass ~= H.hash(p.password or "") then
+  return "# Хостинг\n{red}Неверный логин или пароль{}\n---\n" .. form
 end
 local out, total = {}, 0
-for site in pairs(u.sites or {}) do
-  local s, m = size("/sites/" .. site), size("/hosting/mail/" .. site)
+local names = {}
+for site in pairs(u.sites or {}) do names[#names + 1] = site end
+table.sort(names)
+for _, site in ipairs(names) do
+  local s, m = H.size(H.SITES .. "/" .. site), H.size(H.MAIL .. "/" .. site)
   total = total + s + m
   local boxes = {}
-  if fs.isDir("/hosting/mail/" .. site) then
-    for _, b in ipairs(fs.list("/hosting/mail/" .. site)) do
-      boxes[#boxes + 1] = b .. "@" .. site .. " (" .. #fs.list("/hosting/mail/" .. site .. "/" .. b) .. ")"
+  if fs.isDir(H.MAIL .. "/" .. site) then
+    for _, b in ipairs(fs.list(H.MAIL .. "/" .. site)) do
+      boxes[#boxes + 1] = b .. "@" .. site .. " (" .. #fs.list(H.MAIL .. "/" .. site .. "/" .. b) .. ")"
     end
   end
-  out[#out + 1] = "## [" .. site .. "](mine://" .. site .. ")
-Сайт: " .. sz(s) .. (#boxes > 0 and ("
-Почта: " .. table.concat(boxes, ", ")) or "
-Почта: писем пока нет")
+  local st = H.stats(site)
+  local maxv = 1
+  for _, d in ipairs(st.series) do if d.views > maxv then maxv = d.views end end
+  local bars = {}
+  for _, d in ipairs(st.series) do
+    bars[#bars + 1] = "{gray}" .. d.date .. "{} {cyan}" .. string.rep("█", math.floor(d.views * 16 / maxv + 0.5)) .. "{} " .. d.views
+  end
+  out[#out + 1] = "## [" .. site .. "](mine://" .. site .. ")\nСайт: " .. sz(s) .. ", почта: " .. sz(m) ..
+    "\nПосещения: сегодня {lime}" .. st.today .. "{} (гостей " .. st.todayUniq .. "), за неделю " .. st.week ..
+    " (гостей " .. st.weekUniq .. "), трафик за неделю " .. sz(st.weekBytes) .. ", всего страниц " .. st.total ..
+    "\n" .. table.concat(bars, "\n") ..
+    "\nЯщики: " .. (#boxes > 0 and table.concat(boxes, ", ") or "писем пока нет")
 end
-local quota = u.quota or 524288
+local quota = u.quota or H.DEFAULT_QUOTA
 local pct = math.min(100, math.floor(total * 100 / math.max(1, quota)))
 local bar = string.rep("█", math.floor(pct / 5)) .. string.rep("░", 20 - math.floor(pct / 5))
-return "# Хостинг: " .. p.login .. "
-Место: {" .. (pct > 90 and "red" or "lime") .. "}" .. bar .. "{} " .. sz(total) .. " из " .. sz(quota) ..
-  "
----
-" .. (#out > 0 and table.concat(out, "
----
-") or "Сайтов нет. Загрузите: {lightBlue}deploy <сервер> <сайт>{}") ..
-  "
----
-> Почта на ваши домены (имя@сайт.mine) приходит сюда; читать — Почта Wired → «Ящик на хостинге»."
+return "# Хостинг: " .. p.login .. "\nМесто: {" .. (pct > 90 and "red" or "lime") .. "}" .. bar .. "{} " .. sz(total) ..
+  " из " .. sz(quota) .. "\n---\n" ..
+  (#out > 0 and table.concat(out, "\n---\n") or "Сайтов нет. Загрузите: {lightBlue}deploy <сервер> <сайт>{}") ..
+  "\n---\n> Почта на ваши домены (имя@сайт.mine) приходит сюда; читать — Почта Wired → «Ящик на хостинге»."
 ]==]
 
 --- Имя сайта: «shop» → «shop.mine», маленькими буквами; nil — плохое имя.
@@ -175,7 +105,8 @@ local function handle(db, from, c, user, ph, x1, x2, x3, x4, x5)
     local sites = {}
     for site in pairs(u.sites or {}) do
       local s, n = size(SITES .. "/" .. site)
-      sites[#sites + 1] = { name = site, size = s, files = n }
+      local st = H.stats(site)
+      sites[#sites + 1] = { name = site, size = s, files = n, today = st.today, week = st.week, weekBytes = st.weekBytes }
     end
     table.sort(sites, function(p, q) return p.name < q.name end)
     return true, { user = user, quota = u.quota, used = used(u), sites = sites }
@@ -294,17 +225,18 @@ local function handle(db, from, c, user, ph, x1, x2, x3, x4, x5)
     local s = size(dir)
     return true, { url = site, size = s, used = used(u), quota = u.quota }
   elseif c == "remove" then
-    if fs.exists(dir) then fs.delete(dir) end
-    if fs.exists(MAIL .. "/" .. site) then fs.delete(MAIL .. "/" .. site) end
-    pcall(net.dns, "unregister", site)
+    H.removeSite(site)
     u.sites[site] = nil
-    saveDb(db)
     return true, site
   end
   return false, "Неизвестная команда " .. tostring(c)
 end
 
 local function serve()
+  -- панель клиентов на сайте сервера: каждый запуск — свежая (её пишет hostd)
+  pcall(fs.makeDir, "/www")
+  local pf = fs.open("/www/hosting.lua", "w")
+  if pf then pf.write(PANEL) pf.close() end
   net.open(PORT)
   while true do
     local ev = { os.pullEvent("net_message") }
@@ -323,43 +255,21 @@ end
 if cmd == "serve" then
   serve()
 elseif cmd == "stop" then
-  autostart(SELF .. " serve", false)
-  local pid = running(SELF)
-  if pid and computer.kill(pid) then print("Хостинг остановлен (сайты клиентов не отвечают, httpd работает)") else print("Хостинг не запущен") end
+  if H.stop() then print("Хостинг остановлен (сайты клиентов не отвечают, httpd работает)") else print("Хостинг не запущен") end
 elseif cmd == "add" then
   if not a1 or not a2 then print("hostd add <логин> <пароль> [КБ]") return end
-  local db = loadDb()
-  if db.users[a1] then printError("Клиент " .. a1 .. " уже есть") return end
-  db.users[a1] = { pass = hash(a2), quota = (tonumber(a3) or DEFAULT_QUOTA / 1024) * 1024, sites = {} }
-  saveDb(db)
-  print("Клиент " .. a1 .. ": " .. kb(db.users[a1].quota) .. ". Загрузить сайт: deploy " ..
+  local ok, err = H.add(a1, a2, a3)
+  if not ok then printError(err) return end
+  print("Клиент " .. a1 .. ": " .. kb(loadDb().users[a1].quota) .. ". Загрузить сайт: deploy " ..
     (net.hostname() ~= "" and net.hostname() or net.address():sub(1, 8)) .. " <имя сайта>")
 elseif cmd == "del" then
-  local db = loadDb()
-  local u = a1 and db.users[a1]
-  if not u then printError("Нет клиента " .. tostring(a1)) return end
-  for site in pairs(u.sites or {}) do
-    if fs.exists(SITES .. "/" .. site) then fs.delete(SITES .. "/" .. site) end
-    if fs.exists(MAIL .. "/" .. site) then fs.delete(MAIL .. "/" .. site) end
-    pcall(net.dns, "unregister", site)
-  end
-  db.users[a1] = nil
-  saveDb(db)
-  print("Клиент " .. a1 .. " и его сайты удалены")
+  local ok, err = H.del(a1)
+  if ok then print("Клиент " .. a1 .. " и его сайты удалены") else printError(err) end
 elseif cmd == "quota" then
-  local db = loadDb()
-  local u = a1 and db.users[a1]
-  if not u or not tonumber(a2) then print("hostd quota <логин> <КБ>") return end
-  u.quota = tonumber(a2) * 1024
-  saveDb(db)
-  print(a1 .. ": " .. kb(u.quota))
+  if not H.quota(a1, a2) then print("hostd quota <логин> <КБ>") return end
+  print(a1 .. ": " .. kb(tonumber(a2) * 1024))
 elseif cmd == "passwd" then
-  local db = loadDb()
-  local u = a1 and db.users[a1]
-  if not u or not a2 then print("hostd passwd <логин> <пароль>") return end
-  u.pass = hash(a2)
-  saveDb(db)
-  print("Пароль клиента " .. a1 .. " сменён")
+  if H.passwd(a1, a2) then print("Пароль клиента " .. a1 .. " сменён") else print("hostd passwd <логин> <пароль>") end
 elseif cmd == "list" then
   local db = loadDb()
   local any = false
@@ -369,30 +279,19 @@ elseif cmd == "list" then
     write(name)
     term.setTextColor(colors.white)
     print("  " .. kb(used(u)) .. " из " .. kb(u.quota or DEFAULT_QUOTA))
-    for site in pairs(u.sites or {}) do print("   " .. site .. "  " .. kb((size(SITES .. "/" .. site)))) end
+    for site in pairs(u.sites or {}) do
+      local st = H.stats(site)
+      print("   " .. site .. "  " .. kb((size(SITES .. "/" .. site))) .. "  заходов сегодня " .. st.today .. ", за неделю " .. st.week)
+    end
   end
   if not any then print("Клиентов нет. Завести: hostd add <логин> <пароль> [КБ]") end
-  print(running(SELF) and "Хостинг работает" or "Хостинг не запущен: hostd")
+  print(H.running() and "Хостинг работает" or "Хостинг не запущен: hostd")
 elseif cmd == nil or cmd == "start" then
-  autostart(SELF .. " serve", true)
-  autostart(HTTPD .. " serve", true)
-  autostart(MAILD .. " serve", true)
-  if not running(HTTPD) then computer.spawn(HTTPD, "serve") end
-  if not running(MAILD) then computer.spawn(MAILD, "serve") end
-  local pid = running(SELF)
-  if not pid then pid = computer.spawn(SELF, "serve") end
-  pcall(fs.makeDir, SITES)
-  if not fs.exists("/www/hosting.lua") then
-    pcall(fs.makeDir, "/www")
-    local f = fs.open("/www/hosting.lua", "w")
-    if f then f.write(PANEL) f.close() end
-  end
+  local pid, err = H.start()
+  if not pid then printError("Не запустился: " .. tostring(err)) return end
   print("Хостинг работает (процесс " .. pid .. "), включается сам при запуске. Сайты клиентов — в " .. SITES .. ".")
-  local db = loadDb()
-  if next(db.users) == nil then print("Заведите клиента: hostd add <логин> <пароль> [КБ]") end
-  local okN, names = net.dns("names")
-  local host = (okN and names[1]) and names[1].name or (net.hostname() ~= "" and net.hostname() or net.address():sub(1, 8))
-  print("Панель клиентов: " .. host .. "/hosting.lua")
+  if next(loadDb().users) == nil then print("Заведите клиента: hostd add <логин> <пароль> [КБ]") end
+  print("Панель клиентов: " .. H.url() .. "   В Wired — программа «Хостинг».")
 else
   print("hostd [stop | add | del | quota | passwd | list]")
 end

@@ -51,6 +51,8 @@ I.ART = {
            ".dgdgdrd.", ".ddddddd.", ".dgdgdrd.", ".ddddddd." },
   clock = { "...www...", ".wwwwwww.", ".wwwkwww.", "wwwwkwwww", "wwwwkwwww", "wwwwkkkww", "wwwwwwwww", "wwwwwwwww",
             ".wwwwwww.", ".wwwwwww.", "...www...", "........." },
+  host = { ".ddddddd.", ".dkkkkkd.", ".dknkkgd.", ".dkkkkkd.", ".ddddddd.", ".dkkkkkd.", ".dknkkgd.", ".dkkkkkd.",
+           ".ddddddd.", ".dkckkgd.", ".ddddddd.", "..d...d.." },
   app = { ".........", "ddddddddd", "dpppppppd", "dwwwwwwwd", "dwppwppwd", "dwppwppwd", "dwwwwwwwd", "dwppwppwd",
           "dwppwppwd", "dwwwwwwwd", "ddddddddd", "........." },
 }
@@ -62,7 +64,7 @@ I.MINI = {
   gear = { "✲", 0x8d87a3 }, task = { "▥", 0x5fd38a }, trash = { "▾", 0x8d87a3 }, disk = { "▣", 0xff4f5e },
   app = { "◆", 0xc77dff }, chat = { "◌", 0x4fd1e8 }, net = { "⇄", 0x5fd38a }, pult = { "⚡", 0xffc857 },
   paint = { "✎", 0xffc857 }, music = { "♪", 0xc77dff }, games = { "♠", 0xff4f5e }, archive = { "▤", 0xffc857 },
-  calc = { "±", 0x5fd38a }, clock = { "◷", 0xece8f4 },
+  calc = { "±", 0x5fd38a }, clock = { "◷", 0xece8f4 }, host = { "☁", 0x4fd1e8 },
 }
 
 --- Значок программы из файла icon.pix (или nil).

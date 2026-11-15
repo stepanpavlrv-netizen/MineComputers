@@ -5,6 +5,7 @@ openos/component.lua
 openos/cores.lua
 openos/event.lua
 openos/filesystem.lua
+openos/hostadm.lua
 openos/hosting.lua
 openos/http.lua
 openos/io.lua

@@ -714,7 +714,10 @@ public class HeadlessTest {
         for (int i = 0; i < 300 && !screen().contains("BADPW"); i++) { for (Computer c : box) c.tick(); Thread.sleep(2); }
         command("local b, code = require('http').get('test.mine/more'); print('VHOST', code, b)");
         for (int i = 0; i < 300 && !screen().contains("VHOST"); i++) { for (Computer c : box) c.tick(); Thread.sleep(2); }
+        command("local b = require('http').get('beta/hosting.lua', {login = 'vasya', password = 'pw'}); print('PANEL', b:match('Посещения: [^\\n]*'))");
+        for (int i = 0; i < 300 && !screen().contains("PANEL"); i++) { for (Computer c : box) c.tick(); Thread.sleep(2); }
         show("хостинг");
+        expect("панель хостинга: вход и посещения сайта", screen().contains("PANEL") && screen().contains("Посещения: сегодня"));
         expect("deploy: сайт загружен на хостинг как test.mine", screen().contains("DEPLOY") && screen().contains("test.mine"));
         expect("хостинг: неверный пароль — отказ", screen().contains("BADPW") && screen().contains("Неверный"));
         expect("хостинг: test.mine открывается с сервера (своя папка сайта)", screen().contains("VHOST") && screen().contains("Ещё страница"));

@@ -1,4 +1,4 @@
--- Wired 1.2 — графическая система MineComputers.
+-- Wired 1.3 — графическая система MineComputers.
 -- Запускается из /startup.lua. Удалить /startup.lua — компьютер снова загрузится в командную строку.
 local ROOT = "/wired"
 local CFG = ROOT .. "/settings.cfg"
@@ -8,7 +8,7 @@ if not term.isColor() then
   return
 end
 
-_G.wired = { VERSION = "1.2", root = ROOT }
+_G.wired = { VERSION = "1.3", root = ROOT }
 
 local function loadSettings()
   local s = { scale = "auto", theme = "dark", accent = 0xff4f5e, wallpaper = "wires" }

@@ -90,6 +90,8 @@ local function read(path)
 end
 
 --- Папка сайта: на хостинге у каждого имени своя (/sites/shop.mine), иначе — /www этого компьютера.
+local stats = require("hostadm")
+
 local function rootFor(host)
   host = (unicode and unicode.lower or string.lower)(tostring(host or "")):gsub("[/\\]", "")
   if host ~= "" and host ~= "." and host ~= ".." and fs.isDir("/sites/" .. host) then return "/sites/" .. host end
@@ -132,6 +134,9 @@ local function serve()
       local ok, status, ctype, body = pcall(handle, path, type(params) == "table" and params or {}, from, host)
       if not ok then status, ctype, body = 500, "page", "# Ошибка сервера\n" .. tostring(status) end
       http.reply(from, reply, id, status, ctype, body)
+      -- посещения: по сайту хостинга или «www» этого компьютера
+      local key = rootFor(host):match("^/sites/(.+)$") or "www"
+      pcall(stats.record, key, from, #body, ctype == "page" and status == 200)
       log(string.format("%s %s%s %d %d Б", from:sub(1, 8), host and host ~= "" and (tostring(host) .. " ") or "", tostring(path), status, #body))
     end
   end

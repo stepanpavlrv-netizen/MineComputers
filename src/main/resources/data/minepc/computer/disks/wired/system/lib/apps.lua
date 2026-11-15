@@ -19,9 +19,10 @@ local SYSTEM = {
   archive = { id = "archive", name = "Архив", icon = "archive", file = "archive" },
   calc = { id = "calc", name = "Калькулятор", icon = "calc", file = "calc" },
   clock = { id = "clock", name = "Часы", icon = "clock", file = "clock" },
+  hosting = { id = "hosting", name = "Хостинг", icon = "host", file = "hosting" },
 }
 -- Встроенные программы в «Пуске» (по порядку)
-local BUILTIN = { "chat", "network", "pult", "paint", "music", "games", "archive", "calc", "clock" }
+local BUILTIN = { "chat", "network", "pult", "paint", "music", "games", "archive", "calc", "clock", "hosting" }
 
 --- Описание программы из папки dir (там app.lua: return { name = ..., main = ..., ... }).
 function A.manifest(dir)

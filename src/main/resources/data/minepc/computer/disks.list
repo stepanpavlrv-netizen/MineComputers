@@ -30,6 +30,7 @@ wired/system/apps/chat.lua
 wired/system/apps/clock.lua
 wired/system/apps/files.lua
 wired/system/apps/games.lua
+wired/system/apps/hosting.lua
 wired/system/apps/installer.lua
 wired/system/apps/music.lua
 wired/system/apps/network.lua
