@@ -39,8 +39,8 @@ public final class CordShape {
             java.util.List<LanDevice.Socket> socks = dev.sockets(level, pos, s);
             if (port < socks.size()) return socketPoint(pos, socks.get(port));
         }
-        LanDevice.Socket front = outletSocket(level, pos, s, port);
-        if (front != null) return socketPoint(pos, front);
+        LanDevice.Socket outletFront = outletSocket(level, pos, s, port);
+        if (outletFront != null) return socketPoint(pos, outletFront);
         if (s.getBlock() instanceof BracketBlock) {
             return new Vec3(pos.getX() + 0.5, pos.getY() + 0.62, pos.getZ() + 0.5);
         }
