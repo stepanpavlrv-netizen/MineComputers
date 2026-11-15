@@ -1,0 +1,4 @@
+root/
+usb/
+*.png
+__pycache__/

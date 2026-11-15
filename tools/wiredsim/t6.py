@@ -1,0 +1,23 @@
+import os, shutil, sys
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from sim import Sim, REPO
+here = os.path.dirname(os.path.abspath(__file__))
+root = here + "/root"
+shutil.rmtree(root, ignore_errors=True)
+os.makedirs(root + "/home"); os.makedirs(root + "/apps")
+shutil.copytree(REPO + "/disks/wired/system", root + "/wired")
+open(root + "/home/заметки.txt", "w").write("привет\nмир")
+s = Sim(root)
+s.start("/wired/boot.lua"); s.run()
+s.click(3, 49)
+p = s.find("Диспетчер задач"); s.click(p[0], p[1])
+s.run(advance=3)
+p = s.find("Производительность"); s.click(p[0], p[1]); s.run(advance=3)
+s.screen.png("g1.png")
+s.key("f4", True)
+s.dbl(10, 4)
+p = s.find("+ Папка"); s.click(p[0]+1, p[1])
+s.type("Проекты"); s.key("enter")
+p = s.find("заметки.txt"); s.dbl(p[0], p[1])
+s.screen.png("g2.png")
+print(os.listdir(root + "/home"), s.flags.get("errors"))
