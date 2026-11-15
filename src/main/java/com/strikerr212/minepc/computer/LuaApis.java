@@ -74,6 +74,12 @@ final class LuaApis {
             }
             return t;
         }
+        if (o instanceof java.util.List<?> l) {          // список → массив Lua с 1 (камеры, порты…)
+            LuaTable t = new LuaTable();
+            int i = 1;
+            for (Object x : l) t.rawset(i++, toLua(x));
+            return t;
+        }
         return str(o.toString());
     }
 

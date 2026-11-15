@@ -25,7 +25,7 @@ return function()
 
   local function refreshList()
     local ok, list = pcall(camera.list)
-    st.cams = ok and list or {}
+    st.cams = (ok and type(list) == "table") and list or {}
     if st.sel > #st.cams then st.sel = math.max(1, #st.cams) end
   end
 
