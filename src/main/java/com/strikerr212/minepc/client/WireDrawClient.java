@@ -412,6 +412,10 @@ public final class WireDrawClient {
         clicks.addAll(pts);
     }
 
+    public static void debugCancel() {
+        cancel();
+    }
+
     public static WirePlan.Result debugPreview() {
         return preview;
     }

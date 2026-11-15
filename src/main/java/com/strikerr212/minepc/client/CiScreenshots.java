@@ -578,7 +578,12 @@ public class CiScreenshots {
                         + ", м " + r.meters() + ", ok " + r.ok() + ", " + r.problem());
                 shot(mc, "wire_draw");
             }
-            case 4020 -> server.execute(CiScreenshots::layWires);
+            case 4020 -> {
+                WireDrawClient.debugCancel();
+                server.execute(CiScreenshots::layWires);
+            }
+            case 4036 -> com.mojang.logging.LogUtils.getLogger().info("[CI-WIRE] у игрока проводов: {}",
+                    com.strikerr212.minepc.wire.WireStore.all().size());
             case 4030 -> server.execute(() -> logPower(server.overworld()));
             case 4038 -> server.execute(() -> server.getPlayerList().getPlayers().get(0).teleportTo(server.overworld(),
                     drawBase.getX() + 5.5, drawBase.getY() + 2.5, drawBase.getZ() - 4.5, -20f, 35f));

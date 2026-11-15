@@ -59,7 +59,7 @@ public final class WireRenderer {
 
     @SubscribeEvent
     public static void onRender(RenderLevelStageEvent event) {
-        if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_SOLID_BLOCKS) return;
+        if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_ENTITIES) return;
         Minecraft mc = Minecraft.getInstance();
         Level level = mc.level;
         if (level == null || WireStore.all().isEmpty()) return;
@@ -69,6 +69,9 @@ public final class WireRenderer {
         MultiBufferSource.BufferSource buffers = mc.renderBuffers().bufferSource();
         pose.pushPose();
         pose.translate(-cam.x, -cam.y, -cam.z);
+        // вне отрисовки сущностей карту света и наложение надо включить самим, иначе провод не виден
+        mc.gameRenderer.lightTexture().turnOnLightLayer();
+        mc.gameRenderer.overlayTexture().setupOverlayColor();
         VertexConsumer vc = buffers.getBuffer(RenderType.entityCutoutNoCull(TEXTURE));
         for (WireLine l : WireStore.all()) {
             var box = l.bounds();
@@ -90,6 +93,8 @@ public final class WireRenderer {
             }
         }
         buffers.endBatch(RenderType.entityCutoutNoCull(PLUG));
+        mc.gameRenderer.overlayTexture().teardownOverlayColor();
+        mc.gameRenderer.lightTexture().turnOffLightLayer();
         pose.popPose();
     }
 
