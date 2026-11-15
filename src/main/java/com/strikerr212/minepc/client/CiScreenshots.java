@@ -768,7 +768,10 @@ public class CiScreenshots {
                 shot(mc, "wired_music");
             }
             // Настенные роутер и коммутатор, корд в розетку, клавиатуры у широкого и изогнутого мониторов
-            case 5604 -> server.execute(CiScreenshots::placeMounts);
+            case 5604 -> {
+                mc.setScreen(null);
+                server.execute(CiScreenshots::placeMounts);
+            }
             case 5650 -> shot(mc, "wall_mounts");
             case 5652 -> server.execute(() -> server.getPlayerList().getPlayers().get(0).teleportTo(server.overworld(),
                     mountPos.getX() + 3.5, mountPos.getY(), mountPos.getZ() - 1.0, 0f, -42f));
