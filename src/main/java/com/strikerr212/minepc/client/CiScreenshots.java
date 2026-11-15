@@ -656,6 +656,7 @@ public class CiScreenshots {
             case 4488 -> server.execute(CiScreenshots::placeCam);
             case 4494 -> server.execute(CiScreenshots::cableCam);
             case 4504 -> typeAt(drawPcA, "cam");
+            case 4520 -> server.execute(() -> logScreens("[CI-CAMLIST]"));   // camera.list: таблица камер
             case 4524 -> typeAt(drawPcA, "cam двор");
             case 4528 -> mc.setScreen(new TerminalScreen(drawPcA));
             case 4570 -> shot(mc, "cam_view");
