@@ -120,6 +120,13 @@ public final class LanData extends SavedData {
     private final Map<Long, int[]> trays = new HashMap<>();
     private final Map<Long, Device> devices = new HashMap<>();
     private final List<Cord> cords = new ArrayList<>();
+    /** Провода 3.0: провод целиком — один объект ({@link com.strikerr212.minepc.wire.WireLine}). */
+    private final Map<Long, com.strikerr212.minepc.wire.WireLine> lines = new java.util.LinkedHashMap<>();
+    /** Чанк → провода, которые через него проходят (для рассылки игрокам). */
+    private final Map<Long, java.util.Set<Long>> lineChunks = new HashMap<>();
+    /** Устройство → провода, воткнутые в него. */
+    private final Map<Long, java.util.Set<Long>> lineDevices = new HashMap<>();
+    private long nextLine = 1;
     /** Настройки портов: бит 0 — порт выключен, биты 1..5 — VLAN (0 — общий, 1..16 — цвет красителя + 1). */
     private final Map<Long, int[]> ports = new HashMap<>();
     /** Бирки на проводах и кордах: номер бирки - 1 → имя. */
@@ -292,6 +299,98 @@ public final class LanData extends SavedData {
         }
     }
 
+    // ======================= Провода 3.0 =======================
+
+    public com.strikerr212.minepc.wire.WireLine line(long id) {
+        return lines.get(id);
+    }
+
+    public java.util.Collection<com.strikerr212.minepc.wire.WireLine> lines() {
+        return lines.values();
+    }
+
+    public long newLineId() {
+        setDirty();
+        return nextLine++;
+    }
+
+    /** Провода, воткнутые в устройство. */
+    public List<com.strikerr212.minepc.wire.WireLine> linesAt(BlockPos dev) {
+        java.util.Set<Long> ids = lineDevices.get(dev.asLong());
+        if (ids == null) return List.of();
+        List<com.strikerr212.minepc.wire.WireLine> out = new ArrayList<>();
+        for (long id : ids) {
+            var l = lines.get(id);
+            if (l != null) out.add(l);
+        }
+        return out;
+    }
+
+    /** Провод в гнезде port устройства dev (или null). */
+    public com.strikerr212.minepc.wire.WireLine lineAt(BlockPos dev, int port) {
+        for (var l : linesAt(dev)) if (l.pluggedInto(dev, port)) return l;
+        return null;
+    }
+
+    public List<com.strikerr212.minepc.wire.WireLine> linesInChunk(long chunk) {
+        java.util.Set<Long> ids = lineChunks.get(chunk);
+        if (ids == null) return List.of();
+        List<com.strikerr212.minepc.wire.WireLine> out = new ArrayList<>();
+        for (long id : ids) {
+            var l = lines.get(id);
+            if (l != null) out.add(l);
+        }
+        return out;
+    }
+
+    private void indexLine(com.strikerr212.minepc.wire.WireLine l, boolean add) {
+        for (long c : l.chunks()) {
+            if (add) lineChunks.computeIfAbsent(c, k -> new java.util.HashSet<>()).add(l.id);
+            else {
+                var set = lineChunks.get(c);
+                if (set != null && set.remove(l.id) && set.isEmpty()) lineChunks.remove(c);
+            }
+        }
+        for (BlockPos d : new BlockPos[]{l.devA, l.devB}) {
+            if (d == null) continue;
+            if (add) lineDevices.computeIfAbsent(d.asLong(), k -> new java.util.HashSet<>()).add(l.id);
+            else {
+                var set = lineDevices.get(d.asLong());
+                if (set != null && set.remove(l.id) && set.isEmpty()) lineDevices.remove(d.asLong());
+            }
+        }
+    }
+
+    /** Добавить провод или заменить его новым видом (тот же номер). */
+    public void putLine(com.strikerr212.minepc.wire.WireLine l) {
+        var old = lines.put(l.id, l);
+        if (old != null) indexLine(old, false);
+        indexLine(l, true);
+        nextLine = Math.max(nextLine, l.id + 1);
+        bump();
+        if (level != null) com.strikerr212.minepc.wire.WireSync.changed(level, old, l);
+    }
+
+    public com.strikerr212.minepc.wire.WireLine removeLine(long id) {
+        var old = lines.remove(id);
+        if (old != null) {
+            indexLine(old, false);
+            bump();
+            if (level != null) com.strikerr212.minepc.wire.WireSync.removed(level, old);
+        }
+        return old;
+    }
+
+    /** Устройство убрали: воткнутые в него провода остаются лежать, их концы становятся свободными. */
+    public void unplugLines(BlockPos dev) {
+        for (var l : List.copyOf(linesAt(dev))) {
+            var n = l;
+            if (dev.equals(n.devA)) n = n.unplugged(false);
+            if (dev.equals(n.devB)) n = n.unplugged(true);
+            putLine(n);
+        }
+    }
+
     // ======================= Патч-корды =======================
 
     public List<Cord> cords(BlockPos dev) {
@@ -400,6 +499,15 @@ public final class LanData extends SavedData {
         }
         list = tag.getList("labels", Tag.TAG_STRING);
         for (int i = 0; i < list.size(); i++) d.labels.add(list.getString(i));
+        list = tag.getList("lines", Tag.TAG_COMPOUND);
+        for (int i = 0; i < list.size(); i++) {
+            var l = com.strikerr212.minepc.wire.WireLine.load(list.getCompound(i));
+            if (l == null) continue;
+            d.lines.put(l.id, l);
+            d.indexLine(l, true);
+            d.nextLine = Math.max(d.nextLine, l.id + 1);
+        }
+        d.nextLine = Math.max(d.nextLine, tag.getLong("next_line"));
         return d;
     }
 
@@ -455,6 +563,10 @@ public final class LanData extends SavedData {
         list = new ListTag();
         for (String l : labels) list.add(net.minecraft.nbt.StringTag.valueOf(l));
         tag.put("labels", list);
+        list = new ListTag();
+        for (var l : lines.values()) list.add(l.save());
+        tag.put("lines", list);
+        tag.putLong("next_line", nextLine);
         return tag;
     }
 }

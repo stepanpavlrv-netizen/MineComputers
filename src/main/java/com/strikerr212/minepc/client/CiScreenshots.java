@@ -567,24 +567,22 @@ public class CiScreenshots {
             // Провода щелчками: от гнезда до гнезда через стену, по точкам излома; призрак и результат
             case 3980 -> server.execute(CiScreenshots::placeDraw);
             case 3996 -> {
-                // Призрак: начало у компьютера B, точка излома на полу, прицел — на коммутатор
-                var lvl = mc.level;
-                var start = drawSocket(lvl, drawPcB, false);
-                var bend = new com.strikerr212.minepc.lan.CablePath.Point(drawBase.offset(11, 0, 7), Direction.DOWN, 8, 8, null, -1);
-                if (start != null) CableDrawClient.debugPoints(net.minecraft.world.InteractionHand.MAIN_HAND, List.of(start, bend));
+                // Призрак провода 3.0: от гнезда компьютера B к точке на полу у коммутатора
+                var a = wireSocket(mc.level, drawPcB);
+                if (a != null) WireDrawClient.debugPlan(net.minecraft.world.InteractionHand.MAIN_HAND, a,
+                        List.of(floorPixel(drawBase.offset(11, 0, 4), 8, 8)));
             }
             case 4016 -> {
-                var r = CableDrawClient.debugPreview();
-                com.mojang.logging.LogUtils.getLogger().info("[CI-DRAW] призрак: {}", r == null ? "нет" : "кусков " + r.pieces().size()
-                        + ", длина " + r.length() + ", ошибки " + r.problems());
-                shot(mc, "cable_draw");
+                var r = WireDrawClient.debugPreview();
+                com.mojang.logging.LogUtils.getLogger().info("[CI-WIRE] призрак: {}", r == null ? "нет" : "узлов " + r.xs().length
+                        + ", м " + r.meters() + ", ok " + r.ok() + ", " + r.problem());
+                shot(mc, "wire_draw");
             }
-            case 4020 -> {
-                CableDrawClient.debugPoints(net.minecraft.world.InteractionHand.MAIN_HAND, List.of());
-                server.execute(CiScreenshots::layDraw);
-            }
+            case 4020 -> server.execute(CiScreenshots::layWires);
             case 4030 -> server.execute(() -> logPower(server.overworld()));
-            case 4040 -> shot(mc, "cable_draw_done");
+            case 4038 -> server.execute(() -> server.getPlayerList().getPlayers().get(0).teleportTo(server.overworld(),
+                    drawBase.getX() + 5.5, drawBase.getY() + 2.5, drawBase.getZ() - 4.5, -20f, 35f));
+            case 4040 -> shot(mc, "wire_done");
             case 4044 -> server.execute(() -> placeEmptyCase(server.overworld()));
             case 4048 -> server.execute(() -> openEmptyCase(server.overworld()));
             case 4052 -> {
@@ -921,6 +919,88 @@ public class CiScreenshots {
         pcWithMonitor(level, drawPcB, Direction.NORTH);
         p.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, new ItemStack(com.strikerr212.minepc.registry.ModItems.CABLE.get(), 64));
         p.teleportTo(level, b.getX() + 5.5, b.getY(), b.getZ() - 4.5, -32f, 22f);
+    }
+
+    /** Провода 3.0: первое свободное гнездо устройства (медь). */
+    private static com.strikerr212.minepc.wire.WirePlan.Anchor wireSocket(net.minecraft.world.level.Level level, BlockPos dev) {
+        var socks = com.strikerr212.minepc.lan.LanDevice.socketsAt(level, dev);
+        for (int i = 0; i < socks.size(); i++) {
+            if (socks.get(i).accepts(false) && com.strikerr212.minepc.lan.CablePath.socketFree(level, dev, i)) {
+                return com.strikerr212.minepc.wire.WirePlan.Anchor.socket(dev, i);
+            }
+        }
+        return null;
+    }
+
+    /** Пиксель на полу клетки cell (над её нижней гранью). */
+    private static int[] floorPixel(BlockPos cell, int u, int v) {
+        return new int[]{cell.getX() * 16 + u, cell.getY() * 16, cell.getZ() * 16 + v};
+    }
+
+    /** [CI-WIRE]: провода 3.0 — сами через стену, щелчками, свободный конец, продолжить, срастить, разрезать. */
+    private static void layWires() {
+        var server = Minecraft.getInstance().getSingleplayerServer();
+        ServerPlayer p = server.getPlayerList().getPlayers().get(0);
+        ServerLevel level = p.serverLevel();
+        var log = com.mojang.logging.LogUtils.getLogger();
+        var data = com.strikerr212.minepc.lan.LanData.get(level);
+        p.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, new ItemStack(com.strikerr212.minepc.registry.ModItems.CABLE.get(), 64));
+        java.util.function.Function<com.strikerr212.minepc.network.WireLayPayload, String> lay = req -> {
+            int before = data.lines().size();
+            long t0 = System.nanoTime();
+            com.strikerr212.minepc.wire.WireService.lay(p, req);
+            return "проводов " + before + "→" + data.lines().size() + ", " + (System.nanoTime() - t0) / 1000 + " мкс";
+        };
+        // 1) A → коммутатор: путь сам, через стену в 2 блока
+        var a = wireSocket(level, drawPcA);
+        var sw = wireSocket(level, drawSwitch);
+        log.info("[CI-WIRE] A → коммутатор (сам, через стену): {}", a == null || sw == null ? "нет гнезда"
+                : lay.apply(new com.strikerr212.minepc.network.WireLayPayload(false, a, List.of(), sw)));
+        // 2) B → две точки на полу → коммутатор
+        var b = wireSocket(level, drawPcB);
+        var sw2 = wireSocket(level, drawSwitch);
+        log.info("[CI-WIRE] B → коммутатор (щелчками): {}", b == null || sw2 == null ? "нет гнезда"
+                : lay.apply(new com.strikerr212.minepc.network.WireLayPayload(false, b,
+                List.of(floorPixel(drawBase.offset(11, 0, 7), 8, 8), floorPixel(drawBase.offset(11, 0, 4), 8, 8)), sw2)));
+        // 3) Свободный конец: коммутатор → точка на полу (провод C); отдельный кусок D; C продолжить и срастить с D
+        var sw3 = wireSocket(level, drawSwitch);
+        if (sw3 != null) {
+            log.info("[CI-WIRE] C: коммутатор → пол (свободный конец): {}", lay.apply(new com.strikerr212.minepc.network.WireLayPayload(false, sw3,
+                    List.of(floorPixel(drawBase.offset(8, 0, -2), 8, 8)), null)));
+            log.info("[CI-WIRE] D: кусок на полу: {}", lay.apply(new com.strikerr212.minepc.network.WireLayPayload(false,
+                    com.strikerr212.minepc.wire.WirePlan.Anchor.pixel(floorPixel(drawBase.offset(2, 0, -3), 8, 8)),
+                    List.of(floorPixel(drawBase.offset(4, 0, -3), 8, 8)), null)));
+            com.strikerr212.minepc.wire.WireLine c = data.lineAt(drawSwitch, sw3.port()), d = null;
+            for (var l : data.lines()) if (l.devA == null && l.devB == null) d = l;
+            if (c != null && d != null) {
+                log.info("[CI-WIRE] C продолжить и срастить с D: {}", lay.apply(new com.strikerr212.minepc.network.WireLayPayload(false,
+                        com.strikerr212.minepc.wire.WirePlan.Anchor.end(c.id, true), List.of(floorPixel(drawBase.offset(6, 0, -3), 8, 8)),
+                        com.strikerr212.minepc.wire.WirePlan.Anchor.end(d.id, false))));
+                var merged = data.line(c.id);
+                log.info("[CI-WIRE] после срастания: D есть {}, C узлов {}, м {}, концы {} / {}", data.line(d.id) != null,
+                        merged == null ? 0 : merged.nodes(), merged == null ? 0 : merged.meters(),
+                        merged == null ? "-" : merged.devA, merged == null ? "-" : merged.devB);
+                if (merged != null) {
+                    int seg = merged.nodes() / 2;
+                    var mid = merged.node(seg).lerp(merged.node(seg + 1), 0.5);
+                    com.strikerr212.minepc.wire.WireService.cutAt(level, merged.id, seg, mid);
+                    int free = 0;
+                    for (var l : data.lines()) free += (l.free(false) ? 1 : 0) + (l.free(true) ? 1 : 0);
+                    log.info("[CI-WIRE] разрезали посередине: проводов {}, свободных концов {}", data.lines().size(), free);
+                }
+            }
+        }
+        for (var l : data.lines()) {
+            log.info("[CI-WIRE] провод {}: узлов {}, м {}, {}:{} → {}:{}, висит отрезков {}", l.id, l.nodes(), l.meters(), l.devA, l.portA, l.devB, l.portB,
+                    java.util.stream.IntStream.range(0, l.hang.length).filter(i -> l.hang[i]).count());
+        }
+        server.execute(() -> {
+            var lan = com.strikerr212.minepc.lan.LanManager.get(level);
+            StringBuilder sbr = new StringBuilder("[CI-WIRE] связь A ->");
+            for (var r : lan.reach(level, drawPcA)) sbr.append(' ').append(r.pos().equals(drawPcB) ? "B" : r.pos().toShortString()).append(" hops=").append(r.hops());
+            sbr.append(" | кабеля в руке ").append(p.getMainHandItem().getCount());
+            log.info(sbr.toString());
+        });
     }
 
     /** [CI-DRAW]: проложить оба провода (как будто щелчками) и проверить связь A ↔ B через коммутатор. */

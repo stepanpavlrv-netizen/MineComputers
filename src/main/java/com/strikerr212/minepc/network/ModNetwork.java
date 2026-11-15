@@ -42,6 +42,13 @@ public class ModNetwork {
                 }));
         registrar.playToClient(PortsInfoPayload.TYPE, PortsInfoPayload.STREAM_CODEC, (payload, context) ->
                 context.enqueueWork(() -> ClientAccess.onPortsInfo(payload)));
+        // Провода 3.0
+        registrar.playToClient(WiresPayload.TYPE, WiresPayload.STREAM_CODEC, (payload, context) ->
+                context.enqueueWork(() -> com.strikerr212.minepc.client.ClientAccess.onWires(payload)));
+        registrar.playToServer(WireLayPayload.TYPE, WireLayPayload.STREAM_CODEC, (payload, context) ->
+                context.enqueueWork(() -> {
+                    if (context.player() instanceof net.minecraft.server.level.ServerPlayer sp) com.strikerr212.minepc.wire.WireService.lay(sp, payload);
+                }));
         registrar.playToServer(CableLayPayload.TYPE, CableLayPayload.STREAM_CODEC, (payload, context) ->
                 context.enqueueWork(() -> {
                     if (context.player() instanceof net.minecraft.server.level.ServerPlayer sp) {

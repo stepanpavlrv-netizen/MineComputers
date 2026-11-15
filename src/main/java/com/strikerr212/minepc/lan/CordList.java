@@ -61,6 +61,12 @@ public final class CordList {
 
     /** Воткнут ли патч-корд прямо в гнездо port устройства (у игрока и на сервере — по копии у блока). */
     public static boolean inSocket(net.minecraft.world.level.BlockGetter level, BlockPos dev, int port) {
+        // провода 3.0: на сервере — схема мира, у игрока — его копия
+        if (level instanceof net.minecraft.server.level.ServerLevel sl) {
+            if (LanData.get(sl).lineAt(dev, port) != null) return true;
+        } else if (com.strikerr212.minepc.wire.WireStore.at(dev, port) != null) {
+            return true;
+        }
         if (!(level.getBlockEntity(dev) instanceof Holder h)) return false;
         for (End e : h.cords().ends()) if (e.port() == port) return true;
         return false;

@@ -109,6 +109,7 @@ public final class LanManager {
                 CordList.refresh(server, c.a().equals(pos) ? c.b() : c.a());
             }
             data.removeDevice(pos);
+            data.unplugLines(pos);       // провода 3.0 остаются лежать, их концы — свободные
         }
     }
 
@@ -610,6 +611,10 @@ public final class LanManager {
         for (PlugWire pw : plugWires(data, dev)) if (pw.port() < LanData.CABLE_PORTS && !out.contains(pw.port())) out.add(pw.port());
         // корды: и в своих портах, и прямо в гнёздах (у коммутатора корд втыкается в гнездо на модели)
         for (int port = 0; port < LanData.PORTS; port++) if (!out.contains(port) && data.cordAt(dev, port)) out.add(port);
+        for (var l : data.linesAt(dev)) {           // провода 3.0
+            if (dev.equals(l.devA) && !out.contains(l.portA)) out.add(l.portA);
+            if (dev.equals(l.devB) && !out.contains(l.portB)) out.add(l.portB);
+        }
         java.util.Collections.sort(out);
         return out;
     }
@@ -645,7 +650,7 @@ public final class LanManager {
         int[] cordCells = {0};
         boolean[] copper = {false};
         seenPlugs.add(new LanData.Plug(dev, port));
-        seed(data, dev, port, wires, plugs, done, cordCells);
+        seed(data, dev, port, wires, plugs, done, cordCells, copper);
         while (!wires.isEmpty() || !plugs.isEmpty() || !trayq.isEmpty()) {
             while (!trayq.isEmpty()) {
                 // Провод в лотке: соседние лотки во все стороны и провода, которые входят в лоток
@@ -723,7 +728,7 @@ public final class LanManager {
                     // розетка — гнёзда своей линии и та же линия розетки на другой стороне стены
                     for (LanData.Plug other : passiveSides(data, pl, d)) {
                         if (!seenPlugs.add(other)) continue;
-                        seed(data, other.pos(), other.port(), wires, plugs, done, cordCells);
+                        seed(data, other.pos(), other.port(), wires, plugs, done, cordCells, copper);
                     }
                 } else {
                     out.add(pl);
@@ -796,9 +801,9 @@ public final class LanManager {
         ArrayDeque<long[]> trayq = new ArrayDeque<>();
         ArrayDeque<LanData.Plug> plugs = new ArrayDeque<>();
         int[] cordCells = {0};
-        boolean copper = false;
+        boolean[] copper = {false};
         java.util.function.BiConsumer<BlockPos, Integer> seedPort = (dev, port) -> {
-            seed(data, dev, port, wires, plugs, done, cordCells);
+            seed(data, dev, port, wires, plugs, done, cordCells, copper);
             for (LanData.Cord c : data.cords(dev)) if (c.other(dev, port) != null && !cordList.contains(c)) cordList.add(c);
         };
         if (startDev != null) {
@@ -820,7 +825,7 @@ public final class LanManager {
                     break;
                 }
                 int tw = (int) cur[1];
-                if ((tw & 16) == 0) copper = true;
+                if ((tw & 16) == 0) copper[0] = true;
                 for (Direction d : Direction.values()) {
                     BlockPos n = p.relative(d);
                     int[] tray = data.tray(n.asLong());
@@ -853,7 +858,7 @@ public final class LanManager {
                 }
                 Wire w = Wire.unpack(here[(int) cur[1]]);
                 wireList.add(new long[]{cur[0], here[(int) cur[1]]});
-                if (!w.fiber) copper = true;
+                if (!w.fiber) copper[0] = true;
                 Direction[] ds = w.dirs();
                 int links = 0;
                 for (int i = 0; i < 4; i++) {
@@ -907,12 +912,12 @@ public final class LanManager {
             }
         }
         int length = cells.size() + trayCells.size() + cordCells[0];
-        return new Trace(wireList, trayCells, cordList, passives, ends, open, length, copper || wireList.isEmpty());
+        return new Trace(wireList, trayCells, cordList, passives, ends, open, length, copper[0] || wireList.isEmpty());
     }
 
     /** Что воткнуто в порт: провода с вилкой в этот порт и патч-корды. */
     private static void seed(LanData data, BlockPos dev, int port, ArrayDeque<long[]> wires, ArrayDeque<LanData.Plug> plugs,
-                             Set<Long> done, int[] cordCells) {
+                             Set<Long> done, int[] cordCells, boolean[] copper) {
         if (port < LanData.CABLE_PORTS) {
             for (PlugWire pw : plugWires(data, dev)) {
                 if (pw.port() == port && done.add(key(pw.cell(), pw.index()))) wires.add(new long[]{pw.cell().asLong(), pw.index()});
@@ -923,6 +928,16 @@ public final class LanManager {
             if (other != null) {
                 plugs.add(other);
                 cordCells[0] += c.length();
+            }
+        }
+        // Провода 3.0: провод воткнут в этот порт — на другом конце его второе гнездо (свободный конец никуда не ведёт)
+        for (var l : data.linesAt(dev)) {
+            for (int e = 0; e < 2; e++) {
+                boolean b = e == 1;
+                if (l.dev(b) == null || l.port(b) != port || !dev.equals(l.dev(b))) continue;
+                cordCells[0] += l.meters();
+                if (!l.fiber && copper != null) copper[0] = true;
+                if (l.dev(!b) != null) plugs.add(new LanData.Plug(l.dev(!b), l.port(!b)));
             }
         }
     }

@@ -32,11 +32,15 @@ public final class ClientAccess {
     /** ПКМ мотком по блоку — точка пути провода. */
     public static void cableClick(net.minecraft.world.InteractionHand hand, net.minecraft.core.BlockPos pos, net.minecraft.core.Direction side,
                                   net.minecraft.world.phys.Vec3 hit) {
-        CableDrawClient.click(hand, pos, side, hit);
+        WireDrawClient.click(hand, pos, side, hit);
     }
 
     public static void cableAir(net.minecraft.world.InteractionHand hand) {
-        CableDrawClient.air(hand);
+        WireDrawClient.air(hand);
+    }
+
+    public static void onWires(com.strikerr212.minepc.network.WiresPayload payload) {
+        WireRenderer.onPayload(payload);
     }
 
     public static void onTester(com.strikerr212.minepc.network.TesterPayload payload) {

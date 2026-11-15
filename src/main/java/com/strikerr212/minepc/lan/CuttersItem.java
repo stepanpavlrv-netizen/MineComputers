@@ -29,11 +29,38 @@ public class CuttersItem extends Item {
         super(properties);
     }
 
+    /** Смотрит ли игрок на провод 3.0 (у игрока — по своей копии проводов). */
+    private static boolean aimsAtWire(Player player) {
+        double reach = player.blockInteractionRange() + 0.5;
+        return com.strikerr212.minepc.wire.WireService.pick(com.strikerr212.minepc.wire.WireStore.all(), player.getEyePosition(),
+                player.getViewVector(1), reach) != null;
+    }
+
+    /** Провод 3.0 под прицелом: разрезать (shift — снять целиком). */
+    private static InteractionResult cutWire(Level level, Player player, net.minecraft.world.InteractionHand hand) {
+        if (player == null) return InteractionResult.PASS;
+        if (level.isClientSide) return aimsAtWire(player) ? InteractionResult.SUCCESS : InteractionResult.PASS;
+        if (player instanceof net.minecraft.server.level.ServerPlayer sp && com.strikerr212.minepc.wire.WireService.cut(sp, sp.isShiftKeyDown())) {
+            player.getItemInHand(hand).hurtAndBreak(1, player, hand == net.minecraft.world.InteractionHand.MAIN_HAND ? EquipmentSlot.MAINHAND : EquipmentSlot.OFFHAND);
+            return InteractionResult.CONSUME;
+        }
+        return InteractionResult.PASS;
+    }
+
+    @Override
+    public net.minecraft.world.InteractionResultHolder<ItemStack> use(Level level, Player player, net.minecraft.world.InteractionHand hand) {
+        InteractionResult r = cutWire(level, player, hand);
+        return r == InteractionResult.PASS ? net.minecraft.world.InteractionResultHolder.pass(player.getItemInHand(hand))
+                : new net.minecraft.world.InteractionResultHolder<>(r, player.getItemInHand(hand));
+    }
+
     @Override
     public InteractionResult useOn(UseOnContext ctx) {
         Level level = ctx.getLevel();
         BlockPos pos = ctx.getClickedPos();
         Player player = ctx.getPlayer();
+        InteractionResult wire = cutWire(level, player, ctx.getHand());
+        if (wire != InteractionResult.PASS) return wire;
         List<ItemStack> back = new ArrayList<>();
         if (level.getBlockEntity(pos) instanceof CableBlockEntity be && be.facade() == null && !be.wires().isEmpty()) {
             if (level.isClientSide) return InteractionResult.SUCCESS;

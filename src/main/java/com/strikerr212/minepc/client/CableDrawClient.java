@@ -43,7 +43,7 @@ import java.util.List;
  * Когда путь закончен (щелчок по гнезду или повторный — по последней точке), весь путь уходит на сервер
  * ({@link CableLayPayload}); сервер кладёт ровно то же, что было видно призраком (та же {@link CablePath}).
  */
-@EventBusSubscriber(modid = MineComputers.MODID, value = Dist.CLIENT)
+/** Старая прокладка (провода-блоки) — отключена, прокладывает {@link WireDrawClient}. */
 public final class CableDrawClient {
 
     private CableDrawClient() {
@@ -68,7 +68,7 @@ public final class CableDrawClient {
 
     /** Идёт прокладка (для подсказок монтажника: не мешать). */
     public static boolean active() {
-        return !points.isEmpty();
+        return WireDrawClient.active();
     }
 
     private static CableItem cableIn(InteractionHand h) {
