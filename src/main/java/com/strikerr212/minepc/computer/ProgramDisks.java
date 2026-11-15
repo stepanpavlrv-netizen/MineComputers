@@ -19,7 +19,7 @@ public final class ProgramDisks {
     }
 
     public static final List<Program> ALL = List.of(
-            new Program("wired", "Wired", "1.0", 0xFF4F5E, 10),
+            new Program("wired", "Wired", "1.1", 0xFF4F5E, 10),
             new Program("mail", "Почта", "1.0", 0xECE8F4, 8),
             new Program("office", "Офис", "1.0", 0x6B95FF, 5),
             new Program("cameras", "Камеры", "1.0", 0xFF8A3D, 5),

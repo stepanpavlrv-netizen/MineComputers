@@ -328,27 +328,45 @@ local function drawMenu()
   local role = (auth and auth.open()) and "без пароля" or (wired.isAdmin() and "администратор" or "пользователь")
   G.text(x + 8, y + 3, G.cut(role .. " · " .. (os.getComputerLabel and os.getComputerLabel() or "компьютер"), w - 10), T.dim, T.menu)
   local col2 = x + floor(w * 0.56)
-  G.text(x + 2, y + 5, "ПРОГРАММЫ", T.faint, T.menu)
   local list = wired.apps.list()
-  local yy = y + 6
-  local step = (#list * 2 <= h - 10) and 2 or 1
-  for _, a in ipairs(list) do
-    if yy > y + h - 4 then break end
-    local mini = I.MINI[a.icon] or I.MINI.app
-    G.text(x + 2, yy, mini[1], mini[2], T.menu)
-    G.text(x + 4, yy, G.cut(a.name, col2 - x - 6), T.fg, T.menu)
-    if a.installed then G.text(col2 - 3, yy, "▣", T.faint, T.menu) end
-    menuHits[#menuHits + 1] = { x + 1, yy, col2 - 2, yy, "app", a }
-    yy = yy + step
-  end
-  G.text(col2, y + 5, "ПАПКИ", T.faint, T.menu)
   local places = wired.apps.places()
-  for i, p in ipairs(places) do
-    local py = y + 6 + (i - 1) * step
-    if py > y + h - 4 then break end
-    G.text(col2, py, p.mark, p.color, T.menu)
-    G.text(col2 + 2, py, G.cut(p.name, x + w - col2 - 3), T.fg, T.menu)
-    menuHits[#menuHits + 1] = { col2, py, x + w - 2, py, "place", p }
+  local rows = h - 9                      -- строки y+6 … y+h-4
+  local two = #list > rows                -- программ больше, чем строк: две колонки, папки — следом во второй
+  local step = (not two and #list * 2 <= h - 10) and 2 or 1
+  local cw = two and floor((w - 4) / 2) or (col2 - x - 2)
+  G.text(x + 2, y + 5, "ПРОГРАММЫ", T.faint, T.menu)
+  local function item(cx, cy, mark, color, name, hit)
+    G.text(cx, cy, mark, color, T.menu)
+    G.text(cx + 2, cy, G.cut(name, cw - 3), T.fg, T.menu)
+    hit[1], hit[2], hit[3], hit[4] = cx - 1, cy, cx + cw - 2, cy
+    menuHits[#menuHits + 1] = hit
+  end
+  for i, a in ipairs(list) do
+    local cx, cy
+    if two then
+      if i > rows * 2 then break end
+      cx, cy = i <= rows and x + 2 or x + 2 + cw, y + 6 + (i - 1) % rows
+    else
+      cx, cy = x + 2, y + 6 + (i - 1) * step
+    end
+    local mini = I.MINI[a.icon] or I.MINI.app
+    item(cx, cy, mini[1], mini[2], a.name, { 0, 0, 0, 0, "app", a })
+    if a.installed then G.text(cx + cw - 4, cy, "▣", T.faint, T.menu) end
+  end
+  local px, py0
+  if two then
+    px, py0 = x + 2 + cw, y + 6 + math.max(0, #list - rows) + 1
+  else
+    px, py0 = col2, y + 6
+  end
+  if py0 <= y + h - 5 then
+    G.text(px, py0 - 1, "ПАПКИ", T.faint, T.menu)
+    if two then cw = x + w - px - 1 else cw = x + w - col2 - 1 end
+    for i, p in ipairs(places) do
+      local py = py0 + (i - 1) * step
+      if py > y + h - 4 then break end
+      item(px, py, p.mark, p.color, p.name, { 0, 0, 0, 0, "place", p })
+    end
   end
   G.text(x + 1, y + h - 3, string.rep("─", w - 2), T.line, T.menu)
   local bx = x + 2

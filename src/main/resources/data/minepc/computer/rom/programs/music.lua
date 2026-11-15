@@ -27,6 +27,8 @@ local TUNES = {
   },
 }
 
+if args[1] == "--tunes" then return TUNES end   -- для проигрывателя Wired
+
 local function usage()
   print("Мелодии: music korobeiniki | music ode | music elise | music <файл>")
   print("Свой файл: строка — голос, ноты как E5/4 C#4/8. R/2, «tempo 140» — темп.")

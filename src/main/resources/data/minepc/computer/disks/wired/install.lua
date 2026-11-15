@@ -1,4 +1,4 @@
--- Установка Wired 1.0 с дискеты: администратор, файлы системы в /wired, запуск при включении.
+-- Установка Wired 1.1 с дискеты: администратор, файлы системы в /wired, запуск при включении.
 local src = ...
 if not src then
   for _, d in ipairs({ "/disk", "/disk2", "/disk3", "/usb", "/usb2" }) do
@@ -23,7 +23,7 @@ local function screen(title)
   term.write(string.rep(" ", W))
   rgb(ACC, BG)
   term.setCursorPos(bx, 3)
-  term.write("◆ WIRED 1.0")
+  term.write("◆ WIRED 1.1")
   rgb(DIM, BG)
   term.setCursorPos(bx, 4)
   term.write("Графическая система MineComputers · установка")

@@ -24,8 +24,17 @@ site/readme.txt
 wired/install.lua
 wired/readme.txt
 wired/startup.lua
+wired/system/apps/archive.lua
+wired/system/apps/calc.lua
+wired/system/apps/chat.lua
+wired/system/apps/clock.lua
 wired/system/apps/files.lua
+wired/system/apps/games.lua
 wired/system/apps/installer.lua
+wired/system/apps/music.lua
+wired/system/apps/network.lua
+wired/system/apps/paint.lua
+wired/system/apps/pult.lua
 wired/system/apps/settings.lua
 wired/system/apps/taskmgr.lua
 wired/system/apps/terminal.lua

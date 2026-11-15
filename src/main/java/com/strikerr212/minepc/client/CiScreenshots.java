@@ -751,7 +751,23 @@ public class CiScreenshots {
                 server.execute(() -> logWired("офис"));
                 shot(mc, "wired_office");
             }
-            case 5504 -> mc.stop();
+            // Встроенные программы: Игры (Сапёр) и Музыка из «Пуска»
+            case 5504 -> server.execute(() -> clickText(wiredPos, "◆ WIRED", 1, 0));
+            case 5512 -> server.execute(() -> clickText(wiredPos, "Игры", 1, 0));
+            case 5524 -> server.execute(() -> clickText(wiredPos, " Играть ", 2, 0));
+            case 5532 -> server.execute(() -> clickText(wiredPos, "Сапёр · Новичок", -18, 4));
+            case 5540 -> {
+                server.execute(() -> logWired("игры"));
+                shot(mc, "wired_games");
+            }
+            case 5544 -> server.execute(() -> clickText(wiredPos, "◆ WIRED", 1, 0));
+            case 5552 -> server.execute(() -> clickText(wiredPos, "Музыка", 1, 0));
+            case 5564 -> server.execute(() -> clickText(wiredPos, " ▶ Играть ", 2, 0));
+            case 5600 -> {
+                server.execute(() -> logWired("музыка"));
+                shot(mc, "wired_music");
+            }
+            case 5604 -> mc.stop();
             default -> {
             }
         }
@@ -2001,7 +2017,7 @@ public class CiScreenshots {
 
     private static BlockPos wiredPos;
 
-    /** Компьютер ур. 5 с монитором и дисководом, в дисководе — дискета «Wired 1.0» (как из сундука деревни). */
+    /** Компьютер ур. 5 с монитором и дисководом, в дисководе — дискета «Wired» (как из сундука деревни). */
     private static void placeWired() {
         var server = Minecraft.getInstance().getSingleplayerServer();
         ServerPlayer p = server.getPlayerList().getPlayers().get(0);

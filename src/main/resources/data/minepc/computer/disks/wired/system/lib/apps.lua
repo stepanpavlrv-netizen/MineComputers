@@ -10,7 +10,18 @@ local SYSTEM = {
   taskmgr = { id = "taskmgr", name = "Диспетчер задач", icon = "task", file = "taskmgr" },
   settings = { id = "settings", name = "Параметры", icon = "gear", file = "settings" },
   installer = { id = "installer", name = "Установка программы", icon = "disk", file = "installer" },
+  chat = { id = "chat", name = "Чат", icon = "chat", file = "chat" },
+  network = { id = "network", name = "Сеть", icon = "net", file = "network" },
+  pult = { id = "pult", name = "Пульт", icon = "pult", file = "pult" },
+  paint = { id = "paint", name = "Рисовалка", icon = "paint", file = "paint", opens = { "pix" } },
+  music = { id = "music", name = "Музыка", icon = "music", file = "music", opens = { "mus" } },
+  games = { id = "games", name = "Игры", icon = "games", file = "games" },
+  archive = { id = "archive", name = "Архив", icon = "archive", file = "archive" },
+  calc = { id = "calc", name = "Калькулятор", icon = "calc", file = "calc" },
+  clock = { id = "clock", name = "Часы", icon = "clock", file = "clock" },
 }
+-- Встроенные программы в «Пуске» (по порядку)
+local BUILTIN = { "chat", "network", "pult", "paint", "music", "games", "archive", "calc", "clock" }
 
 --- Описание программы из папки dir (там app.lua: return { name = ..., main = ..., ... }).
 function A.manifest(dir)
@@ -65,6 +76,7 @@ end
 function A.list()
   local out = { SYSTEM.files, SYSTEM.terminal }
   for _, e in ipairs(A.installed()) do out[#out + 1] = e end
+  for _, id in ipairs(BUILTIN) do out[#out + 1] = SYSTEM[id] end
   out[#out + 1] = SYSTEM.taskmgr
   out[#out + 1] = SYSTEM.settings
   return out
@@ -119,6 +131,18 @@ end
 
 --- Службы программ (service в app.lua): работают в фоне всё время, пока запущена система.
 function A.startServices()
+  A.running = A.running or {}
+  -- службы встроенных программ: будильники, приём сообщений чата
+  for _, id in ipairs({ "clock", "chat" }) do
+    local key = "@" .. id
+    if not A.running[key] then
+      local ok, mod = pcall(dofile, "/wired/apps/" .. id .. ".lua")
+      if ok and type(mod) == "table" and mod.service then
+        A.running[key] = true
+        wm.spawn(mod.service, function() A.running[key] = nil end)
+      end
+    end
+  end
   for _, e in ipairs(A.installed()) do
     local m = e.m
     if m.service and not A.running then A.running = {} end
@@ -146,6 +170,9 @@ function A.forExt(ext)
     if type(exts) == "table" then
       for _, x in ipairs(exts) do if x == ext then return e end end
     end
+  end
+  for _, id in ipairs(BUILTIN) do
+    for _, x in ipairs(SYSTEM[id].opens or {}) do if x == ext then return SYSTEM[id] end end
   end
 end
 
