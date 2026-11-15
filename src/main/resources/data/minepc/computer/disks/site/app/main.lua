@@ -1,8 +1,115 @@
 -- Сайтостроитель для Wired: страницы сайта из блоков (заголовок, текст, ссылка, форма, картинка…) без кода.
--- Страницы — в /www (*.page), публикация — httpd этого компьютера.
+-- Страницы — в /www (*.page), публикация — httpd этого компьютера или хостинг на сервере (hostd).
 local G, T, U, wm, P = wired.gfx, wired.theme, wired.ui, wired.wm, wired.page
 local WWW = "/www"
 local HTTPD = "/rom/programs/httpd.lua"
+
+--- Окно «На хостинг»: сервер, логин, пароль, имя сайта → загрузка папки /www (только изменённые файлы).
+local function hostingDialog(onDone)
+  local hosting = require("hosting")
+  local saved = {}
+  local f = fs.exists(WWW .. "/.deploy") and fs.open(WWW .. "/.deploy", "r")
+  if f then
+    local line = f.readAll() or ""
+    f.close()
+    saved.server, saved.user, saved.site = line:match("^([^|]*)|([^|]*)|([^|\n]*)")
+  end
+  local fields = {
+    { label = "Сервер", f = U.field(saved.server or "", "f1") },
+    { label = "Логин", f = U.field(saved.user or "", "f2") },
+    { label = "Пароль", f = U.field("", "f3", "•") },
+    { label = "Имя сайта", f = U.field(saved.site or "", "f4") },
+  }
+  local focus = (saved.server and saved.server ~= "") and 3 or 1
+  fields[focus].f.focused = true
+  local st = { servers = nil, busy = nil, err = nil, done = nil }
+  local win
+  local app = { title = "Сайт на хостинг", icon = "site", w = 76, h = 22, resizable = false }
+
+  local function setFocus(i)
+    for k, x in ipairs(fields) do x.f.focused = k == i end
+    focus = i
+  end
+
+  local function upload()
+    local server, user, pass, site = fields[1].f.text, fields[2].f.text, fields[3].f.text, fields[4].f.text
+    if server == "" or user == "" or site == "" then st.err = "Заполните сервер, логин и имя сайта" wm.redraw(win) return end
+    st.err, st.busy, st.done = nil, "Подключаюсь…", nil
+    wm.redraw(win)
+    wm.spawn(function()
+      local s = hosting.connect(server, user, pass, { quiet = true })
+      return s:upload(WWW, site, function(i, n, file)
+        st.busy = string.format("%d/%d  %s", i, n, file)
+        wm.redraw(win)
+      end)
+    end, function(ok, url, sent, bytes)
+      st.busy = nil
+      if ok and url then
+        local w = fs.open(WWW .. "/.deploy", "w")
+        if w then w.write(server .. "|" .. user .. "|" .. site .. "\n") w.close() end
+        st.done = url
+        if onDone then onDone(url, server) end
+        wm.notify({ title = "☁ Сайт на хостинге", text = url .. " — работает на сервере " .. server .. ", даже когда этот компьютер выключен" })
+      else
+        st.err = tostring(ok and sent or url)
+      end
+      wm.redraw(win)
+    end)
+  end
+
+  function app.init(w)
+    win = w
+    wm.spawn(function() return hosting.discover(true) end, function(ok, list)
+      st.servers = ok and list or {}
+      wm.redraw(win)
+    end)
+  end
+
+  function app.draw(w, c)
+    c.text(3, 2, "Сайт будет жить на сервере: работает, даже когда этот компьютер выключен.", T.dim)
+    c.text(3, 3, "Логин и пароль выдаёт владелец сервера (hostd add).", T.faint)
+    for i, x in ipairs(fields) do
+      local y = 4 + i * 2
+      c.text(3, y, x.label, T.fg)
+      c.field(15, y, c.w - 17, x.f)
+    end
+    c.text(15, 13, "например shop — будет shop.mine", T.faint)
+    c.text(3, 16, "В сети:", T.dim)
+    local bx = 11
+    if st.servers == nil then c.text(bx, 16, "ищу серверы…", T.faint)
+    elseif #st.servers == 0 then c.text(bx, 16, "серверов с хостингом не видно", T.faint)
+    else
+      for _, sv in ipairs(st.servers) do
+        if bx > c.w - 10 then break end
+        bx = c.button(bx, 16, sv.name, "server", fields[1].f.text == sv.name and "primary" or "normal", sv.name) + 1
+      end
+    end
+    if st.busy then c.text(3, 18, G.cut(st.busy, c.w - 4), T.warn)
+    elseif st.err then c.text(3, 18, G.cut(st.err, c.w - 4), T.err)
+    elseif st.done then c.text(3, 18, G.cut("Готово: " .. st.done .. " — откройте в Браузере", c.w - 4), T.ok) end
+    local b = c.w - 30
+    b = c.button(b, c.h - 1, "Закрыть", "close") + 1
+    c.button(b, c.h - 1, "☁ Загрузить", "go", st.busy and "off" or "primary")
+  end
+
+  function app.event(w, ev, a, b)
+    if ev == "click" or ev == "dblclick" then
+      if a == "close" then wm.close(w)
+      elseif a == "go" and not st.busy then upload()
+      elseif a == "server" then fields[1].f.text, fields[1].f.pos = b, G.len(b) setFocus(2)
+      elseif type(a) == "string" and a:match("^f%d$") then setFocus(tonumber(a:sub(2))) end
+      wm.redraw(w)
+    elseif ev == "char" or ev == "key" or ev == "paste" then
+      if ev == "key" and a == "escape" then wm.close(w) return end
+      local r = U.edit(fields[focus].f, ev, a)
+      if r == "tab" then setFocus(focus % #fields + 1)
+      elseif r == "enter" then if focus < #fields then setFocus(focus + 1) elseif not st.busy then upload() end end
+      wm.redraw(w)
+    end
+  end
+
+  return wm.open(app)
+end
 
 local KINDS = {
   { id = "h1", name = "Заголовок", make = "# Заголовок" },
@@ -134,7 +241,7 @@ return function()
       local label = p:gsub("%.page$", "")
       local act = p == st.page
       x = c.button(x, 1, label, "page", act and "primary" or "normal", p) + 1
-      if x > c.w - 50 then break end
+      if x > c.w - 66 then break end
     end
     x = c.button(x, 1, "+", "newpage") + 2
     local on = httpdRunning()
@@ -142,6 +249,8 @@ return function()
     local pub = on and "■ Остановить сайт" or "◉ Опубликовать"
     rx = rx - G.len(pub) - 2
     c.button(rx, 1, pub, on and "unpublish" or "publish", on and "normal" or "primary")
+    rx = rx - 15
+    c.button(rx, 1, "☁ На хостинг", "hosting")
     rx = rx - 13
     c.button(rx, 1, "▷ Просмотр", "preview")
     rx = rx - 13
@@ -272,6 +381,9 @@ return function()
           msg = "Не запустился: " .. tostring(err)
         end
         retitle()
+      elseif a == "hosting" then
+        savePage()
+        hostingDialog(function(url) msg = "На хостинге: " .. url retitle() wm.redraw(w) end)
       elseif a == "unpublish" then
         local pid = httpdRunning()
         if pid then pcall(computer.kill, pid) end

@@ -5,6 +5,7 @@ openos/component.lua
 openos/cores.lua
 openos/event.lua
 openos/filesystem.lua
+openos/hosting.lua
 openos/http.lua
 openos/io.lua
 openos/ioc.lua
@@ -26,11 +27,13 @@ programs/chat.lua
 programs/clear.lua
 programs/connect.lua
 programs/cp.lua
+programs/deploy.lua
 programs/dns.lua
 programs/drives.lua
 programs/edit.lua
 programs/get.lua
 programs/help.lua
+programs/hostd.lua
 programs/hostname.lua
 programs/httpd.lua
 programs/info.lua

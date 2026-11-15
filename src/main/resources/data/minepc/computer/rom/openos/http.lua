@@ -1,6 +1,7 @@
 -- Майннет: запросы к сайтам (порт 80). Адрес — имя.mine, имя компьютера или его адрес, дальше путь:
 --   shop.mine/index.page,  shop.mine/order.lua
 -- http.get(адрес, [параметры], [onProgress]) → текст, код (200/404/500), тип ("page" | "text" | "file")
+-- Запрос: "GET", номер, порт ответа, путь, параметры, имя сайта (по нему хостинг выбирает папку сайта)
 --                                            или nil, ошибка
 local http = {}
 http.PORT = 80
@@ -34,7 +35,7 @@ function http.get(url, params, onProgress, timeout)
   local port = math.random(40000, 49999)
   net.open(port)
   local id = math.random(1, 1000000000)
-  if not net.send(host, http.PORT, "GET", id, port, path, params or {}) then
+  if not net.send(host, http.PORT, "GET", id, port, path, params or {}, (unicode and unicode.lower or string.lower)(host)) then
     net.close(port)
     return nil, "Нет сети"
   end

@@ -26,6 +26,51 @@ function M.start()
   return true
 end
 
+--- Ящик на хостинге: { server, user, ph (хэш пароля), address = "имя@сайт.mine" } или nil.
+local REMOTE = "/home/.mailhost"
+function M.remote()
+  local f = fs.exists(REMOTE) and fs.open(REMOTE, "r")
+  if not f then return nil end
+  local line = f.readAll() or ""
+  f.close()
+  local server, user, ph, address = line:match("^([^|]*)|([^|]*)|([^|]*)|([^|\n]*)")
+  if not address or address == "" then return nil end
+  return { server = server, user = user, ph = ph, address = address }
+end
+
+function M.setRemote(cfg)
+  if not cfg then if fs.exists(REMOTE) then fs.delete(REMOTE) end return end
+  local f = fs.open(REMOTE, "w")
+  if f then f.write(cfg.server .. "|" .. cfg.user .. "|" .. cfg.ph .. "|" .. cfg.address .. "\n") f.close() end
+end
+
+--- Адрес отправителя: ящик на хостинге, если подключён, иначе имя@этот компьютер.
+function M.from()
+  local r = M.remote()
+  return r and r.address or (M.me() .. "@" .. M.host())
+end
+
+--- Запрос к хостингу по ящику (в фоновой задаче). cmd: mail_list, mail_get, mail_del.
+function M.ask(cfg, cmd, id)
+  local hosting = require("hosting")
+  local s = hosting.connect(cfg.server, cfg.user, "", { quiet = true })
+  s.ph = cfg.ph
+  local box, site = cfg.address:match("^([^@]+)@(.+)$")
+  if not box then return nil, "Адрес ящика — имя@сайт.mine" end
+  return s:call(cmd, site, box, id)
+end
+
+function M.parseText(text, path)
+  local head, body = text:match("^(.-)\n\n(.*)$")
+  head = head or text
+  return {
+    path = path, file = path and fs.getName(path) or "", text = text, body = body or "",
+    from = head:match("От: ([^\n]*)") or "?", to = head:match("Кому: ([^\n]*)"),
+    subject = head:match("Тема: ([^\n]*)") or "", time = head:match("Время: ([^\n]*)") or "",
+    new = head:find("Новое: да") ~= nil,
+  }
+end
+
 function M.parse(path)
   local f = fs.open(path, "r")
   if not f then return nil end
@@ -68,7 +113,7 @@ function M.send(to, subject, body)
   local port = math.random(40000, 49999)
   net.open(port)
   local id = math.random(1, 1000000000)
-  if not net.send(host, 25, "MAIL", id, port, user, M.me() .. "@" .. M.host(), subject, body) then
+  if not net.send(host, 25, "MAIL", id, port, user, M.from(), subject, body, (unicode and unicode.lower or string.lower)(host)) then
     net.close(port)
     return false, "Нет сети"
   end
@@ -90,7 +135,7 @@ function M.send(to, subject, body)
     local name = string.format("%s/%d-%04d.txt", dir, math.floor(os.epoch and os.epoch() or 0), math.random(0, 9999))
     local f = fs.open(name, "w")
     if f then
-      f.write("От: " .. M.me() .. "@" .. M.host() .. "\nКому: " .. to .. "\nТема: " .. subject .. "\nВремя: " ..
+      f.write("От: " .. M.from() .. "\nКому: " .. to .. "\nТема: " .. subject .. "\nВремя: " ..
         os.date("%d.%m %H:%M") .. "\n\n" .. body)
       f.close()
     end

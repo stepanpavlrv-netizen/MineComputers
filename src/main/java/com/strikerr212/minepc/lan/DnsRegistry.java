@@ -18,7 +18,7 @@ import java.util.TreeMap;
 public final class DnsRegistry extends SavedData {
 
     public static final String ZONE = ".mine";
-    public static final int MAX_PER_COMPUTER = 4, MAX_NAME = 32;
+    public static final int MAX_PER_COMPUTER = 4, MAX_PER_SERVER = 64, MAX_NAME = 32;
 
     private final Map<String, String> names = new TreeMap<>();
 
@@ -55,11 +55,16 @@ public final class DnsRegistry extends SavedData {
 
     /** Занять имя: null — получилось, иначе причина. */
     public String register(String name, String address) {
+        return register(name, address, MAX_PER_COMPUTER);
+    }
+
+    /** То же с пределом имён на компьютер (у серверов-хостингов — {@link #MAX_PER_SERVER}). */
+    public String register(String name, String address, int max) {
         String n = normalize(name);
         if (n == null) return "Имя — латиница, кириллица, цифры, «-» и «.», до " + MAX_NAME + " знаков";
         String owner = names.get(n);
         if (owner != null) return owner.equals(address) ? null : "Имя " + n + " уже занято";
-        if (namesOf(address).size() >= MAX_PER_COMPUTER) return "У компьютера уже " + MAX_PER_COMPUTER + " имени — освободите одно";
+        if (namesOf(address).size() >= max) return "У компьютера уже " + max + " имён — освободите одно";
         names.put(n, address);
         setDirty();
         return null;

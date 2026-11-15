@@ -1,4 +1,5 @@
 -- Почтовый ящик этого компьютера: принимает письма (порт 25) в фоне. Письма — в /mail/<имя>/.
+-- На хостинге (hostd) письма на домены клиентов — в /hosting/mail/<домен>/<имя>/, их забирает Почта по сети.
 --   maild — запустить, maild stop — остановить. Читать — mail.
 local cmd = ...
 local SELF = "/rom/programs/maild.lua"
@@ -35,7 +36,12 @@ if cmd == "serve" then
         tostring(ev[10] or ""), tostring(ev[11] or "")
       user = user:lower():gsub("[^%w%-%_а-яё]", "")
       if user == "" then user = "all" end
+      -- Хостинг: письма на чужие домены этого сервера (user@shop.mine) — в ящики клиента, /hosting/mail/<домен>/<имя>
+      local domain = (unicode and unicode.lower or string.lower)(tostring(ev[12] or "")):gsub("[/\\]", "")
       local dir = "/mail/" .. user
+      if domain ~= "" and domain ~= "." and domain ~= ".." and fs.isDir("/sites/" .. domain) then
+        dir = "/hosting/mail/" .. domain .. "/" .. user
+      end
       pcall(fs.makeDir, dir)
       local name = string.format("%s/%d-%04d.txt", dir, math.floor(os.epoch and os.epoch("utc") or os.clock() * 1000), math.random(0, 9999))
       local f = fs.open(name, "w")

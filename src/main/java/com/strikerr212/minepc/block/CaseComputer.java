@@ -416,7 +416,10 @@ public final class CaseComputer implements Computer.Host {
             String me = be.address();
             switch (command) {
                 case "register" -> {
-                    String err = reg.register(name, me);
+                    // Сервер (в стойке или серверный корпус) держит хостинг — имён ему можно больше
+                    int max = be.isModule() || be.serverChassis() ? com.strikerr212.minepc.lan.DnsRegistry.MAX_PER_SERVER
+                            : com.strikerr212.minepc.lan.DnsRegistry.MAX_PER_COMPUTER;
+                    String err = reg.register(name, me, max);
                     return new Object[]{err == null, err == null ? com.strikerr212.minepc.lan.DnsRegistry.normalize(name) : err};
                 }
                 case "unregister" -> {

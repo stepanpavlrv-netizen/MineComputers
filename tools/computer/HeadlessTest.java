@@ -378,6 +378,9 @@ public class HeadlessTest {
         System.exit(failures == 0 ? 0 : 1);
     }
 
+    /** Имена .mine в сетевом тесте (общие для двух компьютеров). */
+    static final java.util.Map<String, String> DNS = new java.util.concurrent.ConcurrentHashMap<>();
+
     /** Два компьютера, соединённые «сетью» прямо в тесте: сообщение, таблица, порт, предел 8 КБ, OpenOS modem. */
     static Computer netComputer(String address, Computer[] box, int other, String otherName) throws Exception {
         Path dir = Files.createTempDirectory("minepc_net");
@@ -388,10 +391,42 @@ public class HeadlessTest {
                 return List.of(new Computer.Peer(box[other].address(), otherName, 1));
             }
             @Override public boolean netSend(String target, int port, Object[] payload, int bytes) {
+                if (target != null && target.toLowerCase(java.util.Locale.ROOT).endsWith(".mine")) {
+                    target = DNS.get(target.toLowerCase(java.util.Locale.ROOT));
+                    if (target == null) return true;
+                }
+                if (target != null && address.startsWith(target)) {          // себе
+                    Computer me = box[other == 0 ? 1 : 0];
+                    me.netReceive(address, port, 0, payload, bytes);
+                    return true;
+                }
                 if (target == null || target.equalsIgnoreCase(otherName) || box[other].address().startsWith(target)) {
                     box[other].netReceive(address, port, 1, payload, bytes);
                 }
                 return true;
+            }
+            @Override public Object[] dns(String command, String name) {
+                String n = name == null ? null : name.toLowerCase(java.util.Locale.ROOT);
+                if (n != null && !n.endsWith(".mine")) n = n + ".mine";
+                switch (command) {
+                    case "register" -> {
+                        String owner = DNS.get(n);
+                        if (owner != null && !owner.equals(address)) return new Object[]{false, "Имя " + n + " уже занято"};
+                        DNS.put(n, address);
+                        return new Object[]{true, n};
+                    }
+                    case "unregister" -> { DNS.remove(n); return new Object[]{true, ""}; }
+                    case "lookup" -> { String a = DNS.get(n); return new Object[]{a != null, a == null ? "Имя не занято" : a}; }
+                    default -> {
+                        java.util.Map<Object, Object> t = new java.util.LinkedHashMap<>();
+                        int i = 1;
+                        for (var e : DNS.entrySet()) {
+                            if (command.equals("names") && !e.getValue().equals(address)) continue;
+                            t.put(i++, java.util.Map.of("name", e.getKey(), "address", e.getValue()));
+                        }
+                        return new Object[]{true, t};
+                    }
+                }
             }
         });
         c.setInfo(new Computer.Info("Тест", 2, 2800, "Lua", 2048, 2_000_000, "ГП", 1000));
@@ -664,6 +699,41 @@ public class HeadlessTest {
         for (int i = 0; i < 300 && !screen().contains("SITE"); i++) { for (Computer c : box) c.tick(); Thread.sleep(2); }
         show("сайт из программы");
         expect("httpd, запущенный computer.spawn, отдаёт вторую страницу по ссылке «two»", screen().contains("SITE") && screen().contains("Вторая страница"));
+
+        // Хостинг: beta держит сайты, alpha загружает свой сайт и открывает его по имени .mine
+        pc = box[1];
+        command("os.run({}, '/rom/programs/hostd.lua', 'add', 'vasya', 'pw', '64')");
+        command("print('HOSTD', computer.spawn('/rom/programs/hostd.lua', 'serve'))");
+        for (int i = 0; i < 20; i++) { for (Computer c : box) c.tick(); Thread.sleep(2); }
+        pc = box[0];
+        command("fs.makeDir('/www') local f = fs.open('/www/index.page', 'w') f.write('# Сайт на хостинге\\n[Ещё](more)') f.close()"
+                + " f = fs.open('/www/more.page', 'w') f.write('# Ещё страница') f.close()");
+        command("local h = require('hosting'); local s = h.connect('beta', 'vasya', 'pw'); print('DEPLOY', s:upload('/www', 'test'))");
+        for (int i = 0; i < 400 && !screen().contains("DEPLOY"); i++) { for (Computer c : box) c.tick(); Thread.sleep(2); }
+        command("local h = require('hosting'); print('BADPW', h.connect('beta', 'vasya', 'нет'):info())");
+        for (int i = 0; i < 300 && !screen().contains("BADPW"); i++) { for (Computer c : box) c.tick(); Thread.sleep(2); }
+        command("local b, code = require('http').get('test.mine/more'); print('VHOST', code, b)");
+        for (int i = 0; i < 300 && !screen().contains("VHOST"); i++) { for (Computer c : box) c.tick(); Thread.sleep(2); }
+        show("хостинг");
+        expect("deploy: сайт загружен на хостинг как test.mine", screen().contains("DEPLOY") && screen().contains("test.mine"));
+        expect("хостинг: неверный пароль — отказ", screen().contains("BADPW") && screen().contains("Неверный"));
+        expect("хостинг: test.mine открывается с сервера (своя папка сайта)", screen().contains("VHOST") && screen().contains("Ещё страница"));
+        expect("на сервере файлы сайта в /sites/test.mine", Files.exists(dirB.resolve("sites/test.mine/more.page")));
+
+        // Почта на домене хостинга: письмо на info@test.mine ложится на сервер, клиент забирает его по сети
+        pc = box[1];
+        command("print('MAILD', computer.spawn('/rom/programs/maild.lua', 'serve'))");
+        for (int i = 0; i < 20; i++) { for (Computer c : box) c.tick(); Thread.sleep(2); }
+        pc = box[0];
+        command("net.open(41000) net.send('test.mine', 25, 'MAIL', 7, 41000, 'info', 'alpha@x', 'Привет хостингу', 'Текст письма', 'test.mine')"
+                + " local e repeat e = {os.pullEvent('net_message')} until e[5] == 'MAILOK' print('MAILOK', e[7])");
+        for (int i = 0; i < 300 && !screen().contains("MAILOK"); i++) { for (Computer c : box) c.tick(); Thread.sleep(2); }
+        command("local s = require('hosting').connect('beta', 'vasya', 'pw'); local l = s:call('mail_list', 'test.mine', 'info');"
+                + " print('MBOX', type(l) == 'table' and #l, l and l[1] and l[1].subject, s:call('mail_get', 'test.mine', 'info', l[1].id))");
+        for (int i = 0; i < 400 && !screen().contains("MBOX"); i++) { for (Computer c : box) c.tick(); Thread.sleep(2); }
+        show("почта на хостинге");
+        expect("письмо на домен хостинга лежит в /hosting/mail/test.mine/info", Files.isDirectory(dirB.resolve("hosting/mail/test.mine/info")));
+        expect("клиент видит письмо в ящике хостинга и читает его", screen().contains("MBOX") && screen().contains("Привет хостингу") && screen().contains("Текст письма"));
         pc = saved;
     }
 

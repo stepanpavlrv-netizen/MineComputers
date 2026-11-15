@@ -9,7 +9,7 @@ local topics = {
   { "info", "железо компьютера и скорость" },
   { "label [имя]", "имя компьютера" },
   { "сеть", "ip, peers, ping, chat, wifi, send/recv, switch, bmc, ioc" },
-  { "майннет", "browse, httpd, dns, mail, get, cam" },
+  { "майннет", "browse, httpd, dns, mail, get, cam, deploy, hostd" },
   { "sh", "новая командная строка (exit — назад)" },
   { "ps, top, kill", "процессы; reboot, shutdown" },
   { "вход", "users passwd sudo journal sshd connect" },

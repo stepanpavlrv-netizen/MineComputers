@@ -68,7 +68,7 @@ elseif cmd == "send" then
   local port = math.random(40000, 49999)
   net.open(port)
   local id = math.random(1, 1000000000)
-  if not net.send(host, 25, "MAIL", id, port, user, me, subject, table.concat(lines, "\n")) then
+  if not net.send(host, 25, "MAIL", id, port, user, me, subject, table.concat(lines, "\n"), (unicode and unicode.lower or string.lower)(host)) then
     net.close(port) printError("Нет сети") return
   end
   local timer = os.startTimer(4)

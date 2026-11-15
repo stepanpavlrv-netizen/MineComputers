@@ -2,7 +2,8 @@
 --   httpd        — запустить (в фоне; дальше включается сам при запуске компьютера)
 --   httpd stop   — остановить (и не запускать при включении)
 --   httpd log    — последние запросы
--- Страницы: /www/index.page (разметка — см. help в browse), картинки и файлы — как есть,
+-- Страницы: /www/index.page (разметка — см. help в browse), картинки и файлы — как есть. На хостинге (hostd)
+-- у каждого имени своя папка: /sites/shop.mine.
 -- /www/*.lua — страница-программа: получает request (path, params, from), возвращает текст страницы.
 local cmd = ...
 local SELF = "/rom/programs/httpd.lua"
@@ -88,9 +89,17 @@ local function read(path)
   return data
 end
 
-local function handle(path, params, from)
+--- Папка сайта: на хостинге у каждого имени своя (/sites/shop.mine), иначе — /www этого компьютера.
+local function rootFor(host)
+  host = (unicode and unicode.lower or string.lower)(tostring(host or "")):gsub("[/\\]", "")
+  if host ~= "" and host ~= "." and host ~= ".." and fs.isDir("/sites/" .. host) then return "/sites/" .. host end
+  return "/www"
+end
+
+local function handle(path, params, from, host)
   path = "/" .. tostring(path or "/"):gsub("%.%.", ""):gsub("^/+", "")
-  local file = "/www" .. path
+  local root = rootFor(host)
+  local file = root .. path
   if fs.isDir(file) then
     file = fs.exists(file .. "/index.page") and (file .. "/index.page") or (file .. "/index.lua")
   end
@@ -100,7 +109,7 @@ local function handle(path, params, from)
   end
   if file:match("%.lua$") then
     local out = {}
-    local env = setmetatable({ request = { path = path, params = params or {}, from = from },
+    local env = setmetatable({ request = { path = path, params = params or {}, from = from, host = host },
       echo = function(...) for _, v in ipairs({ ... }) do out[#out + 1] = tostring(v) end out[#out + 1] = "\n" end },
       { __index = _G })
     local fn, err = loadfile(file, "t", env)
@@ -119,11 +128,11 @@ local function serve()
     local ev = { os.pullEvent("net_message") }
     local from, port = ev[2], ev[3]
     if port == http.PORT and ev[5] == "GET" then
-      local id, reply, path, params = ev[6], ev[7], ev[8], ev[9]
-      local ok, status, ctype, body = pcall(handle, path, type(params) == "table" and params or {}, from)
+      local id, reply, path, params, host = ev[6], ev[7], ev[8], ev[9], ev[10]
+      local ok, status, ctype, body = pcall(handle, path, type(params) == "table" and params or {}, from, host)
       if not ok then status, ctype, body = 500, "page", "# Ошибка сервера\n" .. tostring(status) end
       http.reply(from, reply, id, status, ctype, body)
-      log(string.format("%s %s %d %d Б", from:sub(1, 8), tostring(path), status, #body))
+      log(string.format("%s %s%s %d %d Б", from:sub(1, 8), host and host ~= "" and (tostring(host) .. " ") or "", tostring(path), status, #body))
     end
   end
 end

@@ -22,7 +22,7 @@ local function fetch(url, params, progress)
   local port = math.random(40000, 49999)
   net.open(port)
   local id = math.random(1, 1000000000)
-  if not net.send(host, http.PORT, "GET", id, port, path, params or {}) then
+  if not net.send(host, http.PORT, "GET", id, port, path, params or {}, (unicode and unicode.lower or string.lower)(host)) then
     net.close(port)
     return nil, "Нет сети"
   end
