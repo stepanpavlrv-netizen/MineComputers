@@ -28,9 +28,13 @@ function A.manifest(dir)
   return m
 end
 
-local function entry(m)
-  return { id = m.id, name = m.name, icon = I.MINI[m.icon or ""] and m.icon or "app", art = I.load(fs.combine(m.dir, "icon.pix")),
-           installed = true, m = m }
+--- Значок программы p (или всей папки m).
+local function entry(m, p)
+  p = p or m
+  local icon = I.MINI[p.icon or ""] and p.icon or "app"
+  local art = p.pix and I.load(fs.combine(m.dir, p.pix)) or (p == m and I.load(fs.combine(m.dir, "icon.pix"))) or nil
+  return { id = p == m and m.id or (m.id .. "." .. tostring(p.id or p.name)), name = p.name, icon = icon, art = art,
+           installed = true, m = m, main = p.main, type = p.type or m.type, w = p.w or m.w, h = p.h or m.h }
 end
 
 function A.installed()
@@ -38,7 +42,14 @@ function A.installed()
   if fs.isDir("/apps") then
     for _, name in ipairs(fs.list("/apps")) do
       local m = A.manifest("/apps/" .. name)
-      if m then out[#out + 1] = entry(m) end
+      if m then
+        if type(m.programs) == "table" and #m.programs > 0 then
+          -- на одной дискете несколько программ (например, Офис: Документы и Таблицы)
+          for _, p in ipairs(m.programs) do out[#out + 1] = entry(m, p) end
+        else
+          out[#out + 1] = entry(m)
+        end
+      end
     end
   end
   table.sort(out, function(a, b) return a.name < b.name end)
@@ -88,9 +99,9 @@ function A.launch(e, arg)
       return
     end
     local m = e.m
-    local main = fs.combine(m.dir, m.main)
-    if m.type == "terminal" then
-      wm.open(wired.vterm.app(main, arg and { arg } or {}, { title = m.name, icon = e.icon, w = m.w, h = m.h }))
+    local main = fs.combine(m.dir, e.main or m.main)
+    if e.type == "terminal" then
+      wm.open(wired.vterm.app(main, arg and { arg } or {}, { title = e.name, icon = e.icon, w = e.w, h = e.h }))
       return
     end
     local env = setmetatable({ APP_DIR = m.dir, wired = wired }, { __index = _G })
@@ -99,11 +110,43 @@ function A.launch(e, arg)
     local r = fn(arg)
     if type(r) == "function" then r = r(arg) end
     if type(r) ~= "table" then error("программа не вернула окно", 0) end
-    r.title = r.title or m.name
+    r.title = r.title or e.name
     r.icon = r.icon or e.icon
     wm.open(r)
   end)
   if not ok then wm.notify({ title = "Не запустилось: " .. tostring(e.name), text = tostring(err) }) end
+end
+
+--- Службы программ (service в app.lua): работают в фоне всё время, пока запущена система.
+function A.startServices()
+  for _, e in ipairs(A.installed()) do
+    local m = e.m
+    if m.service and not A.running then A.running = {} end
+    if m.service and not A.running[m.id] then
+      A.running[m.id] = true
+      local path = fs.combine(m.dir, m.service)
+      local env = setmetatable({ APP_DIR = m.dir, wired = wired }, { __index = _G })
+      local fn, err = loadfile(path, env)
+      if fn then wm.spawn(fn, function(ok, e2) A.running[m.id] = nil end)
+      else wm.notify({ title = "Служба «" .. m.name .. "» не запустилась", text = tostring(err) }) end
+    end
+  end
+end
+
+--- Найти программу по полю (например, по расширению файла, которое она открывает).
+function A.forExt(ext)
+  for _, e in ipairs(A.installed()) do
+    local p = e.m.programs and nil
+    local exts = e.m.opens
+    if e.m.programs then
+      for _, pp in ipairs(e.m.programs) do
+        if pp.name == e.name and pp.opens then exts = pp.opens end
+      end
+    end
+    if type(exts) == "table" then
+      for _, x in ipairs(exts) do if x == ext then return e end end
+    end
+  end
 end
 
 -- ======================= установка =======================
@@ -153,7 +196,10 @@ function A.install(src, step, done)
   local dst = "/apps/" .. m.id
   if fs.exists(dst) then fs.delete(dst) end
   A.copyTree(src, dst, step, function(ok, e)
-    if ok then wm.refreshDesktop() end
+    if ok then
+      wm.refreshDesktop()
+      pcall(A.startServices)
+    end
     done(ok, e, m)
   end)
 end

@@ -116,9 +116,13 @@ function wired.onEvent(ev)
   end
 end
 
+function wired.onLogin()
+  pcall(wired.apps.startServices)
+end
+
 wired.applyScale()
 wm.layout()
-if auth and not auth.open() and not auth.user() then wm.startLogin() end
+if auth and not auth.open() and not auth.user() then wm.startLogin() else wired.onLogin() end
 
 -- часы на панели — раз в 20 секунд
 local function clock()

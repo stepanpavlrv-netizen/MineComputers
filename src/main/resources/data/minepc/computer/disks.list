@@ -1,4 +1,18 @@
 # Файлы дискет с программами. Обновляется tools/computer/update_rom_list.py
+cameras/app/app.lua
+cameras/app/icon.pix
+cameras/app/main.lua
+cameras/readme.txt
+mail/app/app.lua
+mail/app/icon.pix
+mail/app/lib.lua
+mail/app/main.lua
+mail/app/service.lua
+mail/readme.txt
+office/app/app.lua
+office/app/docs.lua
+office/app/tables.lua
+office/readme.txt
 wired/install.lua
 wired/readme.txt
 wired/startup.lua

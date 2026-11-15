@@ -32,6 +32,46 @@ function wm.redraw(win) if win and not win.min then wm.invalidateWin(win) end en
 local function invalidateBar() wm.invalidate(1, DH + 1, G.W, TB) end
 wm.invalidateBar = invalidateBar
 
+-- ======================= фоновые задачи =======================
+-- Сопрограмма, которой можно ждать событий (сеть, таймеры) и не держать систему: wm.spawn(fn, done).
+local tasks = {}
+local nullTerm = setmetatable({}, { __index = function() return function() return 0, 0 end end })
+
+local function resumeTask(t, ...)
+  local saved = term
+  _G.term = nullTerm
+  local r = table.pack(coroutine.resume(t.co, ...))
+  _G.term = saved
+  local ok, res = r[1], r[2]
+  if not ok or coroutine.status(t.co) == "dead" then
+    for i, x in ipairs(tasks) do if x == t then table.remove(tasks, i) break end end
+    if t.done then
+      local okd, err = pcall(t.done, table.unpack(r, 1, r.n))
+      if not okd then wm.notify({ title = "Ошибка", text = tostring(err) }) end
+    elseif not ok then
+      wm.notify({ title = "Ошибка в фоне", text = tostring(res) })
+    end
+  else
+    t.filter = res
+  end
+end
+
+function wm.spawn(fn, done)
+  local t = { co = coroutine.create(fn), done = done }
+  tasks[#tasks + 1] = t
+  resumeTask(t)
+  return t
+end
+
+local function feedTasks(ev)
+  if #tasks == 0 then return end
+  local list = {}
+  for i, t in ipairs(tasks) do list[i] = t end
+  for _, t in ipairs(list) do
+    if t.filter == nil or t.filter == ev[1] or ev[1] == "terminate" then resumeTask(t, table.unpack(ev, 1, ev.n)) end
+  end
+end
+
 --- Таймер Wired: fn вызовется через sec секунд. Возвращает номер.
 function wm.after(sec, fn)
   local id = os.startTimer(sec)
@@ -659,6 +699,7 @@ function wm.handle(ev)
     if wm.focus then deliver(wm.focus, name, ev[2], ev[3], ev[4]) end
   else
     if wired.onEvent then wired.onEvent(ev) end
+    feedTasks(ev)
     for _, win in ipairs(wm.windows) do deliver(win, table.unpack(ev, 1, ev.n)) end
   end
 end
@@ -674,6 +715,7 @@ end
 function wm.prompt(title, label, default, fn)
   local f = U.field(default or "", "f")
   f.focused = true
+  f.fresh = (default or "") ~= ""      -- первая буква заменяет подсказанный текст, стрелки — правят его
   local win
   local function done(v) wm.close(win, true) fn(v) end
   win = dialog(title, min(56, G.W - 2), 7, function(w, c)
@@ -687,6 +729,13 @@ function wm.prompt(title, label, default, fn)
       if a == "ok" then done(f.text) elseif a == "no" then done(nil) end
     elseif ev == "key" and a == "escape" then done(nil)
     elseif ev == "char" or ev == "key" or ev == "paste" then
+      if f.fresh then
+        if ev == "char" or ev == "paste" or (ev == "key" and (a == "backspace" or a == "delete")) then
+          f.text, f.pos = "", 0
+          if ev == "key" then f.fresh = false wm.redraw(w) return end
+        end
+        if ev ~= "key" or a ~= "enter" then f.fresh = false end
+      end
       if U.edit(f, ev, a) == "enter" then done(f.text) return end
       wm.redraw(w)
     end

@@ -222,8 +222,13 @@ final class Canvas {
                     int o = base(a, t);
                     if (cv.freed) throw LuaApis.error("буфер освобождён");
                     int x = a.arg(o + 1).optInteger(1) - 1, y = a.arg(o + 2).optInteger(1) - 1;
-                    int changed = c.terminal().putPixels(x, y, cv.px, cv.w, cv.h);
-                    c.chargeGpu(changed / 4);
+                    // В активный буфер видеокарты (так программа с задним буфером, например Wired, рисует кадр к себе)
+                    Terminal dst = gpu.target();
+                    // необязательная обрезка: present(x, y, x1, y1, x2, y2) — клетки, куда можно рисовать
+                    int changed = a.arg(o + 3).isNil() ? dst.putPixels(x, y, cv.px, cv.w, cv.h)
+                            : dst.putPixels(x, y, cv.px, cv.w, cv.h, a.arg(o + 3).checkInteger() - 1, a.arg(o + 4).checkInteger() - 1,
+                            a.arg(o + 5).checkInteger() - 1, a.arg(o + 6).checkInteger() - 1);
+                    if (gpu.targetIsScreen()) c.chargeGpu(changed / 4);
                     m.spend(cv.px.length / 32 + 8);
                     return valueOf(changed);
                 }),

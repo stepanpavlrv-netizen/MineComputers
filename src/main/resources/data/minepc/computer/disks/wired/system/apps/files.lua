@@ -57,6 +57,8 @@ return function(arg)
       return
     end
     local ext = item.name:match("%.([%w]+)$")
+    local owner = ext and A.forExt(ext:lower())
+    if owner then A.launch(owner, p) return end
     if ext == "lua" then
       wm.open(wired.vterm.app(p, {}, { title = item.name, closeOnExit = false, dir = st.path }))
     else

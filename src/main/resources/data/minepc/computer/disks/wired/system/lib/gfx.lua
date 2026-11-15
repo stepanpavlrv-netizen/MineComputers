@@ -162,6 +162,25 @@ function G.cut(s, n)
   if n <= 1 then return usub(s, 1, n) end
   return usub(s, 1, n - 1) .. "…"
 end
+--- Разбить текст на строки шириной w (по словам; \n — новая строка).
+function G.wrap(text, w)
+  local out = {}
+  w = math.max(1, w)
+  for para in (tostring(text) .. "\n"):gmatch("(.-)\n") do
+    if para == "" then out[#out + 1] = "" else
+      local line = ""
+      for word in para:gmatch("%S+") do
+        if line == "" then line = word
+        elseif ulen(line) + 1 + ulen(word) <= w then line = line .. " " .. word
+        else out[#out + 1] = line line = word end
+        while ulen(line) > w do out[#out + 1] = usub(line, 1, w) line = usub(line, w + 1) end
+      end
+      out[#out + 1] = line
+    end
+  end
+  return out
+end
+
 function G.pad(s, n)
   s = G.cut(s, n)
   return s .. string.rep(" ", n - ulen(s))

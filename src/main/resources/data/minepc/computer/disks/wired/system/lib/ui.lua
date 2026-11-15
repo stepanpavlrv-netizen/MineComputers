@@ -13,6 +13,11 @@ function U.canvas(win)
   function c.text(x, y, s, fg, bg) G.text(X(x), Y(y), s, fg, bg or c.bg) end
   function c.sprite(x, y, art, pal) G.sprite(X(x), Y(y), art, pal or I.PAL) end
   function c.half(x, y, w, top, bot) G.half(X(x), Y(y), w, top, bot) end
+  --- Кадровый буфер видеокарты (gpu.canvas) в точке окна x, y — только в пределах обрезки.
+  function c.canvas(cv, x, y)
+    local a, b, cc, d = G.getClip()
+    return cv:present(X(x), Y(y), a, b, cc, d)
+  end
   function c.hit(x, y, w, h, id, data)
     win.hits[#win.hits + 1] = { x, y, x + w - 1, y + h - 1, id, data }
   end
@@ -51,7 +56,7 @@ function U.canvas(win)
     if text == "" and placeholder and not f.focused then
       c.text(x + 1, y, G.cut(placeholder, room), T.faint, T.field)
     else
-      c.text(x + 1, y, G.sub(text, start + 1, start + room), T.fg, T.field)
+      c.text(x + 1, y, G.sub(text, start + 1, start + room), f.fresh and T.ink or T.fg, f.fresh and T.sel or T.field)
     end
     if f.focused then
       local cx = x + 1 + f.pos - start
@@ -104,6 +109,100 @@ function U.edit(f, ev, a)
       return nil
     end
     return true
+  end
+end
+
+-- ======================= многострочное поле (письмо, заметка) =======================
+
+function U.area(text)
+  local a = { lines = {}, row = 1, col = 0, top = 0, focused = false }
+  for l in ((text or "") .. "\n"):gmatch("(.-)\n") do a.lines[#a.lines + 1] = l end
+  if #a.lines == 0 then a.lines[1] = "" end
+  return a
+end
+
+function U.areaText(a) return table.concat(a.lines, "\n") end
+
+--- Клавиша или символ в многострочном поле (w — ширина: длинная строка переносится по словам).
+function U.areaEdit(a, ev, k, w)
+  local line = a.lines[a.row]
+  local n = G.len(line)
+  local function insert(t)
+    a.lines[a.row] = G.sub(line, 1, a.col) .. t .. G.sub(line, a.col + 1)
+    a.col = a.col + G.len(t)
+    line = a.lines[a.row]
+    if w and G.len(line) > w then
+      local cut = w
+      for i = w, 1, -1 do if G.sub(line, i, i) == " " then cut = i break end end
+      local rest = G.sub(line, cut + 1)
+      a.lines[a.row] = G.sub(line, 1, cut)
+      table.insert(a.lines, a.row + 1, rest)
+      if a.col > cut then a.row, a.col = a.row + 1, a.col - cut end
+    end
+  end
+  if ev == "char" then insert(k)
+  elseif ev == "paste" then
+    local first = true
+    for part in (tostring(k) .. "\n"):gmatch("(.-)\n") do
+      if not first then
+        local l = a.lines[a.row]
+        a.lines[a.row] = G.sub(l, 1, a.col)
+        table.insert(a.lines, a.row + 1, G.sub(l, a.col + 1))
+        a.row, a.col = a.row + 1, 0
+        line = a.lines[a.row]
+      end
+      insert(part)
+      first = false
+    end
+  elseif ev == "key" then
+    if k == "enter" then
+      a.lines[a.row] = G.sub(line, 1, a.col)
+      table.insert(a.lines, a.row + 1, G.sub(line, a.col + 1))
+      a.row, a.col = a.row + 1, 0
+    elseif k == "backspace" then
+      if a.col > 0 then
+        a.lines[a.row] = G.sub(line, 1, a.col - 1) .. G.sub(line, a.col + 1)
+        a.col = a.col - 1
+      elseif a.row > 1 then
+        local prev = a.lines[a.row - 1]
+        a.col = G.len(prev)
+        a.lines[a.row - 1] = prev .. line
+        table.remove(a.lines, a.row)
+        a.row = a.row - 1
+      end
+    elseif k == "delete" then
+      if a.col < n then a.lines[a.row] = G.sub(line, 1, a.col) .. G.sub(line, a.col + 2)
+      elseif a.row < #a.lines then a.lines[a.row] = line .. a.lines[a.row + 1] table.remove(a.lines, a.row + 1) end
+    elseif k == "left" then
+      if a.col > 0 then a.col = a.col - 1 elseif a.row > 1 then a.row = a.row - 1 a.col = G.len(a.lines[a.row]) end
+    elseif k == "right" then
+      if a.col < n then a.col = a.col + 1 elseif a.row < #a.lines then a.row = a.row + 1 a.col = 0 end
+    elseif k == "up" and a.row > 1 then a.row = a.row - 1 a.col = math.min(a.col, G.len(a.lines[a.row]))
+    elseif k == "down" and a.row < #a.lines then a.row = a.row + 1 a.col = math.min(a.col, G.len(a.lines[a.row]))
+    elseif k == "home" then a.col = 0
+    elseif k == "end" then a.col = n
+    else return nil end
+  else
+    return nil
+  end
+  return true
+end
+
+--- Нарисовать многострочное поле на холсте c.
+function U.drawArea(c, x, y, w, h, a, bg, fg)
+  bg, fg = bg or T.field, fg or T.fg
+  c.fill(x, y, w, h, bg)
+  if a.row <= a.top then a.top = a.row - 1 end
+  if a.row > a.top + h then a.top = a.row - h end
+  for i = 1, h do
+    local l = a.lines[a.top + i]
+    if not l then break end
+    c.text(x + 1, y + i - 1, G.sub(l, 1, w - 2), fg, bg)
+  end
+  if a.focused then
+    local cy = y + a.row - a.top - 1
+    local ch = G.sub(a.lines[a.row], a.col + 1, a.col + 1)
+    c.text(x + 1 + a.col, cy, ch ~= "" and ch or " ", bg, T.accent)
   end
 end
 
