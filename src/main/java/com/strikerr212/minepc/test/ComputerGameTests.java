@@ -93,7 +93,7 @@ public class ComputerGameTests {
                 })
                 .thenWaitUntil(() -> h.assertTrue(be.screenText().contains("/>"), "Нет командной строки:\n" + be.screenText()))
                 .thenExecute(() -> type(be, "info"))
-                .thenWaitUntil(() -> h.assertTrue(be.screenText().contains("Видеоядро процессора, до 100×30"),
+                .thenWaitUntil(() -> h.assertTrue(be.screenText().contains("Видеоядро процессора, до 120×40"),
                         "info не показал видеоядро:\n" + be.screenText()))
                 .thenSucceed();
     }
