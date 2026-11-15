@@ -795,14 +795,21 @@ public class CiScreenshots {
             case 6040 -> keyAt(lanJ2, "2");
             case 6042 -> keyUpAt(lanJ2, "2");
             case 6046 -> keyAt(lanJ2, "ctrl");
-            case 6066 -> shot(mc, "razlom_fight");
+            case 6066 -> { shot(mc, "razlom_fight"); logMouseLock(); }   // сверху подсказка «Мышь в игре · Esc — отпустить»
             case 6090 -> { keyUpAt(lanJ2, "ctrl"); keyAt(lanJ2, "up"); }
             case 6098 -> { keyUpAt(lanJ2, "up"); keyAt(lanJ2, "right"); }
             case 6110 -> keyUpAt(lanJ2, "right");
+            case 6112 -> {   // поворот захваченной мышью: 45° вправо — как будто игрок двинул мышь
+                server.execute(() -> {
+                    if (server.overworld().getBlockEntity(lanJ2) instanceof PcCaseBlockEntity pc) {
+                        pc.mouse(com.strikerr212.minepc.network.TerminalInputPayload.MOUSE_MOVE, 0, 4500, 0);
+                    }
+                });
+            }
             case 6120 -> shot(mc, "razlom_look_up");
             case 6126 -> { keyAt(lanJ2, "q"); logRazlom(); }
             case 6128 -> keyAt(lanJ2, "q");
-            case 6150 -> { logRazlom(); shot(mc, "razlom_exit"); }
+            case 6150 -> { logRazlom(); logMouseLock(); shot(mc, "razlom_exit"); }
             case 6154 -> mc.stop();
             default -> {
             }
@@ -1957,6 +1964,12 @@ public class CiScreenshots {
         server.execute(() -> {
             if (server.overworld().getBlockEntity(pos) instanceof PcCaseBlockEntity be) be.input(TerminalInputPayload.KEY_UP, key, false, false);
         });
+    }
+
+    /** Захват мыши, как его видит клиент (кадр с сервера) и окно экрана. */
+    private static void logMouseLock() {
+        var s = ClientTerminals.get(lanJ2);
+        com.mojang.logging.LogUtils.getLogger().info("[CI-RAZLOM] захват мыши: {}", s != null && s.mouseLock());
     }
 
     /** Нижние строки экрана компьютера с «Разломом» (счёт, сообщения об ошибках) — в журнал. */

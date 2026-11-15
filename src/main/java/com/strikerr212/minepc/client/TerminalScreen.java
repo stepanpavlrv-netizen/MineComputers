@@ -108,11 +108,21 @@ public class TerminalScreen extends Screen {
             g.pose().popPose();
         }
 
+        // Захват мыши: подсказка сверху (у консоли стойки там вкладки — тогда под экраном, вместо обычной)
+        updateMouseLock(s);
+        Component lockHint = s != null && s.mouseLock()
+                ? Component.translatable(grabbed ? "gui.minepc.terminal.mouse_locked" : "gui.minepc.terminal.mouse_free") : null;
+
         boolean keyboard = ClientTerminals.keyboard(host);
         Component hint = keyboard ? Component.translatable("gui.minepc.terminal.hint2")
                 : Component.translatable("gui.minepc.terminal.no_keyboard");
-        g.drawCenteredString(font, hint, width / 2, termY + sh + 14, keyboard ? TEXT_DIM : 0xFFE0A040);
+        if (lockHint != null && console != null) g.drawCenteredString(font, lockHint, width / 2, termY + sh + 14, TEXT_DIM);
+        else g.drawCenteredString(font, hint, width / 2, termY + sh + 14, keyboard ? TEXT_DIM : 0xFFE0A040);
         g.drawString(font, heading(), 8, 10, 0xFFE6E8EB, false);
+        if (lockHint != null && console == null) {
+            int x = 8 + font.width(heading()) + 12;
+            g.drawString(font, font.plainSubstrByWidth(lockHint.getString(), Math.max(0, width - 72 - x)), x, 10, TEXT_DIM, false);
+        }
     }
 
     /** Заголовок: у сервера в стойке — его имя или место. */
@@ -187,6 +197,92 @@ public class TerminalScreen extends Screen {
         vc.addVertex(m, x1, y0, 0).setColor(argb);
     }
 
+    // ======================= Захват мыши (обзор в играх) =======================
+
+    /** Мышь захвачена: курсора нет, движение уходит в программу. */
+    private boolean grabbed;
+    /** Игрок отпустил мышь (Esc или переключился в другое окно) — ждём щелчка по экрану. */
+    private boolean released;
+    /** Первый кадр после захвата: GLFW может «прыгнуть» курсором — этот сдвиг не считаем. */
+    private boolean skipMove;
+    private double lastMouseX, lastMouseY, carryX, carryY;
+    private long lastMoveSent;
+    /** Не чаще 40 раз в секунду: плавно для игры и немного трафика на сервере. */
+    private static final long MOVE_INTERVAL_NANOS = 25_000_000L;
+
+    /** Каждый кадр: захватить или отпустить мышь по просьбе программы и отправить накопленный сдвиг. */
+    private void updateMouseLock(ClientTerminals.Snapshot s) {
+        if (minecraft == null) return;
+        boolean lock = s != null && s.mouseLock();
+        if (!lock) {
+            if (grabbed) ungrab();
+            released = false;
+            return;
+        }
+        if (grabbed && !minecraft.isWindowActive()) {   // свернули игру — мышь отпускаем, вернуть щелчком
+            ungrab();
+            released = true;
+        }
+        if (!grabbed && !released && minecraft.isWindowActive()) grab();
+        if (!grabbed) return;
+
+        double mx = minecraft.mouseHandler.xpos(), my = minecraft.mouseHandler.ypos();
+        if (skipMove) {
+            skipMove = false;
+        } else {
+            // Как в самом Minecraft: чувствительность из настроек игрока, сдвиг — в сотых долях градуса
+            double f = minecraft.options.sensitivity().get() * 0.6 + 0.2;
+            double k = f * f * f * 8.0 * 0.15 * 100.0;
+            carryX += (mx - lastMouseX) * k;
+            carryY += (my - lastMouseY) * k;
+        }
+        lastMouseX = mx;
+        lastMouseY = my;
+        long now = System.nanoTime();
+        if (now - lastMoveSent < MOVE_INTERVAL_NANOS) return;
+        int dx = (int) carryX, dy = (int) carryY;
+        if (dx == 0 && dy == 0) return;
+        carryX -= dx;
+        carryY -= dy;
+        lastMoveSent = now;
+        PacketDistributor.sendToServer(new TerminalInputPayload(host, TerminalInputPayload.MOUSE_MOVE, "", 0, dx, dy));
+    }
+
+    private void grab() {
+        if (minecraft == null) return;
+        var window = minecraft.getWindow();
+        com.mojang.blaze3d.platform.InputConstants.grabOrReleaseMouse(window.getWindow(), GLFW.GLFW_CURSOR_DISABLED,
+                window.getScreenWidth() / 2.0, window.getScreenHeight() / 2.0);
+        grabbed = true;
+        released = false;
+        skipMove = true;
+        carryX = carryY = 0;
+    }
+
+    private void ungrab() {
+        grabbed = false;
+        if (minecraft == null) return;
+        var window = minecraft.getWindow();
+        com.mojang.blaze3d.platform.InputConstants.grabOrReleaseMouse(window.getWindow(), GLFW.GLFW_CURSOR_NORMAL,
+                window.getScreenWidth() / 2.0, window.getScreenHeight() / 2.0);
+        if (pressedButton != 0) {   // кнопку держали в момент отпускания — программа должна узнать, что её отпустили
+            sendMouse(TerminalInputPayload.MOUSE_UP, pressedButton, centerCell());
+            pressedButton = 0;
+        }
+    }
+
+    /** При захвате щелчки и прокрутка приходят программе в середину экрана. */
+    private int[] centerCell() {
+        ClientTerminals.Snapshot s = ClientTerminals.get(host);
+        return s == null ? new int[]{1, 1} : new int[]{s.width() / 2 + 1, s.height() / 2 + 1};
+    }
+
+    @Override
+    public void removed() {
+        if (grabbed) ungrab();
+        super.removed();
+    }
+
     // ======================= Мышь и файлы =======================
 
     private int lastCellX = -1, lastCellY = -1, pressedButton;
@@ -206,7 +302,22 @@ public class TerminalScreen extends Screen {
 
     @Override
     public boolean mouseClicked(double mx, double my, int button) {
+        if (grabbed) {   // мышь в игре: кнопка — программе (огонь), позиция — середина экрана
+            pressedButton = button + 1;
+            int[] c = centerCell();
+            lastCellX = c[0];
+            lastCellY = c[1];
+            sendMouse(TerminalInputPayload.MOUSE_DOWN, pressedButton, c);
+            return true;
+        }
         int[] cell = cellAt(mx, my);
+        if (released && cell != null) {   // щелчок по экрану возвращает захват (сам щелчок программе не нужен)
+            ClientTerminals.Snapshot s = ClientTerminals.get(host);
+            if (s != null && s.mouseLock()) {
+                grab();
+                return true;
+            }
+        }
         if (cell == null) return super.mouseClicked(mx, my, button);
         pressedButton = button + 1;
         lastCellX = cell[0];
@@ -217,6 +328,7 @@ public class TerminalScreen extends Screen {
 
     @Override
     public boolean mouseDragged(double mx, double my, int button, double dx, double dy) {
+        if (grabbed) return true;   // при захвате движение уходит событием mouse_move, а не перетаскиванием
         int[] cell = cellAt(mx, my);
         if (cell == null || pressedButton == 0) return super.mouseDragged(mx, my, button, dx, dy);
         if (cell[0] != lastCellX || cell[1] != lastCellY) {   // только когда мышь перешла в другую клетку
@@ -230,7 +342,7 @@ public class TerminalScreen extends Screen {
     @Override
     public boolean mouseReleased(double mx, double my, int button) {
         if (pressedButton != 0) {
-            int[] cell = cellAt(mx, my);
+            int[] cell = grabbed ? null : cellAt(mx, my);
             if (cell == null) cell = new int[]{Math.max(1, lastCellX), Math.max(1, lastCellY)};
             sendMouse(TerminalInputPayload.MOUSE_UP, pressedButton, cell);
             pressedButton = 0;
@@ -241,7 +353,7 @@ public class TerminalScreen extends Screen {
 
     @Override
     public boolean mouseScrolled(double mx, double my, double scrollX, double scrollY) {
-        int[] cell = cellAt(mx, my);
+        int[] cell = grabbed ? centerCell() : cellAt(mx, my);
         if (cell == null || scrollY == 0) return super.mouseScrolled(mx, my, scrollX, scrollY);
         sendMouse(TerminalInputPayload.MOUSE_SCROLL, scrollY > 0 ? -1 : 1, cell);
         return true;
@@ -310,6 +422,11 @@ public class TerminalScreen extends Screen {
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
         if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
+            if (grabbed) {   // первый Esc отпускает мышь, второй — закрывает экран
+                ungrab();
+                released = true;
+                return true;
+            }
             onClose();
             return true;
         }

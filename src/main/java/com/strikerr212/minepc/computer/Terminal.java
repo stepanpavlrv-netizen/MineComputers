@@ -26,6 +26,8 @@ public final class Terminal {
     private int[] fg, bg;
     private int cursorX, cursorY;
     private boolean cursorBlink = true;
+    /** Программа просит захватить мышь (обзор в 3D-играх): движение приходит событием mouse_move. */
+    private boolean mouseLock;
     private final int[] palette = DEFAULT_PALETTE.clone();
     private int textColor = DEFAULT_PALETTE[WHITE], backColor = DEFAULT_PALETTE[BLACK];
     /** Номер цвета палитры, если цвет задан номером (для term.getTextColor), иначе -1. */
@@ -92,6 +94,13 @@ public final class Terminal {
     public synchronized int cursorX() { return cursorX; }
     public synchronized int cursorY() { return cursorY; }
     public synchronized boolean cursorBlink() { return cursorBlink; }
+    public synchronized boolean mouseLock() { return mouseLock; }
+
+    public synchronized void setMouseLock(boolean lock) {
+        if (mouseLock == lock) return;
+        mouseLock = lock;
+        version++;
+    }
     public synchronized int version() { return version; }
 
     // ======================= Цвета =======================
@@ -421,7 +430,7 @@ public final class Terminal {
         out[5] = (byte) (cx >> 8);
         out[6] = (byte) cy;
         out[7] = (byte) (cy >> 8);
-        out[8] = (byte) (cursorBlink ? 1 : 0);
+        out[8] = (byte) ((cursorBlink ? 1 : 0) | (mouseLock ? 2 : 0));
         out[9] = (byte) depth;
         int c = TerminalCodec.HEADER, f = c + 2 * n, b = f + 3 * n;
         for (int i = 0; i < n; i++) {

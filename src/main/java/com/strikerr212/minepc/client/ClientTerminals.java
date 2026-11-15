@@ -14,7 +14,7 @@ public final class ClientTerminals {
 
     /** Разобранный кадр: символы и цвета (RGB) каждой клетки. */
     public record Snapshot(HostRef host, int width, int height, int cursorX, int cursorY, boolean blink, int depth,
-                           char[] chars, int[] fg, int[] bg) {
+                           char[] chars, int[] fg, int[] bg, boolean mouseLock) {
 
         static Snapshot parse(HostRef pos, byte[] f) {
             int w = TerminalCodec.width(f), h = TerminalCodec.height(f), n = w * h;
@@ -27,7 +27,8 @@ public final class ClientTerminals {
                 fg[i] = (f[pf++] & 0xFF) << 16 | (f[pf++] & 0xFF) << 8 | (f[pf++] & 0xFF);
                 bg[i] = (f[pb++] & 0xFF) << 16 | (f[pb++] & 0xFF) << 8 | (f[pb++] & 0xFF);
             }
-            return new Snapshot(pos, w, h, TerminalCodec.cursorX(f), TerminalCodec.cursorY(f), TerminalCodec.blink(f), TerminalCodec.depth(f), c, fg, bg);
+            return new Snapshot(pos, w, h, TerminalCodec.cursorX(f), TerminalCodec.cursorY(f), TerminalCodec.blink(f), TerminalCodec.depth(f), c, fg, bg,
+                    TerminalCodec.mouseLock(f));
         }
     }
 

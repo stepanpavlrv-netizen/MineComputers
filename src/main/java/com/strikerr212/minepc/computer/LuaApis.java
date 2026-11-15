@@ -741,6 +741,9 @@ final class LuaApis {
                     return Constants.NONE;
                 }),
                 RegisteredFunction.ofV("setCursorBlink", (s, a) -> { t.setCursorBlink(a.arg(1).toBoolean()); return Constants.NONE; }),
+                // Захват мыши для игр: курсор у игрока пропадает, движение приходит событием mouse_move (dx, dy в градусах)
+                RegisteredFunction.ofV("setMouseLock", (s, a) -> { t.setMouseLock(a.arg(1).toBoolean()); return Constants.NONE; }),
+                RegisteredFunction.ofV("getMouseLock", (s, a) -> valueOf(t.mouseLock())),
                 RegisteredFunction.ofV("getSize", (s, a) -> varargsOf(valueOf(t.width()), valueOf(t.height()))),
                 RegisteredFunction.ofV("scroll", (s, a) -> { c.chargeGpu(t.cells() / 8); t.scroll(a.arg(1).checkInteger()); return Constants.NONE; }),
                 RegisteredFunction.ofV("getResolution", (s, a) -> varargsOf(valueOf(t.width()), valueOf(t.height()))),

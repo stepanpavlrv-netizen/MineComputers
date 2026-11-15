@@ -117,6 +117,8 @@ while running do
     if history[#history] ~= line then history[#history + 1] = line end
     if #history > 50 then table.remove(history, 1) end
     shell.run(line)
+    -- программа могла упасть, не отпустив мышь (игры с обзором мышью) — в командной строке захват не нужен
+    if term.getMouseLock and term.getMouseLock() then term.setMouseLock(false) end
   end
 end
 

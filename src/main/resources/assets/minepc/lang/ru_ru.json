@@ -947,5 +947,7 @@
   "tooltip.minepc.program_disk_hint": "Вставь в дисковод — Wired предложит установить",
   "tooltip.minepc.program_disk_wired": "Загрузись с неё или набери /disk/install",
   "gui.minepc.router.unsaved": "Есть несохранённые изменения — «Сохранить» или «Готово»",
-  "tooltip.minepc.screen_px": "Экран: до %s символов (%s точек для игр)"
+  "tooltip.minepc.screen_px": "Экран: до %s символов (%s точек для игр)",
+  "gui.minepc.terminal.mouse_locked": "Мышь в игре · Esc — отпустить",
+  "gui.minepc.terminal.mouse_free": "Щёлкните по экрану — управлять мышью · Esc — закрыть"
 }

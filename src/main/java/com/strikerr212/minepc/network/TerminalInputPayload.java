@@ -22,7 +22,9 @@ import net.minecraft.resources.ResourceLocation;
 public record TerminalInputPayload(com.strikerr212.minepc.block.HostRef host, int kind, String text, int flags, int x, int y) implements CustomPacketPayload {
 
     public static final int CHAR = 0, KEY = 1, KEY_UP = 2, PASTE = 3, TERMINATE = 4, POWER = 5, REFRESH = 6,
-            MOUSE_DOWN = 7, MOUSE_DRAG = 8, MOUSE_UP = 9, MOUSE_SCROLL = 10;
+            MOUSE_DOWN = 7, MOUSE_DRAG = 8, MOUSE_UP = 9, MOUSE_SCROLL = 10,
+            /** Захваченная мышь сдвинулась: x, y — поворот в сотых долях градуса (с чувствительностью игрока). */
+            MOUSE_MOVE = 11;
     public static final int MAX_TEXT = 32000;
     /** В flags: клавишу нажали (не автоповтор) — пусть другие услышат стук. */
     public static final int FLAG_CLICK = 8;

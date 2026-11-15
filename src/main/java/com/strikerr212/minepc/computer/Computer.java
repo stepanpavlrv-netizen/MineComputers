@@ -358,6 +358,7 @@ public final class Computer {
         terminal.resize(Math.min(BOOT_WIDTH, terminal.maxWidth()), Math.min(BOOT_HEIGHT, terminal.maxHeight()));
         terminal.setCursor(0, 0);
         terminal.setCursorBlink(false);
+        terminal.setMouseLock(false);
         // Загрузку системы (время по скорости диска) теперь показывает BIOS после самотеста
         bootRemaining = 0;
         state = State.RUNNING;

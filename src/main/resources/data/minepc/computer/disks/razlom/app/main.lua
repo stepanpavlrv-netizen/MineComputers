@@ -30,6 +30,7 @@ return function()
     if not fn then lastErr = tostring(err) wm.redraw(win) return end
     G.release()                                  -- видеопамять заднего буфера — игре
     local ok, r, msg = pcall(fn, mode, "wired")
+    if term and term.setMouseLock then pcall(term.setMouseLock, false) end   -- если игра упала, не отпустив мышь
     wm.layout()                                  -- вернуть буфер и перерисовать рабочий стол
     if not ok then lastErr = tostring(r)
     elseif r == false then lastErr = tostring(msg)
@@ -45,8 +46,8 @@ return function()
     c.text(3, 7, "Станция над кислотным разломом захвачена. Уничтожьте всех —", T.fg)
     c.text(3, 8, "откроется портал. Настоящее 3D: мост над залом, балконы, взгляд", T.fg)
     c.text(3, 9, "вверх и вниз, прыжок на взрыве плазмы.", T.fg)
-    c.text(3, 11, "W/S/A/D ходьба · ←/→ поворот · ↑/↓ взгляд · пробел прыжок", T.dim)
-    c.text(3, 12, "Ctrl или F огонь · 1/2/3 оружие · P пауза · Q выход", T.dim)
+    c.text(3, 11, "Мышь обзор (Esc — отпустить) · W/S/A/D ходьба · пробел прыжок", T.dim)
+    c.text(3, 12, "ЛКМ, Ctrl или F огонь · 1/2/3 оружие · стрелки поворот · P пауза · Q выход", T.dim)
     c.text(3, 14, record(), T.warn or 0xffc857)
     local x = c.button(3, 16, "Играть", "play", "primary") + 1
     c.button(x, 16, "Облёт уровня", "demo")

@@ -89,7 +89,7 @@ public class ModNetwork {
                         if (msg != null) player.displayClientMessage(msg, true);
                         return;
                     }
-                    if (payload.kind() >= TerminalInputPayload.MOUSE_DOWN && payload.kind() <= TerminalInputPayload.MOUSE_SCROLL) {
+                    if (payload.kind() >= TerminalInputPayload.MOUSE_DOWN && payload.kind() <= TerminalInputPayload.MOUSE_MOVE) {
                         pc.mouse(payload.kind(), payload.flags(), payload.x(), payload.y());   // мышь работает и без клавиатуры
                         return;
                     }

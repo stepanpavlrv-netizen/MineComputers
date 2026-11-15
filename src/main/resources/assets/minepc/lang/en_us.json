@@ -947,5 +947,7 @@
   "tooltip.minepc.program_disk_hint": "Insert it: Wired will offer to install",
   "tooltip.minepc.program_disk_wired": "Boot from it or run /disk/install",
   "gui.minepc.router.unsaved": "Unsaved changes — press Save or Done",
-  "tooltip.minepc.screen_px": "Screen: up to %s characters (%s pixels for games)"
+  "tooltip.minepc.screen_px": "Screen: up to %s characters (%s pixels for games)",
+  "gui.minepc.terminal.mouse_locked": "Mouse captured · Esc to release",
+  "gui.minepc.terminal.mouse_free": "Click the screen to use the mouse · Esc to close"
 }

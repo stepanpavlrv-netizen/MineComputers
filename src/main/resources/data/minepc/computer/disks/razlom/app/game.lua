@@ -3,8 +3,8 @@
 --   game            — играть
 --   game demo [с]   — облёт уровня (сам), для показа
 --   game bench [N]  — замер: N кадров облёта, печатает кадры в секунду
--- Управление: W/S/A/D — ходьба, ←/→ — поворот, ↑/↓ — взгляд, пробел — прыжок, Ctrl или F (или левая кнопка
--- мыши) — огонь, 1/2/3 — оружие, правая кнопка мыши с протяжкой — обзор, P — пауза, Q — выход.
+-- Управление: мышь — обзор (захватывается на время боя, Esc отпускает), W/S/A/D — ходьба, ←/→ и ↑/↓ — поворот
+-- и взгляд клавишами, пробел — прыжок, левая кнопка мыши, Ctrl или F — огонь, 1/2/3 — оружие, P — пауза, Q — выход.
 local args = { ... }
 local mode = args[1] or "play"
 -- «wired» среди аргументов — запущено из окна Wired: экран потом перерисует сама система
@@ -690,6 +690,8 @@ end
 -- ======================= игрок =======================
 local keys = {}
 local mouseFire, dragX, dragY = false, nil, nil
+local mouseLocked = nil   -- просили ли захват мыши (term.setMouseLock)
+local MOUSE_RAD = pi / 180  -- mouse_move приходит в градусах — с чувствительностью из настроек игрока
 
 local function updatePlayer(dt)
   if P.dead then
@@ -905,8 +907,8 @@ local function hud(fps)
   end
   gpu.set(x, H, slots)
   local hint = mode == "demo" and "Демо: облёт станции · Q — выход"
-          or "WASD · ←→ поворот · ↑↓ взгляд · пробел прыжок · Ctrl огонь · P пауза · Q выход"
-  if unicode.len(hint) > W - 26 then hint = "WASD ←→↑↓ · Ctrl огонь · Q выход" end
+          or "Мышь обзор · WASD · пробел прыжок · ЛКМ/Ctrl огонь · P пауза · Q выход"
+  if unicode.len(hint) > W - 26 then hint = "Мышь · WASD · ЛКМ огонь · Q выход" end
   gpu.set(14, H, hint)
   gpu.setForeground(0x5d5775)
   gpu.set(W - 9, H, string.format("%3d к/с", fps))
@@ -1082,7 +1084,12 @@ local function saveRecord(sec)
 end
 
 -- ======================= главный цикл =======================
+local function setMouseLock(on)
+  if term and term.setMouseLock and mouseLocked ~= on then pcall(term.setMouseLock, on) mouseLocked = on end
+end
+
 local function finish(text)
+  setMouseLock(false)
   if snd then pcall(snd.stop) end
   pcall(function() cv:free() end)
   for _, l in ipairs(levelMeshes or {}) do pcall(gpu.freeMesh, l.id) end
@@ -1163,6 +1170,11 @@ while not quit do
     end
   elseif name == "mouse_up" then
     if ev[2] == 1 then mouseFire = false else dragX, dragY = nil, nil end
+  elseif name == "mouse_move" then
+    if state == "play" and mode == "play" then
+      P.yaw = P.yaw + (tonumber(ev[2]) or 0) * MOUSE_RAD
+      P.pitch = max(-1.35, min(1.35, P.pitch - (tonumber(ev[3]) or 0) * MOUSE_RAD))
+    end
   elseif name == "timer" and ev[2] == timer then
     local t = uptime()
     local dt = min(0.1, t - last)
@@ -1193,6 +1205,8 @@ while not quit do
       if state == "won" and not stats.record then stats.record = saveRecord(stats.time) end
       render(fps)
     end
+    -- мышь захвачена, пока идёт бой; на паузе, в вопросе «выйти?» и в облёте — свободна
+    setMouseLock(mode == "play" and (state == "play" or state == "dead" or state == "won"))
     frames = frames + 1
     if t - fpsT >= 1 then fps = floor(frames / (t - fpsT) + 0.5) frames = 0 fpsT = t end
     if endAt and t - started >= endAt then quit = true end

@@ -1620,6 +1620,13 @@ public final class CaseComputer implements Computer.Host {
             case TerminalInputPayload.MOUSE_DRAG -> computer.queueEvent("mouse_drag", button, x, y);
             case TerminalInputPayload.MOUSE_UP -> computer.queueEvent("mouse_up", button, x, y);
             case TerminalInputPayload.MOUSE_SCROLL -> computer.queueEvent("mouse_scroll", button, x, y);
+            case TerminalInputPayload.MOUSE_MOVE -> {
+                // Только если программа сама попросила захват — иначе чужой клиент не завалит очередь событиями
+                if (computer.terminal().mouseLock()) {
+                    int dx = Math.max(-36000, Math.min(36000, x)), dy = Math.max(-36000, Math.min(36000, y));
+                    computer.queueEvent("mouse_move", dx / 100.0, dy / 100.0);
+                }
+            }
             default -> {
             }
         }

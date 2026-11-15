@@ -979,6 +979,31 @@ public class HeadlessTest {
         show("razlom bench");
         expect("razlom: 3D-кадры рисуются (замер)", flat().contains("RAZLOM") && flat().contains("клеток"));
 
+        // Захват мыши: признак едет в кадре вторым битом (мигание курсора не путается), событие mouse_move
+        // доходит до программы, а оболочка снимает захват, если программа упала, не отпустив мышь
+        boolean blinkBefore = TerminalCodec.blink(pc.terminal().snapshot());
+        pc.terminal().setMouseLock(true);
+        byte[] lockedFrame = pc.terminal().snapshot();
+        pc.terminal().setMouseLock(false);
+        expect("мышь: захват в кадре, мигание курсора не тронуто",
+                TerminalCodec.mouseLock(lockedFrame) && TerminalCodec.blink(lockedFrame) == blinkBefore
+                        && !TerminalCodec.mouseLock(pc.terminal().snapshot()));
+        Files.writeString(razlom.resolve("lock.lua"), "term.setMouseLock(true) os.queueEvent('mouse_move', 1.5, -2) "
+                + "local e, dx, dy = os.pullEvent('mouse_move') print('LOCK', term.getMouseLock(), dx, dy) error('boom')");
+        command("clear");
+        command("/razlom/lock.lua");
+        show("mouse lock");
+        expect("мышь: term.setMouseLock и событие mouse_move", flat().contains("LOCK true 1.5 -2"));
+        expect("мышь: оболочка отпускает захват после упавшей программы", !pc.terminal().mouseLock());
+        // «Разлом» в бою просит захват, а при выходе отпускает
+        command("clear");
+        type("/razlom/app/game.lua play 2 god");
+        key("enter", false);
+        boolean lockedInGame = false;
+        for (int i = 0; i < 300 && !lockedInGame; i++) { ticks(1); lockedInGame = pc.terminal().mouseLock(); }
+        for (int i = 0; i < 600 && !flat().contains("Разлом: врагов"); i++) ticks(1);
+        expect("razlom: мышь захвачена в бою и отпущена после", lockedInGame && !pc.terminal().mouseLock());
+
         // BIOS: настройки сохраняются, порядок загрузки нормализуется
         command("clear");
         command("lua");
