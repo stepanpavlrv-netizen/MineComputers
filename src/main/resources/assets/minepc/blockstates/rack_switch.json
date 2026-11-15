@@ -1,17 +1,32 @@
 {
  "variants": {
-  "facing=north": {
+  "facing=north,wall=false": {
    "model": "minepc:block/rack_switch"
   },
-  "facing=east": {
+  "facing=north,wall=true": {
+   "model": "minepc:block/rack_switch"
+  },
+  "facing=east,wall=false": {
    "model": "minepc:block/rack_switch",
    "y": 90
   },
-  "facing=south": {
+  "facing=east,wall=true": {
+   "model": "minepc:block/rack_switch",
+   "y": 90
+  },
+  "facing=south,wall=false": {
    "model": "minepc:block/rack_switch",
    "y": 180
   },
-  "facing=west": {
+  "facing=south,wall=true": {
+   "model": "minepc:block/rack_switch",
+   "y": 180
+  },
+  "facing=west,wall=false": {
+   "model": "minepc:block/rack_switch",
+   "y": 270
+  },
+  "facing=west,wall=true": {
    "model": "minepc:block/rack_switch",
    "y": 270
   }

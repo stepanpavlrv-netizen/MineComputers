@@ -70,17 +70,17 @@ public class CordRenderer<T extends BlockEntity & CordList.Holder> implements Bl
             boolean blink = NetHud.blinking(pos, i, time);
             int rgb = blink ? 0xFFB020 : 0x50FF78;
             float lift = sw.rack() ? 2 : 1;
-            // Точка на лицевой плоскости над гнездом, чуть впереди неё
-            float along = s.along() + 0.5f, y = s.height() + lift + 0.5f;
-            float plane = s.face().getAxisDirection() == net.minecraft.core.Direction.AxisDirection.POSITIVE ? 16 - s.depth() + 0.05f : s.depth() - 0.05f;
-            float x, z;
-            if (s.face().getAxis() == net.minecraft.core.Direction.Axis.Z) {
-                x = along;
-                z = plane;
-            } else {
-                x = plane;
-                z = along;
-            }
+            // Точка на лицевой плоскости над гнездом, чуть впереди неё («над» — вверх, у настенного — от стены)
+            net.minecraft.core.Direction f = s.face();
+            net.minecraft.core.Direction up = !sw.rack() && com.strikerr212.minepc.lan.SwitchBlock.onWall(state)
+                    ? state.getValue(com.strikerr212.minepc.lan.SwitchBlock.FACING) : net.minecraft.core.Direction.UP;
+            float plane = f.getAxisDirection() == net.minecraft.core.Direction.AxisDirection.POSITIVE ? 16 - s.depth() + 0.05f : s.depth() - 0.05f;
+            var fa = com.strikerr212.minepc.lan.LanDevice.faceAxes(f);
+            float[] p = new float[3];
+            p[fa[0].ordinal()] = s.along() + 0.5f;
+            p[fa[1].ordinal()] = s.height() + 0.5f;
+            p[f.getAxis().ordinal()] = plane;
+            float x = p[0] + lift * up.getStepX(), y = p[1] + lift * up.getStepY(), z = p[2] + lift * up.getStepZ();
             cube(vc, pose.last(), new Vec3(x / 16, y / 16, z / 16), 0.5f / 16, 0xF000F0, (rgb >> 16) & 255, (rgb >> 8) & 255, rgb & 255);
         }
     }

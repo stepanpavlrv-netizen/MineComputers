@@ -18,6 +18,13 @@ public final class BoxShapes {
         return this;
     }
 
+    /** Копия, к которой можно добавить ещё коробки. */
+    public BoxShapes copy() {
+        BoxShapes b = new BoxShapes();
+        System.arraycopy(shapes, 0, b.shapes, 0, 4);
+        return b;
+    }
+
     public static BoxShapes of(double x0, double y0, double z0, double x1, double y1, double z1) {
         return new BoxShapes().add(x0, y0, z0, x1, y1, z1);
     }

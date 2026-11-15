@@ -23,20 +23,22 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 
 /**
  * Коммутатор: соединяет все кабели, вставленные в его гнёзда, и усиливает сигнал (+1 тик к задержке).
- * Настольный — 6 гнёзд спереди. Стоечный — целый блок, два ряда по 6 гнёзд спереди (медь и оптика),
+ * Настольный — 6 гнёзд спереди; вешается и на стену (кликнуть по стене), тогда гнёзда смотрят вниз. Стоечный — целый блок, два ряда по 6 гнёзд спереди (медь и оптика),
  * 10 Гбит/с; стоечные коммутаторы вплотную друг к другу работают как один.
  */
 public class SwitchBlock extends HorizontalDirectionalBlock implements LanDevice, net.minecraft.world.level.block.EntityBlock {
 
     public static final MapCodec<SwitchBlock> CODEC = simpleCodec(p -> new SwitchBlock(p, false));
     private static final BoxShapes DESK = BoxShapes.of(1, 0, 4, 15, 4, 11);
+    private static final BoxShapes WALL_SHAPE = WallMount.shape(true, 1, 0, 4, 15, 4, 11);
 
     private final boolean rack;
 
     public SwitchBlock(Properties properties, boolean rack) {
         super(properties);
         this.rack = rack;
-        registerDefaultState(stateDefinition.any().setValue(FACING, Direction.NORTH).setValue(Paint.PROPERTY, Paint.NONE));
+        registerDefaultState(stateDefinition.any().setValue(FACING, Direction.NORTH).setValue(Paint.PROPERTY, Paint.NONE)
+                .setValue(WallMount.WALL, false));
     }
 
     public boolean rack() {
@@ -50,17 +52,25 @@ public class SwitchBlock extends HorizontalDirectionalBlock implements LanDevice
 
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
-        builder.add(FACING, Paint.PROPERTY);
+        builder.add(FACING, Paint.PROPERTY, WallMount.WALL);
     }
 
     @Override
     public BlockState getStateForPlacement(BlockPlaceContext context) {
+        Direction clicked = context.getClickedFace();
+        if (!rack && clicked.getAxis().isHorizontal()) return defaultBlockState().setValue(FACING, clicked).setValue(WallMount.WALL, true);
         return defaultBlockState().setValue(FACING, context.getHorizontalDirection().getOpposite());
+    }
+
+    /** Настольный коммутатор на стене (гнёздами вниз). */
+    public static boolean onWall(BlockState state) {
+        return state.getValue(WallMount.WALL);
     }
 
     @Override
     protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
-        return rack ? Shapes.block() : DESK.get(state.getValue(FACING));
+        if (rack) return Shapes.block();
+        return onWall(state) ? WALL_SHAPE.get(state.getValue(FACING).getOpposite()) : DESK.get(state.getValue(FACING));
     }
 
     @Override
@@ -71,6 +81,7 @@ public class SwitchBlock extends HorizontalDirectionalBlock implements LanDevice
     /** Гнёзда только спереди: у настольного 6 в ряд, у стоечного два ряда по 6 (медь и оптика). */
     @Override
     public boolean acceptsCable(BlockState state, Direction face) {
+        if (!rack && onWall(state)) return face == Direction.DOWN;
         return face == state.getValue(FACING);
     }
 
@@ -89,7 +100,11 @@ public class SwitchBlock extends HorizontalDirectionalBlock implements LanDevice
                 for (int i = 0; i < 6; i++) out.add(LanDevice.local(f, false, 13 - 2 * i, row, 0, true, true));
             }
         } else {
-            for (int i = 0; i < 6; i++) out.add(LanDevice.local(f, false, 13 - 2 * i, 1, 4, true, false));
+            boolean wall = onWall(state);
+            for (int i = 0; i < 6; i++) {
+                out.add(wall ? WallMount.socket(f, true, false, 13 - 2 * i, 1, 4, true, false)
+                        : LanDevice.local(f, false, 13 - 2 * i, 1, 4, true, false));
+            }
         }
         return out;
     }

@@ -18,7 +18,7 @@ import java.util.List;
 /** Окно роутера: имя сети, пароль, радиус и кто сейчас подключён (список обновляется сам раз в 2 секунды). */
 public class RouterScreen extends Screen {
 
-    private static final int W = 248, H = 214;
+    private static final int W = 248, H = 238;
     private static final int BG = 0xF01D2026, PANEL = 0xFF272B33, LINE = 0xFF3A404B, FG = 0xFFE6E9EF, DIM = 0xFF8D95A3,
             ACCENT = 0xFF4EA1FF, GOOD = 0xFF5BD982, WARN = 0xFFF2B13C, BAD = 0xFFE5534B;
 
@@ -30,6 +30,11 @@ public class RouterScreen extends Screen {
     private boolean showPassword;
     private Button showButton;
     private int left, top, age;
+    /** Что сейчас сохранено в роутере: «Готово» и Esc сохраняют, если игрок что-то поменял. */
+    private String savedSsid, savedPassword;
+    private int savedRadius;
+    private Component status;
+    private int statusColor;
 
     public RouterScreen(RouterOpenPayload p) {
         super(Component.translatable("gui.minepc.router.title"));
@@ -37,6 +42,9 @@ public class RouterScreen extends Screen {
         this.ssid = p.ssid();
         this.password = p.password();
         this.radius = p.radius();
+        this.savedSsid = ssid;
+        this.savedPassword = password;
+        this.savedRadius = radius;
         update(p);
     }
 
@@ -81,7 +89,9 @@ public class RouterScreen extends Screen {
                 .bounds(left + W - 32, top + 96, 20, 16).build());
         addRenderableWidget(Button.builder(Component.translatable("gui.minepc.router.save"), b -> save())
                 .bounds(left + 10, top + H - 26, 110, 18).build());
-        addRenderableWidget(Button.builder(Component.translatable("gui.done"), b -> onClose())
+        addRenderableWidget(Button.builder(Component.translatable("gui.done"), b -> {
+                    if (!dirty() || save()) onClose();
+                })
                 .bounds(left + W - 120, top + H - 26, 110, 18).build());
         setInitialFocus(ssidBox);
     }
@@ -93,8 +103,33 @@ public class RouterScreen extends Screen {
                 ? com.strikerr212.minepc.lan.AccessPointBlock.MAX_RADIUS : RouterBlockEntity.MAX_RADIUS;
     }
 
-    private void save() {
+    private boolean dirty() {
+        return ssidBox != null && (!ssidBox.getValue().strip().equals(savedSsid) || !passBox.getValue().equals(savedPassword)
+                || radius != savedRadius);
+    }
+
+    /** Проверить и отправить на сервер; ошибку показать прямо в окне. */
+    private boolean save() {
+        String error = RouterBlockEntity.validate(ssidBox.getValue(), passBox.getValue(), radius, maxRadius());
+        if (error != null) {
+            status = Component.translatable(error);
+            statusColor = BAD;
+            return false;
+        }
         PacketDistributor.sendToServer(new RouterSavePayload(pos, ssidBox.getValue(), passBox.getValue(), radius, false));
+        savedSsid = ssidBox.getValue().strip();
+        savedPassword = passBox.getValue();
+        savedRadius = radius;
+        status = Component.translatable("gui.minepc.router.saved");
+        statusColor = GOOD;
+        return true;
+    }
+
+    /** Esc: изменения не теряются — сохраняем, если они правильные. */
+    @Override
+    public void onClose() {
+        if (dirty() && RouterBlockEntity.validate(ssidBox.getValue(), passBox.getValue(), radius, maxRadius()) == null) save();
+        super.onClose();
     }
 
     @Override
@@ -125,6 +160,11 @@ public class RouterScreen extends Screen {
         String r = Component.translatable("gui.minepc.router.blocks", radius).getString();
         g.drawString(font, r, left + W - 64 - font.width(r), top + 100, FG, false);
 
+        if (status != null && (statusColor == BAD || !dirty())) {
+            g.drawString(font, font.plainSubstrByWidth(status.getString(), W - 20), left + 10, top + H - 40, statusColor, false);
+        } else if (dirty()) {
+            g.drawString(font, Component.translatable("gui.minepc.router.unsaved"), left + 10, top + H - 40, WARN, false);
+        }
         int y = top + 120;
         g.fill(left + 10, y, left + W - 10, y + 1, LINE);
         g.drawString(font, Component.translatable("gui.minepc.router.clients"), left + 10, y + 5, DIM, false);

@@ -767,10 +767,64 @@ public class CiScreenshots {
                 server.execute(() -> logWired("музыка"));
                 shot(mc, "wired_music");
             }
-            case 5604 -> mc.stop();
+            // Настенные роутер и коммутатор, корд в розетку, клавиатуры у широкого и изогнутого мониторов
+            case 5604 -> server.execute(CiScreenshots::placeMounts);
+            case 5650 -> shot(mc, "wall_mounts");
+            case 5652 -> server.execute(() -> server.getPlayerList().getPlayers().get(0).teleportTo(server.overworld(),
+                    mountPos.getX() + 3.5, mountPos.getY(), mountPos.getZ() - 1.0, 0f, -42f));
+            case 5680 -> shot(mc, "wall_mounts_below");
+            case 5684 -> mc.stop();
             default -> {
             }
         }
+    }
+
+    private static BlockPos mountPos = BlockPos.ZERO;
+
+    /** Стена: роутер и коммутатор на ней, розетка с кордом в коммутатор; перед стеной — мониторы в два блока с клавиатурами. */
+    private static void placeMounts() {
+        var server = Minecraft.getInstance().getSingleplayerServer();
+        ServerLevel level = server.overworld();
+        BlockPos b = wiredPos.south(14);
+        mountPos = b;
+        for (int dx = -3; dx <= 9; dx++) {
+            for (int dz = -9; dz <= 4; dz++) {
+                level.setBlockAndUpdate(b.offset(dx, -1, dz), net.minecraft.world.level.block.Blocks.SMOOTH_STONE.defaultBlockState());
+                for (int dy = 0; dy <= 4; dy++) level.setBlockAndUpdate(b.offset(dx, dy, dz), net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
+            }
+        }
+        for (int dx = -1; dx <= 7; dx++) {
+            for (int dy = 0; dy <= 3; dy++) level.setBlockAndUpdate(b.offset(dx, dy, 2), net.minecraft.world.level.block.Blocks.STONE_BRICKS.defaultBlockState());
+        }
+        BlockPos router = b.offset(1, 2, 1), sw = b.offset(4, 2, 1), outlet = b.offset(6, 1, 1);
+        level.setBlockAndUpdate(router, ModBlocks.ROUTER.get().defaultBlockState()
+                .setValue(com.strikerr212.minepc.lan.RouterBlock.FACING, Direction.NORTH).setValue(com.strikerr212.minepc.lan.WallMount.WALL, true));
+        level.setBlockAndUpdate(sw, ModBlocks.NETWORK_SWITCH.get().defaultBlockState()
+                .setValue(com.strikerr212.minepc.lan.SwitchBlock.FACING, Direction.NORTH).setValue(com.strikerr212.minepc.lan.WallMount.WALL, true));
+        level.setBlockAndUpdate(outlet, ModBlocks.OUTLET.get().defaultBlockState()
+                .setValue(com.strikerr212.minepc.lan.OutletBlock.FACE, net.minecraft.world.level.block.state.properties.AttachFace.WALL)
+                .setValue(com.strikerr212.minepc.lan.OutletBlock.FACING, Direction.NORTH));
+        for (BlockPos d : new BlockPos[]{router, sw, outlet}) com.strikerr212.minepc.lan.LanManager.updateDevice(level, d);
+        var data = com.strikerr212.minepc.lan.LanData.get(level);
+        data.addCord(new com.strikerr212.minepc.lan.LanData.Cord(outlet, com.strikerr212.minepc.lan.LanData.CABLE_PORTS, sw, 0,
+                net.minecraft.world.item.DyeColor.BLUE.getId()));
+        data.addCord(new com.strikerr212.minepc.lan.LanData.Cord(router, com.strikerr212.minepc.lan.LanData.CABLE_PORTS, sw, 2,
+                net.minecraft.world.item.DyeColor.YELLOW.getId()));
+        for (BlockPos d : new BlockPos[]{router, sw, outlet}) com.strikerr212.minepc.lan.CordList.refresh(level, d);
+        // Мониторы смотрят на север, к игроку; «вправо» для зрителя — на запад
+        for (int k = 0; k < 2; k++) {
+            BlockPos c = b.offset(2 + k * 4, 0, -3);
+            var wide = (k == 0 ? ModBlocks.MONITOR_WIDE : ModBlocks.MONITOR_CURVED).get().defaultBlockState()
+                    .setValue(DeviceBlock.FACING, Direction.NORTH).setValue(com.strikerr212.minepc.block.MonitorBlock.KEYBOARD, true);
+            level.setBlockAndUpdate(c, wide.setValue(com.strikerr212.minepc.block.WideMonitorBlock.HALF,
+                    com.strikerr212.minepc.block.WideMonitorBlock.Half.LEFT));
+            level.setBlockAndUpdate(c.west(), wide.setValue(com.strikerr212.minepc.block.WideMonitorBlock.HALF,
+                    com.strikerr212.minepc.block.WideMonitorBlock.Half.RIGHT));
+        }
+        var p = server.getPlayerList().getPlayers().get(0);
+        p.teleportTo(level, b.getX() + 3.5, b.getY(), b.getZ() - 7.5, 0f, 8f);
+        com.mojang.logging.LogUtils.getLogger().info("[CI-MOUNT] роутер {}, коммутатор {}, розетка {}", level.getBlockState(router),
+                level.getBlockState(sw), level.getBlockState(outlet));
     }
 
     private static BlockPos rackPos = BlockPos.ZERO, rowPos = BlockPos.ZERO;

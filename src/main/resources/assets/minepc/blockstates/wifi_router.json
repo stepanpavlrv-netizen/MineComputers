@@ -1,19 +1,38 @@
 {
  "variants": {
-  "facing=north": {
+  "facing=north,wall=false": {
    "model": "minepc:block/wifi_router"
   },
-  "facing=east": {
+  "facing=north,wall=true": {
+   "model": "minepc:block/wifi_router",
+   "x": 270,
+   "y": 180
+  },
+  "facing=east,wall=false": {
    "model": "minepc:block/wifi_router",
    "y": 90
   },
-  "facing=south": {
+  "facing=east,wall=true": {
+   "model": "minepc:block/wifi_router",
+   "x": 270,
+   "y": 270
+  },
+  "facing=south,wall=false": {
    "model": "minepc:block/wifi_router",
    "y": 180
   },
-  "facing=west": {
+  "facing=south,wall=true": {
+   "model": "minepc:block/wifi_router",
+   "x": 270
+  },
+  "facing=west,wall=false": {
    "model": "minepc:block/wifi_router",
    "y": 270
+  },
+  "facing=west,wall=true": {
+   "model": "minepc:block/wifi_router",
+   "x": 270,
+   "y": 90
   }
  }
 }

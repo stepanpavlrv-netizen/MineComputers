@@ -1,33 +1,63 @@
 {
  "variants": {
-  "facing=north,half=left": {
+  "facing=north,half=left,keyboard=false": {
    "model": "minepc:block/monitor_curved_left"
   },
-  "facing=north,half=right": {
+  "facing=north,half=left,keyboard=true": {
+   "model": "minepc:block/monitor_curved_left_keyboard"
+  },
+  "facing=north,half=right,keyboard=false": {
    "model": "minepc:block/monitor_curved_right"
   },
-  "facing=east,half=left": {
+  "facing=north,half=right,keyboard=true": {
+   "model": "minepc:block/monitor_curved_right_keyboard"
+  },
+  "facing=east,half=left,keyboard=false": {
    "model": "minepc:block/monitor_curved_left",
    "y": 90
   },
-  "facing=east,half=right": {
+  "facing=east,half=left,keyboard=true": {
+   "model": "minepc:block/monitor_curved_left_keyboard",
+   "y": 90
+  },
+  "facing=east,half=right,keyboard=false": {
    "model": "minepc:block/monitor_curved_right",
    "y": 90
   },
-  "facing=south,half=left": {
+  "facing=east,half=right,keyboard=true": {
+   "model": "minepc:block/monitor_curved_right_keyboard",
+   "y": 90
+  },
+  "facing=south,half=left,keyboard=false": {
    "model": "minepc:block/monitor_curved_left",
    "y": 180
   },
-  "facing=south,half=right": {
+  "facing=south,half=left,keyboard=true": {
+   "model": "minepc:block/monitor_curved_left_keyboard",
+   "y": 180
+  },
+  "facing=south,half=right,keyboard=false": {
    "model": "minepc:block/monitor_curved_right",
    "y": 180
   },
-  "facing=west,half=left": {
+  "facing=south,half=right,keyboard=true": {
+   "model": "minepc:block/monitor_curved_right_keyboard",
+   "y": 180
+  },
+  "facing=west,half=left,keyboard=false": {
    "model": "minepc:block/monitor_curved_left",
    "y": 270
   },
-  "facing=west,half=right": {
+  "facing=west,half=left,keyboard=true": {
+   "model": "minepc:block/monitor_curved_left_keyboard",
+   "y": 270
+  },
+  "facing=west,half=right,keyboard=false": {
    "model": "minepc:block/monitor_curved_right",
+   "y": 270
+  },
+  "facing=west,half=right,keyboard=true": {
+   "model": "minepc:block/monitor_curved_right_keyboard",
    "y": 270
   }
  }

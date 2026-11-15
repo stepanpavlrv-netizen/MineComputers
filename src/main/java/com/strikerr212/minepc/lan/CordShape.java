@@ -39,6 +39,8 @@ public final class CordShape {
             java.util.List<LanDevice.Socket> socks = dev.sockets(level, pos, s);
             if (port < socks.size()) return socketPoint(pos, socks.get(port));
         }
+        LanDevice.Socket front = outletSocket(level, pos, s, port);
+        if (front != null) return socketPoint(pos, front);
         if (s.getBlock() instanceof BracketBlock) {
             return new Vec3(pos.getX() + 0.5, pos.getY() + 0.62, pos.getZ() + 0.5);
         }
@@ -78,7 +80,17 @@ public final class CordShape {
                 return new Vec3(f.getStepX(), f.getStepY(), f.getStepZ());
             }
         }
+        LanDevice.Socket front = outletSocket(level, pos, s, port);
+        if (front != null) return new Vec3(front.face().getStepX(), front.face().getStepY(), front.face().getStepZ());
         return Vec3.ZERO;
+    }
+
+    /** Корд в розетке: вилка — в лицевом гнезде своей линии (A или B), а не сбоку от пластины. */
+    private static LanDevice.Socket outletSocket(BlockGetter level, BlockPos pos, BlockState s, int port) {
+        if (port < LanData.CABLE_PORTS || !(s.getBlock() instanceof OutletBlock outlet)) return null;
+        java.util.List<LanDevice.Socket> socks = outlet.sockets(s);
+        int line = OutletBlock.line(port);
+        return line < socks.size() ? socks.get(line) : null;
     }
 
     /** Точка чуть впереди гнезда (в мировых координатах): туда втыкается вилка. */

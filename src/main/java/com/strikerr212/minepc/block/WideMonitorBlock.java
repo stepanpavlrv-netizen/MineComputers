@@ -46,13 +46,16 @@ public class WideMonitorBlock extends BaseMonitorBlock {
 
     public static final EnumProperty<Half> HALF = EnumProperty.create("half", Half.class);
 
-    private final BoxShapes left, right;
+    private final BoxShapes left, right, leftKb, rightKb;
 
     public WideMonitorBlock(Properties properties, MonitorKind kind, int paintBase, BoxShapes left, BoxShapes right) {
         super(properties, kind, paintBase);
         this.left = left;
         this.right = right;
-        registerDefaultState(defaultBlockState().setValue(HALF, Half.LEFT));
+        // Клавиатура перед экраном, посередине пары: половина в левом блоке, половина в правом
+        this.leftKb = left.copy().add(9, 0, 0.5, 16, 1.5, 6);
+        this.rightKb = right.copy().add(0, 0, 0.5, 7, 1.5, 6);
+        registerDefaultState(defaultBlockState().setValue(HALF, Half.LEFT).setValue(MonitorBlock.KEYBOARD, false));
     }
 
     @Override
@@ -63,7 +66,52 @@ public class WideMonitorBlock extends BaseMonitorBlock {
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
         super.createBlockStateDefinition(builder);
-        builder.add(HALF);
+        builder.add(HALF, MonitorBlock.KEYBOARD);
+    }
+
+    @Override
+    public boolean hasKeyboard(BlockState state) {
+        return state.getValue(MonitorBlock.KEYBOARD);
+    }
+
+    /** Клавиатура — на обе половины сразу. */
+    private static void setKeyboard(Level level, BlockPos pos, BlockState state, boolean on) {
+        level.setBlockAndUpdate(pos, state.setValue(MonitorBlock.KEYBOARD, on));
+        BlockPos other = partner(state, pos);
+        BlockState os = level.getBlockState(other);
+        if (os.getBlock() == state.getBlock()) level.setBlockAndUpdate(other, os.setValue(MonitorBlock.KEYBOARD, on));
+    }
+
+    /** ПКМ клавиатурой — клавиатура встаёт перед экраном (посередине двух блоков). */
+    @Override
+    protected net.minecraft.world.ItemInteractionResult useItemOn(net.minecraft.world.item.ItemStack stack, BlockState state, Level level,
+                                                                  BlockPos pos, Player player, net.minecraft.world.InteractionHand hand,
+                                                                  net.minecraft.world.phys.BlockHitResult hit) {
+        if (!stack.is(com.strikerr212.minepc.registry.ModItems.KEYBOARD.get()) || state.getValue(MonitorBlock.KEYBOARD) || player.isShiftKeyDown()) {
+            return super.useItemOn(stack, state, level, pos, player, hand, hit);
+        }
+        if (!level.isClientSide) {
+            setKeyboard(level, pos, state, true);
+            level.playSound(null, pos, net.minecraft.sounds.SoundEvents.STONE_PLACE, net.minecraft.sounds.SoundSource.BLOCKS, 1f, 1.2f);
+            if (!player.getAbilities().instabuild) stack.shrink(1);
+        }
+        return net.minecraft.world.ItemInteractionResult.sidedSuccess(level.isClientSide);
+    }
+
+    /** Shift + ПКМ пустой рукой — забрать клавиатуру; иначе — открыть экран. */
+    @Override
+    protected net.minecraft.world.InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player,
+                                                                   net.minecraft.world.phys.BlockHitResult hit) {
+        if (player.isShiftKeyDown() && state.getValue(MonitorBlock.KEYBOARD)) {
+            if (!level.isClientSide) {
+                setKeyboard(level, pos, state, false);
+                net.minecraft.world.item.ItemStack kb = new net.minecraft.world.item.ItemStack(com.strikerr212.minepc.registry.ModItems.KEYBOARD.get());
+                if (!player.getInventory().add(kb)) player.drop(kb, false);
+                level.playSound(null, pos, net.minecraft.sounds.SoundEvents.STONE_BREAK, net.minecraft.sounds.SoundSource.BLOCKS, 1f, 1.2f);
+            }
+            return net.minecraft.world.InteractionResult.sidedSuccess(level.isClientSide);
+        }
+        return super.useWithoutItem(state, level, pos, player, hit);
     }
 
     /** Вправо, если смотреть на экран. */
@@ -90,7 +138,7 @@ public class WideMonitorBlock extends BaseMonitorBlock {
     public void setPlacedBy(Level level, BlockPos pos, BlockState state, LivingEntity placer, ItemStack stack) {
         super.setPlacedBy(level, pos, state, placer, stack);
         if (!level.isClientSide) {
-            level.setBlock(pos.relative(right(state)), state.setValue(HALF, Half.RIGHT), Block.UPDATE_ALL);
+            level.setBlock(pos.relative(right(state)), state.setValue(HALF, Half.RIGHT).setValue(MonitorBlock.KEYBOARD, false), Block.UPDATE_ALL);
             state.updateNeighbourShapes(level, pos, Block.UPDATE_ALL);
         }
     }
@@ -121,6 +169,7 @@ public class WideMonitorBlock extends BaseMonitorBlock {
 
     @Override
     protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
-        return (state.getValue(HALF) == Half.LEFT ? left : right).get(state.getValue(FACING));
+        boolean kb = state.getValue(MonitorBlock.KEYBOARD);
+        return (state.getValue(HALF) == Half.LEFT ? (kb ? leftKb : left) : (kb ? rightKb : right)).get(state.getValue(FACING));
     }
 }
