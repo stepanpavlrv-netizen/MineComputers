@@ -67,6 +67,16 @@ function wired.applyTheme()
   wm.layout()
 end
 
+--- Текущий пользователь — администратор (по списку пользователей, без sudo).
+function wired.isAdmin()
+  if not auth or auth.open() then return true end
+  local me = auth.user()
+  for _, u in ipairs(auth.users() or {}) do
+    if u.name == me then return u.admin and true or false end
+  end
+  return false
+end
+
 function wired.quit(kind)
   wired.exit = kind
   wm.running = false

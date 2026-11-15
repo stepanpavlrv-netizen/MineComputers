@@ -62,7 +62,7 @@ return function(arg)
       c.button(x, 5, "Добавить пользователя", "useradd", "primary")
       return
     end
-    c.text(x, 2, "Вы вошли как " .. tostring(auth.user() or "?") .. (auth.isAdmin() and " (администратор)" or ""), T.fg)
+    c.text(x, 2, "Вы вошли как " .. tostring(auth.user() or "?") .. (wired.isAdmin() and " (администратор)" or ""), T.fg)
     c.text(x, 4, "Пользователи", T.faint)
     local y = 5
     for _, u in ipairs(auth.users() or {}) do
@@ -74,7 +74,7 @@ return function(arg)
     end
     local bx = x
     bx = c.button(bx, c.h - 1, "Сменить пароль", "passwd") + 1
-    if auth.isAdmin() then
+    if wired.isAdmin() then
       bx = c.button(bx, c.h - 1, "Добавить", "useradd") + 1
       c.button(bx, c.h - 1, "Журнал входов", "journal")
     end
