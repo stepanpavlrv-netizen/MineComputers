@@ -49,7 +49,7 @@ public final class WireSupport {
         for (long p : set) {
             BlockPos pos = BlockPos.of(p);
             for (WireLine l : data.linesInChunk(ChunkPos.asLong(pos.getX() >> 4, pos.getZ() >> 4))) {
-                if (!seen.add(l.id) || !l.bounds().inflate(1).contains(pos.getCenter())) continue;
+                if (!l.bounds().inflate(1).contains(pos.getCenter()) || !seen.add(l.id)) continue;
                 WireLine fixed = fix(new LevelVoxels(level), l);
                 if (fixed != null) data.putLine(fixed);
             }

@@ -595,7 +595,10 @@ public class CiScreenshots {
                 server.execute(CiScreenshots::logSag);
                 shot(mc, "wire_sag");
             }
-            case 4044 -> server.execute(() -> placeEmptyCase(server.overworld()));
+            case 4044 -> server.execute(() -> {
+                logSag();
+                placeEmptyCase(server.overworld());
+            });
             case 4048 -> server.execute(() -> openEmptyCase(server.overworld()));
             case 4052 -> {
                 PcCaseScreen.ciTheme = com.strikerr212.minepc.block.CaseStyle.GAMING;
@@ -1038,6 +1041,7 @@ public class CiScreenshots {
         var plan = com.strikerr212.minepc.wire.WirePlan.build(level, data::line, false, a, List.of(), b, 60000);
         log.info("[CI-WIRE2] пролёт: ok {}, узлов {}, висит {}, {}", plan.ok(), plan.xs().length, plan.hang().length > 0 && plan.hang()[0], plan.problem());
         int before = data.lines().size();
+        p.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, new ItemStack(com.strikerr212.minepc.registry.ModItems.CABLE.get(), 64));
         com.strikerr212.minepc.wire.WireService.lay(p, new com.strikerr212.minepc.network.WireLayPayload(false, a, List.of(), b));
         log.info("[CI-WIRE2] воздушная линия: проводов {}→{}", before, data.lines().size());
         // слишком длинный пролёт
@@ -1067,6 +1071,13 @@ public class CiScreenshots {
         var l = data.line(sagLine);
         log.info("[CI-WIRE2] стену убрали: провод A {}, висящих отрезков {}→{}, узлов {}", l == null ? "пропал" : "цел", sagBefore,
                 l == null ? 0 : java.util.stream.IntStream.range(0, l.hang.length).filter(i -> l.hang[i]).count(), l == null ? 0 : l.nodes());
+        if (l != null) {
+            StringBuilder nodes = new StringBuilder();
+            for (int i = 0; i < l.nodes(); i++) nodes.append(' ').append(l.xs[i]).append(',').append(l.ys[i]).append(',').append(l.zs[i])
+                    .append(i < l.hang.length && l.hang[i] ? "~" : "");
+            var fixed = com.strikerr212.minepc.wire.WireSupport.fix(new com.strikerr212.minepc.wire.LevelVoxels(level), l);
+            log.info("[CI-WIRE2] узлы A:{} | поправить сейчас: {}", nodes, fixed == null ? "нечего" : fixed.nodes() + " узлов");
+        }
         var lan = com.strikerr212.minepc.lan.LanManager.get(level);
         StringBuilder sb = new StringBuilder("[CI-WIRE2] связь A ->");
         for (var r : lan.reach(level, drawPcA)) sb.append(' ').append(r.pos().equals(drawPcB) ? "B" : r.pos().toShortString());
