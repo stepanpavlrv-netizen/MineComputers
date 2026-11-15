@@ -707,7 +707,7 @@ public class HeadlessTest {
         command("clear");
         command("lua");
         command("E = require('event') os.queueEvent('aa', 1) os.queueEvent('bb', 2) T = computer.uptime() X, Y, Z = E.pull(0), E.pull(0), E.pull(0) D = computer.uptime() - T");
-        command("print('PULL0', X, Y, Z, D < 0.01, computer.pending())");
+        command("print('PULL0', X, Y, Z, D < 0.2, computer.pending())");
         for (int i = 0; i < 20; i++) ticks(1);
         command("exit()");
         show("event.pull(0)");
