@@ -92,8 +92,9 @@ final class LuaApis {
         if (++count[0] > COPY_MAX_VALUES) throw error("Слишком большое сообщение");
         if (v.isNil()) return null;
         if (v instanceof LuaBoolean) return v.toBoolean();
+        // строка, похожая на число ("00123456", "12e45678"), остаётся строкой: isNumber() верно и для таких строк
+        if (v instanceof LuaString) return bytes(v);
         if (v.isNumber()) return v.toDouble();
-        if (v.isString()) return bytes(v);
         if (v instanceof LuaTable t) {
             if (depth > 32 || seen.put(t, Boolean.TRUE) != null) throw error("Таблица в сообщении ссылается сама на себя");
             Map<Object, Object> out = new java.util.LinkedHashMap<>();
@@ -134,8 +135,8 @@ final class LuaApis {
     private static Object fromLua(LuaValue v) {
         if (v.isNil()) return null;
         if (v instanceof LuaBoolean) return v.toBoolean();
+        if (v instanceof LuaString) return text(v);
         if (v.isNumber()) return v.toDouble();
-        if (v.isString()) return text(v);
         return null;   // таблицы и функции в события не передаём
     }
 
