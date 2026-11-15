@@ -739,7 +739,19 @@ public class CiScreenshots {
                 server.execute(() -> logWired("окна"));
                 shot(mc, "wired_windows");
             }
-            case 5384 -> mc.stop();
+            // Дискета «Офис» из деревни: уведомление → установка → Документы
+            case 5386 -> server.execute(() -> wiredDisk(null));
+            case 5390 -> server.execute(() -> wiredDisk("office"));
+            case 5410 -> server.execute(() -> logWired("дискета «Офис»"));
+            case 5412 -> server.execute(() -> clickText(wiredPos, " Установить ", 2, 0));
+            case 5424 -> server.execute(() -> clickText(wiredPos, " Установить ", 2, 0));
+            case 5470 -> server.execute(() -> clickText(wiredPos, " Открыть ", 2, 0));
+            case 5490 -> typeAt(wiredPos, "Привет из MineComputers!");
+            case 5500 -> {
+                server.execute(() -> logWired("офис"));
+                shot(mc, "wired_office");
+            }
+            case 5504 -> mc.stop();
             default -> {
             }
         }
@@ -2022,6 +2034,14 @@ public class CiScreenshots {
             be.togglePower();
         }
         p.teleportTo(level, b.getX() + 0.5, b.getY(), b.getZ() - 3.5, 0f, 10f);
+    }
+
+    private static void wiredDisk(String program) {
+        var level = Minecraft.getInstance().getSingleplayerServer().overworld();
+        if (level.getBlockEntity(wiredPos.east()) instanceof com.strikerr212.minepc.block.DiskDriveBlockEntity drive) {
+            drive.setDisk(program == null ? ItemStack.EMPTY : com.strikerr212.minepc.item.DriveItem.withProgram(
+                    new ItemStack(com.strikerr212.minepc.registry.ModItems.FLOPPY_DISK.get()), program));
+        }
     }
 
     private static void logWired(String tag) {

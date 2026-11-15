@@ -47,6 +47,7 @@ lib("wallpaper")
 lib("wm")
 lib("vterm")
 lib("apps")
+lib("page")
 
 local gpu = wired.gfx.gpu
 local maxW, maxH = gpu.maxResolution()

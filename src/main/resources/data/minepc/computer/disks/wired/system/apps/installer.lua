@@ -81,7 +81,11 @@ return function(src)
     if ev == "click" then
       if a == "close" then wm.close(w)
       elseif a == "desk" then st.desk = not st.desk wm.redraw(w)
-      elseif a == "open" then wm.close(w) A.launch(A.get(m.id))
+      elseif a == "open" then
+        wm.close(w)
+        for _, e in ipairs(A.installed()) do
+          if e.m.id == m.id then A.launch(e) break end
+        end
       elseif a == "go" and st.phase == "ready" then
         st.phase = "copy"
         wm.redraw(w)

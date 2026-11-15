@@ -1,4 +1,8 @@
 # Файлы дискет с программами. Обновляется tools/computer/update_rom_list.py
+browser/app/app.lua
+browser/app/icon.pix
+browser/app/main.lua
+browser/readme.txt
 cameras/app/app.lua
 cameras/app/icon.pix
 cameras/app/main.lua
@@ -13,6 +17,10 @@ office/app/app.lua
 office/app/docs.lua
 office/app/tables.lua
 office/readme.txt
+site/app/app.lua
+site/app/icon.pix
+site/app/main.lua
+site/readme.txt
 wired/install.lua
 wired/readme.txt
 wired/startup.lua
@@ -25,6 +33,7 @@ wired/system/boot.lua
 wired/system/lib/apps.lua
 wired/system/lib/gfx.lua
 wired/system/lib/icons.lua
+wired/system/lib/page.lua
 wired/system/lib/theme.lua
 wired/system/lib/ui.lua
 wired/system/lib/vterm.lua
