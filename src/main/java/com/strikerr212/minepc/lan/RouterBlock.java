@@ -34,14 +34,14 @@ import java.util.List;
 /**
  * Wi-Fi роутер: раздаёт сеть компьютерам с USB Wi-Fi адаптером в своём радиусе и соединяет их с кабельной сетью
  * (кабель втыкается сзади или сбоку). Для сети это ещё один коммутатор: +1 переход. ПКМ — окно настроек.
- * Ставится на стол или на стену (кликнуть по стене): на стене гнёзда смотрят вниз.
+ * Ставится на стол или на стену (кликнуть по стене): на стене гнёзда и антенны смотрят вверх.
  */
 public class RouterBlock extends BaseEntityBlock implements LanDevice {
 
     public static final MapCodec<RouterBlock> CODEC = simpleCodec(RouterBlock::new);
     public static final net.minecraft.world.level.block.state.properties.DirectionProperty FACING = HorizontalDirectionalBlock.FACING;
     private static final BoxShapes SHAPE = BoxShapes.of(3, 0, 4, 13, 3, 11);
-    private static final BoxShapes WALL_SHAPE = WallMount.shape(false, 3, 0, 4, 13, 3, 11);
+    private static final BoxShapes WALL_SHAPE = WallMount.shape(true, 3, 0, 4, 13, 3, 11);
     /** Цвет корпуса некрашеного роутера (белый пластик). */
     public static final int PAINT_BASE = 0xF9FBFF;
 
@@ -103,7 +103,7 @@ public class RouterBlock extends BaseEntityBlock implements LanDevice {
     /** Гнёзда сзади (синий WAN и 4 жёлтых LAN), спереди лампочки. */
     @Override
     public boolean acceptsCable(BlockState state, Direction face) {
-        if (state.getValue(WallMount.WALL)) return face == Direction.DOWN;
+        if (state.getValue(WallMount.WALL)) return face == Direction.UP;
         return face == state.getValue(FACING).getOpposite();
     }
 
@@ -113,7 +113,7 @@ public class RouterBlock extends BaseEntityBlock implements LanDevice {
         java.util.List<Socket> out = new java.util.ArrayList<>();
         boolean wall = state.getValue(WallMount.WALL);
         for (int x : new int[]{11, 9, 7, 5, 3}) {
-            out.add(wall ? WallMount.socket(f, false, true, x, 0, 5, true, false) : LanDevice.local(f, true, x, 0, 5, true, false));
+            out.add(wall ? WallMount.socket(f, true, true, x, 0, 5, true, false) : LanDevice.local(f, true, x, 0, 5, true, false));
         }
         return out;
     }

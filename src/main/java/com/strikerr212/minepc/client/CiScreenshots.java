@@ -811,7 +811,7 @@ public class CiScreenshots {
         var data = com.strikerr212.minepc.lan.LanData.get(level);
         data.addCord(new com.strikerr212.minepc.lan.LanData.Cord(outlet, com.strikerr212.minepc.lan.LanData.CABLE_PORTS, sw, 0,
                 net.minecraft.world.item.DyeColor.BLUE.getId()));
-        data.addCord(new com.strikerr212.minepc.lan.LanData.Cord(router, com.strikerr212.minepc.lan.LanData.CABLE_PORTS, sw, 2,
+        data.addCord(new com.strikerr212.minepc.lan.LanData.Cord(router, 1, sw, 2,
                 net.minecraft.world.item.DyeColor.YELLOW.getId()));
         for (BlockPos d : new BlockPos[]{router, sw, outlet}) com.strikerr212.minepc.lan.CordList.refresh(level, d);
         // Мониторы смотрят на север, к игроку; «вправо» для зрителя — на запад

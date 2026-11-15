@@ -52,9 +52,9 @@ public class PatchCordItem extends Item {
         return pending(stack) != null;
     }
 
-    /** Корд втыкается в настоящее гнездо на модели (а не в «невидимый» порт) — у коммутаторов. */
+    /** Корд втыкается в настоящее гнездо на модели (а не в «невидимый» порт) — у коммутаторов и Wi-Fi роутера. */
     public static boolean intoSockets(BlockState state) {
-        return state.getBlock() instanceof SwitchBlock;
+        return state.getBlock() instanceof SwitchBlock || state.getBlock() instanceof RouterBlock;
     }
 
     /**
