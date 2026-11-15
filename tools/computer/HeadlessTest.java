@@ -969,6 +969,16 @@ public class HeadlessTest {
         show("bunker bench");
         expect("bunker: кадры рисуются (замер)", screen().contains("BUNKER") && screen().contains("кадров/с"));
 
+        // «Разлом» с дискеты: файлы пишутся как на настоящую дискету, замер рисует кадры настоящим 3D (gpu.newMesh)
+        Path razlom = Files.createTempDirectory("minepc_razlom");
+        ProgramDisks.populate(razlom, "razlom");
+        pc.fileSystem().mount("razlom", new DirMount(razlom, 1 << 20, "razlom"));
+        command("clear");
+        command("/razlom/app/game.lua bench 10");
+        for (int i = 0; i < 600 && !flat().contains("RAZLOM") && !flat().contains("не запустился") && !flat().contains("Нужна"); i++) ticks(1);
+        show("razlom bench");
+        expect("razlom: 3D-кадры рисуются (замер)", flat().contains("RAZLOM") && flat().contains("клеток"));
+
         // BIOS: настройки сохраняются, порядок загрузки нормализуется
         command("clear");
         command("lua");

@@ -24,7 +24,8 @@ public final class ProgramDisks {
             new Program("office", "Офис", "1.0", 0x6B95FF, 5),
             new Program("cameras", "Камеры", "1.0", 0xFF8A3D, 5),
             new Program("browser", "Браузер", "1.0", 0x4FD1E8, 8),
-            new Program("site", "Сайтостроитель", "1.0", 0xFFC857, 3));
+            new Program("site", "Сайтостроитель", "1.0", 0xFFC857, 3),
+            new Program("razlom", "Разлом", "1.0", 0xE0502A, 5));
 
     private static final String BASE = "/data/minepc/computer/";
 

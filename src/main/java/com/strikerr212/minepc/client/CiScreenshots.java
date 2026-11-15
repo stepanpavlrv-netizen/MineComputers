@@ -777,7 +777,33 @@ public class CiScreenshots {
             case 5652 -> server.execute(() -> server.getPlayerList().getPlayers().get(0).teleportTo(server.overworld(),
                     mountPos.getX() + 3.5, mountPos.getY(), mountPos.getZ() - 2.0, 0f, -14f));
             case 5680 -> shot(mc, "wall_mounts_below");
-            case 5684 -> mc.stop();
+            // 3D-игра «Разлом» с дискеты: облёт уровня, потом бой (бессмертие, всё оружие, огонь по стражу)
+            case 5686 -> {
+                mc.setScreen(null);
+                server.execute(() -> {
+                    boolean ok = server.overworld().getBlockEntity(lanJ2) instanceof PcCaseBlockEntity pc
+                            && pc.mountProgramForTest("razlom", "razlom");
+                    com.mojang.logging.LogUtils.getLogger().info("[CI-RAZLOM] дискета подключена: {}", ok);
+                });
+            }
+            case 5690 -> typeAt(lanJ2, "/razlom/app/game.lua demo 12");
+            case 5694 -> mc.setScreen(new TerminalScreen(lanJ2));
+            case 5770 -> shot(mc, "razlom_demo_1");
+            case 5850 -> { perf(mc, true, lanJ2); shot(mc, "razlom_demo_2"); }
+            case 5930 -> { perf(mc, false, lanJ2); shot(mc, "razlom_demo_3"); }
+            case 5990 -> typeAt(lanJ2, "/razlom/app/game.lua play at=13.5,7.5,0 god give");
+            case 6040 -> keyAt(lanJ2, "2");
+            case 6042 -> keyUpAt(lanJ2, "2");
+            case 6046 -> keyAt(lanJ2, "ctrl");
+            case 6066 -> shot(mc, "razlom_fight");
+            case 6090 -> { keyUpAt(lanJ2, "ctrl"); keyAt(lanJ2, "up"); }
+            case 6098 -> { keyUpAt(lanJ2, "up"); keyAt(lanJ2, "right"); }
+            case 6110 -> keyUpAt(lanJ2, "right");
+            case 6120 -> shot(mc, "razlom_look_up");
+            case 6126 -> { keyAt(lanJ2, "q"); logRazlom(); }
+            case 6128 -> keyAt(lanJ2, "q");
+            case 6150 -> { logRazlom(); shot(mc, "razlom_exit"); }
+            case 6154 -> mc.stop();
             default -> {
             }
         }
@@ -1923,6 +1949,27 @@ public class CiScreenshots {
         var server = Minecraft.getInstance().getSingleplayerServer();
         server.execute(() -> {
             if (server.overworld().getBlockEntity(pos) instanceof PcCaseBlockEntity be) be.input(TerminalInputPayload.KEY, key, false, false);
+        });
+    }
+
+    private static void keyUpAt(BlockPos pos, String key) {
+        var server = Minecraft.getInstance().getSingleplayerServer();
+        server.execute(() -> {
+            if (server.overworld().getBlockEntity(pos) instanceof PcCaseBlockEntity be) be.input(TerminalInputPayload.KEY_UP, key, false, false);
+        });
+    }
+
+    /** Нижние строки экрана компьютера с «Разломом» (счёт, сообщения об ошибках) — в журнал. */
+    private static void logRazlom() {
+        var server = Minecraft.getInstance().getSingleplayerServer();
+        server.execute(() -> {
+            if (server.overworld().getBlockEntity(lanJ2) instanceof PcCaseBlockEntity pc) {
+                var lines = pc.screenLines();
+                for (int i = Math.max(0, lines.size() - 4); i < lines.size(); i++) {
+                    String l = lines.get(i).replace("▀", "").strip();
+                    if (!l.isBlank()) com.mojang.logging.LogUtils.getLogger().info("[CI-RAZLOM] | {}", l);
+                }
+            }
         });
     }
 

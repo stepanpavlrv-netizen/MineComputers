@@ -22,6 +22,13 @@ final class Canvas {
     /** Глубина по столбцам: что ближе, то закрывает спрайты (column() записывает, sprite() проверяет). */
     final float[] depth;
     boolean freed;
+    /** 3D: появляется при первой 3D-команде (буфер глубины по точкам — только тем, кому нужен). */
+    private Raster3D r3d;
+
+    Raster3D r3d() {
+        if (r3d == null) r3d = new Raster3D(this);
+        return r3d;
+    }
 
     Canvas(int w, int h) {
         this.w = w;
@@ -150,6 +157,22 @@ final class Canvas {
         return t;
     }
 
+    /**
+     * Нарисовать 3D-сетку. Оплата: процессор — за вершины, треугольники и точки (работа драйвера),
+     * видеокарта — за треугольники и закрашенные точки, так что слабая видеокарта даёт меньше кадров.
+     */
+    private static Varargs draw3d(Computer c, LuaMachine m, Gpu gpu, Canvas cv, Varargs a, int o, boolean onCamera) throws LuaError {
+        Raster3D.Mesh mesh = gpu.mesh(a.arg(o + 1).checkInteger());
+        if (mesh == null) throw LuaApis.error("нет такой сетки");
+        Raster3D.Work work = new Raster3D.Work();
+        cv.r3d().mesh(mesh, gpu::texture, a.arg(o + 2).checkDouble(), a.arg(o + 3).checkDouble(), a.arg(o + 4).checkDouble(),
+                a.arg(o + 5).optDouble(0), a.arg(o + 6).optDouble(0), a.arg(o + 7).optDouble(1), a.arg(o + 8).optDouble(1),
+                a.arg(o + 9).optInteger(0), onCamera, work, 4L * cv.px.length);
+        m.spend(work.verts / 4 + work.tris / 2 + work.pixels / 32 + 8);
+        c.chargeGpu(work.pixels / 8 + work.tris / 2);
+        return valueOf((int) work.pixels);
+    }
+
     /** Объект для программ: таблица функций, работающих с этим буфером. */
     static LuaTable lua(Computer c, LuaMachine m, Gpu gpu, Canvas cv) {
         LuaTable t = new LuaTable();
@@ -161,11 +184,70 @@ final class Canvas {
                     int o = base(a, t);
                     java.util.Arrays.fill(cv.px, a.arg(o + 1).optInteger(0) & 0xFFFFFF);
                     java.util.Arrays.fill(cv.depth, Float.MAX_VALUE);
+                    if (cv.r3d != null) cv.r3d.clearDepth();
                     m.spend(cv.px.length / 16 + 8);
                     return Constants.NONE;
                 }),
                 RegisteredFunction.ofV("clearDepth", (s, a) -> {
                     java.util.Arrays.fill(cv.depth, Float.MAX_VALUE);
+                    if (cv.r3d != null) {
+                        cv.r3d.clearDepth();
+                        m.spend(cv.px.length / 64 + 4);
+                    }
+                    return Constants.NONE;
+                }),
+                // ----- 3D: камера, туман, лампы, сетки (gpu.newMesh), спрайты в мире -----
+                // view(x, y, z, yaw, pitch, [угол обзора = 90], [сколько точка шире, чем выше = 4/3])
+                RegisteredFunction.ofV("view", (s, a) -> {
+                    int o = base(a, t);
+                    cv.r3d().view(a.arg(o + 1).checkDouble(), a.arg(o + 2).checkDouble(), a.arg(o + 3).checkDouble(),
+                            a.arg(o + 4).optDouble(0), a.arg(o + 5).optDouble(0), a.arg(o + 6).optDouble(90),
+                            a.arg(o + 7).optDouble(4.0 / 3.0));
+                    return Constants.NONE;
+                }),
+                // fog(цвет, начало, конец) — даль растворяется в цвете; fog() — без тумана
+                RegisteredFunction.ofV("fog", (s, a) -> {
+                    int o = base(a, t);
+                    if (a.arg(o + 1).isNil()) cv.r3d().fogOff();
+                    else cv.r3d().fog(a.arg(o + 1).checkInteger(), a.arg(o + 2).checkDouble(), a.arg(o + 3).checkDouble());
+                    return Constants.NONE;
+                }),
+                // light(x, y, z, радиус, цвет, [сила = 1]) — лампа на этот кадр (до 16); clearLights() — убрать все
+                RegisteredFunction.ofV("light", (s, a) -> {
+                    int o = base(a, t);
+                    return valueOf(cv.r3d().light(a.arg(o + 1).checkDouble(), a.arg(o + 2).checkDouble(), a.arg(o + 3).checkDouble(),
+                            a.arg(o + 4).checkDouble(), a.arg(o + 5).optInteger(0xFFFFFF), a.arg(o + 6).optDouble(1)));
+                }),
+                RegisteredFunction.ofV("clearLights", (s, a) -> {
+                    cv.r3d().clearLights();
+                    return Constants.NONE;
+                }),
+                // mesh(сетка, x, y, z, [yaw], [pitch], [масштаб], [яркость], [вспышка 0xRRGGBB]) → закрашено точек
+                RegisteredFunction.ofV("mesh", (s, a) -> draw3d(c, m, gpu, cv, a, base(a, t), false)),
+                // held(сетка, вправо, вверх, вперёд, ...) — то же в координатах камеры (оружие в руках)
+                RegisteredFunction.ofV("held", (s, a) -> draw3d(c, m, gpu, cv, a, base(a, t), true)),
+                // billboard(текстура, x, y, z, ширина, высота, [яркость], [вспышка], [флаги: 1 светится, 2 не закрывает])
+                RegisteredFunction.ofV("billboard", (s, a) -> {
+                    int o = base(a, t);
+                    int n = cv.r3d().billboard(tex(gpu, a.arg(o + 1)), a.arg(o + 2).checkDouble(), a.arg(o + 3).checkDouble(),
+                            a.arg(o + 4).checkDouble(), a.arg(o + 5).checkDouble(), a.arg(o + 6).checkDouble(),
+                            a.arg(o + 7).optDouble(1), a.arg(o + 8).optInteger(0), a.arg(o + 9).optInteger(0));
+                    m.spend(n / 16 + 8);
+                    c.chargeGpu(n / 8 + 1);
+                    return valueOf(n);
+                }),
+                // project(x, y, z) → x, y на кадре (с нуля) и расстояние, или nil — точка позади
+                RegisteredFunction.ofV("project", (s, a) -> {
+                    int o = base(a, t);
+                    double[] p = cv.r3d().project(a.arg(o + 1).checkDouble(), a.arg(o + 2).checkDouble(), a.arg(o + 3).checkDouble());
+                    if (p == null) return Constants.NIL;
+                    return org.squiddev.cobalt.ValueFactory.varargsOf(valueOf(p[0]), valueOf(p[1]), valueOf(p[2]));
+                }),
+                // tint(цвет, доля 0..1) — смешать весь кадр с цветом
+                RegisteredFunction.ofV("tint", (s, a) -> {
+                    int o = base(a, t);
+                    int n = cv.r3d().tint(a.arg(o + 1).checkInteger(), a.arg(o + 2).checkDouble());
+                    m.spend(n / 32 + 4);
                     return Constants.NONE;
                 }),
                 RegisteredFunction.ofV("pixel", (s, a) -> {

@@ -206,6 +206,30 @@ final class OcApis {
                     return id < 0 ? varargsOf(Constants.NIL, str("не хватает видеопамяти")) : valueOf(id);
                 }),
                 RegisteredFunction.ofV("freeTexture", (s, a) -> valueOf(gpu.freeTexture(a.arg(1).checkInteger()))),
+                // 3D-сетка: newMesh({x,y,z,u,v,свет, ...}, {a,b,c,текстура, ...}, [отсекать изнанку = true]) → номер
+                RegisteredFunction.ofV("newMesh", (s, a) -> {
+                    LuaTable vt = a.arg(1).checkTable(), tt = a.arg(2).checkTable();
+                    int vl = vt.length(), tl = tt.length();
+                    if (vl % Raster3D.Mesh.STRIDE != 0) throw LuaApis.error("вершины — по 6 чисел: x, y, z, u, v, свет");
+                    if (tl % 4 != 0) throw LuaApis.error("треугольники — по 4 числа: вершина, вершина, вершина, текстура");
+                    int nv = vl / Raster3D.Mesh.STRIDE, nt = tl / 4;
+                    if (nv > 65536 || nt > 65536) throw LuaApis.error("в сетке не больше 65536 вершин и 65536 треугольников");
+                    float[] v = new float[vl];
+                    for (int i = 0; i < vl; i++) v[i] = (float) vt.rawget(i + 1).checkDouble();
+                    int[] t = new int[tl];
+                    for (int i = 0; i < tl; i++) {
+                        int x = tt.rawget(i + 1).checkInteger();
+                        if (i % 4 != 3) {
+                            if (x < 1 || x > nv) throw LuaApis.error("треугольник " + (i / 4 + 1) + ": нет вершины " + x);
+                            x--;
+                        }
+                        t[i] = x;
+                    }
+                    m.spend((vl + tl) / 4 + 16);
+                    int id = gpu.newMesh(Raster3D.Mesh.of(v, t, a.arg(3).isNil() || a.arg(3).toBoolean()));
+                    return id < 0 ? varargsOf(Constants.NIL, str("не хватает видеопамяти")) : valueOf(id);
+                }),
+                RegisteredFunction.ofV("freeMesh", (s, a) -> valueOf(gpu.freeMesh(a.arg(1).checkInteger()))),
                 // ----- Видеопамять (как в OpenComputers 1.8) -----
                 RegisteredFunction.ofV("getActiveBuffer", (s, a) -> valueOf(gpu.active())),
                 RegisteredFunction.ofV("setActiveBuffer", (s, a) -> {

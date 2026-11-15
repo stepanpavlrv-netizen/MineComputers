@@ -22,6 +22,8 @@ final class Gpu {
     /** Кадровые буферы (точки) и текстуры — тоже в видеопамяти. */
     private final List<Canvas> canvases = new ArrayList<>();
     private final List<Canvas.Texture> textures = new ArrayList<>();
+    /** 3D-сетки (gpu.newMesh), номера с 1; освобождённые — null. */
+    private final List<Raster3D.Mesh> meshes = new ArrayList<>();
 
     synchronized void reset() {
         buffers.clear();
@@ -29,6 +31,30 @@ final class Gpu {
         for (Canvas c : canvases) c.freed = true;
         canvases.clear();
         textures.clear();
+        meshes.clear();
+    }
+
+    /** Сетка (номер с 1) или -1, если не хватает видеопамяти. */
+    synchronized int newMesh(Raster3D.Mesh m) {
+        if (usedCells() + m.cells() > totalCells()) return -1;
+        for (int i = 0; i < meshes.size(); i++) {
+            if (meshes.get(i) == null) {
+                meshes.set(i, m);
+                return i + 1;
+            }
+        }
+        meshes.add(m);
+        return meshes.size();
+    }
+
+    synchronized Raster3D.Mesh mesh(int id) {
+        return id < 1 || id > meshes.size() ? null : meshes.get(id - 1);
+    }
+
+    synchronized boolean freeMesh(int id) {
+        if (mesh(id) == null) return false;
+        meshes.set(id - 1, null);
+        return true;
     }
 
     /** Куда сейчас рисует видеокарта. */
@@ -71,6 +97,7 @@ final class Gpu {
         for (Terminal t : buffers) if (t != null) n += t.cells();
         for (Canvas c : canvases) n += c.cells();
         for (Canvas.Texture t : textures) if (t != null) n += t.cells();
+        for (Raster3D.Mesh m : meshes) if (m != null) n += m.cells();
         return n;
     }
 
@@ -154,6 +181,7 @@ final class Gpu {
         for (Canvas c : canvases) c.freed = true;
         canvases.clear();
         textures.clear();
+        meshes.clear();
     }
 
     synchronized List<Integer> indexes() {

@@ -480,6 +480,24 @@ public class PcCaseBlockEntity extends BlockEntity implements com.strikerr212.mi
         return out;
     }
 
+    /**
+     * Для проверок CI: подключить файлы программной дискеты (как будто её вставили) в папку at, например «razlom».
+     * Файлы берутся из мода, как при первой вставке настоящей дискеты.
+     */
+    public boolean mountProgramForTest(String program, String at) {
+        var c = pc.computer();
+        if (c == null || level == null || level.getServer() == null) return false;
+        try {
+            java.nio.file.Path folder = DriveStorage.folder(level.getServer(), "ci-" + program);
+            com.strikerr212.minepc.computer.ProgramDisks.populate(folder, program);
+            c.fileSystem().mount(at, new com.strikerr212.minepc.computer.fs.DirMount(folder, 1 << 20, program));
+            return true;
+        } catch (Exception e) {
+            com.mojang.logging.LogUtils.getLogger().warn("CI: программа {} не подключилась: {}", program, e.toString());
+            return false;
+        }
+    }
+
     /** 0 — выключен, 1 — работает, 2 — ошибка. */
     public int computerState() {
         return pc.stateCode();

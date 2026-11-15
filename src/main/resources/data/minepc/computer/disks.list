@@ -17,6 +17,13 @@ office/app/app.lua
 office/app/docs.lua
 office/app/tables.lua
 office/readme.txt
+razlom/app/app.lua
+razlom/app/art.lua
+razlom/app/game.lua
+razlom/app/icon.pix
+razlom/app/level.lua
+razlom/app/main.lua
+razlom/readme.txt
 site/app/app.lua
 site/app/icon.pix
 site/app/main.lua
