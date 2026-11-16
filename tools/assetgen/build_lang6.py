@@ -311,7 +311,6 @@ COMMON.update({
     "tooltip.minepc.wifi_router": ("Раздаёт Wi-Fi компьютерам с USB-адаптером. ПКМ — имя сети, пароль, радиус",
                                    "Shares Wi-Fi with computers that have a USB adapter. Right-click: name, password, range"),
     "tooltip.minepc.network_switch": ("8 гнёзд (спереди и сзади), 1 Гбит/с. ПКМ — порты и VLAN", "8 sockets (front and back), 1 Gbit/s. Right-click: ports and VLAN"),
-    "message.minepc.tray.full": ("В лотке уже 8 проводов (или этот цвет занят)", "The tray already has 8 wires (or this color is taken)"),
     "block.minepc.radio_modem": ("Радиомодем", "Radio Modem"),
     "block.minepc.radio_mast": ("Секция радиомачты", "Radio Mast Section"),
     "item.minepc.patch_cord": ("Патч-корд", "Patch Cord"),
@@ -353,7 +352,6 @@ COMMON.update({
     "gui.minepc.switch.dev.pc": ("компьютер", "computer"),
     "tooltip.minepc.fiber": ("Оптика: 10 Гбит/с, до 2000 блоков без коммутатора. Только в стоечный коммутатор",
                              "Fiber: 10 Gbit/s, up to 2000 blocks per run. Plugs only into a rack switch"),
-    "tooltip.minepc.cable_hide": ("ПКМ по кабелю блоком — спрятать кабель в этот блок", "Right-click a cable with a block to hide it inside"),
     "item.minepc.wifi_adapter_g": ("USB Wi-Fi адаптер (54 Мбит/с)", "USB Wi-Fi Adapter (54 Mbit/s)"),
     "item.minepc.wifi_adapter_n": ("USB Wi-Fi адаптер (300 Мбит/с)", "USB Wi-Fi Adapter (300 Mbit/s)"),
     "item.minepc.wifi_adapter_ac": ("USB Wi-Fi адаптер (1200 Мбит/с)", "USB Wi-Fi Adapter (1200 Mbit/s)"),
@@ -380,12 +378,10 @@ COMMON.update({
 })
 
 COMMON.update({
-    "block.minepc.network_cable": ("Сетевой кабель", "Network Cable"),
     "item.minepc.network_cable": ("Сетевой кабель", "Network Cable"),
     "block.minepc.network_switch": ("Коммутатор", "Network Switch"),
     "tooltip.minepc.cable": ("ПКМ по полу — провод (до 4 в блоке, куда кликнешь — та дорожка). Красителем — перекрасить. Блоком — спрятать. У стенки с проводом сверху — поднимется по ней",
                              "Right-click the floor to lay a wire (up to 4 per block, lane = where you click). Dye to recolor, a block to hide it. Climbs a wall to a wire on top"),
-    "message.minepc.cable.full": ("В этом блоке уже 4 провода", "This block already has 4 wires"),
     "gui.minepc.tab.net": ("Сеть", "Network"),
     "gui.minepc.net.address": ("Адрес в сети:", "Network address:"),
     "gui.minepc.net.noname": ("без имени", "no name"),

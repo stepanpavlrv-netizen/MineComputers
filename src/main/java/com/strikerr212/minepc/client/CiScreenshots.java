@@ -260,7 +260,8 @@ public class CiScreenshots {
             case 1626 -> server.execute(() -> {
                 if (maskCell == null) return;
                 ServerPlayer p = server.getPlayerList().getPlayers().get(0);
-                var eye = new net.minecraft.world.phys.Vec3(maskCell.getX() + 0.5, maskCell.getY() + 1.62 + 0.9, maskCell.getZ() - 1.4);
+                // сверху: между глазом и кирпичом ничего нет
+                var eye = new net.minecraft.world.phys.Vec3(maskPoint.x + 0.02, maskCell.getY() + 2.4, maskPoint.z - 0.35);
                 var d = maskPoint.subtract(eye);
                 float yaw = (float) Math.toDegrees(Math.atan2(-d.x, d.z)), pitch = (float) Math.toDegrees(-Math.atan2(d.y, Math.hypot(d.x, d.z)));
                 p.teleportTo(p.serverLevel(), eye.x, eye.y - 1.62, eye.z, yaw, pitch);
@@ -852,7 +853,15 @@ public class CiScreenshots {
                 server.execute(() -> logWired("браузер: сайты майннета"));
                 shot(mc, "wired_browser_sites");
             }
-            case 6324 -> mc.stop();
+            // Большая серверная: сотни проводов в лотках — нет ли подтормаживаний, сеть та же
+            case 6322 -> logPerf(mc, "до серверной");
+            case 6324 -> server.execute(CiScreenshots::placeBigRoom);
+            case 6380 -> {
+                logPerf(mc, "серверная");
+                shot(mc, "world_big_room");
+            }
+            case 6384 -> server.execute(CiScreenshots::logBigRoom);
+            case 6390 -> mc.stop();
             default -> {
             }
         }
@@ -2112,6 +2121,91 @@ public class CiScreenshots {
     private static BlockPos lanBase = BlockPos.ZERO, lanE = BlockPos.ZERO, lanF = BlockPos.ZERO, lanJ1 = BlockPos.ZERO,
             lanJ2 = BlockPos.ZERO, radio1 = BlockPos.ZERO;
 
+    private static BlockPos bigPcA = BlockPos.ZERO, bigPcB = BlockPos.ZERO;
+
+    /** [CI-BIG]: кадров в секунду у игрока и средний тик сервера. */
+    private static void logPerf(Minecraft mc, String what) {
+        var server = mc.getSingleplayerServer();
+        com.mojang.logging.LogUtils.getLogger().info("[CI-BIG] {}: {} кадр/с, тик сервера {} мс, проводов у игрока {}", what, mc.getFps(),
+                server == null ? -1 : String.format(java.util.Locale.ROOT, "%.2f", server.getAverageTickTimeNanos() / 1e6),
+                com.strikerr212.minepc.wire.WireStore.all().size());
+    }
+
+    /**
+     * Большая серверная: два ряда патч-панелей (12 колонн по 3 в высоту) друг напротив друга через проход в 9 блоков,
+     * под каждой колонной — лоток на полу поперёк прохода; панели соединены проводами гнездо в гнездо (6 на пару,
+     * 216 проводов). За крайними панелями — по компьютеру: связь через всю серверную.
+     */
+    private static void placeBigRoom() {
+        var server = Minecraft.getInstance().getSingleplayerServer();
+        ServerPlayer p = server.getPlayerList().getPlayers().get(0);
+        ServerLevel level = p.serverLevel();
+        var log = com.mojang.logging.LogUtils.getLogger();
+        BlockPos b = drawBase.offset(0, 0, 40);
+        for (int dx = -3; dx <= 16; dx++) {
+            for (int dz = -4; dz <= 14; dz++) {
+                level.setBlockAndUpdate(b.offset(dx, -1, dz), net.minecraft.world.level.block.Blocks.SMOOTH_STONE.defaultBlockState());
+                for (int dy = 0; dy <= 5; dy++) level.setBlockAndUpdate(b.offset(dx, dy, dz), net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
+            }
+        }
+        BlockState south = ModBlocks.PATCH_PANEL.get().defaultBlockState().setValue(com.strikerr212.minepc.lan.PatchPanelBlock.FACING, Direction.SOUTH);
+        BlockState north = ModBlocks.PATCH_PANEL.get().defaultBlockState().setValue(com.strikerr212.minepc.lan.PatchPanelBlock.FACING, Direction.NORTH);
+        for (int x = 0; x < 12; x++) {
+            for (int y = 0; y < 3; y++) {
+                level.setBlockAndUpdate(b.offset(x, y, 0), south);
+                level.setBlockAndUpdate(b.offset(x, y, 10), north);
+                com.strikerr212.minepc.lan.LanManager.updateDevice(level, b.offset(x, y, 0));
+                com.strikerr212.minepc.lan.LanManager.updateDevice(level, b.offset(x, y, 10));
+            }
+            for (int z = 1; z <= 9; z++) tray(level, b.offset(x, 0, z), Direction.DOWN, com.strikerr212.minepc.block.Paint.NONE);
+        }
+        connectTrays(level, b.offset(0, 0, 1), b.offset(11, 0, 9));
+        int colors = 0, laid = 0, failed = 0;
+        long total = 0, worst = 0;
+        for (int x = 0; x < 12; x++) {
+            for (int y = 0; y < 3; y++) {
+                for (int k = 0; k < com.strikerr212.minepc.lan.PatchPanelBlock.CHANNELS; k++) {
+                    long t0 = System.nanoTime();
+                    var l = link(level, b.offset(x, y, 0), Direction.SOUTH, b.offset(x, y, 10), Direction.NORTH, (colors++) % 16, false, "",
+                            List.of());
+                    long dt = System.nanoTime() - t0;
+                    total += dt;
+                    worst = Math.max(worst, dt);
+                    if (l != null) laid++;
+                    else failed++;
+                }
+            }
+        }
+        // Компьютеры за крайними панелями — в их задние гнёзда
+        bigPcA = b.offset(0, 0, -2);
+        bigPcB = b.offset(0, 0, 12);
+        pcWithMonitor(level, bigPcA, Direction.NORTH);
+        pcWithMonitor(level, bigPcB, Direction.SOUTH);
+        link(level, bigPcA, null, b, Direction.NORTH, net.minecraft.world.item.DyeColor.RED.getId(), false, "A", List.of());
+        link(level, bigPcB, null, b.offset(0, 0, 10), Direction.SOUTH, net.minecraft.world.item.DyeColor.RED.getId(), false, "B", List.of());
+        int inTray = 0;
+        for (var l : com.strikerr212.minepc.lan.LanData.get(level).lines()) {
+            for (int i = 0; i < l.nodes(); i++) {
+                if (level.getBlockState(BlockPos.containing(l.node(i))).getBlock() instanceof com.strikerr212.minepc.lan.TrayBlock) {
+                    inTray++;
+                    break;
+                }
+            }
+        }
+        log.info("[CI-BIG] проложено {} проводов (не вышло {}), всего {} мс, самый долгий {} мс; через лотки идут {}", laid, failed,
+                total / 1_000_000, worst / 1_000_000, inTray);
+        p.teleportTo(level, b.getX() + 6, b.getY() + 4.5, b.getZ() - 3.5, -20f, 35f);
+    }
+
+    private static void logBigRoom() {
+        ServerLevel level = Minecraft.getInstance().getSingleplayerServer().overworld();
+        StringBuilder sb = new StringBuilder("[CI-BIG] связь A ->");
+        for (var r : com.strikerr212.minepc.lan.LanManager.get(level).reach(level, bigPcA)) {
+            sb.append(' ').append(r.pos().equals(bigPcB) ? "B" : r.pos().toShortString()).append(" hops=").append(r.hops());
+        }
+        com.mojang.logging.LogUtils.getLogger().info(sb.toString());
+    }
+
     private static BlockPos wiredPos, trayBase = BlockPos.ZERO, maskCell;
     private static net.minecraft.world.phys.Vec3 maskPoint;
 
@@ -2289,8 +2383,8 @@ public class CiScreenshots {
             var l = com.strikerr212.minepc.wire.WireService.layDirect(level, false, k == 0 ? net.minecraft.world.item.DyeColor.ORANGE.getId()
                             : net.minecraft.world.item.DyeColor.LIME.getId(), "",
                     com.strikerr212.minepc.wire.WirePlan.Anchor.pixel(floorPixel(b.offset(9, 0, 3), 8, 6 + k)),
-                    List.of(new int[]{w1.getX() * 16 + 7 + k, w1.getY() * 16 + 8, w1.getZ() * 16 + 14},
-                            new int[]{w2.getX() * 16 + 7 + k, w2.getY() * 16 + 8, w2.getZ() * 16 + 14}),
+                    List.of(new int[]{w1.getX() * 16 + 6 + 3 * k, w1.getY() * 16 + 6 + 3 * k, w1.getZ() * 16 + 14},
+                            new int[]{w2.getX() * 16 + 9 - 3 * k, w2.getY() * 16 + 6 + 3 * k, w2.getZ() * 16 + 14}),
                     com.strikerr212.minepc.wire.WirePlan.Anchor.pixel(floorPixel(b.offset(14, 0, 3), 8, 6 + k)));
             com.mojang.logging.LogUtils.getLogger().info("[CI-TRAY] провод по стене {}: {}", k + 1, l == null ? "не проложился" : l.meters() + " м, узлов " + l.nodes());
         }
