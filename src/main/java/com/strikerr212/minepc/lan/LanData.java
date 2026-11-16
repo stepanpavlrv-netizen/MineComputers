@@ -23,7 +23,7 @@ import java.util.Map;
  */
 public final class LanData extends SavedData {
 
-    public static final int COMPUTER = 0, DESK_SWITCH = 1, RACK_SWITCH = 2, ROUTER = 3, PANEL = 4, RADIO = 5, BRACKET = 6, RACK = 7,
+    public static final int COMPUTER = 0, DESK_SWITCH = 1, ROUTER = 3, PANEL = 4, RADIO = 5, BRACKET = 6, RACK = 7,
             OUTLET = 8;
 
     /** Портов у устройства: 16 под кабели (гнёзда по порядку, {@link LanDevice#sockets}) и 8 под патч-корды. */

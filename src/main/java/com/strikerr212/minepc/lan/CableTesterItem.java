@@ -122,7 +122,6 @@ public class CableTesterItem extends Item {
         return switch (d.type()) {
             case LanData.COMPUTER -> "block.minepc.pc_case";
             case LanData.DESK_SWITCH -> "block.minepc.network_switch";
-            case LanData.RACK_SWITCH -> "block.minepc.rack_switch";
             case LanData.ROUTER -> "block.minepc.wifi_router";
             case LanData.RADIO -> "block.minepc.radio_modem";
             case LanData.RACK -> "block.minepc.server_rack";

@@ -69,10 +69,10 @@ public class CordRenderer<T extends BlockEntity & CordList.Holder> implements Bl
             if (vc == null) vc = buffers.getBuffer(RenderType.entityCutoutNoCull(LED));
             boolean blink = NetHud.blinking(pos, i, time);
             int rgb = blink ? 0xFFB020 : 0x50FF78;
-            float lift = sw.rack() ? 2 : 1;
+            float lift = 1;
             // Точка на лицевой плоскости над гнездом, чуть впереди неё («над» — вверх, у настенного — от стены)
             net.minecraft.core.Direction f = s.face();
-            net.minecraft.core.Direction up = !sw.rack() && com.strikerr212.minepc.lan.SwitchBlock.onWall(state)
+            net.minecraft.core.Direction up = com.strikerr212.minepc.lan.SwitchBlock.onWall(state)
                     ? state.getValue(com.strikerr212.minepc.lan.SwitchBlock.FACING) : net.minecraft.core.Direction.UP;
             float plane = f.getAxisDirection() == net.minecraft.core.Direction.AxisDirection.POSITIVE ? 16 - s.depth() + 0.05f : s.depth() - 0.05f;
             var fa = com.strikerr212.minepc.lan.LanDevice.faceAxes(f);

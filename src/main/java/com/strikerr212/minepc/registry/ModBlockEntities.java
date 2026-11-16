@@ -33,7 +33,7 @@ public class ModBlockEntities {
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<com.strikerr212.minepc.lan.LanBlockEntity>> LAN =
             BLOCK_ENTITIES.register("lan_device", () ->
                     BlockEntityType.Builder.of(com.strikerr212.minepc.lan.LanBlockEntity::new, ModBlocks.NETWORK_SWITCH.get(),
-                            ModBlocks.RACK_SWITCH.get(), ModBlocks.PATCH_PANEL.get(), ModBlocks.RADIO.get(), ModBlocks.BRACKET.get(),
+                            ModBlocks.PATCH_PANEL.get(), ModBlocks.RADIO.get(), ModBlocks.BRACKET.get(),
                             ModBlocks.OUTLET.get()).build(null));
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<com.strikerr212.minepc.lan.RouterBlockEntity>> ROUTER =
             BLOCK_ENTITIES.register("wifi_router", () ->

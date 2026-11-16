@@ -126,11 +126,7 @@ public class ModBlocks {
     public static final DeferredBlock<com.strikerr212.minepc.lan.SwitchBlock> NETWORK_SWITCH = BLOCKS.register("network_switch",
             () -> new com.strikerr212.minepc.lan.SwitchBlock(BlockBehaviour.Properties.of()
                     .mapColor(MapColor.COLOR_GRAY).strength(1.0f).sound(SoundType.METAL).noOcclusion()
-                    .lightLevel(s -> 2), false));
-    public static final DeferredBlock<com.strikerr212.minepc.lan.SwitchBlock> RACK_SWITCH = BLOCKS.register("rack_switch",
-            () -> new com.strikerr212.minepc.lan.SwitchBlock(BlockBehaviour.Properties.of()
-                    .mapColor(MapColor.COLOR_BLACK).strength(2.0f, 6.0f).sound(SoundType.METAL)
-                    .lightLevel(s -> 3), true));
+                    .lightLevel(s -> 2)));
     public static final DeferredBlock<com.strikerr212.minepc.lan.TrayBlock> TRAY = BLOCKS.register("cable_tray",
             () -> new com.strikerr212.minepc.lan.TrayBlock(BlockBehaviour.Properties.of()
                     .mapColor(MapColor.METAL).strength(1.0f).sound(SoundType.CHAIN).noOcclusion()));

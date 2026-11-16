@@ -113,11 +113,6 @@ public interface LanDevice {
     /** Скорость, бит/с (как в жизни); в игре делится на 800 → байт/с. */
     long lanBitsPerSecond(Level level, BlockPos pos, BlockState state);
 
-    /** Стоечные коммутаторы рядом друг с другом работают как один. */
-    default boolean joinsNeighbours() {
-        return false;
-    }
-
     /** Дополнительно для схемы (у радиомодема — дальность и канал). */
     default int lanExtra(Level level, BlockPos pos, BlockState state) {
         return 0;
@@ -126,7 +121,7 @@ public interface LanDevice {
     /** Вид для схемы сети ({@link LanData#COMPUTER} и т.д.). */
     default int lanType(BlockState state) {
         if (lanKind() == Kind.COMPUTER) return LanData.COMPUTER;
-        return joinsNeighbours() ? LanData.RACK_SWITCH : LanData.DESK_SWITCH;
+        return LanData.DESK_SWITCH;
     }
 
     /** Гнёзда устройства, стоящего в pos (пустой список — это не устройство). */

@@ -23,12 +23,28 @@ def facing_variants(model):
             for f, y in (("north", 0), ("east", 90), ("south", 180), ("west", 270))}
 
 
-def save_block(name, model, paint):
+def wall_variants(model, wall_model):
+    """Блок ставится на стол или на стену (свойство wall): на стене — повёрнут на 90° по x."""
+    out = {}
+    for facing, y in (("north", 0), ("east", 90), ("south", 180), ("west", 270)):
+        for wall in (False, True):
+            v = {"model": wall_model if wall else model}
+            if wall:
+                v["x"] = 90
+            if y:
+                v["y"] = y
+            out[f"facing={facing},wall={'true' if wall else 'false'}"] = v
+    return out
+
+
+def save_block(name, model, paint, wall=None):
+    """wall — модель для установки на стену (тогда в blockstate есть wall=true/false)."""
     mj, img, bbox, n_el, n_glow = cases.build(name, model, folder="lan", paint=paint)
     os.makedirs(os.path.join(ASSETS, "textures/block/lan"), exist_ok=True)
     img.save(os.path.join(ASSETS, "textures/block/lan", name + ".png"))
     write(os.path.join(ASSETS, "models/block", name + ".json"), mj)
-    write(os.path.join(ASSETS, "blockstates", name + ".json"), {"variants": facing_variants(f"minepc:block/{name}")})
+    variants = wall_variants(f"minepc:block/{name}", wall) if wall else facing_variants(f"minepc:block/{name}")
+    write(os.path.join(ASSETS, "blockstates", name + ".json"), {"variants": variants})
     write(os.path.join(ASSETS, "models/item", name + ".json"), {"parent": f"minepc:block/{name}"})
     write(os.path.join(DATA, "loot_table/blocks", name + ".json"), {
         "type": "minecraft:block",
@@ -274,9 +290,8 @@ def loot(name):
 
 
 def main():
-    save_block("network_switch", netvox.switch(SWITCH_BODY), SWITCH_BODY)
-    save_block("rack_switch", netvox.rack_switch(), RACK_BODY)
-    save_block("wifi_router", netvox.router(ROUTER_BODY), ROUTER_BODY)
+    save_block("network_switch", netvox.switch(SWITCH_BODY), SWITCH_BODY, wall="minepc:block/network_switch")
+    save_block("wifi_router", netvox.router(ROUTER_BODY), ROUTER_BODY, wall="minepc:block/wifi_router_wall")
     save_block("patch_panel", patch_panel(), None)
     save_block("radio_modem", radio_modem(), RADIO_BODY)
     save_plain("radio_mast", mast(False), None)

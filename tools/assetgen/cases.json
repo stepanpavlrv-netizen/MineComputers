@@ -130,19 +130,6 @@
   "tint": "0xA6BCC6"
  },
  {
-  "id": "case_server",
-  "style": "SERVER",
-  "box": [
-   0,
-   0,
-   0,
-   16,
-   16,
-   16
-  ],
-  "tint": "0x404550"
- },
- {
   "id": "case_aio",
   "style": "OFFICE",
   "box": [
@@ -154,19 +141,6 @@
    15
   ],
   "tint": "0xF9FBFF"
- },
- {
-  "id": "case_rack_kvm",
-  "style": "SERVER",
-  "box": [
-   0,
-   0,
-   0,
-   16,
-   16,
-   16
-  ],
-  "tint": "0x404550"
  },
  {
   "id": "case_console",

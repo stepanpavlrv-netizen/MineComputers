@@ -18,31 +18,27 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
-import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
 /**
  * Коммутатор: соединяет все кабели, вставленные в его гнёзда, и усиливает сигнал (+1 тик к задержке).
- * Настольный — 6 гнёзд спереди; вешается и на стену (кликнуть по стене), тогда гнёзда смотрят вниз. Стоечный — целый блок, два ряда по 6 гнёзд спереди (медь и оптика),
- * 10 Гбит/с; стоечные коммутаторы вплотную друг к другу работают как один.
+ * Настольный: 6 медных гнёзд спереди (1 Гбит/с) и одно жёлтое SFP для оптики справа (10 Гбит/с — связь между зданиями
+ * и стойками); вешается и на стену (кликнуть по стене), тогда гнёзда смотрят вниз.
  */
 public class SwitchBlock extends HorizontalDirectionalBlock implements LanDevice, net.minecraft.world.level.block.EntityBlock {
 
-    public static final MapCodec<SwitchBlock> CODEC = simpleCodec(p -> new SwitchBlock(p, false));
+    public static final MapCodec<SwitchBlock> CODEC = simpleCodec(SwitchBlock::new);
+    /** Номер порта SFP (оптика) — седьмое гнездо, справа от медных. */
+    public static final int SFP_PORT = 6;
+    /** Скорость порта SFP, бит/с. */
+    public static final long SFP_BITS = 10_000_000_000L;
     private static final BoxShapes DESK = BoxShapes.of(1, 0, 4, 15, 4, 11);
     private static final BoxShapes WALL_SHAPE = WallMount.shape(true, 1, 0, 4, 15, 4, 11);
 
-    private final boolean rack;
-
-    public SwitchBlock(Properties properties, boolean rack) {
+    public SwitchBlock(Properties properties) {
         super(properties);
-        this.rack = rack;
         registerDefaultState(stateDefinition.any().setValue(FACING, Direction.NORTH).setValue(Paint.PROPERTY, Paint.NONE)
                 .setValue(WallMount.WALL, false));
-    }
-
-    public boolean rack() {
-        return rack;
     }
 
     @Override
@@ -58,7 +54,7 @@ public class SwitchBlock extends HorizontalDirectionalBlock implements LanDevice
     @Override
     public BlockState getStateForPlacement(BlockPlaceContext context) {
         Direction clicked = context.getClickedFace();
-        if (!rack && clicked.getAxis().isHorizontal()) return defaultBlockState().setValue(FACING, clicked).setValue(WallMount.WALL, true);
+        if (clicked.getAxis().isHorizontal()) return defaultBlockState().setValue(FACING, clicked).setValue(WallMount.WALL, true);
         return defaultBlockState().setValue(FACING, context.getHorizontalDirection().getOpposite());
     }
 
@@ -69,7 +65,6 @@ public class SwitchBlock extends HorizontalDirectionalBlock implements LanDevice
 
     @Override
     protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
-        if (rack) return Shapes.block();
         return onWall(state) ? WALL_SHAPE.get(state.getValue(FACING).getOpposite()) : DESK.get(state.getValue(FACING));
     }
 
@@ -78,16 +73,16 @@ public class SwitchBlock extends HorizontalDirectionalBlock implements LanDevice
         return Kind.SWITCH;
     }
 
-    /** Гнёзда только спереди: у настольного 6 в ряд, у стоечного два ряда по 6 (медь и оптика). */
+    /** Гнёзда только спереди (на стене — снизу): 6 медных в ряд и SFP для оптики справа. */
     @Override
     public boolean acceptsCable(BlockState state, Direction face) {
-        if (!rack && onWall(state)) return face == Direction.DOWN;
+        if (onWall(state)) return face == Direction.DOWN;
         return face == state.getValue(FACING);
     }
 
     @Override
     public boolean acceptsFiber(BlockState state, Direction face) {
-        return rack && face == state.getValue(FACING);
+        return acceptsCable(state, face);
     }
 
     /** Порт 1 — левый, если смотреть на лицевую сторону (как подписано в программе switch). */
@@ -95,33 +90,24 @@ public class SwitchBlock extends HorizontalDirectionalBlock implements LanDevice
     public java.util.List<Socket> sockets(BlockState state) {
         Direction f = state.getValue(FACING);
         java.util.List<Socket> out = new java.util.ArrayList<>();
-        if (rack) {
-            for (int row : new int[]{12, 7}) {
-                for (int i = 0; i < 6; i++) out.add(LanDevice.local(f, false, 13 - 2 * i, row, 0, true, true));
-            }
-        } else {
-            boolean wall = onWall(state);
-            for (int i = 0; i < 6; i++) {
-                out.add(wall ? WallMount.socket(f, true, false, 13 - 2 * i, 1, 4, true, false)
-                        : LanDevice.local(f, false, 13 - 2 * i, 1, 4, true, false));
-            }
+        boolean wall = onWall(state);
+        for (int i = 0; i < 6; i++) {
+            out.add(wall ? WallMount.socket(f, true, false, 13 - 2 * i, 1, 4, true, false)
+                    : LanDevice.local(f, false, 13 - 2 * i, 1, 4, true, false));
         }
+        // SFP — справа от медных, только оптика
+        out.add(wall ? WallMount.socket(f, true, false, 1, 1, 4, false, true) : LanDevice.local(f, false, 1, 1, 4, false, true));
         return out;
     }
 
     @Override
     public long lanBitsPerSecond(Level level, BlockPos pos, BlockState state) {
-        return rack ? 10_000_000_000L : 1_000_000_000L;
-    }
-
-    @Override
-    public boolean joinsNeighbours() {
-        return rack;
+        return 1_000_000_000L;
     }
 
     /** Цвет корпуса некрашеного коммутатора. */
     public int paintColor(BlockState state) {
-        return state.getValue(Paint.PROPERTY).tint(rack ? 0x404550 : 0x535963);
+        return state.getValue(Paint.PROPERTY).tint(0x535963);
     }
 
     @Override
@@ -160,6 +146,6 @@ public class SwitchBlock extends HorizontalDirectionalBlock implements LanDevice
     @Override
     public void appendHoverText(net.minecraft.world.item.ItemStack stack, net.minecraft.world.item.Item.TooltipContext context,
                                 java.util.List<net.minecraft.network.chat.Component> tooltip, net.minecraft.world.item.TooltipFlag flag) {
-        tooltip.add(net.minecraft.network.chat.Component.translatable(rack ? "tooltip.minepc.rack_switch" : "tooltip.minepc.network_switch").withStyle(net.minecraft.ChatFormatting.GRAY));
+        tooltip.add(net.minecraft.network.chat.Component.translatable("tooltip.minepc.network_switch").withStyle(net.minecraft.ChatFormatting.GRAY));
     }
 }

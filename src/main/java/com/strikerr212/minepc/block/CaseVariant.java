@@ -19,9 +19,7 @@ public enum CaseVariant {
     GAMING_WHITE("case_gaming_white", 0xF9FBFF, CaseStyle.GAMING, null, false, 2, 0, 1, 14, 16, 15),
     GAMING_CUBE("case_gaming_cube", 0x2D2D36, CaseStyle.GAMING, null, false, 2, 0, 2, 14, 12, 14),
     INDUSTRIAL("case_industrial", 0xA6BCC6, CaseStyle.INDUSTRIAL, null, false, 1, 0, 1, 15, 16, 15),
-    SERVER("case_server", 0x404550, CaseStyle.SERVER, null, false, 0, 0, 0, 16, 16, 16),
     AIO("case_aio", 0xF9FBFF, CaseStyle.OFFICE, new Screen(2, 14, 2, 10, 8, 0), true, 1, 0, 2, 15, 15, 15),
-    RACK_KVM("case_rack_kvm", 0x404550, CaseStyle.SERVER, new Screen(3, 13, 3, 4, 7, 0), true, 0, 0, 0, 16, 16, 16),
     CONSOLE("case_console", 0xA6BCC6, CaseStyle.INDUSTRIAL, new Screen(3, 13, 2, 5, 7.07f, 45), true, 0, 0, 0, 16, 15, 14);
 
     public final String id;

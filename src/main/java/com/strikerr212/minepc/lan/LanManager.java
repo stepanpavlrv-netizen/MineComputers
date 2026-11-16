@@ -278,7 +278,9 @@ public final class LanManager {
                 if (!s.ok()) continue;
                 int cfg = data.portConfig(cur.pos, s.port());
                 if (!LanData.portEnabled(cfg) || LanData.portVlan(cfg) != cur.vlan) continue;
-                for (LanData.Plug p : s.plugs()) v.plug(p, cur.hops, cur.bits);
+                // Медные гнёзда настольного коммутатора — 1 Гбит/с, его SFP — 10 Гбит/с
+                long out = dev.type() == LanData.DESK_SWITCH && s.port() != SwitchBlock.SFP_PORT ? Math.min(cur.bits, dev.bits()) : cur.bits;
+                for (LanData.Plug p : s.plugs()) v.plug(p, cur.hops, out);
             }
         }
         return new Result(List.copyOf(best.values()), List.copyOf(switches));
@@ -344,7 +346,9 @@ public final class LanManager {
                 if (toBus && p.port() < LanData.CABLE_PORTS) return;   // модуль без коммутатора в ряду — тупик
             }
             if (d.computer() && host.equals(start)) return;
-            long b = Math.min(bits, d.computer() ? d.bitsFor(host.slot()) : d.bits());
+            long own = d.computer() ? d.bitsFor(host.slot())
+                    : d.type() == LanData.DESK_SWITCH && p.port() == SwitchBlock.SFP_PORT ? SwitchBlock.SFP_BITS : d.bits();
+            long b = Math.min(bits, own);
             if (b <= 0) return;
             if (d.computer()) {
                 computer(host, hops, b);
@@ -533,28 +537,9 @@ public final class LanManager {
         return true;
     }
 
-    /** Коммутатор и стоечные коммутаторы, стоящие с ним вплотную (они работают как один). */
+    /** Коммутатор (раньше сюда же входили стоечные коммутаторы вплотную; их больше нет). */
     static List<BlockPos> switchGroup(LanData data, BlockPos start) {
-        List<BlockPos> out = new ArrayList<>();
-        out.add(start);
-        LanData.Device s = data.device(start);
-        if (s == null || s.type() != LanData.RACK_SWITCH) return out;
-        ArrayDeque<BlockPos> q = new ArrayDeque<>(out);
-        Set<BlockPos> seen = new HashSet<>(out);
-        while (!q.isEmpty() && seen.size() < 256) {
-            BlockPos p = q.poll();
-            for (Direction dir : Direction.values()) {
-                BlockPos n = p.relative(dir);
-                if (seen.contains(n)) continue;
-                LanData.Device o = data.device(n);
-                if (o != null && o.type() == LanData.RACK_SWITCH) {
-                    seen.add(n);
-                    q.add(n);
-                    out.add(n);
-                }
-            }
-        }
-        return out;
+        return List.of(start);
     }
 
     // ======================= Порты и отрезки =======================

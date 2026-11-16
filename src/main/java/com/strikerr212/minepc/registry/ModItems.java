@@ -73,7 +73,6 @@ public class ModItems {
     public static final DeferredItem<com.strikerr212.minepc.lan.CableItem> FIBER = ITEMS.register("fiber_cable",
             () -> new com.strikerr212.minepc.lan.CableItem(new Item.Properties(), true));
     public static final DeferredItem<BlockItem> NETWORK_SWITCH = ITEMS.registerSimpleBlockItem("network_switch", ModBlocks.NETWORK_SWITCH);
-    public static final DeferredItem<BlockItem> RACK_SWITCH = ITEMS.registerSimpleBlockItem("rack_switch", ModBlocks.RACK_SWITCH);
     public static final DeferredItem<BlockItem> ROUTER = ITEMS.registerSimpleBlockItem("wifi_router", ModBlocks.ROUTER);
     public static final DeferredItem<BlockItem> IO_CONTROLLER = ITEMS.registerSimpleBlockItem("io_controller", ModBlocks.IO_CONTROLLER);
     public static final DeferredItem<BlockItem> CAMERA = ITEMS.registerSimpleBlockItem("camera", ModBlocks.CAMERA);

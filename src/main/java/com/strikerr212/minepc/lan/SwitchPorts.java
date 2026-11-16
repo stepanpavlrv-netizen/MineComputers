@@ -41,7 +41,6 @@ public final class SwitchPorts {
     public static String kind(LanData.Device d) {
         return switch (d.type()) {
             case LanData.DESK_SWITCH -> "desk";
-            case LanData.RACK_SWITCH -> "rack";
             case LanData.ROUTER -> "router";
             case LanData.RADIO -> "radio";
             case LanData.RACK -> "rackbus";
@@ -132,15 +131,18 @@ public final class SwitchPorts {
             boolean exists = port < LanData.CABLE_PORTS && port < socks.size() && (socks.get(port).copper() || socks.get(port).fiber());
             LanManager.Segment seg = used.get(port);
             if (!exists && seg == null) continue;
-            // У стоечного коммутатора 12 гнёзд: показываем только занятые, чтобы окно не было бесконечным
-            if (d.type() == LanData.RACK_SWITCH && seg == null) continue;
             char side = 'C';
             int number = port - LanData.CABLE_PORTS + 1;
             if (port < LanData.CABLE_PORTS) {
                 Direction face = port < socks.size() ? socks.get(port).face() : Direction.NORTH;
-                side = side(state, face);
+                boolean sfp = port < socks.size() && socks.get(port).fiber() && !socks.get(port).copper();
+                side = sfp ? 'O' : side(state, face);
                 number = 1;
-                for (int j = 0; j < port && j < socks.size(); j++) if (socks.get(j).face() == face) number++;
+                for (int j = 0; j < port && j < socks.size(); j++) {
+                    LanDevice.Socket o = socks.get(j);
+                    boolean oSfp = o.fiber() && !o.copper();
+                    if (sfp ? oSfp : (!oSfp && o.face() == face)) number++;
+                }
             }
             String device = "";
             boolean link = seg != null && seg.ok() && !seg.plugs().isEmpty();

@@ -2244,7 +2244,8 @@ public class CiScreenshots {
             }
         }
         BlockState panel = ModBlocks.PATCH_PANEL.get().defaultBlockState().setValue(com.strikerr212.minepc.lan.PatchPanelBlock.FACING, Direction.NORTH);
-        BlockState rack = ModBlocks.RACK_SWITCH.get().defaultBlockState().setValue(com.strikerr212.minepc.lan.SwitchBlock.FACING, Direction.NORTH);
+        // Два настольных коммутатора, связанные оптикой через их гнёзда SFP (раньше — стоечные коммутаторы)
+        BlockState rack = ModBlocks.NETWORK_SWITCH.get().defaultBlockState().setValue(com.strikerr212.minepc.lan.SwitchBlock.FACING, Direction.NORTH);
         level.setBlockAndUpdate(b.west(), panel);
         level.setBlockAndUpdate(b, rack);
         level.setBlockAndUpdate(b.east(5), rack);

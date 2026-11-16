@@ -51,11 +51,6 @@ def aio():
     return m
 
 
-def kvm():
-    m = models2.rack_kvm()
-    off_screen(m, [(x, y, 11) for x in range(3, 13) for y in range(6, 13)], (8, 20, 12), 8)
-    return m
-
 
 def console():
     m = models2.ind_console()
@@ -75,9 +70,7 @@ CASES = {
     "case_gaming_white": (gaming_white, "GAMING", "minecraft:white_stained_glass_pane"),
     "case_gaming_cube": (models2.gaming_cube, "GAMING", "minecraft:amethyst_shard"),
     "case_industrial": (models2.ind_cabinet, "INDUSTRIAL", "minecraft:iron_block"),
-    "case_server": (models.case_server, "SERVER", "minecraft:chain"),
     "case_aio": (aio, "OFFICE", "minepc:monitor"),
-    "case_rack_kvm": (kvm, "SERVER", "minepc:monitor_terminal"),
     "case_console": (console, "INDUSTRIAL", "minepc:monitor_panel"),
 }
 
@@ -88,8 +81,8 @@ PAINT = {
     "case_retro_tower": (214, 205, 178), "case_retro_desktop": (214, 205, 178), "case_home80": (120, 98, 76),
     "case_office_tower": (43, 45, 50), "case_mini": (192, 196, 202), "case_workstation": (192, 195, 200),
     "case_gaming": (26, 26, 31), "case_gaming_white": (232, 234, 238), "case_gaming_cube": (28, 28, 34),
-    "case_industrial": STEEL, "case_server": (40, 43, 50), "case_aio": (232, 234, 238),
-    "case_rack_kvm": (40, 43, 50), "case_console": STEEL,
+    "case_industrial": STEEL, "case_aio": (232, 234, 238),
+    "case_console": STEEL,
 }
 
 

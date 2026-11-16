@@ -82,6 +82,7 @@ public class SwitchScreen extends Screen {
             case 'R' -> "gui.minepc.switch.right";
             case 'S' -> "gui.minepc.switch.bus";
             case 'W' -> "gui.minepc.switch.wan";
+            case 'O' -> "gui.minepc.switch.sfp";
             default -> "gui.minepc.switch.cord";
         };
         return Component.translatable(key, r.number).getString();

@@ -84,7 +84,6 @@ public class ClientEvents {
         java.util.List<net.minecraft.world.level.block.Block> out = new java.util.ArrayList<>();
         for (var b : com.strikerr212.minepc.registry.ModBlocks.CASES.values()) out.add(b.get());
         out.add(com.strikerr212.minepc.registry.ModBlocks.NETWORK_SWITCH.get());
-        out.add(com.strikerr212.minepc.registry.ModBlocks.RACK_SWITCH.get());
         out.add(com.strikerr212.minepc.registry.ModBlocks.ROUTER.get());
         out.add(com.strikerr212.minepc.registry.ModBlocks.RADIO.get());
         for (var b : com.strikerr212.minepc.registry.ModBlocks.allMonitors()) {
