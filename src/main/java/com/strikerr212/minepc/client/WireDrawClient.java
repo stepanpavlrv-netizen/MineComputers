@@ -193,7 +193,7 @@ public final class WireDrawClient {
             say("message.minepc.wire.same_line");
             return;
         }
-        WirePlan.Result r = WirePlan.build(mc.level, WireStore::get, cable.fiber(), from, clicks, to, SEARCH * 2);
+        WirePlan.Result r = WirePlan.build(mc.level, WirePlan.Lines.client(), cable.fiber(), from, clicks, to, SEARCH * 2);
         if (!r.ok()) {
             say(r.problem() == null ? "message.minepc.wire.no_path" : r.problem());
             if (to == null && !clicks.isEmpty()) clicks.remove(clicks.size() - 1);
@@ -252,7 +252,7 @@ public final class WireDrawClient {
         if (!key.equals(previewKey) && now - previewAt >= 2) {
             previewKey = key;
             previewAt = now;
-            preview = path.isEmpty() && to == null ? null : WirePlan.build(level, WireStore::get, cable.fiber(), from, path, to, SEARCH);
+            preview = path.isEmpty() && to == null ? null : WirePlan.build(level, WirePlan.Lines.client(), cable.fiber(), from, path, to, SEARCH);
         }
         int have = mc.player.getAbilities().instabuild ? Integer.MAX_VALUE : mc.player.getItemInHand(hand).getCount();
         int len = preview == null ? 0 : preview.meters();

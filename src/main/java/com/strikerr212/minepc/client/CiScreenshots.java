@@ -224,6 +224,11 @@ public class CiScreenshots {
                 });
             }
             case 1540 -> shot(mc, "world_lan2");
+            case 1541 -> server.execute(() -> {
+                ServerPlayer p = server.getPlayerList().getPlayers().get(0);
+                p.teleportTo(p.serverLevel(), trayBase.getX() + 2.5, trayBase.getY() + 2.2, trayBase.getZ() - 2.6, 0f, 32f);
+            });
+            case 1544 -> shot(mc, "world_tray");
             case 1545 -> {
                 mc.options.hideGui = false;
                 mc.setScreen(new TerminalScreen(lanE));
@@ -251,6 +256,27 @@ public class CiScreenshots {
                 });
             }
             case 1625 -> shot(mc, "world_rack");
+            // Маскировка: провод уходит в кирпич и выходит из него; прицел видит провод внутри
+            case 1626 -> server.execute(() -> {
+                if (maskCell == null) return;
+                ServerPlayer p = server.getPlayerList().getPlayers().get(0);
+                var eye = new net.minecraft.world.phys.Vec3(maskCell.getX() + 0.5, maskCell.getY() + 1.62 + 0.9, maskCell.getZ() - 1.4);
+                var d = maskPoint.subtract(eye);
+                float yaw = (float) Math.toDegrees(Math.atan2(-d.x, d.z)), pitch = (float) Math.toDegrees(-Math.atan2(d.y, Math.hypot(d.x, d.z)));
+                p.teleportTo(p.serverLevel(), eye.x, eye.y - 1.62, eye.z, yaw, pitch);
+            });
+            case 1629 -> {
+                shot(mc, "world_mask");
+                server.execute(() -> {
+                    if (maskCell == null) return;
+                    ServerPlayer p = server.getPlayerList().getPlayers().get(0);
+                    var hit = com.strikerr212.minepc.wire.WireService.aimed(p);
+                    com.mojang.logging.LogUtils.getLogger().info("[CI-MASK] блок {}, провод внутри спрятан {}, прицел видит провод {}, E видит {}",
+                            p.serverLevel().getBlockState(maskCell).getBlock().getName().getString(),
+                            com.strikerr212.minepc.wire.WireMask.inside(p.serverLevel(), maskPoint), hit == null ? "нет" : hit.line().id,
+                            com.strikerr212.minepc.lan.LanManager.get(p.serverLevel()).reach(p.serverLevel(), lanE).size());
+                });
+            }
             // BIOS: классический (плата ур. 3) и UEFI (плата ур. 5)
             case 1630 -> { mc.options.hideGui = false; typeAt(lanE, "reboot"); typeAt(lanJ2, "reboot"); }
             case 1636, 1642, 1648, 1654, 1660 -> { keyAt(lanE, "delete"); keyAt(lanJ2, "delete"); }
@@ -2086,7 +2112,24 @@ public class CiScreenshots {
     private static BlockPos lanBase = BlockPos.ZERO, lanE = BlockPos.ZERO, lanF = BlockPos.ZERO, lanJ1 = BlockPos.ZERO,
             lanJ2 = BlockPos.ZERO, radio1 = BlockPos.ZERO;
 
-    private static BlockPos wiredPos;
+    private static BlockPos wiredPos, trayBase = BlockPos.ZERO, maskCell;
+    private static net.minecraft.world.phys.Vec3 maskPoint;
+
+    /** Лоток на месте pos, прикреплённый к face (связи — потом, {@link #connectTrays}). */
+    private static void tray(ServerLevel level, BlockPos pos, Direction face, com.strikerr212.minepc.block.Paint paint) {
+        level.setBlockAndUpdate(pos, ModBlocks.TRAY.get().defaultBlockState().setValue(com.strikerr212.minepc.lan.TrayBlock.FACE, face)
+                .setValue(com.strikerr212.minepc.block.Paint.PROPERTY, paint));
+    }
+
+    /** Пересчитать связи всех лотков в коробке (дважды — подъёмы зависят от соседей). */
+    private static void connectTrays(ServerLevel level, BlockPos from, BlockPos to) {
+        for (int pass = 0; pass < 2; pass++) {
+            for (BlockPos q : BlockPos.betweenClosed(from, to)) {
+                var st = level.getBlockState(q);
+                if (st.getBlock() instanceof com.strikerr212.minepc.lan.TrayBlock t) level.setBlockAndUpdate(q, t.connect(st, level, q));
+            }
+        }
+    }
 
     /** Компьютер ур. 5 с монитором и дисководом, в дисководе — дискета «Wired» (как из сундука деревни). */
     private static void placeWired() {
@@ -2206,14 +2249,63 @@ public class CiScreenshots {
         lanE = b.south(2);
         pcWithMonitor(level, lanE, Direction.EAST);
         var lineE = link(level, lanE, null, b.west(), Direction.SOUTH, blue, false, "", List.of());
-        // J1 → J2 (лотки с проводами 3.0 появятся на следующем шаге)
+        // Маскировка «провод в стене»: на середину провода от E — каменный кирпич, провод проходит сквозь него
+        if (lineE != null) {
+            List<net.minecraft.world.phys.Vec3> pts = new java.util.ArrayList<>();
+            for (int i = 0; i + 1 < lineE.nodes(); i++) {
+                if (lineE.hang[i]) continue;
+                var a0 = lineE.node(i);
+                var a1 = lineE.node(i + 1);
+                int n = (int) Math.ceil(a0.distanceTo(a1) * 2);
+                for (int k = 0; k <= n; k++) pts.add(a0.lerp(a1, k / (double) Math.max(1, n)));
+            }
+            for (int k = pts.size() / 2; k < pts.size(); k++) {
+                BlockPos c = BlockPos.containing(pts.get(k));
+                if (!level.getBlockState(c).isAir() || c.distManhattan(lanE) < 1 || c.distManhattan(b.west()) < 1) continue;
+                maskCell = c.immutable();
+                maskPoint = pts.get(k);
+                break;
+            }
+            if (maskCell != null) level.setBlockAndUpdate(maskCell, net.minecraft.world.level.block.Blocks.STONE_BRICKS.defaultBlockState());
+            com.mojang.logging.LogUtils.getLogger().info("[CI-MASK] кирпич на проводе E: {}", maskCell);
+        }
+        // J1 → J2 по лоткам: ряд на полу у кирпичной стены, подъём на стену и ряд по стене (покрашен)
         lanJ1 = b.offset(8, 0, 4);
         lanJ2 = b.offset(15, 0, 4);
         pcWithMonitor(level, lanJ1, Direction.WEST);
         fillCase(level, lanJ2, 5, Direction.EAST);
         level.setBlockAndUpdate(lanJ2.above(), ModBlocks.MONITOR.get().defaultBlockState()
                 .setValue(com.strikerr212.minepc.block.MonitorBlock.KEYBOARD, true).setValue(DeviceBlock.FACING, Direction.EAST));
+        for (int x = 9; x <= 14; x++) for (int y = 0; y <= 3; y++) level.setBlockAndUpdate(b.offset(x, y, 5), net.minecraft.world.level.block.Blocks.BRICKS.defaultBlockState());
+        for (int x = 9; x <= 14; x++) tray(level, b.offset(x, 0, 4), Direction.DOWN, com.strikerr212.minepc.block.Paint.NONE);
+        for (BlockPos t : new BlockPos[]{b.offset(10, 1, 4), b.offset(10, 2, 4), b.offset(11, 2, 4), b.offset(12, 2, 4), b.offset(13, 2, 4), b.offset(13, 1, 4)}) {
+            tray(level, t, Direction.SOUTH, com.strikerr212.minepc.block.Paint.YELLOW);
+        }
+        connectTrays(level, b.offset(8, 0, 3), b.offset(15, 3, 5));
         link(level, lanJ1, lanJ2, blue, false, "");
+        // ещё два провода — вверх по лотку на стене, поверху и вниз
+        for (int k = 0; k < 2; k++) {
+            BlockPos w1 = b.offset(10, 2, 4), w2 = b.offset(13, 2, 4);
+            var l = com.strikerr212.minepc.wire.WireService.layDirect(level, false, k == 0 ? net.minecraft.world.item.DyeColor.ORANGE.getId()
+                            : net.minecraft.world.item.DyeColor.LIME.getId(), "",
+                    com.strikerr212.minepc.wire.WirePlan.Anchor.pixel(floorPixel(b.offset(9, 0, 3), 8, 6 + k)),
+                    List.of(new int[]{w1.getX() * 16 + 7 + k, w1.getY() * 16 + 8, w1.getZ() * 16 + 14},
+                            new int[]{w2.getX() * 16 + 7 + k, w2.getY() * 16 + 8, w2.getZ() * 16 + 14}),
+                    com.strikerr212.minepc.wire.WirePlan.Anchor.pixel(floorPixel(b.offset(14, 0, 3), 8, 6 + k)));
+            com.mojang.logging.LogUtils.getLogger().info("[CI-TRAY] провод по стене {}: {}", k + 1, l == null ? "не проложился" : l.meters() + " м, узлов " + l.nodes());
+        }
+        trayBase = b.offset(9, 0, 4);
+        StringBuilder ts = new StringBuilder("[CI-TRAY] лотки:");
+        for (BlockPos t : BlockPos.betweenClosed(b.offset(9, 0, 4), b.offset(14, 2, 4))) {
+            var st = level.getBlockState(t);
+            if (st.getBlock() instanceof com.strikerr212.minepc.lan.TrayBlock) ts.append(' ').append(t.getX() - b.getX()).append(',').append(t.getY() - b.getY())
+                    .append(st.getValue(com.strikerr212.minepc.lan.TrayBlock.FACE).getName().charAt(0)).append('[')
+                    .append(st.getValue(com.strikerr212.minepc.lan.TrayBlock.N).getSerializedName().charAt(0))
+                    .append(st.getValue(com.strikerr212.minepc.lan.TrayBlock.E).getSerializedName().charAt(0))
+                    .append(st.getValue(com.strikerr212.minepc.lan.TrayBlock.S).getSerializedName().charAt(0))
+                    .append(st.getValue(com.strikerr212.minepc.lan.TrayBlock.W).getSerializedName().charAt(0)).append(']');
+        }
+        com.mojang.logging.LogUtils.getLogger().info(ts.toString());
         // Радиомодемы: один здесь, другой в 300 блоках (чанк потом выгрузится — связь в схеме останется)
         radio1 = b.offset(3, 0, 4);
         BlockState radio = ModBlocks.RADIO.get().defaultBlockState().setValue(com.strikerr212.minepc.block.Paint.PROPERTY,

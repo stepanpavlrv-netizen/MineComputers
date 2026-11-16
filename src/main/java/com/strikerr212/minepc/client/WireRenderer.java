@@ -120,16 +120,26 @@ public final class WireRenderer {
                     tube(vc, m, pts.get(j - 1), pts.get(j), r, g, b, LevelRenderer.getLightColor(level, BlockPos.containing(mid)), k++);
                 }
             } else {
-                // длинный прямой отрезок режем по блокам — у каждого куска свой свет
-                double len = a.distanceTo(c);
-                int parts = Math.max(1, (int) Math.ceil(len));
-                for (int j = 0; j < parts; j++) {
-                    Vec3 p0 = a.lerp(c, j / (double) parts), p1 = a.lerp(c, (j + 1) / (double) parts);
+                // прямой отрезок режем по границам блоков — у каждого куска свой свет; кусок внутри блока
+                // (маскировка «провод в стене») не рисуем
+                List<Double> cuts = new java.util.ArrayList<>();
+                cuts.add(0.0);
+                for (int ax = 0; ax < 3; ax++) {
+                    double va = ax == 0 ? a.x : ax == 1 ? a.y : a.z, vc2 = ax == 0 ? c.x : ax == 1 ? c.y : c.z;
+                    if (Math.abs(vc2 - va) < 1e-9) continue;
+                    for (double t = Math.floor(Math.min(va, vc2)) + 1; t < Math.max(va, vc2); t++) cuts.add((t - va) / (vc2 - va));
+                }
+                cuts.add(1.0);
+                java.util.Collections.sort(cuts);
+                for (int j = 0; j + 1 < cuts.size(); j++) {
+                    if (cuts.get(j + 1) - cuts.get(j) < 1e-6) continue;
+                    Vec3 p0 = a.lerp(c, cuts.get(j)), p1 = a.lerp(c, cuts.get(j + 1));
+                    Vec3 mid = p0.add(p1).scale(0.5);
+                    if (com.strikerr212.minepc.wire.WireMask.inside(level, mid)) continue;
                     // небольшой нахлёст, чтобы на изгибах не было щелей
                     Vec3 d = p1.subtract(p0).normalize().scale(R);
                     if (j == 0 && i > 0) p0 = p0.subtract(d);
-                    if (j == parts - 1 && i + 2 < l.nodes()) p1 = p1.add(d);
-                    Vec3 mid = p0.add(p1).scale(0.5);
+                    if (j + 2 == cuts.size() && i + 2 < l.nodes()) p1 = p1.add(d);
                     tube(vc, m, p0, p1, r, g, b, LevelRenderer.getLightColor(level, BlockPos.containing(mid)), k++);
                 }
             }

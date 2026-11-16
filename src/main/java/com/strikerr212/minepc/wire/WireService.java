@@ -76,7 +76,7 @@ public final class WireService {
             return;
         }
         if (to != null && from.kind() == WirePlan.SOCKET && to.kind() == WirePlan.SOCKET && from.dev().equals(to.dev()) && from.port() == to.port()) return;
-        WirePlan.Result r = WirePlan.build(level, data::line, fiber, from, req.clicks(), to, SEARCH);
+        WirePlan.Result r = WirePlan.build(level, WirePlan.Lines.of(data), fiber, from, req.clicks(), to, SEARCH);
         if (!r.ok()) {
             fail(player, r.problem() == null ? "message.minepc.wire.no_path" : r.problem());
             return;
@@ -152,7 +152,7 @@ public final class WireService {
         for (WirePlan.Anchor a : new WirePlan.Anchor[]{from, to}) {
             if (a != null && a.kind() == WirePlan.SOCKET && !WireSockets.socketFree(level, a.dev(), a.port())) return null;
         }
-        WirePlan.Result r = WirePlan.build(level, data::line, fiber, from, clicks, to, SEARCH);
+        WirePlan.Result r = WirePlan.build(level, WirePlan.Lines.of(data), fiber, from, clicks, to, SEARCH);
         if (!r.ok()) return null;
         BlockPos devA = from.kind() == WirePlan.SOCKET ? from.dev() : null;
         BlockPos devB = to != null && to.kind() == WirePlan.SOCKET ? to.dev() : null;
@@ -214,9 +214,19 @@ public final class WireService {
         }
         Hit hit = pick(near, eye, look, reach);
         if (hit == null) return null;
+        return visible(player, hit, reach);
+    }
+
+    /**
+     * Провод под прицелом виден, если блок не ближе него — или провод спрятан в том самом блоке, на который смотрят
+     * (маскировка «провод в стене», {@link WireMask}).
+     */
+    private static Hit visible(net.minecraft.world.entity.player.Player player, Hit hit, double reach) {
         var block = player.pick(reach, 1f, false);
-        if (block.getType() != net.minecraft.world.phys.HitResult.Type.MISS && block.getLocation().distanceTo(eye) + 0.15 < hit.dist()) return null;
-        return hit;
+        if (block.getType() == net.minecraft.world.phys.HitResult.Type.MISS || block.getLocation().distanceTo(player.getEyePosition()) + 0.15 >= hit.dist()) return hit;
+        if (block instanceof net.minecraft.world.phys.BlockHitResult bh && bh.getBlockPos().equals(BlockPos.containing(hit.point()))
+                && WireMask.inside(player.level(), hit.point())) return hit;
+        return null;
     }
 
     /** Провод под прицелом у игрока (по его копии проводов; блок ближе провода — null). */
@@ -225,9 +235,7 @@ public final class WireService {
         double reach = player.blockInteractionRange() + 0.5;
         Hit hit = pick(WireStore.all(), eye, player.getViewVector(1), reach);
         if (hit == null) return null;
-        var block = player.pick(reach, 1f, false);
-        if (block.getType() != net.minecraft.world.phys.HitResult.Type.MISS && block.getLocation().distanceTo(eye) + 0.15 < hit.dist()) return null;
-        return hit;
+        return visible(player, hit, reach);
     }
 
     /** Бирка: подписать провод под прицелом (пустое имя — снять подпись). false — провода под прицелом нет. */

@@ -70,6 +70,7 @@ public class ModItems {
     public static final DeferredItem<BlockItem> MONITOR_CURVED = ITEMS.registerSimpleBlockItem("monitor_curved", ModBlocks.MONITOR_CURVED);
     public static final DeferredItem<com.strikerr212.minepc.lan.CableItem> CABLE = ITEMS.register("network_cable",
             () -> new com.strikerr212.minepc.lan.CableItem(new Item.Properties()));
+    public static final DeferredItem<BlockItem> TRAY = ITEMS.registerSimpleBlockItem("cable_tray", ModBlocks.TRAY);
     public static final DeferredItem<com.strikerr212.minepc.lan.CableItem> FIBER = ITEMS.register("fiber_cable",
             () -> new com.strikerr212.minepc.lan.CableItem(new Item.Properties(), true));
     public static final DeferredItem<BlockItem> NETWORK_SWITCH = ITEMS.registerSimpleBlockItem("network_switch", ModBlocks.NETWORK_SWITCH);

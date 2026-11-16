@@ -1,0 +1,123 @@
+{
+ "render_type": "minecraft:cutout",
+ "textures": {
+  "t": "minepc:block/cable_tray",
+  "particle": "minepc:block/cable_tray"
+ },
+ "elements": [
+  {
+   "from": [
+    0,
+    0,
+    12
+   ],
+   "to": [
+    3,
+    3,
+    13
+   ],
+   "faces": {
+    "north": {
+     "texture": "#t",
+     "tintindex": 0
+    },
+    "south": {
+     "texture": "#t",
+     "tintindex": 0
+    },
+    "east": {
+     "texture": "#t",
+     "tintindex": 0
+    },
+    "west": {
+     "texture": "#t",
+     "tintindex": 0
+    },
+    "up": {
+     "texture": "#t",
+     "tintindex": 0
+    },
+    "down": {
+     "texture": "#t",
+     "tintindex": 0
+    }
+   }
+  },
+  {
+   "from": [
+    0,
+    0,
+    3
+   ],
+   "to": [
+    3,
+    3,
+    4
+   ],
+   "faces": {
+    "north": {
+     "texture": "#t",
+     "tintindex": 0
+    },
+    "south": {
+     "texture": "#t",
+     "tintindex": 0
+    },
+    "east": {
+     "texture": "#t",
+     "tintindex": 0
+    },
+    "west": {
+     "texture": "#t",
+     "tintindex": 0
+    },
+    "up": {
+     "texture": "#t",
+     "tintindex": 0
+    },
+    "down": {
+     "texture": "#t",
+     "tintindex": 0
+    }
+   }
+  },
+  {
+   "from": [
+    1,
+    0,
+    4
+   ],
+   "to": [
+    2,
+    1,
+    12
+   ],
+   "faces": {
+    "north": {
+     "texture": "#t",
+     "tintindex": 0
+    },
+    "south": {
+     "texture": "#t",
+     "tintindex": 0
+    },
+    "east": {
+     "texture": "#t",
+     "tintindex": 0
+    },
+    "west": {
+     "texture": "#t",
+     "tintindex": 0
+    },
+    "up": {
+     "texture": "#t",
+     "tintindex": 0
+    },
+    "down": {
+     "texture": "#t",
+     "tintindex": 0
+    }
+   }
+  }
+ ]
+}

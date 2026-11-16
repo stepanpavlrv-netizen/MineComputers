@@ -37,6 +37,27 @@ public final class WireGuard {
 
     /** Раз в сколько тиков проверять висящие пролёты. */
     private static final int PERIOD = 40;
+    /**
+     * Короче этого пролёт не проверяем, блоков: короткие висящие кусочки прокладка делает сама (провод
+     * перешагивает ребро блока), их дуга нарисована с запасом и может задеть блок — это не перегородка.
+     */
+    private static final double MIN_SPAN = 1.5;
+    /** У концов пролёта (у опор) точки не проверяем, блоков. */
+    private static final double END_GAP = 0.4;
+
+    /** Точки висящего отрезка i, которые проверяем (пусто — отрезок не проверяется). */
+    private static List<Vec3> checked(WireLine l, int i) {
+        Vec3 a = l.node(i), b = l.node(i + 1);
+        if (!l.hang[i] || a.distanceTo(b) < MIN_SPAN) return List.of();
+        List<Vec3> pts = CordShape.points(a, b), out = new ArrayList<>();
+        for (int k = 1; k < pts.size(); k++) {
+            for (int q = 0; q < 4; q++) {
+                Vec3 p = pts.get(k - 1).lerp(pts.get(k), q / 4.0);
+                if (p.distanceTo(a) > END_GAP && p.distanceTo(b) > END_GAP) out.add(p);
+            }
+        }
+        return out;
+    }
 
     /** Игрок (или кто-то ещё) ставит блок: если он перегородил бы висящий провод — не ставим. */
     @SubscribeEvent
@@ -75,22 +96,17 @@ public final class WireGuard {
     }
 
     private static boolean hangs(WireLine l) {
-        for (boolean h : l.hang) if (h) return true;
+        for (int i = 0; i < l.hang.length; i++) if (l.hang[i] && l.node(i).distanceTo(l.node(i + 1)) >= MIN_SPAN) return true;
         return false;
     }
 
     /** Блок, сквозь который теперь проходит висящий пролёт провода (только в загруженных местах), или null. */
     public static BlockPos blocker(ServerLevel level, WireLine l) {
         for (int i = 0; i + 1 < l.nodes(); i++) {
-            if (!l.hang[i]) continue;
-            List<Vec3> pts = CordShape.points(l.node(i), l.node(i + 1));
-            for (int k = 1; k + 1 < pts.size(); k++) {
-                for (int q = 0; q < 4; q++) {
-                    Vec3 p = pts.get(k - 1).lerp(pts.get(k), q / 4.0);
-                    BlockPos cell = BlockPos.containing(p);
-                    if (cell.equals(l.devA) || cell.equals(l.devB) || !level.isLoaded(cell)) continue;
-                    if (inside(level, cell, level.getBlockState(cell), p)) return cell.immutable();
-                }
+            for (Vec3 p : checked(l, i)) {
+                BlockPos cell = BlockPos.containing(p);
+                if (cell.equals(l.devA) || cell.equals(l.devB) || !level.isLoaded(cell)) continue;
+                if (inside(level, cell, level.getBlockState(cell), p)) return cell.immutable();
             }
         }
         return null;
@@ -101,14 +117,7 @@ public final class WireGuard {
         if (pos.equals(l.devA) || pos.equals(l.devB)) return false;
         AABB cell = new AABB(pos);
         for (int i = 0; i + 1 < l.nodes(); i++) {
-            if (!l.hang[i]) continue;
-            List<Vec3> pts = CordShape.points(l.node(i), l.node(i + 1));
-            for (int k = 1; k < pts.size(); k++) {
-                for (int q = 0; q < 4; q++) {
-                    Vec3 p = pts.get(k - 1).lerp(pts.get(k), q / 4.0);
-                    if (cell.contains(p) && inside(level, pos, state, p)) return true;
-                }
-            }
+            for (Vec3 p : checked(l, i)) if (cell.contains(p) && inside(level, pos, state, p)) return true;
         }
         return false;
     }

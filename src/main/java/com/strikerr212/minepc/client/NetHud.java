@@ -56,6 +56,8 @@ public final class NetHud {
     private static final List<Component> lines = new ArrayList<>();
     private static final List<AABB> highlight = new ArrayList<>();
     private static int highlightColor = 0xFFE15A;
+    /** Подсветку рисовать сквозь блоки. */
+    private static boolean highlightXray;
     private static final List<Vec3> ghost = new ArrayList<>();
     private static boolean ghostBlocked;
 
@@ -113,6 +115,7 @@ public final class NetHud {
         Minecraft mc = Minecraft.getInstance();
         lines.clear();
         highlight.clear();
+        highlightXray = false;
         ghost.clear();
         ghostBlocked = false;
         if (mc.player == null || mc.level == null || mc.options.hideGui) return;
@@ -182,6 +185,7 @@ public final class NetHud {
             if (!l.hang[i]) highlight.add(new AABB(l.node(i), l.node(i + 1)).inflate(0.04));
         }
         highlightColor = l.fiber ? 0xFFD24A : 0x8FD3F0;
+        highlightXray = true;              // провод виден и внутри блока (маскировка)
     }
 
     /** Подсказка у гнезда. */
@@ -277,7 +281,8 @@ public final class NetHud {
         PoseStack pose = event.getPoseStack();
         Vec3 cam = event.getCamera().getPosition();
         MultiBufferSource.BufferSource buffers = mc.renderBuffers().bufferSource();
-        VertexConsumer vc = buffers.getBuffer(RenderType.lines());
+        RenderType type = highlightXray ? XrayRenderTypes.LINES : RenderType.lines();
+        VertexConsumer vc = buffers.getBuffer(type);
         pose.pushPose();
         pose.translate(-cam.x, -cam.y, -cam.z);
         float r = ((highlightColor >> 16) & 255) / 255f, g = ((highlightColor >> 8) & 255) / 255f, b = (highlightColor & 255) / 255f;
@@ -297,7 +302,9 @@ public final class NetHud {
             for (Vec3 p : ghost) LevelRenderer.renderLineBox(pose, vc, new AABB(p, p).inflate(0.04), 0.45f, 0.85f, 1f, 1f);
         }
         pose.popPose();
-        buffers.endBatch(RenderType.lines());
+        if (highlightXray) com.mojang.blaze3d.systems.RenderSystem.disableDepthTest();
+        buffers.endBatch(type);
+        if (highlightXray) com.mojang.blaze3d.systems.RenderSystem.enableDepthTest();
     }
 
     @SubscribeEvent

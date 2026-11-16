@@ -70,6 +70,41 @@ public final class WirePlan {
     /** Откуда брать провода (для свободных концов): у игрока — его копия, на сервере — схема мира. */
     public interface Lines {
         WireLine get(long id);
+
+        /** Провода, которые могут проходить через клетку cell (для дорожек лотка). */
+        default Iterable<WireLine> near(BlockPos cell) {
+            return java.util.List.of();
+        }
+
+        /** Провода схемы мира (на сервере). */
+        static Lines of(com.strikerr212.minepc.lan.LanData data) {
+            return new Lines() {
+                @Override
+                public WireLine get(long id) {
+                    return data.line(id);
+                }
+
+                @Override
+                public Iterable<WireLine> near(BlockPos cell) {
+                    return data.linesInChunk(net.minecraft.world.level.ChunkPos.asLong(cell.getX() >> 4, cell.getZ() >> 4));
+                }
+            };
+        }
+
+        /** Копия проводов у игрока. */
+        static Lines client() {
+            return new Lines() {
+                @Override
+                public WireLine get(long id) {
+                    return WireStore.get(id);
+                }
+
+                @Override
+                public Iterable<WireLine> near(BlockPos cell) {
+                    return WireStore.all();
+                }
+            };
+        }
     }
 
     /**
@@ -164,7 +199,10 @@ public final class WirePlan {
         String[] err = {null};
         Start st = start(level, lines, from, fiber, err);
         if (st == null) return fail(err[0]);
-        WireRouter.Voxels v = new LevelVoxels(level);
+        java.util.Set<Long> own = new java.util.HashSet<>();
+        if (from.kind() == END) own.add(from.line());
+        if (to != null && to.kind() == END) own.add(to.line());
+        WireRouter.Voxels v = new LevelVoxels(level).wires(lines, own);
         // Воздушная линия: от кронштейна к кронштейну без точек по дороге — один провисающий пролёт
         if (to != null && clicks.isEmpty() && from.kind() == SOCKET && to.kind() == SOCKET && bracket(level, from.dev()) && bracket(level, to.dev())) {
             return aerial(level, v, st.prefix().get(0), from.dev(), to, fiber);

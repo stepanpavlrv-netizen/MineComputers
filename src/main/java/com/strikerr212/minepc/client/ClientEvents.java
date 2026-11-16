@@ -86,6 +86,7 @@ public class ClientEvents {
         out.add(com.strikerr212.minepc.registry.ModBlocks.NETWORK_SWITCH.get());
         out.add(com.strikerr212.minepc.registry.ModBlocks.ROUTER.get());
         out.add(com.strikerr212.minepc.registry.ModBlocks.RADIO.get());
+        out.add(com.strikerr212.minepc.registry.ModBlocks.TRAY.get());
         for (var b : com.strikerr212.minepc.registry.ModBlocks.allMonitors()) {
             if (b instanceof com.strikerr212.minepc.block.BaseMonitorBlock m && m.paintColor(b.defaultBlockState()) >= 0) out.add(b);
         }
@@ -98,6 +99,7 @@ public class ClientEvents {
         if (state.getBlock() instanceof com.strikerr212.minepc.lan.SwitchBlock sw) return sw.paintColor(state);
         if (state.getBlock() instanceof com.strikerr212.minepc.lan.RouterBlock r) return r.paintColor(state);
         if (state.getBlock() instanceof com.strikerr212.minepc.lan.RadioBlock r) return r.paintColor(state);
+        if (state.getBlock() instanceof com.strikerr212.minepc.lan.TrayBlock t) return t.paintColor(state);
         return 0xFFFFFF;
     }
 

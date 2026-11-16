@@ -123,6 +123,9 @@ public class ModBlocks {
             () -> new com.strikerr212.minepc.lan.SwitchBlock(BlockBehaviour.Properties.of()
                     .mapColor(MapColor.COLOR_GRAY).strength(1.0f).sound(SoundType.METAL).noOcclusion()
                     .lightLevel(s -> 2)));
+    public static final DeferredBlock<com.strikerr212.minepc.lan.TrayBlock> TRAY = BLOCKS.register("cable_tray",
+            () -> new com.strikerr212.minepc.lan.TrayBlock(BlockBehaviour.Properties.of()
+                    .mapColor(MapColor.METAL).strength(1.0f).sound(SoundType.CHAIN).noOcclusion()));
     public static final DeferredBlock<com.strikerr212.minepc.block.RackBlock> SERVER_RACK = BLOCKS.register("server_rack",
             () -> new com.strikerr212.minepc.block.RackBlock(BlockBehaviour.Properties.of()
                     .mapColor(MapColor.COLOR_BLACK).strength(2.5f, 6.0f).sound(SoundType.METAL).noOcclusion()));

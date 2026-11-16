@@ -37,6 +37,7 @@ public class ModCreativeTabs {
                         output.accept(ModItems.KEYBOARD_STAND.get());
                         output.accept(ModItems.CABLE.get());
                         output.accept(ModItems.FIBER.get());
+                        output.accept(ModItems.TRAY.get());
                         output.accept(ModItems.NETWORK_SWITCH.get());
                         output.accept(ModItems.PATCH_CORD.get());
                         output.accept(ModItems.BRACKET.get());

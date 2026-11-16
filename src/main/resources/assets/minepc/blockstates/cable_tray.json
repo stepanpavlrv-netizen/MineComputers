@@ -1,0 +1,882 @@
+{
+ "multipart": [
+  {
+   "when": {
+    "face": "down",
+    "n": "none"
+   },
+   "apply": {
+    "model": "minepc:block/tray/rail_n"
+   }
+  },
+  {
+   "when": {
+    "face": "down",
+    "n": "flat|bend"
+   },
+   "apply": {
+    "model": "minepc:block/tray/arm_n"
+   }
+  },
+  {
+   "when": {
+    "face": "down",
+    "n": "bend"
+   },
+   "apply": {
+    "model": "minepc:block/tray/bend_n"
+   }
+  },
+  {
+   "when": {
+    "face": "down",
+    "e": "none"
+   },
+   "apply": {
+    "model": "minepc:block/tray/rail_e"
+   }
+  },
+  {
+   "when": {
+    "face": "down",
+    "e": "flat|bend"
+   },
+   "apply": {
+    "model": "minepc:block/tray/arm_e"
+   }
+  },
+  {
+   "when": {
+    "face": "down",
+    "e": "bend"
+   },
+   "apply": {
+    "model": "minepc:block/tray/bend_e"
+   }
+  },
+  {
+   "when": {
+    "face": "down",
+    "s": "none"
+   },
+   "apply": {
+    "model": "minepc:block/tray/rail_s"
+   }
+  },
+  {
+   "when": {
+    "face": "down",
+    "s": "flat|bend"
+   },
+   "apply": {
+    "model": "minepc:block/tray/arm_s"
+   }
+  },
+  {
+   "when": {
+    "face": "down",
+    "s": "bend"
+   },
+   "apply": {
+    "model": "minepc:block/tray/bend_s"
+   }
+  },
+  {
+   "when": {
+    "face": "down",
+    "w": "none"
+   },
+   "apply": {
+    "model": "minepc:block/tray/rail_w"
+   }
+  },
+  {
+   "when": {
+    "face": "down",
+    "w": "flat|bend"
+   },
+   "apply": {
+    "model": "minepc:block/tray/arm_w"
+   }
+  },
+  {
+   "when": {
+    "face": "down",
+    "w": "bend"
+   },
+   "apply": {
+    "model": "minepc:block/tray/bend_w"
+   }
+  },
+  {
+   "when": {
+    "face": "down"
+   },
+   "apply": {
+    "model": "minepc:block/tray/posts"
+   }
+  },
+  {
+   "when": {
+    "OR": [
+     {
+      "face": "down",
+      "n": "flat|bend"
+     },
+     {
+      "face": "down",
+      "s": "flat|bend"
+     },
+     {
+      "face": "down",
+      "e": "none",
+      "w": "none"
+     }
+    ]
+   },
+   "apply": {
+    "model": "minepc:block/tray/bars_x"
+   }
+  },
+  {
+   "when": {
+    "OR": [
+     {
+      "face": "down",
+      "e": "flat|bend"
+     },
+     {
+      "face": "down",
+      "w": "flat|bend"
+     }
+    ]
+   },
+   "apply": {
+    "model": "minepc:block/tray/bars_z"
+   }
+  },
+  {
+   "when": {
+    "face": "up",
+    "n": "none"
+   },
+   "apply": {
+    "model": "minepc:block/tray/rail_n",
+    "x": 180
+   }
+  },
+  {
+   "when": {
+    "face": "up",
+    "n": "flat|bend"
+   },
+   "apply": {
+    "model": "minepc:block/tray/arm_n",
+    "x": 180
+   }
+  },
+  {
+   "when": {
+    "face": "up",
+    "n": "bend"
+   },
+   "apply": {
+    "model": "minepc:block/tray/bend_n",
+    "x": 180
+   }
+  },
+  {
+   "when": {
+    "face": "up",
+    "e": "none"
+   },
+   "apply": {
+    "model": "minepc:block/tray/rail_e",
+    "x": 180
+   }
+  },
+  {
+   "when": {
+    "face": "up",
+    "e": "flat|bend"
+   },
+   "apply": {
+    "model": "minepc:block/tray/arm_e",
+    "x": 180
+   }
+  },
+  {
+   "when": {
+    "face": "up",
+    "e": "bend"
+   },
+   "apply": {
+    "model": "minepc:block/tray/bend_e",
+    "x": 180
+   }
+  },
+  {
+   "when": {
+    "face": "up",
+    "s": "none"
+   },
+   "apply": {
+    "model": "minepc:block/tray/rail_s",
+    "x": 180
+   }
+  },
+  {
+   "when": {
+    "face": "up",
+    "s": "flat|bend"
+   },
+   "apply": {
+    "model": "minepc:block/tray/arm_s",
+    "x": 180
+   }
+  },
+  {
+   "when": {
+    "face": "up",
+    "s": "bend"
+   },
+   "apply": {
+    "model": "minepc:block/tray/bend_s",
+    "x": 180
+   }
+  },
+  {
+   "when": {
+    "face": "up",
+    "w": "none"
+   },
+   "apply": {
+    "model": "minepc:block/tray/rail_w",
+    "x": 180
+   }
+  },
+  {
+   "when": {
+    "face": "up",
+    "w": "flat|bend"
+   },
+   "apply": {
+    "model": "minepc:block/tray/arm_w",
+    "x": 180
+   }
+  },
+  {
+   "when": {
+    "face": "up",
+    "w": "bend"
+   },
+   "apply": {
+    "model": "minepc:block/tray/bend_w",
+    "x": 180
+   }
+  },
+  {
+   "when": {
+    "face": "up"
+   },
+   "apply": {
+    "model": "minepc:block/tray/posts",
+    "x": 180
+   }
+  },
+  {
+   "when": {
+    "OR": [
+     {
+      "face": "up",
+      "n": "flat|bend"
+     },
+     {
+      "face": "up",
+      "s": "flat|bend"
+     },
+     {
+      "face": "up",
+      "e": "none",
+      "w": "none"
+     }
+    ]
+   },
+   "apply": {
+    "model": "minepc:block/tray/bars_x",
+    "x": 180
+   }
+  },
+  {
+   "when": {
+    "OR": [
+     {
+      "face": "up",
+      "e": "flat|bend"
+     },
+     {
+      "face": "up",
+      "w": "flat|bend"
+     }
+    ]
+   },
+   "apply": {
+    "model": "minepc:block/tray/bars_z",
+    "x": 180
+   }
+  },
+  {
+   "when": {
+    "face": "south",
+    "n": "none"
+   },
+   "apply": {
+    "model": "minepc:block/tray/rail_n",
+    "x": 90
+   }
+  },
+  {
+   "when": {
+    "face": "south",
+    "n": "flat|bend"
+   },
+   "apply": {
+    "model": "minepc:block/tray/arm_n",
+    "x": 90
+   }
+  },
+  {
+   "when": {
+    "face": "south",
+    "e": "none"
+   },
+   "apply": {
+    "model": "minepc:block/tray/rail_e",
+    "x": 90
+   }
+  },
+  {
+   "when": {
+    "face": "south",
+    "e": "flat|bend"
+   },
+   "apply": {
+    "model": "minepc:block/tray/arm_e",
+    "x": 90
+   }
+  },
+  {
+   "when": {
+    "face": "south",
+    "s": "none"
+   },
+   "apply": {
+    "model": "minepc:block/tray/rail_s",
+    "x": 90
+   }
+  },
+  {
+   "when": {
+    "face": "south",
+    "s": "flat|bend"
+   },
+   "apply": {
+    "model": "minepc:block/tray/arm_s",
+    "x": 90
+   }
+  },
+  {
+   "when": {
+    "face": "south",
+    "w": "none"
+   },
+   "apply": {
+    "model": "minepc:block/tray/rail_w",
+    "x": 90
+   }
+  },
+  {
+   "when": {
+    "face": "south",
+    "w": "flat|bend"
+   },
+   "apply": {
+    "model": "minepc:block/tray/arm_w",
+    "x": 90
+   }
+  },
+  {
+   "when": {
+    "face": "south"
+   },
+   "apply": {
+    "model": "minepc:block/tray/posts",
+    "x": 90
+   }
+  },
+  {
+   "when": {
+    "OR": [
+     {
+      "face": "south",
+      "n": "flat|bend"
+     },
+     {
+      "face": "south",
+      "s": "flat|bend"
+     },
+     {
+      "face": "south",
+      "e": "none",
+      "w": "none"
+     }
+    ]
+   },
+   "apply": {
+    "model": "minepc:block/tray/bars_x",
+    "x": 90
+   }
+  },
+  {
+   "when": {
+    "OR": [
+     {
+      "face": "south",
+      "e": "flat|bend"
+     },
+     {
+      "face": "south",
+      "w": "flat|bend"
+     }
+    ]
+   },
+   "apply": {
+    "model": "minepc:block/tray/bars_z",
+    "x": 90
+   }
+  },
+  {
+   "when": {
+    "face": "west",
+    "n": "none"
+   },
+   "apply": {
+    "model": "minepc:block/tray/rail_n",
+    "x": 90,
+    "y": 90
+   }
+  },
+  {
+   "when": {
+    "face": "west",
+    "n": "flat|bend"
+   },
+   "apply": {
+    "model": "minepc:block/tray/arm_n",
+    "x": 90,
+    "y": 90
+   }
+  },
+  {
+   "when": {
+    "face": "west",
+    "e": "none"
+   },
+   "apply": {
+    "model": "minepc:block/tray/rail_e",
+    "x": 90,
+    "y": 90
+   }
+  },
+  {
+   "when": {
+    "face": "west",
+    "e": "flat|bend"
+   },
+   "apply": {
+    "model": "minepc:block/tray/arm_e",
+    "x": 90,
+    "y": 90
+   }
+  },
+  {
+   "when": {
+    "face": "west",
+    "s": "none"
+   },
+   "apply": {
+    "model": "minepc:block/tray/rail_s",
+    "x": 90,
+    "y": 90
+   }
+  },
+  {
+   "when": {
+    "face": "west",
+    "s": "flat|bend"
+   },
+   "apply": {
+    "model": "minepc:block/tray/arm_s",
+    "x": 90,
+    "y": 90
+   }
+  },
+  {
+   "when": {
+    "face": "west",
+    "w": "none"
+   },
+   "apply": {
+    "model": "minepc:block/tray/rail_w",
+    "x": 90,
+    "y": 90
+   }
+  },
+  {
+   "when": {
+    "face": "west",
+    "w": "flat|bend"
+   },
+   "apply": {
+    "model": "minepc:block/tray/arm_w",
+    "x": 90,
+    "y": 90
+   }
+  },
+  {
+   "when": {
+    "face": "west"
+   },
+   "apply": {
+    "model": "minepc:block/tray/posts",
+    "x": 90,
+    "y": 90
+   }
+  },
+  {
+   "when": {
+    "OR": [
+     {
+      "face": "west",
+      "n": "flat|bend"
+     },
+     {
+      "face": "west",
+      "s": "flat|bend"
+     },
+     {
+      "face": "west",
+      "e": "none",
+      "w": "none"
+     }
+    ]
+   },
+   "apply": {
+    "model": "minepc:block/tray/bars_x",
+    "x": 90,
+    "y": 90
+   }
+  },
+  {
+   "when": {
+    "OR": [
+     {
+      "face": "west",
+      "e": "flat|bend"
+     },
+     {
+      "face": "west",
+      "w": "flat|bend"
+     }
+    ]
+   },
+   "apply": {
+    "model": "minepc:block/tray/bars_z",
+    "x": 90,
+    "y": 90
+   }
+  },
+  {
+   "when": {
+    "face": "north",
+    "n": "none"
+   },
+   "apply": {
+    "model": "minepc:block/tray/rail_n",
+    "x": 90,
+    "y": 180
+   }
+  },
+  {
+   "when": {
+    "face": "north",
+    "n": "flat|bend"
+   },
+   "apply": {
+    "model": "minepc:block/tray/arm_n",
+    "x": 90,
+    "y": 180
+   }
+  },
+  {
+   "when": {
+    "face": "north",
+    "e": "none"
+   },
+   "apply": {
+    "model": "minepc:block/tray/rail_e",
+    "x": 90,
+    "y": 180
+   }
+  },
+  {
+   "when": {
+    "face": "north",
+    "e": "flat|bend"
+   },
+   "apply": {
+    "model": "minepc:block/tray/arm_e",
+    "x": 90,
+    "y": 180
+   }
+  },
+  {
+   "when": {
+    "face": "north",
+    "s": "none"
+   },
+   "apply": {
+    "model": "minepc:block/tray/rail_s",
+    "x": 90,
+    "y": 180
+   }
+  },
+  {
+   "when": {
+    "face": "north",
+    "s": "flat|bend"
+   },
+   "apply": {
+    "model": "minepc:block/tray/arm_s",
+    "x": 90,
+    "y": 180
+   }
+  },
+  {
+   "when": {
+    "face": "north",
+    "w": "none"
+   },
+   "apply": {
+    "model": "minepc:block/tray/rail_w",
+    "x": 90,
+    "y": 180
+   }
+  },
+  {
+   "when": {
+    "face": "north",
+    "w": "flat|bend"
+   },
+   "apply": {
+    "model": "minepc:block/tray/arm_w",
+    "x": 90,
+    "y": 180
+   }
+  },
+  {
+   "when": {
+    "face": "north"
+   },
+   "apply": {
+    "model": "minepc:block/tray/posts",
+    "x": 90,
+    "y": 180
+   }
+  },
+  {
+   "when": {
+    "OR": [
+     {
+      "face": "north",
+      "n": "flat|bend"
+     },
+     {
+      "face": "north",
+      "s": "flat|bend"
+     },
+     {
+      "face": "north",
+      "e": "none",
+      "w": "none"
+     }
+    ]
+   },
+   "apply": {
+    "model": "minepc:block/tray/bars_x",
+    "x": 90,
+    "y": 180
+   }
+  },
+  {
+   "when": {
+    "OR": [
+     {
+      "face": "north",
+      "e": "flat|bend"
+     },
+     {
+      "face": "north",
+      "w": "flat|bend"
+     }
+    ]
+   },
+   "apply": {
+    "model": "minepc:block/tray/bars_z",
+    "x": 90,
+    "y": 180
+   }
+  },
+  {
+   "when": {
+    "face": "east",
+    "n": "none"
+   },
+   "apply": {
+    "model": "minepc:block/tray/rail_n",
+    "x": 90,
+    "y": 270
+   }
+  },
+  {
+   "when": {
+    "face": "east",
+    "n": "flat|bend"
+   },
+   "apply": {
+    "model": "minepc:block/tray/arm_n",
+    "x": 90,
+    "y": 270
+   }
+  },
+  {
+   "when": {
+    "face": "east",
+    "e": "none"
+   },
+   "apply": {
+    "model": "minepc:block/tray/rail_e",
+    "x": 90,
+    "y": 270
+   }
+  },
+  {
+   "when": {
+    "face": "east",
+    "e": "flat|bend"
+   },
+   "apply": {
+    "model": "minepc:block/tray/arm_e",
+    "x": 90,
+    "y": 270
+   }
+  },
+  {
+   "when": {
+    "face": "east",
+    "s": "none"
+   },
+   "apply": {
+    "model": "minepc:block/tray/rail_s",
+    "x": 90,
+    "y": 270
+   }
+  },
+  {
+   "when": {
+    "face": "east",
+    "s": "flat|bend"
+   },
+   "apply": {
+    "model": "minepc:block/tray/arm_s",
+    "x": 90,
+    "y": 270
+   }
+  },
+  {
+   "when": {
+    "face": "east",
+    "w": "none"
+   },
+   "apply": {
+    "model": "minepc:block/tray/rail_w",
+    "x": 90,
+    "y": 270
+   }
+  },
+  {
+   "when": {
+    "face": "east",
+    "w": "flat|bend"
+   },
+   "apply": {
+    "model": "minepc:block/tray/arm_w",
+    "x": 90,
+    "y": 270
+   }
+  },
+  {
+   "when": {
+    "face": "east"
+   },
+   "apply": {
+    "model": "minepc:block/tray/posts",
+    "x": 90,
+    "y": 270
+   }
+  },
+  {
+   "when": {
+    "OR": [
+     {
+      "face": "east",
+      "n": "flat|bend"
+     },
+     {
+      "face": "east",
+      "s": "flat|bend"
+     },
+     {
+      "face": "east",
+      "e": "none",
+      "w": "none"
+     }
+    ]
+   },
+   "apply": {
+    "model": "minepc:block/tray/bars_x",
+    "x": 90,
+    "y": 270
+   }
+  },
+  {
+   "when": {
+    "OR": [
+     {
+      "face": "east",
+      "e": "flat|bend"
+     },
+     {
+      "face": "east",
+      "w": "flat|bend"
+     }
+    ]
+   },
+   "apply": {
+    "model": "minepc:block/tray/bars_z",
+    "x": 90,
+    "y": 270
+   }
+  }
+ ]
+}

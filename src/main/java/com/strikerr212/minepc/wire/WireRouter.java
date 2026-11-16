@@ -23,6 +23,11 @@ public final class WireRouter {
     /** Мир по пикселям: твёрдый ли пиксель (x, y, z). */
     public interface Voxels {
         boolean solid(int x, int y, int z);
+
+        /** Желоб кабельного лотка: по нему тянуть провод дешевле, чем по полу. */
+        default boolean lane(int x, int y, int z) {
+            return false;
+        }
     }
 
     /** Самый длинный прямой участок без опоры, пикселей (4 блока). */
@@ -30,7 +35,8 @@ public final class WireRouter {
     /** Дальше за один щелчок провод не тянется, пикселей по осям в сумме (48 блоков). */
     public static final int MAX_REACH = 48 * 16;
 
-    private static final int STEP = 10, AIR = 14, TURN = 36;
+    /** Цена шага: обычный, по воздуху (добавка), по желобу лотка; поворот. */
+    private static final int STEP = 10, AIR = 14, LANE = 5, TURN = 36;
     private static final int[] DX = {1, -1, 0, 0, 0, 0}, DY = {0, 0, 1, -1, 0, 0}, DZ = {0, 0, 0, 0, 1, -1};
 
     /**
@@ -130,6 +136,7 @@ public final class WireRouter {
                     side[q] = (q >> 1) != (d >> 1) && prevSup && open(v, cur.x + DX[q], cur.y + DY[q], cur.z + DZ[q]);
                 }
                 int px = cur.x, py = cur.y, pz = cur.z, prevCost = cost, prevAir = air;
+                boolean prevLane = v.lane(cur.x, cur.y, cur.z);
                 boolean prevAdded = true;
                 for (int k = 1; ; k++) {
                     int nx = cur.x + DX[d] * k, ny = cur.y + DY[d] * k, nz = cur.z + DZ[d] * k;
@@ -148,9 +155,10 @@ public final class WireRouter {
                     } else {
                         air = 0;
                     }
-                    cost += STEP + (sup ? 0 : AIR);
+                    boolean lane = v.lane(nx, ny, nz);
+                    cost += (lane ? LANE : STEP) + (sup ? 0 : AIR);
                     boolean cand = target || (d >> 1 == 0 ? nx == tx : d >> 1 == 1 ? ny == ty : nz == tz);
-                    boolean edge = sup != prevSup;
+                    boolean edge = sup != prevSup || lane != prevLane;
                     if (sup) {
                         for (int q = 0; q < 6; q++) {
                             if ((q >> 1) == (d >> 1)) continue;
@@ -175,6 +183,7 @@ public final class WireRouter {
                     py = ny;
                     pz = nz;
                     prevSup = sup;
+                    prevLane = lane;
                     prevCost = cost;
                     prevAir = air;
                 }
