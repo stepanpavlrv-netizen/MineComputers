@@ -2,3 +2,4 @@ root/
 usb/
 *.png
 __pycache__/
+wdisk/
