@@ -20,9 +20,10 @@ public class SwitchScreen extends Screen {
 
     private static final int W = 300, ROW = 13, MAX_ROWS = 12;
     private static final int BG = 0xF01D2026, PANEL = 0xFF272B33, LINE = 0xFF3A404B, FG = 0xFFE6E9EF, DIM = 0xFF8D95A3,
-            GOOD = 0xFF5BD982, BAD = 0xFFE5534B, OFF = 0xFF555B66, PC = 0xFF7FD48A;
+            GOOD = 0xFF5BD982, BAD = 0xFFE5534B, OFF = 0xFF555B66, PC = 0xFF7FD48A, WARN = 0xFFF2C14E;
 
-    private record Row(int port, char side, int number, boolean link, String device, boolean enabled, int vlan, String label) {
+    private record Row(int port, char side, int number, boolean link, String device, boolean enabled, int vlan, String label,
+                       int length) {
     }
 
     private final BlockPos pos;
@@ -49,7 +50,8 @@ public class SwitchScreen extends Screen {
             if (f.length < 7) continue;
             try {
                 list.add(new Row(Integer.parseInt(f[0]), f[1].charAt(0), Integer.parseInt(f[2]), f[3].equals("1"), f[4],
-                        f[5].equals("1"), Integer.parseInt(f[6]), f.length > 7 ? f[7] : ""));
+                        f[5].equals("1"), Integer.parseInt(f[6]), f.length > 7 ? f[7] : "",
+                        f.length > 8 ? Integer.parseInt(f[8]) : 0));
             } catch (RuntimeException ignored) {
             }
         }
@@ -117,11 +119,16 @@ public class SwitchScreen extends Screen {
             g.fill(left + 8, y + 4, left + 12, y + 8, !r.enabled ? OFF : r.link ? GOOD : LINE);
             g.drawString(font, sideName(r), left + 16, y + 2, r.enabled ? FG : DIM, false);
             String dev = r.device.equals("!") ? Component.translatable("gui.minepc.switch.too_long").getString()
+                    : r.device.equals("~") ? Component.translatable("gui.minepc.switch.free_end").getString()
                     : r.device.isEmpty() ? (r.link ? "" : "—")
                     : r.device.startsWith("@") ? r.device.substring(1)
                     : Component.translatable("gui.minepc.switch.dev." + r.device.split(" ")[0]).getString()
                     + (r.device.contains(" ") ? r.device.substring(r.device.indexOf(' ')) : "");
-            int devColor = r.device.equals("!") ? BAD : r.device.startsWith("@") ? PC : DIM;
+            int devColor = r.device.equals("!") ? BAD : r.device.equals("~") ? WARN : r.device.startsWith("@") ? PC : DIM;
+            // длина провода (1 блок = 1 м)
+            if (r.length > 0 && !r.device.equals("!") && !r.device.isEmpty()) {
+                dev += Component.translatable("gui.minepc.switch.len", r.length).getString();
+            }
             int devW = W - 92 - 84;
             if (!r.label.isEmpty()) {
                 // Бирка кабеля — белая плашка справа от имени

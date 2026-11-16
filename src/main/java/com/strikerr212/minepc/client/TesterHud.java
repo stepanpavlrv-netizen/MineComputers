@@ -43,6 +43,11 @@ public final class TesterHud {
     private static final List<AABB> endBoxes = new ArrayList<>();
     private static final List<AABB> openBoxes = new ArrayList<>();
     private static final List<Vec3[]> cordLines = new ArrayList<>();
+    /** Провода 3.0: прямые отрезки (лежат вдоль блоков) — коробками, висящие — линиями; цвет по виду провода. */
+    private static final List<AABB> lineBoxes = new ArrayList<>();
+    private static final List<Boolean> lineFiber = new ArrayList<>();
+    private static final List<Vec3[]> lineArcs = new ArrayList<>();
+    private static final List<Boolean> arcFiber = new ArrayList<>();
     private static long until;
     /** Строки экранчика (последний результат). */
     private static final List<Component> screen = new ArrayList<>();
@@ -56,6 +61,27 @@ public final class TesterHud {
         endBoxes.clear();
         openBoxes.clear();
         cordLines.clear();
+        lineBoxes.clear();
+        lineFiber.clear();
+        lineArcs.clear();
+        arcFiber.clear();
+        for (long id : p.lines()) {
+            com.strikerr212.minepc.wire.WireLine l = com.strikerr212.minepc.wire.WireStore.get(id);
+            if (l == null) continue;
+            for (int i = 0; i + 1 < l.nodes() && lineBoxes.size() < 6000; i++) {
+                Vec3 a = l.node(i), c = l.node(i + 1);
+                if (l.hang[i]) {
+                    List<Vec3> pts = com.strikerr212.minepc.lan.CordShape.points(a, c);
+                    for (int k = 1; k < pts.size(); k++) {
+                        lineArcs.add(new Vec3[]{pts.get(k - 1), pts.get(k)});
+                        arcFiber.add(l.fiber);
+                    }
+                } else {
+                    lineBoxes.add(new AABB(a, c).inflate(0.045));
+                    lineFiber.add(l.fiber);
+                }
+            }
+        }
         for (int i = 0; i + 1 < p.wires().length && wireBoxes.size() < 6000; i += 2) {
             BlockPos cell = BlockPos.of(p.wires()[i]);
             Wire w = Wire.unpack(p.wires()[i + 1]);
@@ -93,7 +119,7 @@ public final class TesterHud {
             for (String e : f[5].split("\u001e")) {
                 String[] q = e.split("\u001f", -1);
                 if (q.length < 3) continue;
-                Component c = Component.literal("→ ").append(Component.translatable(q[0]));
+                Component c = Component.literal("↔ ").append(Component.translatable(q[0]));
                 c = c.copy().append(Component.translatable("hud.minepc.tester.port", q[1]));
                 if (!q[2].isEmpty()) c = c.copy().append(" " + q[2]);
                 screen.add(c);
@@ -113,7 +139,8 @@ public final class TesterHud {
         Minecraft mc = Minecraft.getInstance();
         if (mc.level == null) return;
         long now = mc.level.getGameTime();
-        if (now > until || wireBoxes.isEmpty() && endBoxes.isEmpty() && openBoxes.isEmpty() && cordLines.isEmpty()) return;
+        if (now > until || wireBoxes.isEmpty() && endBoxes.isEmpty() && openBoxes.isEmpty() && cordLines.isEmpty()
+                && lineBoxes.isEmpty() && lineArcs.isEmpty()) return;
         float pulse = 0.75f + 0.25f * (float) Math.sin(now * 0.35);
         float fade = Math.min(1f, (until - now) / 40f);
         PoseStack pose = event.getPoseStack();
@@ -125,6 +152,11 @@ public final class TesterHud {
         VertexConsumer q = buffers.getBuffer(XrayRenderTypes.QUADS);
         Matrix4f m = pose.last().pose();
         for (AABB b : wireBoxes) fill(q, m, b.inflate(0.03), 1f, 0.55f, 0.1f, 0.6f * pulse * fade);
+        // Провода 3.0: медь — голубым, оптика — жёлтым
+        for (int i = 0; i < lineBoxes.size(); i++) {
+            if (lineFiber.get(i)) fill(q, m, lineBoxes.get(i), 1f, 0.82f, 0.2f, 0.55f * pulse * fade);
+            else fill(q, m, lineBoxes.get(i), 0.35f, 0.85f, 1f, 0.55f * pulse * fade);
+        }
         boolean blink = (now / 5) % 2 == 0;
         if (blink) for (AABB b : openBoxes) fill(q, m, b, 0.95f, 0.2f, 0.2f, 0.35f * fade);
         // «Без проверки глубины» у RenderType сама глубину не выключает — выключаем на время отрисовки
@@ -137,6 +169,13 @@ public final class TesterHud {
         if (blink) for (AABB b : endBoxes) LevelRenderer.renderLineBox(pose, vc, b, 0.35f, 1f, 0.45f, fade);
         if (blink) for (AABB b : openBoxes) LevelRenderer.renderLineBox(pose, vc, b, 1f, 0.25f, 0.25f, fade);
         PoseStack.Pose last = pose.last();
+        for (int i = 0; i < lineArcs.size(); i++) {
+            Vec3[] l = lineArcs.get(i);
+            Vec3 n = l[1].subtract(l[0]).normalize();
+            float r = arcFiber.get(i) ? 1f : 0.35f, gg = arcFiber.get(i) ? 0.82f : 0.85f, bb = arcFiber.get(i) ? 0.2f : 1f;
+            vc.addVertex(last, (float) l[0].x, (float) l[0].y, (float) l[0].z).setColor(r, gg, bb, fade).setNormal(last, (float) n.x, (float) n.y, (float) n.z);
+            vc.addVertex(last, (float) l[1].x, (float) l[1].y, (float) l[1].z).setColor(r, gg, bb, fade).setNormal(last, (float) n.x, (float) n.y, (float) n.z);
+        }
         for (Vec3[] l : cordLines) {
             Vec3 n = l[1].subtract(l[0]).normalize();
             vc.addVertex(last, (float) l[0].x, (float) l[0].y, (float) l[0].z).setColor(1f, 0.6f, 0.15f, fade).setNormal(last, (float) n.x, (float) n.y, (float) n.z);

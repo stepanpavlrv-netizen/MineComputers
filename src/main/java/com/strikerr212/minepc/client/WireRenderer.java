@@ -89,7 +89,15 @@ public final class WireRenderer {
                 Vec3 q = l.node(b ? l.nodes() - 2 : 1);
                 // вилка: чуть выступает из гнезда в сторону провода
                 Vec3 c = p.add(q.subtract(p).normalize().scale(0.05));
-                cube(plug, pose.last(), c, 0.06f, LevelRenderer.getLightColor(level, BlockPos.containing(q)), 235, 238, 240);
+                int light = LevelRenderer.getLightColor(level, BlockPos.containing(q));
+                cube(plug, pose.last(), c, 0.06f, light, 235, 238, 240);
+                if (!l.label.isEmpty()) {
+                    // бирка: белый флажок на проводе чуть дальше вилки
+                    Vec3 dir = q.subtract(p).normalize();
+                    Vec3 side = Math.abs(dir.y) > 0.9 ? new Vec3(1, 0, 0) : new Vec3(0, 1, 0);
+                    Vec3 f = p.add(dir.scale(Math.min(0.22, p.distanceTo(q) * 0.5))).add(side.scale(0.06));
+                    cube(plug, pose.last(), f, 0.05f, light, 250, 250, 252);
+                }
             }
         }
         buffers.endBatch(RenderType.entityCutoutNoCull(PLUG));

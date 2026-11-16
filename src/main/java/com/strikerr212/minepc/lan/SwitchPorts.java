@@ -148,8 +148,13 @@ public final class SwitchPorts {
             boolean link = seg != null && seg.ok() && !seg.plugs().isEmpty();
             if (seg != null && !seg.ok()) device = "!";
             else if (link) device = describe(level, data, seg);
+            else if (seg != null) {
+                // провод воткнут, а второй его конец никуда не воткнут
+                var line = data.lineAt(pos, port);
+                if (line != null && (line.free(false) || line.free(true))) device = "~";
+            }
             int cfg = data.portConfig(pos, port);
-            String label = seg == null ? "" : data.labelName(LanManager.portLabel(data, pos, port));
+            String label = seg == null ? "" : LanManager.portLabelName(data, pos, port);
             out.add(new Port(port, side, number, link, device, LanData.portEnabled(cfg), LanData.portVlan(cfg),
                     seg == null ? 0 : seg.length(), label));
         }
@@ -200,7 +205,8 @@ public final class SwitchPorts {
             if (b.length() > 0) b.append('\n');
             b.append(p.port()).append('\t').append(p.side()).append('\t').append(p.number()).append('\t')
                     .append(p.link() ? 1 : 0).append('\t').append(p.device().replace('\t', ' ').replace('\n', ' ')).append('\t')
-                    .append(p.enabled() ? 1 : 0).append('\t').append(p.vlan()).append('\t').append(clean(p.label()));
+                    .append(p.enabled() ? 1 : 0).append('\t').append(p.vlan()).append('\t').append(clean(p.label()))
+                    .append('\t').append(p.length());
         }
         LanData.Device d = LanData.get(level).device(pos);
         return new SwitchOpenPayload(pos, d == null ? "" : kind(d), id(pos), b.toString());

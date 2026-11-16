@@ -618,6 +618,13 @@ public class CiScreenshots {
                 PcCaseScreen.ciTheme = null;
                 mc.setScreen(null);
             }
+            // Провода 3.0, шаг 3: бирка на проводе A, тестер по проводу (подсветка целиком), окно коммутатора
+            case 4121 -> server.execute(CiScreenshots::testWire3);
+            case 4124 -> shot(mc, "wire_tester");
+            case 4125 -> server.execute(() -> net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(
+                    server.getPlayerList().getPlayers().get(0), com.strikerr212.minepc.lan.SwitchPorts.openPayload(server.overworld(), drawSwitch)));
+            case 4130 -> shot(mc, "wire_switch");
+            case 4131 -> mc.setScreen(null);
             case 4126 -> server.execute(CiScreenshots::placeIo);
             case 4134 -> server.execute(CiScreenshots::cableIo);
             case 4150 -> typeAt(drawPcA, "ioc");
@@ -1177,6 +1184,37 @@ public class CiScreenshots {
             sbr.append(" | кабеля в руке ").append(p.getMainHandItem().getCount());
             log.info(sbr.toString());
         });
+    }
+
+    /** [CI-WIRE3]: провод A подписан, тестер по нему; что нашла прозвонка; провод со свободным концом в коммутаторе. */
+    private static void testWire3() {
+        var server = Minecraft.getInstance().getSingleplayerServer();
+        ServerPlayer p = server.getPlayerList().getPlayers().get(0);
+        ServerLevel level = p.serverLevel();
+        var log = com.mojang.logging.LogUtils.getLogger();
+        var data = com.strikerr212.minepc.lan.LanData.get(level);
+        com.strikerr212.minepc.wire.WireLine a = null;
+        for (var l : data.lines()) if (drawPcA.equals(l.devA) || drawPcA.equals(l.devB)) a = l;
+        if (a == null) {
+            log.info("[CI-WIRE3] провода от A нет");
+            return;
+        }
+        data.putLine(new com.strikerr212.minepc.wire.WireLine(a.id, a.fiber, a.color, "серверная-1", a.xs, a.ys, a.zs, a.hang,
+                a.devA, a.portA, a.devB, a.portB));
+        a = data.line(a.id);
+        p.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, new ItemStack(com.strikerr212.minepc.registry.ModItems.CABLE_TESTER.get()));
+        p.teleportTo(level, drawBase.getX() + 5.5, drawBase.getY() + 2.5, drawBase.getZ() - 4.5, -20f, 35f);
+        var t = com.strikerr212.minepc.lan.LanManager.trace(data, null, 0, null, 0, a);
+        com.strikerr212.minepc.lan.CableTesterItem.testLine(level, p, p.getMainHandItem(), a);
+        log.info("[CI-WIRE3] прозвонка провода A: проводов {}, концов {}, длина {}, обрывов {}, бирка в порту: {}",
+                t.lines().size(), t.ends().size(), t.length(), t.open().size(),
+                com.strikerr212.minepc.lan.LanManager.portLabelName(data, a.devA != null ? a.devA : a.devB, a.devA != null ? a.portA : a.portB));
+        StringBuilder sb = new StringBuilder("[CI-WIRE3] порты коммутатора:");
+        for (var port : com.strikerr212.minepc.lan.SwitchPorts.ports(level, drawSwitch)) {
+            sb.append(" | ").append(port.side()).append(port.number()).append(' ').append(port.device()).append(' ').append(port.length())
+                    .append(port.label().isEmpty() ? "" : " «" + port.label() + "»");
+        }
+        log.info(sb.toString());
     }
 
     private static long sagLine = -1;

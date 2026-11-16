@@ -498,7 +498,7 @@ public final class CaseComputer implements Computer.Host {
                 m.put("n", port.number());
                 m.put("link", port.link());
                 String dev = port.device();
-                m.put("device", dev.startsWith("@") ? dev.substring(1) : dev.equals("!") ? "слишком длинный кабель" : dev);
+                m.put("device", dev.startsWith("@") ? dev.substring(1) : dev.equals("!") ? "слишком длинный кабель" : dev.equals("~") ? "провод без второго конца" : dev);
                 m.put("enabled", port.enabled());
                 m.put("vlan", com.strikerr212.minepc.lan.SwitchPorts.vlanName(port.vlan()));
                 m.put("label", port.label());

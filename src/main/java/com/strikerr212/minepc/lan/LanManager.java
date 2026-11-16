@@ -590,6 +590,13 @@ public final class LanManager {
         return 0;
     }
 
+    /** Бирка того, что воткнуто в порт, — текстом: провод 3.0, старый провод или патч-корд ("" — без бирки). */
+    public static String portLabelName(LanData data, BlockPos dev, int port) {
+        var line = data.lineAt(dev, port);
+        if (line != null && !line.label.isEmpty()) return line.label;
+        return data.labelName(portLabel(data, dev, port));
+    }
+
     /** Порты, в которые что-то воткнуто: кабель с вилкой или патч-корд. */
     public static List<Integer> usedPorts(LanData data, BlockPos dev, LanData.Device d) {
         List<Integer> out = new ArrayList<>();
@@ -635,7 +642,7 @@ public final class LanManager {
         int[] cordCells = {0};
         boolean[] copper = {false};
         seenPlugs.add(new LanData.Plug(dev, port));
-        seed(data, dev, port, wires, plugs, done, cordCells, copper);
+        seed(data, dev, port, wires, plugs, done, cordCells, copper, null, null);
         while (!wires.isEmpty() || !plugs.isEmpty() || !trayq.isEmpty()) {
             while (!trayq.isEmpty()) {
                 // Провод в лотке: соседние лотки во все стороны и провода, которые входят в лоток
@@ -713,7 +720,7 @@ public final class LanManager {
                     // розетка — гнёзда своей линии и та же линия розетки на другой стороне стены
                     for (LanData.Plug other : passiveSides(data, pl, d)) {
                         if (!seenPlugs.add(other)) continue;
-                        seed(data, other.pos(), other.port(), wires, plugs, done, cordCells, copper);
+                        seed(data, other.pos(), other.port(), wires, plugs, done, cordCells, copper, null, null);
                     }
                 } else {
                     out.add(pl);
@@ -768,10 +775,16 @@ public final class LanManager {
      * где провод обрывается (конец провода ни с чем не соединён). Идёт по схеме — и через незагруженные места.
      */
     public record Trace(List<long[]> wires, Set<Long> trays, List<LanData.Cord> cords, Set<BlockPos> passives,
-                        List<LanData.Plug> ends, List<BlockPos> open, int length, boolean copper) {
+                        List<LanData.Plug> ends, List<BlockPos> open, int length, boolean copper, List<Long> lines) {
     }
 
     public static Trace trace(LanData data, BlockPos startDev, int startPort, BlockPos startCell, int startWire) {
+        return trace(data, startDev, startPort, startCell, startWire, null);
+    }
+
+    /** Прозвонка от провода 3.0 startLine (или от порта / старого провода, если он null). */
+    public static Trace trace(LanData data, BlockPos startDev, int startPort, BlockPos startCell, int startWire,
+                              com.strikerr212.minepc.wire.WireLine startLine) {
         List<long[]> wireList = new ArrayList<>();
         Set<Long> trayCells = new HashSet<>();
         List<LanData.Cord> cordList = new ArrayList<>();
@@ -787,13 +800,24 @@ public final class LanManager {
         ArrayDeque<LanData.Plug> plugs = new ArrayDeque<>();
         int[] cordCells = {0};
         boolean[] copper = {false};
+        List<Long> lineIds = new ArrayList<>();
         java.util.function.BiConsumer<BlockPos, Integer> seedPort = (dev, port) -> {
-            seed(data, dev, port, wires, plugs, done, cordCells, copper);
+            seed(data, dev, port, wires, plugs, done, cordCells, copper, lineIds, open);
             for (LanData.Cord c : data.cords(dev)) if (c.other(dev, port) != null && !cordList.contains(c)) cordList.add(c);
         };
         if (startDev != null) {
             seenPlugs.add(new LanData.Plug(startDev, startPort));
             seedPort.accept(startDev, startPort);
+        } else if (startLine != null) {
+            // Провод 3.0: оба его конца — в гнёзда (дальше обход как обычно) или свободные (обрыв)
+            lineIds.add(startLine.id);
+            cordCells[0] += startLine.meters();
+            if (!startLine.fiber) copper[0] = true;
+            for (int e = 0; e < 2; e++) {
+                boolean b = e == 1;
+                if (startLine.dev(b) != null) plugs.add(new LanData.Plug(startLine.dev(b), startLine.port(b)));
+                else open.add(BlockPos.containing(startLine.end(b)));
+            }
         } else if (startCell != null && done.add(key(startCell, startWire))) {
             wires.add(new long[]{startCell.asLong(), startWire});
         }
@@ -897,12 +921,13 @@ public final class LanManager {
             }
         }
         int length = cells.size() + trayCells.size() + cordCells[0];
-        return new Trace(wireList, trayCells, cordList, passives, ends, open, length, copper[0] || wireList.isEmpty());
+        boolean isCopper = copper[0] || wireList.isEmpty() && lineIds.isEmpty();
+        return new Trace(wireList, trayCells, cordList, passives, ends, open, length, isCopper, lineIds);
     }
 
     /** Что воткнуто в порт: провода с вилкой в этот порт и патч-корды. */
     private static void seed(LanData data, BlockPos dev, int port, ArrayDeque<long[]> wires, ArrayDeque<LanData.Plug> plugs,
-                             Set<Long> done, int[] cordCells, boolean[] copper) {
+                             Set<Long> done, int[] cordCells, boolean[] copper, List<Long> lineIds, List<BlockPos> open) {
         if (port < LanData.CABLE_PORTS) {
             for (PlugWire pw : plugWires(data, dev)) {
                 if (pw.port() == port && done.add(key(pw.cell(), pw.index()))) wires.add(new long[]{pw.cell().asLong(), pw.index()});
@@ -920,6 +945,12 @@ public final class LanManager {
             for (int e = 0; e < 2; e++) {
                 boolean b = e == 1;
                 if (l.dev(b) == null || l.port(b) != port || !dev.equals(l.dev(b))) continue;
+                if (lineIds != null) {
+                    // прозвонка: каждый провод — один раз (длина, подсветка), свободный второй конец — обрыв
+                    if (lineIds.contains(l.id)) continue;
+                    lineIds.add(l.id);
+                    if (l.dev(!b) == null && open != null && open.size() < 16) open.add(BlockPos.containing(l.end(!b)));
+                }
                 cordCells[0] += l.meters();
                 if (!l.fiber && copper != null) copper[0] = true;
                 if (l.dev(!b) != null) plugs.add(new LanData.Plug(l.dev(!b), l.port(!b)));

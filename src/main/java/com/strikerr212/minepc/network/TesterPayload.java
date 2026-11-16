@@ -9,11 +9,12 @@ import net.minecraft.resources.ResourceLocation;
 /**
  * Результат прозвонки кабельным тестером (сервер → игрок): что подсветить и что показать на экранчике.
  * wires — пары {клетка, провод (Wire.packed)}; cords — пары {конец, конец}; ends — устройства на концах;
- * passives — патч-панели и розетки по дороге; open — клетки, где провод обрывается.
+ * passives — патч-панели и розетки по дороге; open — клетки, где провод обрывается; lines — провода 3.0 (номера).
  * info — строка через табуляцию: длина, предел, оптика (0/1), скорость (кбит/с), бирка, концы (через \u001e,
  * у конца поля через \u001f: ключ названия, порт, имя компьютера).
  */
-public record TesterPayload(long[] wires, long[] trays, long[] cords, long[] passives, long[] ends, long[] open, String info)
+public record TesterPayload(long[] wires, long[] trays, long[] cords, long[] passives, long[] ends, long[] open, long[] lines,
+                            String info)
         implements CustomPacketPayload {
 
     public static final Type<TesterPayload> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(MineComputers.MODID, "tester"));
@@ -26,10 +27,11 @@ public record TesterPayload(long[] wires, long[] trays, long[] cords, long[] pas
                 buf.writeLongArray(p.passives);
                 buf.writeLongArray(p.ends);
                 buf.writeLongArray(p.open);
+                buf.writeLongArray(p.lines);
                 buf.writeUtf(p.info, 4096);
             },
             buf -> new TesterPayload(buf.readLongArray(), buf.readLongArray(), buf.readLongArray(), buf.readLongArray(),
-                    buf.readLongArray(), buf.readLongArray(), buf.readUtf(4096)));
+                    buf.readLongArray(), buf.readLongArray(), buf.readLongArray(), buf.readUtf(4096)));
 
     @Override
     public Type<? extends CustomPacketPayload> type() {

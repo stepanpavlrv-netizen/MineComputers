@@ -161,8 +161,16 @@ public final class NetHud {
         }
         // Идёт прокладка щелчками — подсказки у неё свои
         if (CableDrawClient.active()) return;
-        // Монтажник: провод под прицелом
+        // Монтажник: провод 3.0 под прицелом (с мотком, кусачками, тестером или биркой)
         boolean tool = held.getItem() instanceof CableItem || held.getItem() instanceof CuttersItem;
+        boolean tag = held.is(net.minecraft.world.item.Items.NAME_TAG);
+        if (tool || tag || held.getItem() instanceof com.strikerr212.minepc.lan.CableTesterItem) {
+            var aimed = com.strikerr212.minepc.wire.WireService.aimedClient(mc.player);
+            if (aimed != null) {
+                wireInfo(mc, aimed.line(), tag);
+                return;
+            }
+        }
         if (tool && target != null && mc.level.getBlockEntity(target) instanceof CableBlockEntity be && be.facade() == null
                 && !be.wires().isEmpty()) {
             Vec3 at = hit.getLocation().subtract(target.getX(), target.getY(), target.getZ()).scale(16);
@@ -174,6 +182,26 @@ public final class NetHud {
         if (target != null && state.getBlock() instanceof LanDevice dev && hit instanceof BlockHitResult bhr) {
             port(mc, target, state, dev, bhr);
         }
+    }
+
+    /** Подсказка у провода 3.0: бирка, длина и вид, куда воткнуты концы; сам провод подсвечен. */
+    private static void wireInfo(Minecraft mc, com.strikerr212.minepc.wire.WireLine l, boolean tag) {
+        if (!l.label.isEmpty()) lines.add(Component.translatable("hud.minepc.port_label", l.label).withStyle(s -> s.withColor(0xF2F3F5)));
+        lines.add(Component.translatable("hud.minepc.wire.info", l.meters(),
+                Component.translatable(l.fiber ? "tooltip.minepc.tester.fiber" : "tooltip.minepc.tester.copper")).withStyle(s -> s.withColor(0x8FD3F0)));
+        Component[] ends = new Component[2];
+        for (int e = 0; e < 2; e++) {
+            boolean b = e == 1;
+            BlockPos d = l.dev(b);
+            ends[e] = d == null ? Component.translatable("hud.minepc.wire.free_end")
+                    : Component.translatable("hud.minepc.wire.end", mc.level.getBlockState(d).getBlock().getName(), l.port(b) + 1);
+        }
+        lines.add(Component.translatable("hud.minepc.wire.ends", ends[0], ends[1]).withStyle(s -> s.withColor(0xB4BAC4)));
+        if (tag) lines.add(Component.translatable("hud.minepc.wire.tag_hint").withStyle(s -> s.withColor(0x9097A1)));
+        for (int i = 0; i + 1 < l.nodes() && highlight.size() < 400; i++) {
+            if (!l.hang[i]) highlight.add(new AABB(l.node(i), l.node(i + 1)).inflate(0.04));
+        }
+        highlightColor = l.fiber ? 0xFFD24A : 0x8FD3F0;
     }
 
     /** Подсказка у гнезда. */
@@ -210,6 +238,8 @@ public final class NetHud {
         } else {
             if (p.device().equals("!")) {
                 lines.add(Component.translatable("hud.minepc.port_long", p.length()).withStyle(s -> s.withColor(0xE05555)));
+            } else if (p.device().equals("~")) {
+                lines.add(Component.translatable("gui.minepc.switch.free_end").withStyle(s -> s.withColor(0xF2C14E)));
             } else if (p.link()) {
                 lines.add(Component.translatable("hud.minepc.port_link", speed(info.kbit())).withStyle(s -> s.withColor(0x5BD47A)));
                 lines.add(Component.translatable("hud.minepc.port_to", p.device(), p.length()).withStyle(s -> s.withColor(0xB4BAC4)));

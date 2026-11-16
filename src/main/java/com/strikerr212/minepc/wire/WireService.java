@@ -182,10 +182,9 @@ public final class WireService {
         return new Hit(l, seg, ps, t);
     }
 
-    /** ПКМ кусачками в проводе: разрезать в этом месте или (shift) снять целиком. false — провода под прицелом нет. */
-    public static boolean cut(ServerPlayer player, boolean whole) {
-        ServerLevel level = player.serverLevel();
-        LanData data = LanData.get(level);
+    /** Провод под прицелом игрока на сервере (блок ближе провода — тогда null). */
+    public static Hit aimed(ServerPlayer player) {
+        LanData data = LanData.get(player.serverLevel());
         Vec3 eye = player.getEyePosition();
         Vec3 look = player.getViewVector(1);
         double reach = player.blockInteractionRange() + 0.5;
@@ -195,9 +194,44 @@ public final class WireService {
             for (WireLine l : data.linesInChunk(net.minecraft.world.level.ChunkPos.asLong(x, z))) if (!near.contains(l)) near.add(l);
         }
         Hit hit = pick(near, eye, look, reach);
-        if (hit == null) return false;
+        if (hit == null) return null;
         var block = player.pick(reach, 1f, false);
-        if (block.getType() != net.minecraft.world.phys.HitResult.Type.MISS && block.getLocation().distanceTo(eye) + 0.15 < hit.dist()) return false;
+        if (block.getType() != net.minecraft.world.phys.HitResult.Type.MISS && block.getLocation().distanceTo(eye) + 0.15 < hit.dist()) return null;
+        return hit;
+    }
+
+    /** Провод под прицелом у игрока (по его копии проводов; блок ближе провода — null). */
+    public static Hit aimedClient(net.minecraft.world.entity.player.Player player) {
+        Vec3 eye = player.getEyePosition();
+        double reach = player.blockInteractionRange() + 0.5;
+        Hit hit = pick(WireStore.all(), eye, player.getViewVector(1), reach);
+        if (hit == null) return null;
+        var block = player.pick(reach, 1f, false);
+        if (block.getType() != net.minecraft.world.phys.HitResult.Type.MISS && block.getLocation().distanceTo(eye) + 0.15 < hit.dist()) return null;
+        return hit;
+    }
+
+    /** Бирка: подписать провод под прицелом (пустое имя — снять подпись). false — провода под прицелом нет. */
+    public static boolean relabel(ServerPlayer player, String label) {
+        Hit hit = aimed(player);
+        if (hit == null) return false;
+        WireLine l = hit.line();
+        String name = label == null ? "" : label.strip();
+        if (name.length() > LanData.MAX_LABEL) name = name.substring(0, LanData.MAX_LABEL);
+        LanData data = LanData.get(player.serverLevel());
+        data.putLine(new WireLine(l.id, l.fiber, l.color, name, l.xs, l.ys, l.zs, l.hang, l.devA, l.portA, l.devB, l.portB));
+        player.serverLevel().playSound(null, BlockPos.containing(hit.point()), SoundEvents.BOOK_PAGE_TURN, SoundSource.PLAYERS, 0.7f, 1.3f);
+        player.displayClientMessage(name.isEmpty() ? Component.translatable("message.minepc.wire.unlabeled")
+                : Component.translatable("message.minepc.wire.labeled", name), true);
+        return true;
+    }
+
+    /** ПКМ кусачками в проводе: разрезать в этом месте или (shift) снять целиком. false — провода под прицелом нет. */
+    public static boolean cut(ServerPlayer player, boolean whole) {
+        ServerLevel level = player.serverLevel();
+        LanData data = LanData.get(level);
+        Hit hit = aimed(player);
+        if (hit == null) return false;
         WireLine l = hit.line();
         BlockPos at = BlockPos.containing(hit.point());
         if (whole) {

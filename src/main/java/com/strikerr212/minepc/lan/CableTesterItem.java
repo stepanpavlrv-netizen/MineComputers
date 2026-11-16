@@ -67,8 +67,34 @@ public class CableTesterItem extends Item {
             port = cord;
         }
         LanManager.Trace t = LanManager.trace(data, pos.immutable(), port, null, 0);
-        report(server, player, stack, t, pos, port, data.labelName(LanManager.portLabel(data, pos, port)));
+        report(server, player, stack, t, pos, port, LanManager.portLabelName(data, pos, port));
         return InteractionResult.CONSUME;
+    }
+
+    /** Провод 3.0 под прицелом: прозвонить его. PASS — провода под прицелом нет. */
+    private static InteractionResult testWire(Level level, Player player, ItemStack stack) {
+        if (player == null) return InteractionResult.PASS;
+        if (level.isClientSide) return com.strikerr212.minepc.wire.WireService.aimedClient(player) != null ? InteractionResult.SUCCESS : InteractionResult.PASS;
+        if (!(player instanceof ServerPlayer sp)) return InteractionResult.PASS;
+        var hit = com.strikerr212.minepc.wire.WireService.aimed(sp);
+        if (hit == null) return InteractionResult.PASS;
+        testLine(sp.serverLevel(), player, stack, hit.line());
+        return InteractionResult.CONSUME;
+    }
+
+    /** Прозвонить провод 3.0 (и из CI). */
+    public static void testLine(ServerLevel level, Player player, ItemStack stack, com.strikerr212.minepc.wire.WireLine line) {
+        LanManager.Trace t = LanManager.trace(LanData.get(level), null, 0, null, 0, line);
+        report(level, player, stack, t, null, 0, line.label);
+    }
+
+    /** В воздух — по проводу 3.0, на который смотришь. */
+    @Override
+    public net.minecraft.world.InteractionResultHolder<ItemStack> use(Level level, Player player, net.minecraft.world.InteractionHand hand) {
+        ItemStack stack = player.getItemInHand(hand);
+        InteractionResult r = testWire(level, player, stack);
+        return r == InteractionResult.PASS ? net.minecraft.world.InteractionResultHolder.pass(stack)
+                : new net.minecraft.world.InteractionResultHolder<>(r, stack);
     }
 
     /** По проводу. */
@@ -76,6 +102,8 @@ public class CableTesterItem extends Item {
     public InteractionResult useOn(UseOnContext ctx) {
         Level level = ctx.getLevel();
         BlockPos pos = ctx.getClickedPos();
+        InteractionResult wire = testWire(level, ctx.getPlayer(), ctx.getItemInHand());
+        if (wire != InteractionResult.PASS) return wire;
         if (!(level.getBlockEntity(pos) instanceof CableBlockEntity be) || be.wires().isEmpty()) return InteractionResult.PASS;
         if (!(level instanceof ServerLevel server)) return InteractionResult.SUCCESS;
         Vec3 at = ctx.getClickLocation().subtract(pos.getX(), pos.getY(), pos.getZ()).scale(16);
@@ -179,7 +207,8 @@ public class CableTesterItem extends Item {
             for (int i = 0; i < endPos.length; i++) endPos[i] = t.ends().get(i).pos().asLong();
             PacketDistributor.sendToPlayer(sp, new TesterPayload(wires, t.trays().stream().mapToLong(Long::longValue).toArray(), cords,
                     t.passives().stream().mapToLong(BlockPos::asLong).toArray(), endPos,
-                    t.open().stream().mapToLong(BlockPos::asLong).toArray(), info));
+                    t.open().stream().mapToLong(BlockPos::asLong).toArray(),
+                    t.lines().stream().mapToLong(Long::longValue).toArray(), info));
         }
         // Экранчик тестера: последний результат хранится в самом тестере
         CompoundTag tag = new CompoundTag();
