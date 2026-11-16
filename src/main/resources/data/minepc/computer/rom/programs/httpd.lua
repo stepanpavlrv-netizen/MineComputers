@@ -150,6 +150,12 @@ end
 local function handle(path, params, from, host)
   path = "/" .. tostring(path or "/"):gsub("%.%.", ""):gsub("^/+", "")
   local root = rootFor(host)
+  -- сайт клиента приостановлен или у него вышел срок работы — вместо сайта заглушка (почта при этом работает)
+  local site = root:match("^/sites/(.+)$")
+  if site then
+    local st, info = stats.state(site)
+    if st ~= "ok" then return 423, "page", stats.stub(site, st, info) end
+  end
   local file = root .. path
   if fs.isDir(file) then
     file = fs.exists(file .. "/index.page") and (file .. "/index.page") or (file .. "/index.lua")

@@ -2,7 +2,8 @@
 --   local hosting = require("hosting")
 --   local s = hosting.connect("srv-1", "вася", "пароль")       -- сервер: имя, адрес или имя .mine
 --   s:info()                     → { user, quota, used, sites = { {name, size, files} } } или nil, ошибка
---   s:upload("/www", "shop", onProgress)  → адрес сайта или nil, ошибка (загружает только изменённые файлы)
+--   s:upload("/www", "shop", onProgress)  → адрес, файлов, байт, состояние — или nil, ошибка (только изменённые файлы)
+--   hosting.warning(состояние)   → предупреждение (сайт приостановлен, срок работы кончается) или nil
 --   s:remove("shop.mine")
 --   hosting.discover()           → серверы с хостингом в сети: { {address, name, sites, free} }
 -- quiet = true в hosting.connect(..., {quiet = true}) — не возвращать чужие события в очередь (для Wired).
@@ -109,8 +110,28 @@ function Session:upload(dir, site, onProgress)
   end
   local res, e2 = self:call("finish", site, table.concat(list, "\n"))
   if not res then return nil, e2 end
-  return type(res) == "table" and res.url or tostring(res), sent, total
+  return type(res) == "table" and res.url or tostring(res), sent, total, type(res) == "table" and res or nil
 end
+
+local function fmtDate(iso)
+  local y, m, d = tostring(iso or ""):match("^(%d+)-(%d+)-(%d+)$")
+  return y and (d .. "." .. m .. "." .. y) or tostring(iso)
+end
+
+--- Предупреждение клиенту по ответу сервера (finish или сайт из info): приостановлен, срок вышел или скоро выйдет.
+function hosting.warning(r)
+  if type(r) ~= "table" then return nil end
+  if r.state == "paused" then
+    return "Сайт приостановлен владельцем хостинга" .. ((r.reason and r.reason ~= "") and (": «" .. r.reason .. "»") or "") ..
+      ". Файлы загружены, но посетители видят заглушку, пока его не включат."
+  elseif r.state == "expired" then
+    return "Срок работы сайта закончился " .. fmtDate(r.till or r.reason) .. ". Файлы загружены, но посетители видят заглушку, пока срок не продлят."
+  elseif r.left and r.left <= 3 then
+    return "Срок работы сайтов заканчивается " .. (r.left == 0 and "сегодня" or ("через " .. r.left .. " дн.")) ..
+      " (" .. fmtDate(r.till) .. "). Продлевает владелец хостинга."
+  end
+end
+hosting.fmtDate = fmtDate
 
 function hosting.connect(server, user, password, opts)
   opts = opts or {}

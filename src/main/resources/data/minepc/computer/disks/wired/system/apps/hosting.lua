@@ -1,4 +1,5 @@
--- Wired: Хостинг — для владельца сервера: включить хостинг, клиенты и их место, сайты, посещения, почта.
+-- Wired: Хостинг — для владельца сервера: включить хостинг, клиенты и их место, срок работы, сайты, посещения,
+-- почта, приостановка сайта.
 -- То же, что команды hostd, только мышью. Данные — библиотека hostadm (общая с hostd).
 local G, T, U, wm = wired.gfx, wired.theme, wired.ui, wired.wm
 
@@ -34,6 +35,108 @@ return function()
   end
 
   local function fmt(n) return textutils.formatSize(n) end
+  local function short(iso) return H.fmtDate(iso):sub(1, 5) end
+
+  --- Срок клиента одной строкой для списка: текст и цвет.
+  local function termNote(cl)
+    if not cl.till then return "без срока", T.faint end
+    if cl.left < 0 then return "⌛ срок вышел " .. short(cl.till), T.err end
+    if cl.left <= 3 then
+      return "⌛ " .. (cl.left == 0 and "последний день" or ("через " .. cl.left .. (cl.left == 1 and " день" or " дня"))), T.warn
+    end
+    return "до " .. short(cl.till) .. " · " .. cl.left .. " дн.", T.dim
+  end
+
+  -- ======================= окна: срок работы и приостановка =======================
+
+  local function plusDays(base, n)
+    local y, m, d = base:match("^(%d+)-(%d+)-(%d+)$")
+    return os.date("%Y-%m-%d", os.time({ year = tonumber(y), month = tonumber(m), day = tonumber(d), hour = 12 }) + n * 86400)
+  end
+
+  local function termDialog(cl)
+    local choice = 2
+    local base = (cl.till and cl.left >= 0) and cl.till or H.today()
+    local f = U.field(H.fmtDate(plusDays(base, 30)), "date")
+    local dlg
+    local function close() wm.close(dlg, true) end
+    local function save()
+      local spec = choice == 1 and "+7" or choice == 2 and "+30" or choice == 3 and f.text or "-"
+      local ok, res = H.setUntil(cl.login, spec)
+      if not ok then say(res, true) return end
+      close()
+      reload()
+      say("Срок работы сайтов " .. cl.login .. ": " .. (res and ("до " .. H.fmtDate(res)) or "без срока"))
+    end
+    dlg = wm.open({ title = "Срок работы — " .. cl.login, icon = "host", w = 50, h = 15, resizable = false,
+      draw = function(w, c)
+        c.text(3, 2, cl.till and ("Сейчас: " .. (cl.left < 0 and ("срок вышел " .. H.fmtDate(cl.till))
+          or ("до " .. H.fmtDate(cl.till) .. " (осталось " .. cl.left .. " дн.)"))) or "Сейчас: без срока", T.dim)
+        c.radio(3, 4, "продлить на 7 дней", choice == 1, "c1")
+        c.text(27, 4, "→ до " .. H.fmtDate(plusDays(base, 7)), T.faint)
+        c.radio(3, 5, "продлить на 30 дней", choice == 2, "c2")
+        c.text(27, 5, "→ до " .. H.fmtDate(plusDays(base, 30)), T.faint)
+        c.radio(3, 6, "до даты", choice == 3, "c3")
+        f.focused = choice == 3
+        c.field(14, 6, 14, f)
+        c.hit(14, 6, 14, 1, "c3")
+        c.radio(3, 7, "без срока", choice == 4, "c4")
+        c.text(3, 9, "Срок действует на все сайты клиента. Когда он", T.faint)
+        c.text(3, 10, "выйдет, посетители увидят заглушку; файлы и", T.faint)
+        c.text(3, 11, "почта останутся.", T.faint)
+        local bx = c.w - 24
+        bx = c.button(bx, 13, "Отмена", "no") + 1
+        c.button(bx, 13, "Сохранить", "ok", "primary")
+      end,
+      event = function(w, ev, a)
+        if ev == "click" then
+          if a == "ok" then save() return elseif a == "no" then close() return end
+          local n = type(a) == "string" and tonumber(a:match("^c(%d)$"))
+          if n then choice = n end
+        elseif ev == "key" and a == "escape" then close() return
+        elseif ev == "key" and a == "enter" then save() return
+        elseif choice == 3 and (ev == "char" or ev == "key" or ev == "paste") then U.edit(f, ev, a) end
+        wm.redraw(w)
+      end })
+  end
+
+  --- Приостановить сайт (site) или всего клиента (site == nil).
+  local function pauseDialog(cl, site)
+    local target = site or cl.login
+    local f = U.field("", "why")
+    f.focused = true
+    local dlg
+    local function close() wm.close(dlg, true) end
+    local function go()
+      local ok, err = H.pause(target, f.text)
+      close()
+      if not ok then say(err, true) return end
+      reload()
+      say(site and ("Сайт " .. site .. " приостановлен: посетители видят заглушку, почта работает")
+        or ("Все сайты клиента " .. cl.login .. " приостановлены"))
+    end
+    dlg = wm.open({ title = "Приостановить " .. (site or ("все сайты " .. cl.login)), icon = "host", w = 52, h = 12, resizable = false,
+      draw = function(w, c)
+        c.text(3, 2, "Посетители увидят «сайт временно не работает».", T.dim)
+        c.text(3, 3, "Почта домена продолжит работать.", T.dim)
+        c.text(3, 5, "Причина (необязательно):", T.fg)
+        c.field(3, 6, c.w - 4, f)
+        c.text(3, 7, "её увидят посетители и клиент в панели", T.faint)
+        local bx = c.w - 30
+        bx = c.button(bx, 10, "Отмена", "no") + 1
+        c.button(bx, 10, "⏸ Приостановить", "ok", "primary")
+      end,
+      event = function(w, ev, a)
+        if ev == "click" then
+          if a == "ok" then go() elseif a == "no" then close() end
+          return
+        elseif ev == "key" and a == "escape" then close() return end
+        if ev == "char" or ev == "key" or ev == "paste" then
+          if U.edit(f, ev, a) == "enter" then go() return end
+          wm.redraw(w)
+        end
+      end })
+  end
 
   function app.draw(w, c)
     -- верх: служба
@@ -56,16 +159,19 @@ return function()
       if y > c.h - 3 then break end
       local act = i == st.sel
       local bg = act and T.sel or T.side
-      c.fill(1, y, SIDE, 2, bg)
-      if act then c.text(1, y, "▌", T.accent, bg) c.text(1, y + 1, "▌", T.accent, bg) end
+      c.fill(1, y, SIDE, 3, bg)
+      if act then for k = 0, 2 do c.text(1, y + k, "▌", T.accent, bg) end end
       c.text(3, y, G.cut(cl.login, SIDE - 10), act and T.fg or T.dim, bg)
       c.text(SIDE - 6, y, tostring(#cl.sites) .. " с.", T.faint, bg)
       local frac = cl.used / math.max(1, cl.quota)
       local barW = SIDE - 16
       c.progress(3, y + 1, barW, math.min(1, frac), frac > 0.9 and T.err or T.accent)
       c.text(4 + barW, y + 1, G.cut(fmt(cl.used) .. "/" .. fmt(cl.quota), SIDE - barW - 4), T.faint, bg)
-      c.hit(1, y, SIDE, 2, "client", i)
-      y = y + 3
+      local note, col = termNote(cl)
+      if cl.paused then note, col = "⏸ приостановлен · " .. note, T.warn end
+      c.text(3, y + 2, G.cut(note, SIDE - 4), col, bg)
+      c.hit(1, y, SIDE, 3, "client", i)
+      y = y + 4
     end
     if #st.clients == 0 then c.text(3, 6, "Клиентов пока нет", T.faint, T.side) end
     c.button(2, c.h - 1, "+ Клиент", "add", "primary")
@@ -82,26 +188,62 @@ return function()
       c.text(x0, 4, cl.login, T.fg)
       bx = x0 + G.len(cl.login) + 2
       bx = c.button(bx, 4, "Место", "quota", "ghost") + 1
+      -- в узком окне — короткие подписи кнопок
+      local full = G.len(cl.login) + 2 + 76 <= rw
       bx = c.button(bx, 4, "Пароль", "passwd", "ghost") + 1
-      c.button(bx, 4, "Удалить клиента", "del", "ghost")
-      c.text(x0, 5, string.format("Занято %s из %s", fmt(cl.used), fmt(cl.quota)), T.dim)
-      c.hline(x0, 6, rw)
-      c.text(x0, 7, G.pad("Сайт", 24) .. G.pad("Размер", 10) .. G.pad("Сегодня", 9) .. G.pad("Неделя", 8) .. "Почта", T.faint)
-      local yy = 8
+      bx = c.button(bx, 4, full and "◷ Срок работы" or "◷ Срок", "term", "ghost") + 1
+      bx = c.button(bx, 4, cl.paused and (full and "▶ Включить всё" or "▶ Включить") or (full and "⏸ Приостановить всё" or "⏸ Пауза"),
+        cl.paused and "resumeall" or "pauseall", "ghost") + 1
+      c.button(bx, 4, full and "Удалить клиента" or "Удалить", "del", "ghost")
+      -- срок работы и место
+      local used = string.format("Занято %s из %s", fmt(cl.used), fmt(cl.quota))
+      local room = rw - G.len(used) - 2
+      c.text(x0, 5, "Срок работы: ", T.dim)
+      local tx = x0 + 13
+      if not cl.till then c.text(tx, 5, "без срока", T.fg)
+      elseif cl.left < 0 then
+        local s1 = G.cut("закончился " .. H.fmtDate(cl.till) .. " — сайты показывают заглушку", room - 13)
+        c.text(tx, 5, s1, T.err)
+      else
+        local s1 = "до " .. H.fmtDate(cl.till)
+        c.text(tx, 5, s1, cl.left <= 3 and T.warn or T.fg)
+        c.text(tx + G.len(s1), 5, " · осталось " .. cl.left .. " дн.", T.dim)
+      end
+      local termLen = 13 + (not cl.till and 9 or cl.left < 0 and room - 13 or G.len("до 00.00.0000 · осталось " .. cl.left .. " дн."))
+      if termLen < room then c.text(x0 + rw - G.len(used), 5, used, T.dim) end
+      local top = 6
+      if cl.paused then
+        c.text(x0, 6, G.cut("⏸ Все сайты приостановлены" .. (cl.paused ~= "" and (": «" .. cl.paused .. "»") or ""), rw), T.warn)
+        top = 7
+      end
+      c.hline(x0, top, rw)
+      local W1 = math.max(14, math.min(24, rw - 60))
+      c.text(x0, top + 1, G.pad("Сайт", W1) .. G.pad("Состояние", 18) .. G.pad("Размер", 10) .. G.pad("Сегодня", 9) .. G.pad("Неделя", 8) .. "Почта", T.faint)
+      local yy = top + 2
       for i, s in ipairs(cl.sites) do
         if yy > c.h - 12 then break end
         local act = i == st.site
         if act then c.fill(x0, yy, rw, 1, T.sel) end
         local bg = act and T.sel or T.win
-        c.text(x0, yy, G.cut(s.name, 23), act and T.fg or T.dim, bg)
-        c.text(x0 + 24, yy, fmt(s.size), T.dim, bg)
-        c.text(x0 + 34, yy, tostring(s.stats.today), s.stats.today > 0 and T.ok or T.dim, bg)
-        c.text(x0 + 43, yy, tostring(s.stats.week), T.dim, bg)
-        c.text(x0 + 51, yy, #s.boxes > 0 and (#s.boxes .. " ящ., " .. fmt(s.mail)) or "—", T.dim, bg)
+        local ok = s.state == "ok"
+        c.text(x0, yy, G.cut(s.name, W1 - 1), act and T.fg or T.dim, bg)
+        local sx = x0 + W1
+        if ok then c.text(sx, yy, "● работает", T.ok, bg)
+        elseif s.state == "paused" then c.text(sx, yy, "⏸ приостановлен", T.warn, bg)
+        else c.text(sx, yy, "⌛ срок вышел", T.err, bg) end
+        c.text(sx + 18, yy, fmt(s.size), T.dim, bg)
+        c.text(sx + 28, yy, tostring(s.stats.today), s.stats.today > 0 and T.ok or T.dim, bg)
+        c.text(sx + 37, yy, tostring(s.stats.week), T.dim, bg)
+        c.text(sx + 45, yy, G.cut(#s.boxes > 0 and (#s.boxes .. " ящ., " .. fmt(s.mail)) or "—", math.max(1, rw - W1 - 45)), T.dim, bg)
         c.hit(x0, yy, rw, 1, "site", i)
         yy = yy + 1
+        -- причина приостановки именно этого сайта — строкой ниже
+        if s.sitePaused and s.reason and s.reason ~= "" and yy <= c.h - 12 then
+          c.text(sx, yy, G.cut("«" .. s.reason .. "»", rw - W1), T.faint)
+          yy = yy + 1
+        end
       end
-      if #cl.sites == 0 then c.text(x0, 8, "Сайтов нет — клиент загружает их сам (логин и пароль у него)", T.faint) end
+      if #cl.sites == 0 then c.text(x0, top + 2, "Сайтов нет — клиент загружает их сам (логин и пароль у него)", T.faint) end
       -- выбранный сайт: посещения по дням
       local s = cl.sites[st.site]
       if s then
@@ -110,6 +252,7 @@ return function()
         c.text(x0, gy, s.name, T.accent)
         bx = x0 + G.len(s.name) + 2
         bx = c.button(bx, gy, "Открыть", "open", "ghost") + 1
+        bx = c.button(bx, gy, s.sitePaused and "▶ Включить сайт" or "⏸ Приостановить сайт", s.sitePaused and "resumesite" or "pausesite", "ghost") + 1
         c.button(bx, gy, "Удалить сайт", "rmsite", "ghost")
         local sst = s.stats
         c.text(x0, gy + 1, G.cut(string.format("Гостей сегодня %d, за неделю %d · трафик за неделю %s · всего страниц %d",
@@ -180,6 +323,18 @@ return function()
         reload()
         say("Клиент " .. cl.login .. " удалён")
       end, "Удалить")
+    elseif a == "term" and cl then termDialog(cl)
+    elseif a == "pauseall" and cl then pauseDialog(cl, nil)
+    elseif a == "resumeall" and cl then
+      H.resume(cl.login)
+      say("Сайты клиента " .. cl.login .. " снова работают")
+    elseif a == "pausesite" and cl and cl.sites[st.site] then pauseDialog(cl, cl.sites[st.site].name)
+    elseif a == "resumesite" and cl and cl.sites[st.site] then
+      local name = cl.sites[st.site].name
+      H.resume(name)
+      reload()
+      local s2 = st.clients[st.sel] and st.clients[st.sel].sites[st.site]
+      say("Сайт " .. name .. " снова работает" .. ((s2 and s2.state ~= "ok") and " (но приостановлен весь клиент или вышел срок)" or ""))
     elseif a == "open" and cl and cl.sites[st.site] then
       local e = wired.apps.get("browser")
       if e then wired.apps.launch(e, cl.sites[st.site].name) else say("Браузер не установлен (дискета «Браузер»)", true) end

@@ -4,6 +4,8 @@
 --   H.add(login, пароль, КБ)  H.del(login)  H.quota(login, КБ)  H.passwd(login, пароль)  H.removeSite(site)
 --   H.stats(ключ)             → посещения сайта (ключ — имя .mine или "www")
 --   H.running()  H.start()  H.stop()  H.url()
+--   H.setUntil(login, "30.11.2026" | "+30" | "-")  H.pause(сайт или login, причина)  H.resume(сайт или login)
+--   H.state(сайт) → "ok" | "paused", причина | "expired", дата   H.stub(сайт) → заглушка для посетителей
 local H = {
   SELF = "/rom/programs/hostd.lua", HTTPD = "/rom/programs/httpd.lua", MAILD = "/rom/programs/maild.lua",
   DB = "/etc/hosting.db", SITES = "/sites", MAIL = "/hosting/mail", STATS = "/var/httpd/stats",
@@ -125,18 +127,184 @@ function H.record(key, from, bytes, page)
   if f then f.write(textutils.serialize(s)) f.close() end
 end
 
+-- ======================= срок работы и приостановка =======================
+-- Срок — у клиента (u.till = "ГГГГ-ММ-ДД", nil — без срока), на все его сайты. Приостановить можно клиента
+-- целиком (u.paused = причина) или один сайт (db.paused[сайт] = причина). Ничего не удаляется.
+
+local function iso(y, m, d) return string.format("%04d-%02d-%02d", y, m, d) end
+
+local function timeOf(isoDate)
+  local y, m, d = tostring(isoDate or ""):match("^(%d+)-(%d+)-(%d+)$")
+  if not y then return nil end
+  return os.time({ year = tonumber(y), month = tonumber(m), day = tonumber(d), hour = 12 })
+end
+
+function H.today() return os.date("%Y-%m-%d") end
+
+--- «30.11.2026», «30.11» (этот год) или «2026-11-30» → «2026-11-30»; nil — не дата.
+function H.parseDate(s)
+  s = tostring(s or "")
+  local d, m, y = s:match("^(%d%d?)%.(%d%d?)%.(%d%d%d%d)$")
+  if not d then d, m = s:match("^(%d%d?)%.(%d%d?)$") y = os.date("%Y") end
+  if d then
+    d, m, y = tonumber(d), tonumber(m), tonumber(y)
+    if m < 1 or m > 12 or d < 1 or d > 31 then return nil end
+    return iso(y, m, d)
+  end
+  local yy, mm, dd = s:match("^(%d%d%d%d)-(%d%d?)-(%d%d?)$")
+  if yy then return iso(tonumber(yy), tonumber(mm), tonumber(dd)) end
+  return nil
+end
+
+--- «2026-11-30» → «30.11.2026».
+function H.fmtDate(isoDate)
+  local y, m, d = tostring(isoDate or ""):match("^(%d+)-(%d+)-(%d+)$")
+  return y and (d .. "." .. m .. "." .. y) or "—"
+end
+
+--- Сколько дней до конца срока (0 — сегодня последний день, меньше нуля — срок вышел); nil — без срока.
+function H.daysLeft(isoDate)
+  local t, now = timeOf(isoDate), timeOf(H.today())
+  if not t or not now then return nil end
+  return math.floor((t - now) / 86400 + 0.5)
+end
+
+--- Срок работы клиента: дата, «+N» дней (от текущего срока, а если он вышел или его нет — от сегодня) или «-».
+function H.setUntil(login, spec)
+  local db = H.load()
+  local u = db.users[login]
+  if not u then return false, "Нет клиента " .. tostring(login) end
+  spec = tostring(spec or ""):gsub("%s", "")
+  local value
+  if spec == "-" or spec == "" or spec == "нет" then
+    value = nil
+  elseif spec:match("^%+%d+$") then
+    local base = u.till
+    if not base or (H.daysLeft(base) or -1) < 0 then base = H.today() end
+    value = os.date("%Y-%m-%d", timeOf(base) + tonumber(spec:sub(2)) * 86400)
+  else
+    value = H.parseDate(spec)
+    if not value then return false, "Не понимаю дату «" .. spec .. "»: нужно 30.11.2026, +30 или -" end
+  end
+  u.till = value
+  u.reminded = nil
+  H.save(db)
+  return true, value
+end
+
+--- Чей сайт: логин клиента или nil.
+function H.owner(site, db)
+  db = db or H.load()
+  for login, u in pairs(db.users) do if u.sites and u.sites[site] then return login, u end end
+  return nil
+end
+
+--- Приостановить сайт (если target — сайт) или всех сайтов клиента (если target — логин).
+function H.pause(target, reason)
+  local db = H.load()
+  reason = tostring(reason or "")
+  if H.owner(target, db) then
+    db.paused = db.paused or {}
+    db.paused[target] = reason
+    H.save(db)
+    return true, "site"
+  elseif db.users[target] then
+    db.users[target].paused = reason
+    H.save(db)
+    return true, "client"
+  end
+  return false, "Нет сайта или клиента «" .. tostring(target) .. "»"
+end
+
+function H.resume(target)
+  local db = H.load()
+  if db.paused and db.paused[target] then
+    db.paused[target] = nil
+    H.save(db)
+    return true, "site"
+  elseif db.users[target] then
+    db.users[target].paused = nil
+    H.save(db)
+    return true, "client"
+  end
+  return false, "«" .. tostring(target) .. "» не приостановлен"
+end
+
+--- Состояние сайта: "ok" | "paused", причина | "expired", дата.
+function H.state(site, db)
+  db = db or H.load()
+  if db.paused and db.paused[site] then return "paused", db.paused[site] end
+  local _, u = H.owner(site, db)
+  if u then
+    if u.paused then return "paused", u.paused end
+    if u.till and (H.daysLeft(u.till) or 0) < 0 then return "expired", u.till end
+  end
+  return "ok"
+end
+
+--- Заглушка, которую видит посетитель приостановленного сайта.
+function H.stub(site, st, info)
+  local host = net.hostname() ~= "" and net.hostname() or net.address():sub(1, 8)
+  local okN, names = net.dns("names")
+  if okN and names and names[1] then host = names[1].name end
+  local why
+  if st == "expired" then
+    why = "Срок работы сайта закончился " .. H.fmtDate(info) .. ".\n---\n> Сайт вернётся, когда срок продлят. Письма на " .. site .. " доходят."
+  else
+    why = "Его приостановил владелец хостинга." .. ((info and info ~= "") and ("\n---\n> Причина: «" .. info .. "»") or "") ..
+      "\n> Письма на " .. site .. " доходят."
+  end
+  return "# Сайт " .. site .. " временно не работает\n" .. why .. "\n\n{gray}Хостинг " .. host .. "{}"
+end
+
+--- Напоминание за 3 дня до конца срока: письмо в ящик admin@ каждого сайта клиента (один раз на каждый срок).
+function H.remind()
+  local db = H.load()
+  local changed = false
+  for login, u in pairs(db.users) do
+    local left = u.till and H.daysLeft(u.till)
+    if left and left >= 0 and left <= 3 and u.reminded ~= u.till then
+      local names = {}
+      for site in pairs(u.sites or {}) do names[#names + 1] = site end
+      table.sort(names)
+      if #names > 0 then
+        local host = net.hostname() ~= "" and net.hostname() or net.address():sub(1, 8)
+        local body = "Срок работы ваших сайтов (" .. table.concat(names, ", ") .. ")\nзаканчивается " ..
+          (left == 0 and "сегодня" or ("через " .. left .. " дн.")) .. " — " .. H.fmtDate(u.till) .. ".\n" ..
+          "Чтобы продлить, свяжитесь с владельцем хостинга.\nФайлы и почта сохранятся в любом случае."
+        for _, site in ipairs(names) do
+          local dir = H.MAIL .. "/" .. site .. "/admin"
+          pcall(fs.makeDir, dir)
+          local f = fs.open(string.format("%s/%d-%04d.txt", dir, math.floor(os.epoch and os.epoch("utc") or 0), math.random(0, 9999)), "w")
+          if f then
+            f.write("От: hosting@" .. host .. "\nТема: Срок работы сайтов заканчивается " .. H.fmtDate(u.till) ..
+              "\nВремя: " .. os.date("%d.%m %H:%M") .. "\nНовое: да\n\n" .. body)
+            f.close()
+          end
+        end
+      end
+      u.reminded = u.till
+      changed = true
+    end
+  end
+  if changed then H.save(db) end
+end
+
 --- Все клиенты с сайтами, местом и посещениями.
 function H.clients()
   local db = H.load()
   local out = {}
   for login, u in pairs(db.users) do
-    local c = { login = login, quota = u.quota or H.DEFAULT_QUOTA, used = 0, sites = {} }
+    local c = { login = login, quota = u.quota or H.DEFAULT_QUOTA, used = 0, sites = {},
+      till = u.till, left = u.till and H.daysLeft(u.till), paused = u.paused }
     for site in pairs(u.sites or {}) do
       local sz, files = H.size(H.SITES .. "/" .. site)
       local mail = H.size(H.MAIL .. "/" .. site)
       local boxes = fs.isDir(H.MAIL .. "/" .. site) and fs.list(H.MAIL .. "/" .. site) or {}
       c.used = c.used + sz + mail
-      c.sites[#c.sites + 1] = { name = site, size = sz, files = files, mail = mail, boxes = boxes, stats = H.stats(site) }
+      local st, info = H.state(site, db)
+      c.sites[#c.sites + 1] = { name = site, size = sz, files = files, mail = mail, boxes = boxes, stats = H.stats(site),
+        state = st, reason = st == "paused" and info or nil, sitePaused = db.paused and db.paused[site] ~= nil }
     end
     table.sort(c.sites, function(a, b) return a.name < b.name end)
     out[#out + 1] = c
@@ -156,6 +324,8 @@ function H.add(login, password, kb)
 end
 
 function H.removeSite(site)
+  local db0 = H.load()
+  if db0.paused and db0.paused[site] then db0.paused[site] = nil H.save(db0) end
   if fs.exists(H.SITES .. "/" .. site) then fs.delete(H.SITES .. "/" .. site) end
   if fs.exists(H.MAIL .. "/" .. site) then fs.delete(H.MAIL .. "/" .. site) end
   if fs.exists(H.STATS .. "/" .. site) then fs.delete(H.STATS .. "/" .. site) end

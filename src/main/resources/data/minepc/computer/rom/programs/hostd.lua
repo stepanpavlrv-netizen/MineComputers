@@ -6,11 +6,15 @@
 --   hostd del <логин>              — удалить клиента вместе с его сайтами
 --   hostd quota <логин> <КБ>       — сколько места клиенту
 --   hostd passwd <логин> <пароль>  — сменить пароль
---   hostd list                     — клиенты, их сайты и место
+--   hostd list                     — клиенты, их сайты, место и срок работы
+--   hostd until <логин> <дата|+дней|-> — срок работы сайтов клиента: 30.11.2026, +30 (продлить) или - (без срока)
+--   hostd pause <сайт|логин> [причина] — приостановить сайт или все сайты клиента (посетители видят заглушку)
+--   hostd resume <сайт|логин>      — снова включить
 -- Клиенты загружают сайт командой deploy или кнопкой «На хостинг» в Сайтостроителе Wired. Почта на домены
 -- клиентов (имя@shop.mine) приходит сюда же (maild), клиент забирает её в Почте Wired («Ящик на хостинге»).
 -- Панель клиента — страница hosting на сайте сервера: /www/hosting.lua (создаётся при запуске).
-local cmd, a1, a2, a3 = ...
+local args = { ... }
+local cmd, a1, a2, a3 = args[1], args[2], args[3], args[4]
 local SELF = "/rom/programs/hostd.lua"
 local HTTPD = "/rom/programs/httpd.lua"
 local MAILD = "/rom/programs/maild.lua"
@@ -35,7 +39,8 @@ if not p.login or p.login == "" then
   return "# Хостинг\nСайты и почта клиентов этого сервера.\n---\n" .. form ..
     "\n---\n> Аккаунт выдаёт владелец сервера. Загрузить сайт: {lightBlue}deploy <сервер> <сайт>{} или «На хостинг» в Сайтостроителе."
 end
-local u = H.load().users[p.login]
+local db = H.load()
+local u = db.users[p.login]
 if not u or u.pass ~= H.hash(p.password or "") then
   return "# Хостинг\n{red}Неверный логин или пароль{}\n---\n" .. form
 end
@@ -59,7 +64,15 @@ for _, site in ipairs(names) do
   for _, d in ipairs(st.series) do
     bars[#bars + 1] = "{gray}" .. d.date .. "{} {cyan}" .. string.rep("█", math.floor(d.views * 16 / maxv + 0.5)) .. "{} " .. d.views
   end
-  out[#out + 1] = "## [" .. site .. "](mine://" .. site .. ")\nСайт: " .. sz(s) .. ", почта: " .. sz(m) ..
+  local state, why = H.state(site, db)
+  local note = ""
+  if state == "paused" then
+    note = "\n{orange}⏸ Сайт приостановлен владельцем хостинга{}" .. (why ~= "" and (": «" .. why .. "»") or "") ..
+      "\n> Посетители видят заглушку. Загружать сайт можно, почта работает."
+  elseif state == "expired" then
+    note = "\n{red}Срок работы закончился " .. H.fmtDate(why) .. "{} — посетители видят заглушку."
+  end
+  out[#out + 1] = "## [" .. site .. "](mine://" .. site .. ")" .. note .. "\nСайт: " .. sz(s) .. ", почта: " .. sz(m) ..
     "\nПосещения: сегодня {lime}" .. st.today .. "{} (гостей " .. st.todayUniq .. "), за неделю " .. st.week ..
     " (гостей " .. st.weekUniq .. "), трафик за неделю " .. sz(st.weekBytes) .. ", всего страниц " .. st.total ..
     "\n" .. table.concat(bars, "\n") ..
@@ -68,8 +81,14 @@ end
 local quota = u.quota or H.DEFAULT_QUOTA
 local pct = math.min(100, math.floor(total * 100 / math.max(1, quota)))
 local bar = string.rep("█", math.floor(pct / 5)) .. string.rep("░", 20 - math.floor(pct / 5))
+local left = u.till and H.daysLeft(u.till)
+local termLine = "Срок работы: " .. (left == nil and "без срока"
+  or left < 0 and ("{red}закончился " .. H.fmtDate(u.till) .. "{} — продлевает владелец хостинга")
+  or (left <= 3 and "{yellow}" or "{lime}") .. "до " .. H.fmtDate(u.till) .. "{} · осталось " .. left .. " дн.")
 return "# Хостинг: " .. p.login .. "\nМесто: {" .. (pct > 90 and "red" or "lime") .. "}" .. bar .. "{} " .. sz(total) ..
-  " из " .. sz(quota) .. "\n---\n" ..
+  " из " .. sz(quota) .. "\n" .. termLine ..
+  (u.paused and ("\n{orange}⏸ Все ваши сайты приостановлены{}" .. (u.paused ~= "" and (": «" .. u.paused .. "»") or "")) or "") ..
+  "\n---\n" ..
   (#out > 0 and table.concat(out, "\n---\n") or "Сайтов нет. Загрузите: {lightBlue}deploy <сервер> <сайт>{}") ..
   "\n---\n> Почта на ваши домены (имя@сайт.mine) приходит сюда; читать — Почта Wired → «Ящик на хостинге»."
 ]==]
@@ -106,10 +125,13 @@ local function handle(db, from, c, user, ph, x1, x2, x3, x4, x5)
     for site in pairs(u.sites or {}) do
       local s, n = size(SITES .. "/" .. site)
       local st = H.stats(site)
-      sites[#sites + 1] = { name = site, size = s, files = n, today = st.today, week = st.week, weekBytes = st.weekBytes }
+      local state, why = H.state(site, db)
+      sites[#sites + 1] = { name = site, size = s, files = n, today = st.today, week = st.week, weekBytes = st.weekBytes,
+        state = state, reason = state == "paused" and why or nil }
     end
     table.sort(sites, function(p, q) return p.name < q.name end)
-    return true, { user = user, quota = u.quota, used = used(u), sites = sites }
+    return true, { user = user, quota = u.quota, used = used(u), sites = sites, till = u.till,
+      left = u.till and H.daysLeft(u.till), paused = u.paused }
   end
   local site = siteName(x1)
   if not site then return false, "Плохое имя сайта" end
@@ -223,7 +245,9 @@ local function handle(db, from, c, user, ph, x1, x2, x3, x4, x5)
     if not ok then return false, "Сайт загружен, но имя не занялось: " .. tostring(res) end
     if not running(HTTPD) then pcall(computer.spawn, HTTPD, "serve") end
     local s = size(dir)
-    return true, { url = site, size = s, used = used(u), quota = u.quota }
+    local state, why = H.state(site, db)
+    return true, { url = site, size = s, used = used(u), quota = u.quota, state = state, reason = why,
+      till = u.till, left = u.till and H.daysLeft(u.till) }
   elseif c == "remove" then
     H.removeSite(site)
     u.sites[site] = nil
@@ -238,9 +262,15 @@ local function serve()
   local pf = fs.open("/www/hosting.lua", "w")
   if pf then pf.write(PANEL) pf.close() end
   net.open(PORT)
+  -- напоминания о конце срока работы: при запуске и раз в час
+  pcall(H.remind)
+  local remindTimer = os.startTimer(3600)
   while true do
-    local ev = { os.pullEvent("net_message") }
-    if ev[3] == PORT and ev[5] == "HOST" then
+    local ev = { os.pullEvent() }
+    if ev[1] == "timer" and ev[2] == remindTimer then
+      pcall(H.remind)
+      remindTimer = os.startTimer(3600)
+    elseif ev[1] == "net_message" and ev[3] == PORT and ev[5] == "HOST" then
       local from, id, reply = ev[2], ev[6], ev[7]
       local db = loadDb()
       local ok, okR, res = pcall(handle, db, from, ev[8], ev[9], ev[10], ev[11], ev[12], ev[13], ev[14], ev[15])
@@ -270,6 +300,31 @@ elseif cmd == "quota" then
   print(a1 .. ": " .. kb(tonumber(a2) * 1024))
 elseif cmd == "passwd" then
   if H.passwd(a1, a2) then print("Пароль клиента " .. a1 .. " сменён") else print("hostd passwd <логин> <пароль>") end
+elseif cmd == "until" then
+  if not a1 or not a2 then print("hostd until <логин> <30.11.2026 | +30 | ->") return end
+  local ok, res = H.setUntil(a1, a2)
+  if not ok then printError(res) return end
+  if res then
+    print("Срок работы сайтов " .. a1 .. ": до " .. H.fmtDate(res) .. " (осталось " .. H.daysLeft(res) .. " дн.)")
+  else
+    print("Срок работы сайтов " .. a1 .. ": без срока")
+  end
+elseif cmd == "pause" then
+  if not a1 then print("hostd pause <сайт|логин> [причина]") return end
+  local target = a1
+  if not loadDb().users[target] and not target:match("%.mine$") then target = target .. ".mine" end
+  local ok, res = H.pause(target, table.concat(args, " ", 3))
+  if not ok then printError(res) return end
+  print((res == "site" and ("Сайт " .. target) or ("Все сайты клиента " .. target)) ..
+    " приостановлены: посетители видят заглушку, почта работает. Включить: hostd resume " .. a1)
+elseif cmd == "resume" then
+  if not a1 then print("hostd resume <сайт|логин>") return end
+  local target = a1
+  if not loadDb().users[target] and not target:match("%.mine$") then target = target .. ".mine" end
+  local ok, res = H.resume(target)
+  if not ok then printError(res) return end
+  print((res == "site" and ("Сайт " .. target) or ("Сайты клиента " .. target)) .. " снова работают" ..
+    ((res == "site" and H.state(target) ~= "ok") and " (но клиент приостановлен или срок вышел)" or ""))
 elseif cmd == "list" then
   local db = loadDb()
   local any = false
@@ -278,10 +333,26 @@ elseif cmd == "list" then
     if term.isColor() then term.setTextColor(colors.yellow) end
     write(name)
     term.setTextColor(colors.white)
-    print("  " .. kb(used(u)) .. " из " .. kb(u.quota or DEFAULT_QUOTA))
+    write("  " .. kb(used(u)) .. " из " .. kb(u.quota or DEFAULT_QUOTA) .. "  ")
+    local left = u.till and H.daysLeft(u.till)
+    if term.isColor() then term.setTextColor(left == nil and colors.lightGray or left < 0 and colors.red or left <= 3 and colors.yellow or colors.white) end
+    print(left == nil and "без срока" or left < 0 and ("срок вышел " .. H.fmtDate(u.till)) or ("до " .. H.fmtDate(u.till) .. " (" .. left .. " дн.)"))
+    term.setTextColor(colors.white)
+    if u.paused then
+      if term.isColor() then term.setTextColor(colors.yellow) end
+      print("   ⏸ все сайты приостановлены" .. (u.paused ~= "" and (": " .. u.paused) or ""))
+      term.setTextColor(colors.white)
+    end
     for site in pairs(u.sites or {}) do
       local st = H.stats(site)
-      print("   " .. site .. "  " .. kb((size(SITES .. "/" .. site))) .. "  заходов сегодня " .. st.today .. ", за неделю " .. st.week)
+      local state, why = H.state(site, db)
+      write("   " .. site .. "  " .. kb((size(SITES .. "/" .. site))) .. "  заходов сегодня " .. st.today .. ", за неделю " .. st.week)
+      if state == "paused" and db.paused and db.paused[site] then
+        if term.isColor() then term.setTextColor(colors.yellow) end
+        write("  ⏸" .. (why ~= "" and (" " .. why) or ""))
+        term.setTextColor(colors.white)
+      end
+      print()
     end
   end
   if not any then print("Клиентов нет. Завести: hostd add <логин> <пароль> [КБ]") end
@@ -293,5 +364,5 @@ elseif cmd == nil or cmd == "start" then
   if next(loadDb().users) == nil then print("Заведите клиента: hostd add <логин> <пароль> [КБ]") end
   print("Панель клиентов: " .. H.url() .. "   В Wired — программа «Хостинг».")
 else
-  print("hostd [stop | add | del | quota | passwd | list]")
+  print("hostd [stop | add | del | quota | passwd | until | pause | resume | list]")
 end

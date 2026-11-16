@@ -34,7 +34,7 @@ local function hostingDialog(onDone)
   local function upload()
     local server, user, pass, site = fields[1].f.text, fields[2].f.text, fields[3].f.text, fields[4].f.text
     if server == "" or user == "" or site == "" then st.err = "Заполните сервер, логин и имя сайта" wm.redraw(win) return end
-    st.err, st.busy, st.done = nil, "Подключаюсь…", nil
+    st.err, st.busy, st.done, st.warn = nil, "Подключаюсь…", nil, nil
     wm.redraw(win)
     wm.spawn(function()
       local s = hosting.connect(server, user, pass, { quiet = true })
@@ -42,14 +42,20 @@ local function hostingDialog(onDone)
         st.busy = string.format("%d/%d  %s", i, n, file)
         wm.redraw(win)
       end)
-    end, function(ok, url, sent, bytes)
+    end, function(ok, url, sent, bytes, state)
       st.busy = nil
       if ok and url then
         local w = fs.open(WWW .. "/.deploy", "w")
         if w then w.write(server .. "|" .. user .. "|" .. site .. "\n") w.close() end
         st.done = url
         if onDone then onDone(url, server) end
-        wm.notify({ title = "☁ Сайт на хостинге", text = url .. " — работает на сервере " .. server .. ", даже когда этот компьютер выключен" })
+        local warn = hosting.warning and hosting.warning(state)
+        st.warn = warn
+        if warn then
+          wm.notify({ title = "⏸ Сайт загружен, но не показывается", text = warn })
+        else
+          wm.notify({ title = "☁ Сайт на хостинге", text = url .. " — работает на сервере " .. server .. ", даже когда этот компьютер выключен" })
+        end
       else
         st.err = tostring(ok and sent or url)
       end
@@ -86,7 +92,15 @@ local function hostingDialog(onDone)
     end
     if st.busy then c.text(3, 18, G.cut(st.busy, c.w - 4), T.warn)
     elseif st.err then c.text(3, 18, G.cut(st.err, c.w - 4), T.err)
-    elseif st.done then c.text(3, 18, G.cut("Готово: " .. st.done .. " — откройте в Браузере", c.w - 4), T.ok) end
+    elseif st.done then
+      c.text(3, 18, G.cut("Готово: " .. st.done .. " — откройте в Браузере", c.w - 4), T.ok)
+      if st.warn then
+        for i, line in ipairs(G.wrap("⏸ " .. st.warn, c.w - 4)) do
+          if i > 2 then break end
+          c.text(3, 18 + i, line, T.warn)
+        end
+      end
+    end
     local b = c.w - 30
     b = c.button(b, c.h - 1, "Закрыть", "close") + 1
     c.button(b, c.h - 1, "☁ Загрузить", "go", st.busy and "off" or "primary")

@@ -52,9 +52,17 @@ if args[1] == "info" or args[1] == "remove" then
   local info, err = s:info()
   if not info then printError(err) return end
   print(string.format("%s: занято %s из %s", info.user, textutils.formatSize(info.used), textutils.formatSize(info.quota)))
+  if info.left then
+    color(info.left < 0 and colors.red or info.left <= 3 and colors.yellow or colors.lightGray)
+    print(info.left < 0 and ("Срок работы закончился " .. hosting.fmtDate(info.till) .. " — сайты показывают заглушку")
+      or ("Срок работы: до " .. hosting.fmtDate(info.till) .. ", осталось " .. info.left .. " дн."))
+  end
+  if info.paused then color(colors.yellow) print("⏸ Все сайты приостановлены владельцем хостинга" .. (info.paused ~= "" and (": " .. info.paused) or "")) end
   for _, site in ipairs(info.sites) do
     color(colors.cyan) write("  " .. site.name) color(colors.lightGray)
-    print(string.format("  %s, файлов %d", textutils.formatSize(site.size), site.files))
+    write(string.format("  %s, файлов %d", textutils.formatSize(site.size), site.files))
+    if site.state == "paused" then color(colors.yellow) write("  ⏸ приостановлен") end
+    print()
   end
   color(colors.white)
   if #info.sites == 0 then print("Сайтов нет. Загрузить: deploy " .. server .. " <сайт>") end
@@ -79,7 +87,7 @@ if not user or user == "" then user = ask("Логин хостинга: ") end
 local pass = ask("Пароль: ", "*")
 local s = hosting.connect(server, user, pass)
 local _, y = term.getCursorPos()
-local url, sent, bytes = s:upload(dir, site, function(i, n, file)
+local url, sent, bytes, state = s:upload(dir, site, function(i, n, file)
   term.setCursorPos(1, y)
   term.clearLine()
   write(string.format("%d/%d %s", i, n, file))
@@ -91,3 +99,5 @@ color(colors.lime)
 print("Готово: " .. url .. " — работает на сервере " .. server)
 color(colors.white)
 print(string.format("Отправлено файлов: %d (%s); остальные не менялись", sent or 0, textutils.formatSize(bytes or 0)))
+local warn = hosting.warning(state)
+if warn then color(colors.yellow) print(warn) color(colors.white) end

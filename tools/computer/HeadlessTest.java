@@ -738,7 +738,51 @@ public class HeadlessTest {
         show("почта на хостинге");
         expect("письмо на домен хостинга лежит в /hosting/mail/test.mine/info", Files.isDirectory(dirB.resolve("hosting/mail/test.mine/info")));
         expect("клиент видит письмо в ящике хостинга и читает его", screen().contains("MBOX") && screen().contains("Привет хостингу") && screen().contains("Текст письма"));
+        testPauseAndTerm(box);
         pc = saved;
+    }
+
+    /** Срок работы и приостановка: владелец (box[1]) приостанавливает сайт или ставит прошедший срок — посетители
+     *  получают заглушку с кодом 423; загрузка в приостановленный сайт проходит, но клиент видит, что он приостановлен. */
+    static void testPauseAndTerm(Computer[] box) throws Exception {
+        pc = box[1];
+        command("os.run({}, '/rom/programs/hostd.lua', 'pause', 'test.mine', 'ремонт')");
+        for (int i = 0; i < 20; i++) { for (Computer c : box) c.tick(); Thread.sleep(2); }
+        pc = box[0];
+        String paused = probe(box, "PAUSED");
+        expect("приостановленный сайт: заглушка с кодом 423 и причиной", paused.startsWith("423") && paused.contains("stub") && paused.contains("reason"));
+        command("local _, _, _, st = require('hosting').connect('beta', 'vasya', 'pw'):upload('/www', 'test') print('UPST' .. '=' .. tostring(st and st.state))");
+        for (int i = 0; i < 400 && !screen().contains("UPST="); i++) { for (Computer c : box) c.tick(); Thread.sleep(2); }
+        expect("загрузка в приостановленный сайт проходит, клиент видит состояние", screen().contains("UPST=paused"));
+        pc = box[1];
+        command("os.run({}, '/rom/programs/hostd.lua', 'resume', 'test.mine')");
+        command("os.run({}, '/rom/programs/hostd.lua', 'until', 'vasya', '01.01.2020')");
+        for (int i = 0; i < 20; i++) { for (Computer c : box) c.tick(); Thread.sleep(2); }
+        pc = box[0];
+        String expired = probe(box, "EXPIRED");
+        expect("срок вышел: заглушка «срок работы закончился»", expired.startsWith("423") && expired.contains("ended"));
+        pc = box[1];
+        command("os.run({}, '/rom/programs/hostd.lua', 'until', 'vasya', '-')");
+        for (int i = 0; i < 20; i++) { for (Computer c : box) c.tick(); Thread.sleep(2); }
+        pc = box[0];
+        String back = probe(box, "BACK");
+        show("срок работы и приостановка");
+        expect("без срока и без паузы сайт снова работает", back.startsWith("200") && back.contains("page"));
+    }
+
+    /** Открыть test.mine/more и коротко описать ответ: код и что в нём (заглушка, причина, «закончился», сама страница). */
+    static String probe(Computer[] box, String tag) throws Exception {
+        command("local b, c = require('http').get('test.mine/more', nil, nil, 10) b = tostring(b) print('" + tag + "' .. '=' .. tostring(c)"
+                + " .. (b:find('временно не работает') and ' stub' or '') .. (b:find('ремонт') and ' reason' or '')"
+                + " .. (b:find('закончился') and ' ended' or '') .. (b:find('Ещё страница') and ' page' or ''))");
+        long end = System.currentTimeMillis() + 8000;
+        while (System.currentTimeMillis() < end && !screen().contains(tag + "=")) { for (Computer c : box) c.tick(); Thread.sleep(5); }
+        for (String l : screen().split("\n")) {
+            int i = l.indexOf(tag + "=");
+            if (i >= 0) { System.out.println("  " + l.substring(i)); return l.substring(i + tag.length() + 1).trim(); }
+        }
+        System.out.println("  " + tag + ": нет ответа");
+        return "";
     }
 
     /** Запрос с клиента (box[0], в lua) к сайту; ждём ответ по реальному времени. Возвращает «код|тело» одной строкой. */

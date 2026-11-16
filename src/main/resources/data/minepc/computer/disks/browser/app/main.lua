@@ -143,7 +143,8 @@ return function(start)
       wm.spawn(function() return fetch(s.name, nil, nil, 3) end, function(ok2, body, code, ctype)
         scanning = scanning - 1
         if ok2 and body then
-          s.state, s.ms = "on", math.max(1, (os.epoch and os.epoch("utc") or 0) - started)
+          -- 423 — сайт на хостинге приостановлен или у него вышел срок работы: сервер отвечает заглушкой
+          s.state, s.ms = code == 423 and "paused" or "on", math.max(1, (os.epoch and os.epoch("utc") or 0) - started)
           if ctype == "page" then s.title = ((body:match("^# ([^\n]+)") or ""):gsub("{%a*}", "")) end
           if hidden[s.name] then hidden[s.name] = nil saveHidden(hidden) end   -- снова отвечает — вернуть в список
         else
@@ -170,7 +171,7 @@ return function(start)
     for _, s in ipairs(sites) do
       local hay = (unicode and unicode.lower or string.lower)(s.name .. " " .. s.title)
       if (q == "" or hay:find(q, 1, true)) and not (s.state == "off" and hidden[s.name]) then
-        if s.state == "on" then on[#on + 1] = s else rest[#rest + 1] = s end
+        if s.state == "on" or s.state == "paused" then on[#on + 1] = s else rest[#rest + 1] = s end
       end
     end
     table.sort(on, function(a, b) return a.name < b.name end)
@@ -255,7 +256,7 @@ return function(start)
         if #t.back > 0 then t.url = table.remove(t.back) addr.text = t.url end
       else
         show(t, body, ctype)
-        t.status = (code == 404 and "Нет такой страницы · " or "Готово · ") .. textutils.formatSize(#body)
+        t.status = (code == 404 and "Нет такой страницы · " or code == 423 and "Сайт приостановлен · " or "Готово · ") .. textutils.formatSize(#body)
       end
       wm.setTitle(win, "Браузер — " .. (t.title or url))
       wm.redraw(win)
@@ -292,7 +293,7 @@ return function(start)
 
   --- Стартовая страница: список сайтов майннета.
   local function drawHome(t, c)
-    local BG, FG, DIM, FAINT, OK = P.BG, P.C.text, P.C.quote, 0x5a5470, 0x57c47a
+    local BG, FG, DIM, FAINT, OK, PAUSED = P.BG, P.C.text, P.C.quote, 0x5a5470, 0x57c47a, 0xe8b84f
     local ph = c.h - 4
     c.fill(1, 4, c.w, ph, BG)
     local pw = math.min(c.w, 100)
@@ -336,12 +337,22 @@ return function(start)
         c.text(x, y, G.cut(ln.header, pw - 4), DIM, BG)
       elseif ln then
         local live = ln.state == "on"
+        local paused = ln.state == "paused"
+        if paused then
+          c.text(x, y, "⏸", PAUSED, BG)
+          c.text(x + 2, y, G.cut(ln.name, nameW - 1), P.C.link, BG)
+          c.text(x + 2 + nameW, y, G.cut("приостановлен", math.max(0, pw - nameW - 16)), PAUSED, BG)
+          c.text(x + pw - 12, y, ln.ms .. " мс", FAINT, BG)
+          c.hit(x, y, pw - 4, 1, "site", ln.name)
+        else
         c.text(x, y, live and "●" or "○", live and OK or FAINT, BG)
         c.text(x + 2, y, G.cut(ln.name, nameW - 1), live and P.C.link or FAINT, BG)
         local note = live and (ln.title ~= "" and ln.title or "без заголовка")
           or (ln.state == "check" and "проверяю…" or "сайт выключен или нет связи")
         c.text(x + 2 + nameW, y, G.cut(note, math.max(0, pw - nameW - 16)), live and FG or FAINT, BG)
-        if live then
+        end
+        if paused then
+        elseif live then
           c.text(x + pw - 12, y, ln.ms .. " мс", FAINT, BG)
           c.hit(x, y, pw - 4, 1, "site", ln.name)
         elseif ln.state == "off" then

@@ -260,13 +260,15 @@ end
 
 -- Простая сериализация таблиц (для сохранения настроек и вывода в lua)
 textutils = {}
+local KEYWORDS = {}
+for w in ("and break do else elseif end false for function goto if in local nil not or repeat return then true until while"):gmatch("%a+") do KEYWORDS[w] = true end
 function textutils.serialize(v, indent)
   indent = indent or ""
   local t = type(v)
   if t == "table" then
     local out = { "{" }
     for k, val in pairs(v) do
-      local key = type(k) == "string" and k:match("^[%a_][%w_]*$") and k or "[" .. textutils.serialize(k) .. "]"
+      local key = type(k) == "string" and k:match("^[%a_][%w_]*$") and not KEYWORDS[k] and k or "[" .. textutils.serialize(k) .. "]"
       out[#out + 1] = indent .. "  " .. key .. " = " .. textutils.serialize(val, indent .. "  ") .. ","
     end
     out[#out + 1] = indent .. "}"

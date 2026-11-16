@@ -341,14 +341,24 @@ class Sim:
             sim.timers.append((sim.clock + float(sec or 0), sim.tid))
             return sim.tid
 
+        NOW = datetime.datetime(2026, 11, 15, 12, 4)
+
         def os_date(fmt="%c", t=None):
             fmt = str(fmt)
-            return datetime.datetime(2026, 11, 15, 12, 4).strftime(fmt.lstrip("!"))
+            d = NOW if t is None else datetime.datetime(1970, 1, 1) + datetime.timedelta(seconds=float(t))
+            return d.strftime(fmt.lstrip("!"))
+
+        def os_time(t=None):
+            if t is None:
+                d = NOW
+            else:
+                d = datetime.datetime(int(t["year"]), int(t["month"]), int(t["day"]), int(t["hour"] or 12), int(t["min"] or 0))
+            return int((d - datetime.datetime(1970, 1, 1)).total_seconds())
 
         osT = L.eval("os")
         osT.startTimer = start_timer
         osT.date = os_date
-        osT.time = lambda *a: 0
+        osT.time = os_time
         osT.shutdown = lambda: sim.flags.__setitem__("shutdown", True)
         osT.reboot = lambda: sim.flags.__setitem__("reboot", True)
         osT.getComputerLabel = lambda: "shop"
