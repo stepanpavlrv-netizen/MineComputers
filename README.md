@@ -813,6 +813,10 @@ JSON-модели (их 381) и текстуры **не пишутся вруч�
 | Коммутаторы, текстуры кабеля, рецепты сети | `python tools/assetgen/lan.py` |
 | Силуэты деталей для пустых слотов окна корпуса | `python tools/assetgen/ghosts.py` |
 | Нарисовать корпус со сборкой (без запуска игры) | `python tools/assetgen/preview3d.py . preview.png tools/assetgen/example_build.json` |
+| Посмотреть любую модель без игры: 4 ракурса и текстуры → `build/view/<модель>.png` | `python tools/assetgen/view.py monitor` (`item/flash_drive`, `--y 90`, `--tint 0x292931`) |
+| Все модели блоков на одном листе (сравнить стиль) | `python tools/assetgen/view.py --sheet all` |
+
+Правила стиля (плотность текстур, палитра, материалы, порядок работы) — навык `.claude/skills/minepc-art/SKILL.md`.
 
 Где что лежит:
 - `models6.py` — **геометрия всех деталей** (функции `cpu`, `gpu`, `ram`...), в координатах корпуса
