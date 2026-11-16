@@ -722,6 +722,7 @@ public class HeadlessTest {
         expect("хостинг: неверный пароль — отказ", screen().contains("BADPW") && screen().contains("Неверный"));
         expect("хостинг: test.mine открывается с сервера (своя папка сайта)", screen().contains("VHOST") && screen().contains("Ещё страница"));
         expect("на сервере файлы сайта в /sites/test.mine", Files.exists(dirB.resolve("sites/test.mine/more.page")));
+        testSandbox(box, dirB.resolve("sites/test.mine"));
 
         // Почта на домене хостинга: письмо на info@test.mine ложится на сервер, клиент забирает его по сети
         pc = box[1];
@@ -738,6 +739,67 @@ public class HeadlessTest {
         expect("письмо на домен хостинга лежит в /hosting/mail/test.mine/info", Files.isDirectory(dirB.resolve("hosting/mail/test.mine/info")));
         expect("клиент видит письмо в ящике хостинга и читает его", screen().contains("MBOX") && screen().contains("Привет хостингу") && screen().contains("Текст письма"));
         pc = saved;
+    }
+
+    /** Запрос с клиента (box[0], в lua) к сайту; ждём ответ по реальному времени. Возвращает «код|тело» одной строкой. */
+    static String fetch(Computer[] box, String tag, String url, int waitMs) throws Exception {
+        command("local b, c = require('http').get('" + url + "', nil, nil, 10) print('" + tag + "=' .. tostring(c) .. '|'"
+                + " .. (tostring(b):gsub('%s+', ' ')):sub(1, 90))");
+        long end = System.currentTimeMillis() + waitMs;
+        while (System.currentTimeMillis() < end && !screen().contains(tag + "=")) { for (Computer c : box) c.tick(); Thread.sleep(5); }
+        for (String l : screen().split("\n")) {
+            int i = l.indexOf(tag + "=");
+            if (i >= 0) { System.out.println("  " + l.substring(i)); return l.substring(i + tag.length() + 1); }
+        }
+        System.out.println("  " + tag + ": нет ответа");
+        return "";
+    }
+
+    /** Песочница хостинга: страницы клиента в /sites/<имя> не выходят из своей папки и не вредят серверу. */
+    static void testSandbox(Computer[] box, Path site) throws Exception {
+        Files.writeString(site.resolve("steal.lua"), "return 'S' .. tostring(fs.exists('/etc')) .. tostring(fs.exists('../../www/hosting.lua')) .. tostring(fs.exists('/sites'))");
+        Files.writeString(site.resolve("off.lua"), "os.shutdown() return 'alive'");
+        Files.writeString(site.resolve("loop.lua"), "while true do end");
+        Files.writeString(site.resolve("book.lua"), "local f = fs.open('/book.txt', 'a') f.write(request.params.msg .. ';') f.close()"
+                + " f = fs.open('/book.txt', 'r') local t = f.readAll() f.close() return 'B' .. t");
+        Files.writeString(site.resolve("port.lua"), "return 'P' .. tostring(pcall(net.open, 80)) .. tostring(pcall(net.close, 80))"
+                + " .. tostring(pcall(net.send, 'x', 22, 'hi')) .. tostring(pcall(net.open, 41234))");
+        Files.writeString(site.resolve("tbl.lua"), "return {1}");
+        Files.writeString(site.resolve("cp.lua"), "return 'C' .. tostring(pcall(fs.copy, '/../../www/hosting.lua', '/x.lua')) .. tostring(fs.exists('/x.lua'))");
+        Files.writeString(site.resolve("fetch.lua"), "local b = require('http').get('test.mine/more') return 'F' .. tostring(b)");
+        // чужой запрос на порт 80 сервера (его же и шлёт страница) не должен дойти до страницы
+        Files.writeString(site.resolve("spy.lua"), "net.open(41500) net.send(net.address(), 80, 'GET', 1, 41999, '/more', {}, 'test.mine')"
+                + " local t = os.startTimer(1.5) local e"
+                + " repeat e = {os.pullEvent()} until e[1] == 'timer' or e[1] == 'net_message' return 'Y' .. e[1]");
+
+        String r = fetch(box, "SBX1", "test.mine/steal.lua", 6000);
+        expect("песочница: страница не видит /etc, /www и /sites сервера", r.startsWith("200|Sfalsefalsefalse"));
+        r = fetch(box, "SBX2", "test.mine/off.lua", 6000);
+        expect("песочница: os.shutdown из страницы — ошибка 500 «Недоступно на хостинге»", r.startsWith("500|") && r.contains("Недоступно"));
+        expect("песочница: сервер не выключился", box[1].state() == Computer.State.RUNNING);
+        r = fetch(box, "SBX3", "test.mine/loop.lua", 9000);
+        expect("песочница: бесконечный цикл — 504", r.startsWith("504|"));
+        r = fetch(box, "SBX4", "test.mine/more", 6000);
+        long end;
+        expect("песочница: после зависшей страницы сайт отвечает", r.startsWith("200|") && r.contains("Ещё"));
+        command("local b, c = require('http').get('test.mine/book.lua', {msg = 'раз'}, nil, 10) print('SBX5=' .. tostring(c))");
+        end = System.currentTimeMillis() + 6000;
+        while (System.currentTimeMillis() < end && !screen().contains("SBX5=")) { for (Computer c : box) c.tick(); Thread.sleep(5); }
+        command("local b, c = require('http').get('test.mine/book.lua', {msg = 'два'}, nil, 10) print('SBX6=' .. tostring(c) .. '|' .. tostring(b))");
+        end = System.currentTimeMillis() + 6000;
+        while (System.currentTimeMillis() < end && !screen().contains("SBX6=")) { for (Computer c : box) c.tick(); Thread.sleep(5); }
+        show("гостевая книга");
+        expect("песочница: гостевая книга пишет в свой файл", screen().contains("два;") && Files.exists(site.resolve("book.txt")));
+        r = fetch(box, "SBX7", "test.mine/port.lua", 6000);
+        expect("песочница: порты сервера недоступны, свои 40000–49999 — да", r.startsWith("200|Pfalsefalsefalsetrue"));
+        r = fetch(box, "SBX8", "test.mine/tbl.lua", 6000);
+        expect("песочница: страница вернула таблицу — 200, сайт жив", r.startsWith("200|"));
+        r = fetch(box, "SBXB", "test.mine/cp.lua", 6000);
+        expect("песочница: чужой файл не скопировать в свою папку", r.startsWith("200|Cfalsefalse"));
+        r = fetch(box, "SBX9", "test.mine/fetch.lua", 6000);
+        expect("песочница: страница открывает другой сайт", r.startsWith("200|F") && r.contains("Ещё"));
+        r = fetch(box, "SBXA", "test.mine/spy.lua", 6000);
+        expect("песочница: страница не слышит чужие сетевые сообщения", r.startsWith("200|Ytimer"));
     }
 
     /** Wi-Fi: программа wifi со «своим» адаптером: поиск, подключение, неверный пароль. */

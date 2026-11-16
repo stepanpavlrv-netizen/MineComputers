@@ -59,6 +59,10 @@ final class LuaMachine {
     final EventQueue events;
     final String programPath;
     final Object[] programArgs;
+    /** Клетка страницы хостинга (null — обычный процесс). */
+    final Jail jail;
+    /** Что вернула программа (для страницы — текст ответа). */
+    private Object exitResult;
     final Object lock = new Object();
     final AtomicBoolean scheduled = new AtomicBoolean();
 
@@ -81,6 +85,11 @@ final class LuaMachine {
     private long allocSince, allocMark;
 
     LuaMachine(Computer computer, int pid, int parentPid, EventQueue events, String programPath, Object[] programArgs) {
+        this(computer, pid, parentPid, events, programPath, programArgs, null);
+    }
+
+    LuaMachine(Computer computer, int pid, int parentPid, EventQueue events, String programPath, Object[] programArgs, Jail jail) {
+        this.jail = jail;
         this.computer = computer;
         this.pid = pid;
         this.parentPid = parentPid;
@@ -144,7 +153,12 @@ final class LuaMachine {
             LuaApis.install(state, g, computer, this);
             chargeBuiltins(g);
             g.rawset("collectgarbage", RegisteredFunction.ofV("collectgarbage", (s, a) -> collectGarbage(a)).create());
-            if (programPath != null) {
+            if (jail != null) {
+                LuaTable p = new LuaTable();
+                p.rawset("file", LuaApis.str(jail.file));
+                p.rawset("request", LuaApis.toLua(jail.request));
+                g.rawset("_PAGE", p);
+            } else if (programPath != null) {
                 LuaTable p = new LuaTable();
                 p.rawset("path", LuaApis.str(programPath));
                 LuaTable args = new LuaTable();
@@ -287,8 +301,8 @@ final class LuaMachine {
         } else {
             allocSince += (long) HOOK_STEP * FALLBACK_BYTES_PER_OP;
         }
-        long limit = computer.memoryLimit();
-        long free = limit - computer.memoryUsedExcept(this) - liveBytes;
+        long limit = memoryLimit();
+        long free = Math.min(limit - computer.memoryUsedExcept(this), jailCap()) - liveBytes;
         if (allocSince > Math.max(free, limit / 32)) {
             if (!measure()) throw LuaApis.error("Недостаточно памяти");
         }
@@ -304,7 +318,7 @@ final class LuaMachine {
         long a = allocated();
         if (a >= 0) allocMark = a;
         spend(r.objects() * OPS_PER_OBJECT);
-        return others + liveBytes <= limit;
+        return others + liveBytes <= limit && liveBytes <= jailCap();
     }
 
     /**
@@ -312,12 +326,16 @@ final class LuaMachine {
      * подсчёту не хватает — сначала пересчитываем (вдруг большая часть уже мусор).
      */
     boolean reserve(long bytes) {
-        long limit = computer.memoryLimit();
-        long free = limit - computer.memoryUsedExcept(this) - liveBytes - allocSince;
+        long limit = memoryLimit();
+        long free = Math.min(limit - computer.memoryUsedExcept(this), jailCap()) - liveBytes - allocSince;
         if (bytes <= free) return true;
         measure();
-        return bytes <= limit - computer.memoryUsedExcept(this) - liveBytes;
+        return bytes <= Math.min(limit - computer.memoryUsedExcept(this), jailCap()) - liveBytes;
     }
+
+    private long memoryLimit() { return computer.memoryLimit(); }
+    /** Сколько памяти может занять процесс сам по себе: у страницы хостинга — не больше {@link Jail#MEMORY}. */
+    private long jailCap() { return jail == null ? Long.MAX_VALUE / 4 : Jail.MEMORY; }
 
     /** collectgarbage("count") — занято КБ, "collect"/"step" — пересчитать память, как сборка мусора. */
     private Varargs collectGarbage(Varargs a) throws LuaError {
@@ -425,7 +443,7 @@ final class LuaMachine {
                     state = null;
                     mainRoutine = null;
                     liveBytes = 0;
-                    computer.machineDone(this, true, null);
+                    computer.machineDone(this, true, null, exitResult);
                 }
             } catch (Crash crash) {
                 inSlice = false;
@@ -435,6 +453,13 @@ final class LuaMachine {
                 finishWithError("Внутренняя ошибка: " + t);
             }
         }
+    }
+
+    /** Результат программы для родителя: только строка (страница), длинная — обрезается. */
+    private Object resultOf(LuaValue v) {
+        if (jail == null || !v.isString()) return null;
+        String t = LuaApis.text(v);
+        return t.length() > Jail.MAX_RESULT ? t.substring(0, Jail.MAX_RESULT) + "\n…(ответ обрезан)" : t;
     }
 
     private void finishWithError(String message) {
@@ -475,6 +500,7 @@ final class LuaMachine {
         }
         if (!mainRoutine.isAlive()) {
             finished = true;
+            exitResult = resultOf(result.first());
             return false;
         }
         LuaValue f = result.first();

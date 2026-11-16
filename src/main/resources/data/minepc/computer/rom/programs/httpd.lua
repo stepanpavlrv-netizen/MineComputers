@@ -98,6 +98,55 @@ local function rootFor(host)
   return "/www"
 end
 
+--- Страница-программа сайта клиента: отдельный процесс в клетке (видит только папку сайта, живёт ≤ 3 с).
+local busy = {}          -- сколько страниц каждого сайта работает сейчас
+local pending = {}       -- запросы, на которые не хватило глубины: обработаем следом
+local exits, fired = {}, {}   -- события, пришедшие, пока ждали другую страницу
+local MAX_BUSY, MAX_DEPTH = 2, 3
+local depth = 0
+local serveOne           -- обработать запрос (ниже); пока ждём страницу, отвечаем на другие запросы
+
+local function runCaged(root, file, request, path)
+  if (busy[root] or 0) >= MAX_BUSY or not computer.spawnPage then
+    return 503, "page", "# Сервер занят\nПопробуйте позже."
+  end
+  local pid = computer.spawnPage(root, file, request)
+  if not pid then return 503, "page", "# Сервер занят\nПопробуйте позже." end
+  busy[root] = (busy[root] or 0) + 1
+  depth = depth + 1
+  local timer = os.startTimer(3.5)
+  local ok, perr, result, timedOut
+  while true do
+    local ev
+    if exits[pid] then ev = exits[pid] exits[pid] = nil
+    elseif fired[timer] then fired[timer] = nil ev = { "timer", timer }
+    else ev = { os.pullEvent() } end
+    if ev[1] == "process_exit" and ev[2] == pid then
+      ok, perr, result = ev[3], ev[4], ev[5]
+      break
+    elseif ev[1] == "timer" and ev[2] == timer then
+      timedOut = true
+      pcall(computer.kill, pid)
+      break
+    elseif ev[1] == "process_exit" then
+      exits[ev[2]] = ev
+    elseif ev[1] == "timer" then
+      fired[ev[2]] = true
+    elseif ev[1] == "net_message" then
+      if depth < MAX_DEPTH then serveOne(ev)
+      elseif #pending < 32 then pending[#pending + 1] = ev end
+    end
+  end
+  depth = depth - 1
+  os.cancelTimer(timer)
+  busy[root] = busy[root] - 1
+  if timedOut or perr == "timeout" then
+    return 504, "page", "# Страница слишком долго отвечала\nСтраница {yellow}" .. path .. "{} работала дольше 3 секунд и была остановлена."
+  end
+  if not ok then return 500, "page", "# Ошибка в " .. path .. "\n" .. tostring(perr) end
+  return 200, "page", type(result) == "string" and result or ""
+end
+
 local function handle(path, params, from, host)
   path = "/" .. tostring(path or "/"):gsub("%.%.", ""):gsub("^/+", "")
   local root = rootFor(host)
@@ -108,6 +157,9 @@ local function handle(path, params, from, host)
   if not fs.exists(file) and fs.exists(file .. ".page") then file = file .. ".page" end
   if not fs.exists(file) or fs.isDir(file) then
     return 404, "page", "# 404\nНа этом сайте нет страницы {yellow}" .. path .. "{}\n[На главную](/)"
+  end
+  if file:match("%.lua$") and root:match("^/sites/") then
+    return runCaged(root, file:sub(#root + 1), { path = path, params = params or {}, from = from, host = host }, path)
   end
   if file:match("%.lua$") then
     local out = {}
@@ -123,22 +175,25 @@ local function handle(path, params, from, host)
   return 200, ctypeOf(file), read(file) or ""
 end
 
+function serveOne(ev)
+  local from, port = ev[2], ev[3]
+  if port == http.PORT and ev[5] == "GET" then
+    local id, reply, path, params, host = ev[6], ev[7], ev[8], ev[9], ev[10]
+    local ok, status, ctype, body = pcall(handle, path, type(params) == "table" and params or {}, from, host)
+    if not ok then status, ctype, body = 500, "page", "# Ошибка сервера\n" .. tostring(status) end
+    http.reply(from, reply, id, status, ctype, body)
+    -- посещения: по сайту хостинга или «www» этого компьютера
+    local key = rootFor(host):match("^/sites/(.+)$") or "www"
+    pcall(stats.record, key, from, #body, ctype == "page" and status == 200)
+    log(string.format("%s %s%s %d %d Б", from:sub(1, 8), host and host ~= "" and (tostring(host) .. " ") or "", tostring(path), status, #body))
+  end
+end
+
 local function serve()
   net.open(http.PORT)
   log("сайт запущен")
   while true do
-    local ev = { os.pullEvent("net_message") }
-    local from, port = ev[2], ev[3]
-    if port == http.PORT and ev[5] == "GET" then
-      local id, reply, path, params, host = ev[6], ev[7], ev[8], ev[9], ev[10]
-      local ok, status, ctype, body = pcall(handle, path, type(params) == "table" and params or {}, from, host)
-      if not ok then status, ctype, body = 500, "page", "# Ошибка сервера\n" .. tostring(status) end
-      http.reply(from, reply, id, status, ctype, body)
-      -- посещения: по сайту хостинга или «www» этого компьютера
-      local key = rootFor(host):match("^/sites/(.+)$") or "www"
-      pcall(stats.record, key, from, #body, ctype == "page" and status == 200)
-      log(string.format("%s %s%s %d %d Б", from:sub(1, 8), host and host ~= "" and (tostring(host) .. " ") or "", tostring(path), status, #body))
-    end
+    serveOne(table.remove(pending, 1) or { os.pullEvent("net_message") })
   end
 end
 

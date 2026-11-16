@@ -365,10 +365,28 @@ end
 function os.exit() error("exit", 0) end
 
 io = require("io")
-component = require("component")
-ioc = require("ioc")
+if not _PAGE then             -- у страницы хостинга нет видеокарты, экрана и устройств
+  component = require("component")
+  ioc = require("ioc")
+end
 
 -- ===================== Отдельный процесс (computer.spawn) =====================
+-- Страница сайта клиента на хостинге (computer.spawnPage): процесс в клетке, «/» — папка сайта.
+-- Получает request и echo, возвращает текст страницы (return "..." или накопленный echo).
+if _PAGE then
+  local p = _PAGE
+  _PAGE = nil
+  local out = {}
+  local env = setmetatable({ request = p.request or {},
+    echo = function(...) for _, v in ipairs({ ... }) do out[#out + 1] = tostring(v) end out[#out + 1] = "\n" end },
+    { __index = _G })
+  local fn, err = loadfile(p.file, "t", env)
+  if not fn then error(err, 0) end
+  local res = fn()
+  if type(res) == "string" then return res end
+  return table.concat(out)
+end
+
 -- Процесс на другом ядре: та же система, но вместо командной строки — одна программа.
 if _PROCESS then
   local p = _PROCESS

@@ -453,7 +453,7 @@ public final class Computer {
     void queueAll(String name, Object... args) {
         if (state != State.RUNNING) return;
         queueEvent(name, args);
-        for (LuaMachine m : machines) if (m != main) m.events.offer(event(name, args));
+        for (LuaMachine m : machines) if (m != main && m.jail == null) m.events.offer(event(name, args));
     }
 
     /** Добавить событие главному процессу: имя и значения (строки, числа, логические, null). */
@@ -517,18 +517,37 @@ public final class Computer {
         return pid;
     }
 
-    /** Процесс закончил работу (поток процесса). */
+    /**
+     * Запустить страницу сайта клиента в клетке: видит только папку {@code root}, файл {@code file} — путь внутри
+     * неё. Результат придёт родителю в process_exit (pid, ok, ошибка, текст страницы).
+     */
+    synchronized int spawnPage(LuaMachine parent, String root, String file, Map<?, ?> request) throws LuaMachine.Crash {
+        if (state != State.RUNNING) throw new LuaMachine.Crash("Компьютер выключается");
+        if (machines.size() >= limits.maxProcesses()) throw new LuaMachine.Crash("busy");
+        int pid = nextPid++;
+        Jail jail = new Jail(root, file, request);
+        LuaMachine child = new LuaMachine(this, pid, parent == null ? 0 : parent.pid, new EventQueue(), "/" + jail.root + file, new Object[0], jail);
+        machines.add(child);
+        return pid;
+    }
+
     void machineDone(LuaMachine m, boolean ok, String error) {
+        machineDone(m, ok, error, null);
+    }
+
+    /** Процесс закончил работу (поток процесса). */
+    void machineDone(LuaMachine m, boolean ok, String error, Object result) {
         if (m == main) {
             if (ok) stopRequested = true;       // BIOS завершился — выключаемся
             else crash(error);
             return;
         }
-        machines.remove(m);
+        if (!machines.remove(m)) return;      // уже завершён (например, по тайм-ауту клетки)
+        if (m.jail != null) for (int port : m.jail.ports) openPorts.remove(port);
         LuaMachine parent = machine(m.parentPid);
         if (parent == null) parent = main;
         if (parent != null && state == State.RUNNING) {
-            parent.events.offer(event("process_exit", m.pid, ok, error));
+            parent.events.offer(event("process_exit", m.pid, ok, error, result));
         }
     }
 
@@ -551,6 +570,13 @@ public final class Computer {
             if (second) opsLastSecond = opsThisSecond.getAndSet(0);
         }
         if (second) sampleStats();
+        // Страница хостинга, которая работает дольше лимита, отключается (родитель получит «timeout»)
+        for (LuaMachine m : machines) {
+            if (m.jail != null && m.jail.expired() && !m.isFinished()) {
+                machineDone(m, false, "timeout", null);
+                m.kill();
+            }
+        }
         if (bootRemaining > 0) {
             bootRemaining--;
             if (bootRemaining > 0) {
@@ -813,7 +839,10 @@ public final class Computer {
         queueEvent("net_message", args);
         // фоновым процессам (httpd, maild на других ядрах) — тоже: порты у компьютера общие
         if (state == State.RUNNING) {
-            for (LuaMachine m : machines) if (m != main) m.events.offer(event("net_message", args));
+            for (LuaMachine m : machines) {
+                // страница хостинга слышит только свои порты: иначе видела бы чужие запросы и письма
+                if (m != main && (m.jail == null || m.jail.ports.contains(port))) m.events.offer(event("net_message", args));
+            }
         }
     }
 

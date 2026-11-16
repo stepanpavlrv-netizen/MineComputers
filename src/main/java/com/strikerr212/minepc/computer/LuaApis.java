@@ -7,6 +7,7 @@ import org.squiddev.cobalt.*;
 import org.squiddev.cobalt.function.RegisteredFunction;
 
 import java.io.ByteArrayOutputStream;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -148,7 +149,11 @@ final class LuaApis {
 
     // ======================= Установка =======================
 
-    static void install(LuaState state, LuaTable g, Computer c, LuaMachine m) {
+    static void install(LuaState state, LuaTable g, Computer c, LuaMachine m) throws LuaError {
+        if (m.jail != null) {
+            installJailed(g, c, m);
+            return;
+        }
         g.rawset("term", term(c));
         g.rawset("fs", fs(c, m));
         g.rawset("os", os(c, m));
@@ -162,6 +167,143 @@ final class LuaApis {
         g.rawset("switch", switchApi(c));
         g.rawset("bios", biosApi(c));
         g.rawset("_HOST", str("MineComputers 0.11 (Lua 5.2 / Cobalt)"));
+    }
+
+    // ======================= Клетка: страница сайта клиента на хостинге =======================
+
+    /** Что видит страница хостинга: свою папку, время, сеть «как посетитель». Остальное — «Недоступно на хостинге». */
+    private static void installJailed(LuaTable g, Computer c, LuaMachine m) throws LuaError {
+        Jail jail = m.jail;
+        g.rawset("term", term(c, new Terminal(51, 19)));       // экран-заглушка: страницу никто не видит
+        g.rawset("fs", jailFs(c, m));
+        LuaTable os = os(c, m);
+        deny(os, "shutdown", "reboot", "setComputerLabel");
+        g.rawset("os", os);
+        LuaTable comp = computer(c, m);
+        deny(comp, "spawn", "spawnPage", "send", "kill", "processes", "info", "gpu", "pushSignal", "componentAddress", "beep");
+        g.rawset("computer", comp);
+        g.rawset("unicode", OcApis.unicode());
+        g.rawset("data", OcApis.data(m));
+        LuaTable net = net(c);
+        deny(net, "broadcast", "ping", "io", "bmc", "bmcInfo", "bmcPassword", "stats", "peers", "wifi", "switch");
+        RegisteredFunction.bind(net, new RegisteredFunction[]{
+                RegisteredFunction.ofV("open", (s, a) -> {
+                    int p = port(a, 1);
+                    if (p < Jail.PORT_MIN || p > Jail.PORT_MAX) Jail.deny();
+                    boolean ok = c.openPort(p);
+                    if (ok) jail.ports.add(p);
+                    return valueOf(ok);
+                }),
+                RegisteredFunction.ofV("close", (s, a) -> {
+                    if (a.arg(1).isNil()) {
+                        for (int p : jail.ports) c.closePort(p);
+                        jail.ports.clear();
+                        return Constants.TRUE;
+                    }
+                    int p = port(a, 1);
+                    if (!jail.ports.remove(p)) Jail.deny();
+                    return valueOf(c.closePort(p));
+                }),
+                RegisteredFunction.ofV("send", (s, a) -> {
+                    int p = port(a, 2);
+                    if (!Jail.SEND_PORTS.contains(p)) Jail.deny();
+                    return netSend(c, text(a.arg(1).checkLuaString()), p, a, 3);
+                }),
+                RegisteredFunction.ofV("dns", (s, a) -> {
+                    String cmd = text(a.arg(1).checkLuaString());
+                    if (!cmd.equals("lookup") && !cmd.equals("names") && !cmd.equals("all")) Jail.deny();
+                    Object[] r = c.host().dns(cmd, a.arg(2).isNil() ? "" : text(a.arg(2).checkLuaString()));
+                    return varargsOf(new LuaValue[]{toLua(r[0]), toLua(r[1])});
+                }),
+                RegisteredFunction.ofV("hostname", (s, a) -> {
+                    if (!a.arg(1).isNil()) Jail.deny();
+                    return str(c.label());
+                }),
+        });
+        g.rawset("net", net);
+        g.rawset("_HOST", str("MineComputers (страница хостинга)"));
+    }
+
+    private static void deny(LuaTable t, String... names) throws LuaError {
+        for (String n : names) {
+            if (t.rawget(n).isNil()) continue;
+            t.rawset(n, RegisteredFunction.ofV(n, (s, a) -> { Jail.deny(); return Constants.NONE; }).create());
+        }
+    }
+
+    /** Файлы страницы: корень — папка сайта, /rom — только чтение. Реальный путь в ошибки не попадает. */
+    private static LuaTable jailFs(Computer c, LuaMachine m) {
+        Jail j = m.jail;
+        LuaTable table = new LuaTable();
+        RegisteredFunction.bind(table, new RegisteredFunction[]{
+                jailFn("list", c, j, (fs, a) -> {
+                    String p = jp(j, a, 1);
+                    List<String> names = new ArrayList<>(fs.list(p));
+                    if (p.equals(j.root) && !names.contains("rom")) names.add("rom");
+                    LuaTable out = new LuaTable();
+                    for (int i = 0; i < names.size(); i++) out.rawset(i + 1, str(names.get(i)));
+                    return out;
+                }),
+                jailFn("exists", c, j, (fs, a) -> valueOf(fs.exists(jp(j, a, 1)))),
+                jailFn("isDir", c, j, (fs, a) -> valueOf(fs.isDirectory(jp(j, a, 1)))),
+                jailFn("isReadOnly", c, j, (fs, a) -> {
+                    String p = jp(j, a, 1);
+                    return valueOf(Jail.readOnly(p) || fs.isReadOnly(p));
+                }),
+                jailFn("getSize", c, j, (fs, a) -> valueOf((double) fs.size(jp(j, a, 1)))),
+                jailFn("getFreeSpace", c, j, (fs, a) -> valueOf((double) fs.freeSpace(j.root))),
+                jailFn("getCapacity", c, j, (fs, a) -> valueOf((double) fs.capacity(j.root))),
+                jailFn("lastModified", c, j, (fs, a) -> valueOf((double) fs.lastModified(jp(j, a, 1)))),
+                jailFn("makeDir", c, j, (fs, a) -> { fs.makeDirectory(jw(j, a, 1)); return Constants.NONE; }),
+                jailFn("delete", c, j, (fs, a) -> {
+                    String p = jw(j, a, 1);
+                    if (p.equals(j.root)) throw new FsException("Нельзя удалить папку сайта");
+                    fs.delete(p);
+                    return Constants.NONE;
+                }),
+                jailFn("move", c, j, (fs, a) -> {
+                    String from = jw(j, a, 1);
+                    if (from.equals(j.root)) throw new FsException("Нельзя переместить папку сайта");
+                    fs.move(from, jw(j, a, 2));
+                    return Constants.NONE;
+                }),
+                jailFn("copy", c, j, (fs, a) -> { fs.copy(jp(j, a, 1), jw(j, a, 2)); return Constants.NONE; }),
+                RegisteredFunction.ofV("mounts", (s, a) -> new LuaTable()),
+                RegisteredFunction.ofV("open", (s, a) -> {
+                    String mode = a.arg(2).optString("r");
+                    String p = jp(j, a, 1);
+                    if (!mode.startsWith("r") && Jail.readOnly(p)) return varargsOf(Constants.NIL, str("Только для чтения"));
+                    return open(c, m, p, mode);
+                }),
+        });
+        return table;
+    }
+
+    private static String jp(Jail j, Varargs a, int i) throws LuaError {
+        return j.map(text(a.arg(i).checkLuaString()));
+    }
+
+    /** Путь для записи: в /rom нельзя. */
+    private static String jw(Jail j, Varargs a, int i) throws LuaError, FsException {
+        String p = jp(j, a, i);
+        if (Jail.readOnly(p)) throw new FsException("Только для чтения");
+        return p;
+    }
+
+    private static RegisteredFunction jailFn(String name, Computer c, Jail j, FsCall fn) {
+        return RegisteredFunction.ofV(name, (s, a) -> {
+            try {
+                return fn.call(c.fileSystem(), a);
+            } catch (FsException e) {
+                throw error(hideRoot(j, e.getMessage()));
+            }
+        });
+    }
+
+    /** Убрать из сообщения реальный путь папки сайта на сервере. */
+    private static String hideRoot(Jail j, String msg) {
+        if (msg == null) return "Ошибка";
+        return msg.replace("/" + j.root + "/", "/").replace(j.root + "/", "/").replace("/" + j.root, "/").replace(j.root, "/");
     }
 
     // ======================= net (сеть) =======================
@@ -724,7 +866,10 @@ final class LuaApis {
     // ======================= term =======================
 
     private static LuaTable term(Computer c) {
-        Terminal t = c.terminal();
+        return term(c, c.terminal());
+    }
+
+    private static LuaTable term(Computer c, Terminal t) {
         LuaTable table = new LuaTable();
         RegisteredFunction.bind(table, new RegisteredFunction[]{
                 RegisteredFunction.ofV("write", (s, a) -> {
@@ -843,8 +988,11 @@ final class LuaApis {
 
     /** fs.open(путь, режим): "r" — чтение, "w" — запись, "a" — дописывание; "b" в режиме ничего не меняет. */
     private static Varargs open(Computer c, LuaMachine m, Varargs a) throws LuaError {
-        String path = path(a, 1);
-        String mode = a.arg(2).optString("r").replace("b", "");
+        return open(c, m, path(a, 1), a.arg(2).optString("r"));
+    }
+
+    private static Varargs open(Computer c, LuaMachine m, String path, String modeArg) throws LuaError {
+        String mode = modeArg.replace("b", "");
         FileSystem fs = c.fileSystem();
         try {
             return switch (mode) {
@@ -863,7 +1011,7 @@ final class LuaApis {
                 default -> throw error("Неизвестный режим: " + mode);
             };
         } catch (FsException e) {
-            return varargsOf(Constants.NIL, str(e.getMessage()));
+            return varargsOf(Constants.NIL, str(m.jail == null ? e.getMessage() : hideRoot(m.jail, e.getMessage())));
         }
     }
 
@@ -1037,6 +1185,20 @@ final class LuaApis {
                         return valueOf(c.spawn(m, "/" + path, args));
                     } catch (LuaMachine.Crash e) {
                         throw error(e.getMessage());
+                    }
+                }),
+                // Страница сайта клиента в клетке: computer.spawnPage(папка_сайта, файл_внутри, запрос) → pid
+                RegisteredFunction.ofV("spawnPage", (s, a) -> {
+                    String root = path(a, 1);
+                    String file = "/" + FileSystem.normalize(text(a.arg(2).checkLuaString()));
+                    if (!c.fileSystem().isDirectory(root)) throw error("Нет такой папки: /" + root);
+                    String real = FileSystem.normalize(root + file);
+                    if (!c.fileSystem().exists(real) || c.fileSystem().isDirectory(real)) throw error("Нет такой страницы: " + file);
+                    Object req = a.arg(3) instanceof LuaTable ? copyOut(a.arg(3)) : null;
+                    try {
+                        return valueOf(c.spawnPage(m, root, file, req instanceof Map<?, ?> rm ? rm : Map.of()));
+                    } catch (LuaMachine.Crash e) {
+                        return varargsOf(Constants.NIL, str(e.getMessage()));
                     }
                 }),
                 RegisteredFunction.ofV("send", (s, a) -> {
