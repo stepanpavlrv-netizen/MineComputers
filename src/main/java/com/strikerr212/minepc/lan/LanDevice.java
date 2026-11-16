@@ -125,7 +125,7 @@ public interface LanDevice {
     }
 
     /** Гнёзда устройства, стоящего в pos (пустой список — это не устройство). */
-    static List<Socket> socketsAt(net.minecraft.world.level.BlockGetter level, BlockPos pos) {
+    public static List<Socket> socketsAt(net.minecraft.world.level.BlockGetter level, BlockPos pos) {
         BlockState s = level.getBlockState(pos);
         return s.getBlock() instanceof LanDevice d ? d.sockets(level, pos, s) : List.of();
     }

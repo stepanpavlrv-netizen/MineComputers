@@ -4,7 +4,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.strikerr212.minepc.MineComputers;
 import com.strikerr212.minepc.lan.CableItem;
-import com.strikerr212.minepc.lan.CablePath;
+import com.strikerr212.minepc.wire.WireSockets;
 import com.strikerr212.minepc.lan.LanDevice;
 import com.strikerr212.minepc.network.WireLayPayload;
 import com.strikerr212.minepc.wire.LevelVoxels;
@@ -109,7 +109,7 @@ public final class WireDrawClient {
         WirePlan.Anchor end = freeEndNear(hit, fiber);
         if (end != null) return end;
         if (level.getBlockState(pos).getBlock() instanceof LanDevice) {
-            int port = CablePath.socketAt(level, pos, hit, side, fiber);
+            int port = WireSockets.socketAt(level, pos, hit, side, fiber);
             if (port >= 0) return WirePlan.Anchor.socket(pos.immutable(), port);
         }
         int[] px = WireGeom.surfacePixel(hit, side);
@@ -309,7 +309,7 @@ public final class WireDrawClient {
                     if (pos.distSqr(me) > 64 || !(be.getBlockState().getBlock() instanceof LanDevice)) continue;
                     List<LanDevice.Socket> socks = LanDevice.socketsAt(level, pos);
                     for (int i = 0; i < socks.size() && freeSockets.size() < 200; i++) {
-                        if (socks.get(i).accepts(fiber) && CablePath.socketFree(level, pos, i)) {
+                        if (socks.get(i).accepts(fiber) && WireSockets.socketFree(level, pos, i)) {
                             AABB b = boxOf(level, WirePlan.Anchor.socket(pos, i));
                             if (b != null) freeSockets.add(b);
                         }
@@ -345,7 +345,7 @@ public final class WireDrawClient {
                 Vec3 a = new Vec3(preview.xs()[i] / 32.0, preview.ys()[i] / 32.0, preview.zs()[i] / 32.0);
                 Vec3 b = new Vec3(preview.xs()[i + 1] / 32.0, preview.ys()[i + 1] / 32.0, preview.zs()[i + 1] / 32.0);
                 if (preview.hang()[i]) {
-                    List<Vec3> pts = com.strikerr212.minepc.lan.CordShape.points(a, b);
+                    List<Vec3> pts = com.strikerr212.minepc.wire.CordShape.points(a, b);
                     for (int k = 1; k < pts.size(); k++) ghost(q, m, pts.get(k - 1), pts.get(k), ok);
                 } else {
                     ghost(q, m, a, b, ok);

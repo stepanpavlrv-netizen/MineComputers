@@ -229,7 +229,6 @@ public class RackBlock extends HorizontalDirectionalBlock implements EntityBlock
             super.onRemove(state, level, pos, newState, moved);
             if (!level.isClientSide) {
                 com.strikerr212.minepc.lan.LanManager.updateDevice(level, pos);
-                com.strikerr212.minepc.lan.CableBlockEntity.reconnectAround(level, pos);
             }
             return;
         }
@@ -241,7 +240,6 @@ public class RackBlock extends HorizontalDirectionalBlock implements EntityBlock
         super.onPlace(state, level, pos, old, moved);
         if (!level.isClientSide) {
             com.strikerr212.minepc.lan.LanManager.updateDevice(level, pos);
-            com.strikerr212.minepc.lan.CableBlockEntity.reconnectAround(level, pos);
         }
     }
 

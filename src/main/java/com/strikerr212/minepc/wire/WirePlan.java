@@ -221,7 +221,7 @@ public final class WirePlan {
             return new Result(new int[]{a[0], b[0]}, new int[]{a[1], b[1]}, new int[]{a[2], b[2]}, new boolean[]{true}, 0, false,
                     WireGeom.pixelOf(pb), "message.minepc.wire.span_far");
         }
-        List<net.minecraft.world.phys.Vec3> pts = com.strikerr212.minepc.lan.CordShape.points(pa, pb);
+        List<net.minecraft.world.phys.Vec3> pts = com.strikerr212.minepc.wire.CordShape.points(pa, pb);
         for (int i = 1; i + 1 < pts.size(); i++) {
             net.minecraft.world.phys.Vec3 p = pts.get(i);
             BlockPos cell = BlockPos.containing(p);

@@ -24,9 +24,6 @@ public class ModBlockEntities {
                     () -> BlockEntityType.Builder.of(PcCaseBlockEntity::new,
                             ModBlocks.allCases().toArray(new net.minecraft.world.level.block.Block[0])).build(null));
 
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<com.strikerr212.minepc.lan.TrayBlockEntity>> TRAY =
-            BLOCK_ENTITIES.register("cable_tray", () ->
-                    BlockEntityType.Builder.of(com.strikerr212.minepc.lan.TrayBlockEntity::new, ModBlocks.TRAY.get()).build(null));
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<com.strikerr212.minepc.block.RackBlockEntity>> RACK =
             BLOCK_ENTITIES.register("server_rack", () ->
                     BlockEntityType.Builder.of(com.strikerr212.minepc.block.RackBlockEntity::new, ModBlocks.SERVER_RACK.get()).build(null));
@@ -48,9 +45,6 @@ public class ModBlockEntities {
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<com.strikerr212.minepc.lan.TowerSectionBlockEntity>> TOWER_SECTION =
             BLOCK_ENTITIES.register("tower_section", () ->
                     BlockEntityType.Builder.of(com.strikerr212.minepc.lan.TowerSectionBlockEntity::new, ModBlocks.TOWER_SECTION.get()).build(null));
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<com.strikerr212.minepc.lan.CableBlockEntity>> CABLE =
-            BLOCK_ENTITIES.register("network_cable", () ->
-                    BlockEntityType.Builder.of(com.strikerr212.minepc.lan.CableBlockEntity::new, ModBlocks.CABLE.get()).build(null));
 
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<MonitorBlockEntity>> MONITOR =
             BLOCK_ENTITIES.register("monitor",

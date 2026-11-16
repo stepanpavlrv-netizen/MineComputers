@@ -32,7 +32,7 @@ import java.util.Locale;
  * ночное видение, патруль (сама водит головой). Пока кто-то смотрит, сервер держит снимок мира вокруг камеры —
  * по нему компьютеры и окно камеры рисуют кадр лучами ({@link CameraRender}).
  */
-public class CameraBlockEntity extends BlockEntity implements NetEndpoint, CordList.Holder {
+public class CameraBlockEntity extends BlockEntity implements NetEndpoint {
 
     /** Разрешения: от 64×36 до 320×180 (больше — не влезет в экран лучшей видеокарты). */
     public static final int[][] RES = {{64, 36}, {96, 54}, {128, 72}, {160, 90}, {192, 108}, {256, 144}, {320, 180}};
@@ -50,7 +50,6 @@ public class CameraBlockEntity extends BlockEntity implements NetEndpoint, CordL
     private int res = 3, fps = 1;
     private boolean night, patrol;
     private int patrolDir = 1;
-    private final CordList cords = new CordList();
 
     // ----- снимок мира (только сервер) -----
     private volatile CameraRender.Snapshot snapshot;
@@ -65,10 +64,6 @@ public class CameraBlockEntity extends BlockEntity implements NetEndpoint, CordL
         super(ModBlockEntities.CAMERA.get(), pos, state);
     }
 
-    @Override
-    public CordList cords() {
-        return cords;
-    }
 
     // ======================= Сеть =======================
 
@@ -596,7 +591,6 @@ public class CameraBlockEntity extends BlockEntity implements NetEndpoint, CordL
         tag.putBoolean("Night", night);
         tag.putBoolean("Patrol", patrol);
         tag.putBoolean("Live", live);
-        cords.save(tag);
     }
 
     @Override
@@ -612,7 +606,6 @@ public class CameraBlockEntity extends BlockEntity implements NetEndpoint, CordL
         night = tag.getBoolean("Night");
         patrol = tag.getBoolean("Patrol");
         live = tag.getBoolean("Live");
-        cords.load(tag);
     }
 
     @Override

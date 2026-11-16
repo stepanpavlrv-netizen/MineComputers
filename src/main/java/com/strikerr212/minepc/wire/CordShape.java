@@ -1,4 +1,9 @@
-package com.strikerr212.minepc.lan;
+package com.strikerr212.minepc.wire;
+
+import com.strikerr212.minepc.lan.BracketBlock;
+import com.strikerr212.minepc.lan.LanData;
+import com.strikerr212.minepc.lan.LanDevice;
+import com.strikerr212.minepc.lan.OutletBlock;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -161,7 +166,7 @@ public final class CordShape {
         for (int k = 0; k <= 1; k++) {
             BlockPos c = cell.below(k);
             BlockState st = level.getBlockState(c);
-            if (st.isAir() || st.getBlock() instanceof CableBlock) continue;
+            if (st.isAir()) continue;
             VoxelShape sh = st.getCollisionShape(level, c);
             if (sh.isEmpty()) continue;
             double top = c.getY() + sh.max(Direction.Axis.Y);
@@ -201,9 +206,7 @@ public final class CordShape {
                 BlockPos cell = BlockPos.containing(p);
                 if (cell.equals(a) || cell.equals(b)) continue;
                 BlockState s = level.getBlockState(cell);
-                if (s.isAir() || s.getBlock() instanceof CableBlock && !(level.getBlockEntity(cell) instanceof CableBlockEntity be && be.facade() != null)) {
-                    continue;
-                }
+                if (s.isAir()) continue;
                 VoxelShape shape = s.getCollisionShape(level, cell);
                 if (shape.isEmpty()) continue;
                 Vec3 local = p.subtract(cell.getX(), cell.getY(), cell.getZ());

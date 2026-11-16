@@ -59,19 +59,20 @@ public class CableTesterItem extends Item {
         LanData data = LanData.get(server);
         LanData.Device d = data.device(pos);
         if (d == null) return say(player, "message.minepc.tester.no_socket");
-        // Гнездо пустое, а в устройстве есть патч-корды — прозваниваем корды
-        if (!LanManager.usedPorts(data, pos, d).contains(port)) {
+        // Гнездо пустое, а в устройстве есть корды на местах для кордов — прозваниваем их
+        List<Integer> used = LanManager.usedPorts(data, pos, d);
+        if (!used.contains(port)) {
             int cord = -1;
-            for (int p = LanData.CABLE_PORTS; p < LanData.PORTS && cord < 0; p++) if (data.cordAt(pos, p)) cord = p;
+            for (int p : used) if (p >= LanData.CABLE_PORTS && cord < 0) cord = p;
             if (cord < 0) return say(player, "message.minepc.tester.empty", port + 1);
             port = cord;
         }
-        LanManager.Trace t = LanManager.trace(data, pos.immutable(), port, null, 0);
+        LanManager.Trace t = LanManager.trace(data, pos.immutable(), port, null);
         report(server, player, stack, t, pos, port, LanManager.portLabelName(data, pos, port));
         return InteractionResult.CONSUME;
     }
 
-    /** Провод 3.0 под прицелом: прозвонить его. PASS — провода под прицелом нет. */
+    /** Провод под прицелом: прозвонить его. PASS — провода под прицелом нет. */
     private static InteractionResult testWire(Level level, Player player, ItemStack stack) {
         if (player == null) return InteractionResult.PASS;
         if (level.isClientSide) return com.strikerr212.minepc.wire.WireService.aimedClient(player) != null ? InteractionResult.SUCCESS : InteractionResult.PASS;
@@ -84,11 +85,11 @@ public class CableTesterItem extends Item {
 
     /** Прозвонить провод 3.0 (и из CI). */
     public static void testLine(ServerLevel level, Player player, ItemStack stack, com.strikerr212.minepc.wire.WireLine line) {
-        LanManager.Trace t = LanManager.trace(LanData.get(level), null, 0, null, 0, line);
+        LanManager.Trace t = LanManager.trace(LanData.get(level), null, 0, line);
         report(level, player, stack, t, null, 0, line.label);
     }
 
-    /** В воздух — по проводу 3.0, на который смотришь. */
+    /** В воздух — по проводу, на который смотришь. */
     @Override
     public net.minecraft.world.InteractionResultHolder<ItemStack> use(Level level, Player player, net.minecraft.world.InteractionHand hand) {
         ItemStack stack = player.getItemInHand(hand);
@@ -97,23 +98,10 @@ public class CableTesterItem extends Item {
                 : new net.minecraft.world.InteractionResultHolder<>(r, stack);
     }
 
-    /** По проводу. */
+    /** По проводу (блок за ним — неважно). */
     @Override
     public InteractionResult useOn(UseOnContext ctx) {
-        Level level = ctx.getLevel();
-        BlockPos pos = ctx.getClickedPos();
-        InteractionResult wire = testWire(level, ctx.getPlayer(), ctx.getItemInHand());
-        if (wire != InteractionResult.PASS) return wire;
-        if (!(level.getBlockEntity(pos) instanceof CableBlockEntity be) || be.wires().isEmpty()) return InteractionResult.PASS;
-        if (!(level instanceof ServerLevel server)) return InteractionResult.SUCCESS;
-        Vec3 at = ctx.getClickLocation().subtract(pos.getX(), pos.getY(), pos.getZ()).scale(16);
-        Wire w = be.nearest(at.x, at.y, at.z);
-        if (w == null) return InteractionResult.PASS;
-        LanData data = LanData.get(server);
-        data.putCable(pos, be.packed());
-        LanManager.Trace t = LanManager.trace(data, null, 0, pos.immutable(), be.wires().indexOf(w));
-        report(server, ctx.getPlayer(), ctx.getItemInHand(), t, null, 0, be.label(w));
-        return InteractionResult.CONSUME;
+        return testWire(ctx.getLevel(), ctx.getPlayer(), ctx.getItemInHand());
     }
 
     /** Гнездо под курсором (номер порта) или -1. */
@@ -193,19 +181,9 @@ public class CableTesterItem extends Item {
                 + "\t" + endText + "\t" + t.open().size() + "\t" + ends;
 
         if (player instanceof ServerPlayer sp) {
-            long[] wires = new long[t.wires().size() * 2];
-            for (int i = 0; i < t.wires().size(); i++) {
-                wires[2 * i] = t.wires().get(i)[0];
-                wires[2 * i + 1] = t.wires().get(i)[1];
-            }
-            long[] cords = new long[t.cords().size() * 2];
-            for (int i = 0; i < t.cords().size(); i++) {
-                cords[2 * i] = t.cords().get(i).a().asLong();
-                cords[2 * i + 1] = t.cords().get(i).b().asLong();
-            }
             long[] endPos = new long[t.ends().size()];
             for (int i = 0; i < endPos.length; i++) endPos[i] = t.ends().get(i).pos().asLong();
-            PacketDistributor.sendToPlayer(sp, new TesterPayload(wires, t.trays().stream().mapToLong(Long::longValue).toArray(), cords,
+            PacketDistributor.sendToPlayer(sp, new TesterPayload(
                     t.passives().stream().mapToLong(BlockPos::asLong).toArray(), endPos,
                     t.open().stream().mapToLong(BlockPos::asLong).toArray(),
                     t.lines().stream().mapToLong(Long::longValue).toArray(), info));

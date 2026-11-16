@@ -2,7 +2,6 @@ package com.strikerr212.minepc.wire;
 
 import com.strikerr212.minepc.lan.CableItem;
 import com.strikerr212.minepc.lan.CableLabels;
-import com.strikerr212.minepc.lan.CablePath;
 import com.strikerr212.minepc.lan.LanData;
 import com.strikerr212.minepc.network.WireLayPayload;
 import com.strikerr212.minepc.registry.ModItems;
@@ -46,7 +45,7 @@ public final class WireService {
         switch (a.kind()) {
             case WirePlan.SOCKET -> {
                 if (far(player, a.dev().getX(), a.dev().getY(), a.dev().getZ())) return false;
-                if (!CablePath.socketFree(level, a.dev(), a.port())) return fail(player, "message.minepc.draw.socket_busy");
+                if (!WireSockets.socketFree(level, a.dev(), a.port())) return fail(player, "message.minepc.draw.socket_busy");
             }
             case WirePlan.END -> {
                 WireLine l = data.line(a.line());
@@ -143,6 +142,26 @@ public final class WireService {
                 r.meters(), line.meters()), true);
     }
 
+    /**
+     * Проложить новый провод без игрока (сцены CI, проверки): путь ищется так же, как у игрока. Концы — гнёзда или
+     * точки (не свободные концы других проводов). Возвращает провод или null (пути нет — причина в журнал не идёт).
+     */
+    public static WireLine layDirect(ServerLevel level, boolean fiber, int color, String label, WirePlan.Anchor from,
+                                     List<int[]> clicks, WirePlan.Anchor to) {
+        LanData data = LanData.get(level);
+        for (WirePlan.Anchor a : new WirePlan.Anchor[]{from, to}) {
+            if (a != null && a.kind() == WirePlan.SOCKET && !WireSockets.socketFree(level, a.dev(), a.port())) return null;
+        }
+        WirePlan.Result r = WirePlan.build(level, data::line, fiber, from, clicks, to, SEARCH);
+        if (!r.ok()) return null;
+        BlockPos devA = from.kind() == WirePlan.SOCKET ? from.dev() : null;
+        BlockPos devB = to != null && to.kind() == WirePlan.SOCKET ? to.dev() : null;
+        WireLine line = new WireLine(data.newLineId(), fiber, color, label, r.xs(), r.ys(), r.zs(), r.hang(),
+                devA, devA != null ? from.port() : -1, devB, devB != null ? to.port() : -1);
+        data.putLine(line);
+        return line;
+    }
+
     // ======================= Кусачки =======================
 
     /** На какой провод смотрит игрок: провод, номер отрезка, точка (блоки) и расстояние; null — ни на какой. */
@@ -157,7 +176,7 @@ public final class WireService {
                 Vec3 a = l.node(i), b = l.node(i + 1);
                 if (l.hang[i]) {
                     // висящий отрезок — по точкам дуги
-                    List<Vec3> pts = com.strikerr212.minepc.lan.CordShape.points(a, b);
+                    List<Vec3> pts = com.strikerr212.minepc.wire.CordShape.points(a, b);
                     for (int k = 1; k < pts.size(); k++) best = closer(best, l, i, pts.get(k - 1), pts.get(k), eye, look, reach, 0.2);
                 } else {
                     best = closer(best, l, i, a, b, eye, look, reach, 0.12);
@@ -323,7 +342,7 @@ public final class WireService {
     }
 
     /** Вернуть кабель игроку (в креативе — ничего). */
-    static void give(ServerPlayer player, boolean fiber, int meters, String label) {
+    public static void give(ServerPlayer player, boolean fiber, int meters, String label) {
         if (player.getAbilities().instabuild) return;
         while (meters > 0) {
             int n = Math.min(64, meters);

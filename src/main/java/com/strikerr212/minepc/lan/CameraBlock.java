@@ -144,7 +144,6 @@ public class CameraBlock extends FaceAttachedHorizontalDirectionalBlock implemen
         super.onPlace(state, level, pos, old, moved);
         if (!level.isClientSide) {
             LanManager.updateDevice(level, pos);
-            CableBlockEntity.reconnectAround(level, pos);
         }
     }
 
@@ -153,7 +152,6 @@ public class CameraBlock extends FaceAttachedHorizontalDirectionalBlock implemen
         super.onRemove(state, level, pos, newState, moved);
         if (!level.isClientSide && !state.is(newState.getBlock())) {
             LanManager.updateDevice(level, pos);
-            CableBlockEntity.reconnectAround(level, pos);
         }
     }
 

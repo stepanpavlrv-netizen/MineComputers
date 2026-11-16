@@ -14,14 +14,13 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.phys.Vec3;
 
 import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Кусачки: ПКМ по проводу — снять именно его (тот, на который смотришь), с Shift — весь жгут в этой клетке.
- * ПКМ по кронштейну или устройству — снять висячие провода от него (воздушные линии, патч-корды). Снятый кабель возвращается в инвентарь.
+ * Кусачки: ПКМ по проводу — разрезать его в этом месте, с Shift — снять целиком. ПКМ по кронштейну или устройству —
+ * снять висячие провода от него (воздушные линии, патч-корды). Снятый кабель возвращается в инвентарь.
  */
 public class CuttersItem extends Item {
 
@@ -29,14 +28,14 @@ public class CuttersItem extends Item {
         super(properties);
     }
 
-    /** Смотрит ли игрок на провод 3.0 (у игрока — по своей копии проводов). */
+    /** Смотрит ли игрок на провод (у игрока — по своей копии проводов). */
     private static boolean aimsAtWire(Player player) {
         double reach = player.blockInteractionRange() + 0.5;
         return com.strikerr212.minepc.wire.WireService.pick(com.strikerr212.minepc.wire.WireStore.all(), player.getEyePosition(),
                 player.getViewVector(1), reach) != null;
     }
 
-    /** Провод 3.0 под прицелом: разрезать (shift — снять целиком). */
+    /** Провод под прицелом: разрезать (shift — снять целиком). */
     private static InteractionResult cutWire(Level level, Player player, net.minecraft.world.InteractionHand hand) {
         if (player == null) return InteractionResult.PASS;
         if (level.isClientSide) return aimsAtWire(player) ? InteractionResult.SUCCESS : InteractionResult.PASS;
@@ -62,37 +61,20 @@ public class CuttersItem extends Item {
         InteractionResult wire = cutWire(level, player, ctx.getHand());
         if (wire != InteractionResult.PASS) return wire;
         List<ItemStack> back = new ArrayList<>();
-        if (level.getBlockEntity(pos) instanceof CableBlockEntity be && be.facade() == null && !be.wires().isEmpty()) {
-            if (level.isClientSide) return InteractionResult.SUCCESS;
-            List<Wire> cut = new ArrayList<>();
-            if (player != null && player.isShiftKeyDown()) {
-                cut.addAll(be.wires());
-            } else {
-                Vec3 at = ctx.getClickLocation().subtract(pos.getX(), pos.getY(), pos.getZ()).scale(16);
-                Wire w = be.nearest(at.x, at.y, at.z);
-                if (w != null) cut.add(w);
-            }
-            for (Wire w : cut) {
-                be.remove(w);
-                back.add(be.itemFor(w));
-            }
-            if (be.wires().isEmpty()) {
-                level.removeBlock(pos, false);
-            } else {
-                be.reconnect();
-                be.reconnectNeighbours();
-            }
-        } else if (level.getBlockState(pos).getBlock() instanceof LanDevice && level instanceof ServerLevel server) {
-            LanData data = LanData.get(server);
-            List<LanData.Cord> removed = data.removeCords(pos);
-            for (LanData.Cord c : removed) {
-                back.add(CableLabels.cordDrop(level, c));
-                CordList.refresh(server, c.a().equals(pos) ? c.b() : c.a());
-            }
-            CordList.refresh(server, pos);
-            if (removed.isEmpty()) return InteractionResult.PASS;
-        } else {
-            return level.getBlockState(pos).getBlock() instanceof LanDevice ? InteractionResult.SUCCESS : InteractionResult.PASS;
+        if (!(level.getBlockState(pos).getBlock() instanceof LanDevice)) return InteractionResult.PASS;
+        if (!(level instanceof ServerLevel server)) return InteractionResult.SUCCESS;
+        // Устройство: снять висячие провода от него (воздушные линии, патч-корды)
+        LanData data = LanData.get(server);
+        for (var l : List.copyOf(data.linesAt(pos))) {
+            boolean hangs = false;
+            for (boolean h : l.hang) hangs |= h;
+            if (!hangs) continue;
+            data.removeLine(l.id);
+            ItemStack s = l.meters() <= PatchCordItem.MAX_LENGTH + 1
+                    ? new ItemStack(com.strikerr212.minepc.registry.ModItems.PATCH_CORD.get())
+                    : new ItemStack(l.fiber ? com.strikerr212.minepc.registry.ModItems.FIBER.get() : com.strikerr212.minepc.registry.ModItems.CABLE.get(),
+                    Math.min(64, l.meters()));
+            back.add(CableLabels.named(s, l.label));
         }
         if (back.isEmpty()) return InteractionResult.PASS;
         level.playSound(null, pos, SoundEvents.SHEEP_SHEAR, SoundSource.PLAYERS, 0.8f, 1.4f);

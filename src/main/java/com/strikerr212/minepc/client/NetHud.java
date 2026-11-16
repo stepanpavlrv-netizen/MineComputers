@@ -3,15 +3,9 @@ package com.strikerr212.minepc.client;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.strikerr212.minepc.MineComputers;
-import com.strikerr212.minepc.lan.BracketBlock;
-import com.strikerr212.minepc.lan.CableBlockEntity;
 import com.strikerr212.minepc.lan.CableItem;
 import com.strikerr212.minepc.lan.CuttersItem;
 import com.strikerr212.minepc.lan.LanDevice;
-import com.strikerr212.minepc.lan.LanManager;
-import com.strikerr212.minepc.lan.RoutePlanner;
-import com.strikerr212.minepc.lan.TrayBlockEntity;
-import com.strikerr212.minepc.lan.Wire;
 import com.strikerr212.minepc.network.PortsInfoPayload;
 import com.strikerr212.minepc.network.PortsRequestPayload;
 import net.minecraft.client.Minecraft;
@@ -38,13 +32,10 @@ import net.neoforged.neoforge.client.event.RenderGuiEvent;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
 
-import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 /**
  * Подсказки монтажника (только у игрока):
@@ -80,10 +71,6 @@ public final class NetHud {
     private static long requestedAt;
 
     // ----- Призрак маршрута: пересчитываем не каждый тик -----
-    private static BlockPos ghostFrom, ghostTo;
-    private static long ghostAt;
-    private static RoutePlanner.Route ghostRoute;
-    private static RoutePlanner.Result ghostResult;
 
     // ----- Мигание лампочек -----
     private static final Map<BlockPos, Long> active = new HashMap<>();
@@ -145,7 +132,7 @@ public final class NetHud {
                 BlockPos from = BlockPos.of(data.copyTag().getLong("cord_pos"));
                 int fromPort = data.copyTag().getInt("cord_port");
                 if (!from.equals(target)) {
-                    BlockPos blocked = com.strikerr212.minepc.lan.CordShape.blocker(mc.level, from, fromPort, target, toPort);
+                    BlockPos blocked = com.strikerr212.minepc.wire.CordShape.blocker(mc.level, from, fromPort, target, toPort);
                     if (blocked != null) {
                         lines.add(Component.translatable("hud.minepc.aerial_blocked", mc.level.getBlockState(blocked).getBlock().getName())
                                 .withStyle(s -> s.withColor(0xE05555)));
@@ -153,15 +140,15 @@ public final class NetHud {
                         highlightColor = 0xE05555;
                     }
                     ghostBlocked = blocked != null;
-                    ghost.addAll(com.strikerr212.minepc.lan.CordShape.points(mc.level, from, fromPort, target, toPort));
+                    ghost.addAll(com.strikerr212.minepc.wire.CordShape.points(mc.level, from, fromPort, target, toPort));
                     if (blocked != null) return;
                 }
             }
             // дальше — обычная подсказка у гнезда: номер, что в нём, подсветка
         }
         // Идёт прокладка щелчками — подсказки у неё свои
-        if (CableDrawClient.active()) return;
-        // Монтажник: провод 3.0 под прицелом (с мотком, кусачками, тестером или биркой)
+        if (WireDrawClient.active()) return;
+        // Монтажник: провод под прицелом (с мотком, кусачками, тестером или биркой)
         boolean tool = held.getItem() instanceof CableItem || held.getItem() instanceof CuttersItem;
         boolean tag = held.is(net.minecraft.world.item.Items.NAME_TAG);
         if (tool || tag || held.getItem() instanceof com.strikerr212.minepc.lan.CableTesterItem) {
@@ -171,20 +158,13 @@ public final class NetHud {
                 return;
             }
         }
-        if (tool && target != null && mc.level.getBlockEntity(target) instanceof CableBlockEntity be && be.facade() == null
-                && !be.wires().isEmpty()) {
-            Vec3 at = hit.getLocation().subtract(target.getX(), target.getY(), target.getZ()).scale(16);
-            Wire w = be.nearest(at.x, at.y, at.z);
-            if (w != null) trace(mc.level, target, w, be.label(w));
-            return;
-        }
         // Гнездо устройства
         if (target != null && state.getBlock() instanceof LanDevice dev && hit instanceof BlockHitResult bhr) {
             port(mc, target, state, dev, bhr);
         }
     }
 
-    /** Подсказка у провода 3.0: бирка, длина и вид, куда воткнуты концы; сам провод подсвечен. */
+    /** Подсказка у провода: бирка, длина и вид, куда воткнуты концы; сам провод подсвечен. */
     private static void wireInfo(Minecraft mc, com.strikerr212.minepc.wire.WireLine l, boolean tag) {
         if (!l.label.isEmpty()) lines.add(Component.translatable("hud.minepc.port_label", l.label).withStyle(s -> s.withColor(0xF2F3F5)));
         lines.add(Component.translatable("hud.minepc.wire.info", l.meters(),
@@ -285,125 +265,6 @@ public final class NetHud {
             return Component.translatable("unit.minepc.gbit", g == Math.floor(g) ? String.valueOf((long) g) : String.format(java.util.Locale.ROOT, "%.1f", g));
         }
         return Component.translatable("unit.minepc.mbit", kbit / 1000);
-    }
-
-    /** Отрезок провода: обход по проводам, загруженным у игрока. */
-    private static void trace(Level level, BlockPos start, Wire first, String label) {
-        record Ref(BlockPos pos, Wire w) {
-        }
-        ArrayDeque<Ref> q = new ArrayDeque<>();
-        Set<String> seen = new HashSet<>();
-        Set<BlockPos> cells = new HashSet<>();
-        List<Component> ends = new ArrayList<>();
-        q.add(new Ref(start, first));
-        seen.add(start.asLong() + ":" + first.packed());
-        while (!q.isEmpty() && cells.size() < 2100) {
-            Ref r = q.poll();
-            cells.add(r.pos);
-            for (float[] b : CableBlockEntity.boxes(r.w)) {
-                highlight.add(new AABB(b[0] / 16, b[1] / 16, b[2] / 16, b[3] / 16, b[4] / 16, b[5] / 16).move(r.pos.getX(), r.pos.getY(), r.pos.getZ()));
-            }
-            Direction[] ds = r.w.dirs();
-            for (int i = 0; i < 4; i++) {
-                if (r.w.port(i) >= 0) {
-                    BlockPos dev = r.pos.relative(ds[i]);
-                    if (ends.size() < 4) ends.add(Component.translatable("hud.minepc.wire_end", level.getBlockState(dev).getBlock().getName(), r.w.port(i) + 1));
-                    continue;
-                }
-                Object[] t = LanManager.target(r.pos, r.w, i);
-                if (t == null) continue;
-                BlockPos n = (BlockPos) t[0];
-                Direction face = (Direction) t[1];
-                if (r.w.conn[i] == Wire.FLAT && level.getBlockEntity(n) instanceof TrayBlockEntity) {
-                    if (ends.size() < 4) ends.add(Component.translatable("hud.minepc.wire_tray"));
-                    continue;
-                }
-                if (!(level.getBlockEntity(n) instanceof CableBlockEntity other)) continue;
-                int edge = Wire.edgeAxis(r.w.face, ds[i]).ordinal();
-                for (Wire o : other.wires()) {
-                    if (o.face == face && o.sameKind(r.w) && o.lane[edge] == r.w.lane[edge] && seen.add(n.asLong() + ":" + o.packed())) {
-                        q.add(new Ref(n.immutable(), o));
-                    }
-                }
-            }
-        }
-        int limit = first.fiber ? LanManager.MAX_FIBER : LanManager.MAX_SEGMENT;
-        int len = cells.size();
-        Component color = Component.translatable("color.minecraft." + DyeColor.byId(first.color).getName());
-        lines.add(Component.translatable(first.fiber ? "hud.minepc.fiber_len" : "hud.minepc.wire_len", color, len, limit)
-                .withStyle(s -> s.withColor(len > limit ? 0xE05555 : 0xFFFFFF)));
-        if (!label.isEmpty()) lines.add(Component.translatable("hud.minepc.port_label", label).withStyle(s -> s.withColor(0xF2F3F5)));
-        if (ends.isEmpty()) lines.add(Component.translatable("hud.minepc.wire_noends").withStyle(s -> s.withColor(0x9097A1)));
-        for (Component e : ends) lines.add(Component.literal("→ ").append(e).withStyle(s -> s.withColor(0xB4BAC4)));
-        highlightColor = len > limit ? 0xE05555 : 0xFFE15A;
-    }
-
-    /** Маршрут от выбранного устройства до того, на которое смотрим. */
-    private static void route(Minecraft mc, CableItem cable, ItemStack held, BlockPos from, BlockPos target, BlockState state) {
-        Component fromName = mc.level.getBlockState(from).getBlock().getName();
-        boolean aerial = mc.level.getBlockState(from).getBlock() instanceof BracketBlock;
-        if (target == null || !(state.getBlock() instanceof LanDevice) || target.equals(from)) {
-            lines.add(Component.translatable(aerial ? "hud.minepc.route_from_aerial" : "hud.minepc.route_from", fromName)
-                    .withStyle(s -> s.withColor(0x8FD3F0)));
-            lines.add(Component.translatable("hud.minepc.route_hint").withStyle(s -> s.withColor(0x9097A1)));
-            ghostTo = null;
-            return;
-        }
-        if (aerial && state.getBlock() instanceof BracketBlock) {
-            double dist = Math.sqrt(from.distSqr(target));
-            int len = Math.max(2, (int) Math.ceil(dist));
-            boolean ok = dist <= BracketBlock.MAX_SPAN;
-            lines.add(Component.translatable(ok ? "hud.minepc.aerial_ok" : "hud.minepc.aerial_far", len, BracketBlock.MAX_SPAN)
-                    .withStyle(s -> s.withColor(ok ? 0x8FD3F0 : 0xE05555)));
-            // Где провод пройдёт: если упрётся в блок — призрак красный и этот блок обведён
-            BlockPos blocked = com.strikerr212.minepc.lan.CordShape.blocker(mc.level, from, target);
-            if (blocked != null) {
-                lines.add(Component.translatable("hud.minepc.aerial_blocked", mc.level.getBlockState(blocked).getBlock().getName())
-                        .withStyle(s -> s.withColor(0xE05555)));
-                highlight.add(new AABB(blocked));
-                highlightColor = 0xE05555;
-            }
-            ghostBlocked = blocked != null || !ok;
-            ghost.addAll(com.strikerr212.minepc.lan.CordShape.points(mc.level, from, target));
-            return;
-        }
-        long now = mc.level.getGameTime();
-        if (!target.equals(ghostTo) || !from.equals(ghostFrom) || now - ghostAt > 20) {
-            ghostFrom = from.immutable();
-            ghostTo = target.immutable();
-            ghostAt = now;
-            ghostResult = RoutePlanner.find(mc.level, from, target, cable.fiber());
-            ghostRoute = ghostResult.route();
-        }
-        if (ghostRoute == null) {
-            // Почему не вышло — и где застряли (клетка обведена красным)
-            lines.add(Component.translatable(ghostResult == null ? "hud.minepc.route_none" : ghostResult.reason(),
-                    mc.level.getBlockState(ghostResult != null && ghostResult.stuck() != null ? ghostResult.stuck() : target).getBlock().getName())
-                    .withStyle(s -> s.withColor(0xE05555)));
-            if (ghostResult != null && ghostResult.stuck() != null) {
-                highlight.add(new AABB(ghostResult.stuck()));
-                highlightColor = 0xE05555;
-            }
-            return;
-        }
-        int need = ghostRoute.pieces().size();
-        boolean enough = mc.player.getAbilities().instabuild || held.getCount() >= need;
-        lines.add(Component.translatable("hud.minepc.route", ghostRoute.length(), need)
-                .withStyle(s -> s.withColor(enough ? 0x8FD3F0 : 0xE05555)));
-        lines.add(Component.translatable("hud.minepc.route_click").withStyle(s -> s.withColor(0x9097A1)));
-        for (RoutePlanner.Piece p : ghostRoute.pieces()) ghost.add(center(p));
-    }
-
-    /** Середина провода маршрута (по дорожкам) в мировых координатах. */
-    private static Vec3 center(RoutePlanner.Piece p) {
-        Direction.Axis[] ax = Wire.planeAxes(p.face());
-        double[] c = new double[3];
-        c[ax[0].ordinal()] = p.a() + 0.5;
-        c[ax[1].ordinal()] = p.b() + 0.5;
-        int n = p.face().getAxis().ordinal();
-        c[n] = p.face().getAxisDirection() == Direction.AxisDirection.POSITIVE ? 15.5 : 0.5;
-        if (p.face().getAxis().isHorizontal()) c[1] = 8;      // стенка ступеньки — середина по высоте
-        return new Vec3(p.cell().getX() + c[0] / 16, p.cell().getY() + c[1] / 16, p.cell().getZ() + c[2] / 16);
     }
 
     // ======================= Отрисовка =======================

@@ -34,7 +34,7 @@ import java.util.Map;
  * io_state(адрес, номер, данные) или io_error(адрес, номер, текст). Подписчики (команда watch) получают
  * io_change(адрес, сторона, уровень, было) при изменении входа и io_player(адрес, игрок, пришёл).
  */
-public class IoControllerBlockEntity extends BlockEntity implements NetEndpoint, CordList.Holder {
+public class IoControllerBlockEntity extends BlockEntity implements NetEndpoint {
 
     /** Порядок сторон: как Direction (низ, верх, север, юг, запад, восток). */
     public static final String[] SIDE_NAMES = {"down", "up", "north", "south", "west", "east"};
@@ -57,16 +57,11 @@ public class IoControllerBlockEntity extends BlockEntity implements NetEndpoint,
     private final List<String> log = new ArrayList<>();
     private int light;
     private int age;
-    private final CordList cords = new CordList();
 
     public IoControllerBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.IO_CONTROLLER.get(), pos, state);
     }
 
-    @Override
-    public CordList cords() {
-        return cords;
-    }
 
     // ======================= Адрес и имя =======================
 
@@ -406,7 +401,6 @@ public class IoControllerBlockEntity extends BlockEntity implements NetEndpoint,
         ListTag lg = new ListTag();
         for (String l : log) lg.add(StringTag.valueOf(l));
         tag.put("Log", lg);
-        cords.save(tag);
     }
 
     @Override
@@ -429,7 +423,6 @@ public class IoControllerBlockEntity extends BlockEntity implements NetEndpoint,
         for (var t : tag.getList("Players", 8)) players.add(t.getAsString());
         log.clear();
         for (var t : tag.getList("Log", 8)) log.add(t.getAsString());
-        cords.load(tag);
     }
 
     /** Имя переходит в предмет при разборке (и обратно — при установке). */

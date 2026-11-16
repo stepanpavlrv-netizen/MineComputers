@@ -1,6 +1,6 @@
 package com.strikerr212.minepc.wire;
 
-import com.strikerr212.minepc.lan.CordShape;
+import com.strikerr212.minepc.wire.CordShape;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.phys.Vec3;

@@ -10,19 +10,14 @@ import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 
-/** Блок-сущность коммутатора, патч-панели и радиомодема: патч-корды для отрисовки и запись в схему сети при загрузке. */
-public class LanBlockEntity extends BlockEntity implements CordList.Holder {
+/** Блок-сущность коммутатора, патч-панели и радиомодема: запись в схему сети при загрузке, лампочки гнёзд. */
+public class LanBlockEntity extends BlockEntity {
 
-    private final CordList cords = new CordList();
 
     public LanBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.LAN.get(), pos, state);
     }
 
-    @Override
-    public CordList cords() {
-        return cords;
-    }
 
     @Override
     public void onLoad() {
@@ -33,13 +28,11 @@ public class LanBlockEntity extends BlockEntity implements CordList.Holder {
     @Override
     protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.saveAdditional(tag, registries);
-        cords.save(tag);
     }
 
     @Override
     protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.loadAdditional(tag, registries);
-        cords.load(tag);
     }
 
     @Override

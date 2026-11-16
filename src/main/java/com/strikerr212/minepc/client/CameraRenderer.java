@@ -31,7 +31,6 @@ public class CameraRenderer implements BlockEntityRenderer<CameraBlockEntity> {
     public void render(CameraBlockEntity be, float partialTick, PoseStack pose, MultiBufferSource buffers, int light, int overlay) {
         BlockState state = be.getBlockState();
         if (!(state.getBlock() instanceof CameraBlock)) return;
-        CordRenderer.renderCords(be, be.cords(), pose, buffers);
         float targetYaw = be.worldYaw(), targetPitch = be.pitch();
         if (Float.isNaN(be.renderYaw)) {
             be.renderYaw = targetYaw;

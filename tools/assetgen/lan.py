@@ -250,38 +250,6 @@ def cord_icon():
           {"parent": "minecraft:item/generated", "textures": {"layer0": "minepc:item/patch_cord"}})
 
 
-def tray_assets():
-    """Кабельный лоток: сетчатая сталь (дырки прозрачные), модель для инвентаря — прямой кусок."""
-    im = Image.new("RGBA", (16, 16), (0, 0, 0, 0))
-    for x in range(16):
-        for y in range(16):
-            edge = x in (0, 15) or y in (0, 15)
-            grid = x % 4 == 0 or y % 4 == 0
-            if edge or grid:
-                v = 196 if edge else 168
-                if (x + y) % 5 == 0:
-                    v -= 18
-                im.putpixel((x, y), (v, v + 2, v + 6, 255))
-    im.save(os.path.join(ASSETS, "textures/block/cable_tray.png"))
-    faces = {d: {"texture": "#mesh"} for d in ("north", "south", "east", "west", "up", "down")}
-    write(os.path.join(ASSETS, "models/block/cable_tray.json"), {
-        "render_type": "minecraft:cutout",
-        "textures": {"particle": "minepc:block/cable_tray", "mesh": "minepc:block/cable_tray", "wire": "minepc:block/network_cable"},
-        "elements": [
-            {"from": [0, 4, 4], "to": [16, 12, 12], "faces": faces},
-            {"from": [0, 4.2, 5], "to": [16, 4.9, 6], "faces": {d: {"texture": "#wire", "tintindex": 11} for d in ("up", "north", "south")}},
-            {"from": [0, 4.2, 7], "to": [16, 4.9, 8], "faces": {d: {"texture": "#wire", "tintindex": 1} for d in ("up", "north", "south")}},
-            {"from": [0, 4.2, 9], "to": [16, 4.9, 10], "faces": {d: {"texture": "#wire", "tintindex": 5} for d in ("up", "north", "south")}},
-        ]})
-    write(os.path.join(ASSETS, "blockstates/cable_tray.json"), {"variants": {"": {"model": "minepc:block/cable_tray"}}})
-    write(os.path.join(ASSETS, "models/item/cable_tray.json"), {"parent": "minepc:block/cable_tray"})
-    loot("cable_tray")
-    write(os.path.join(DATA, "recipe/cable_tray.json"), {
-        "type": "minecraft:crafting_shaped", "category": "redstone", "pattern": ["I I", "BBB"],
-        "key": {"I": {"item": "minecraft:iron_nugget"}, "B": {"item": "minecraft:iron_bars"}},
-        "result": {"id": "minepc:cable_tray", "count": 8}})
-
-
 def loot(name):
     write(os.path.join(DATA, "loot_table/blocks", name + ".json"), {
         "type": "minecraft:block",
@@ -301,7 +269,6 @@ def main():
     write(os.path.join(ASSETS, "models/item/radio_mast.json"), {"parent": "minepc:block/radio_mast_top"})
     loot("radio_mast")
     cord_icon()
-    tray_assets()
     write(os.path.join(DATA, "recipe/patch_cord.json"), {
         "type": "minecraft:crafting_shapeless", "category": "redstone",
         "ingredients": [{"item": "minepc:network_cable"}, {"item": "minepc:network_cable"}, {"item": "minecraft:iron_nugget"}],
@@ -345,15 +312,9 @@ def main():
         "type": "minecraft:crafting_shaped", "category": "redstone", "pattern": ["SSS", "GQG", "SSS"],
         "key": {"S": {"item": "minecraft:string"}, "G": {"item": "minecraft:glass_pane"}, "Q": {"item": "minecraft:quartz"}},
         "result": {"id": "minepc:fiber_cable", "count": 8}})
-    # Кабель: модель собирает игра из проводов в блоке; здесь — только текстуры для атласа
-    write(os.path.join(ASSETS, "models/block/network_cable.json"), {
-        "textures": {"particle": "minepc:block/network_cable", "wire": "minepc:block/network_cable", "plug": "minepc:block/network_plug"},
-        "elements": [{"from": [7, 0, 7], "to": [9, 2, 9], "faces": {"up": {"texture": "#wire"}, "north": {"texture": "#plug"}}}]})
-    write(os.path.join(ASSETS, "blockstates/network_cable.json"), {"variants": {"": {"model": "minepc:block/network_cable"}}})
+    # Кабель — только предмет (моток); провода рисует игра (WireRenderer), текстуры — network_cable/network_plug
     write(os.path.join(ASSETS, "models/item/network_cable.json"), {"parent": "minecraft:item/generated",
                                                                    "textures": {"layer0": "minepc:item/network_cable"}})
-    # Добычу (провода каждого вида и блок-маскировку) выдаёт сам блок кабеля
-    write(os.path.join(DATA, "loot_table/blocks/network_cable.json"), {"type": "minecraft:block", "pools": []})
     # Рецепты: медь и нитки → 8 кабеля; коммутаторы
     write(os.path.join(DATA, "recipe/network_cable.json"), {
         "type": "minecraft:crafting_shaped", "category": "redstone", "pattern": ["SSS", "CCC", "SSS"],

@@ -114,7 +114,7 @@ public final class WireRenderer {
         for (int i = 0; i + 1 < l.nodes(); i++) {
             Vec3 a = l.node(i), c = l.node(i + 1);
             if (l.hang[i]) {
-                List<Vec3> pts = com.strikerr212.minepc.lan.CordShape.points(a, c);
+                List<Vec3> pts = com.strikerr212.minepc.wire.CordShape.points(a, c);
                 for (int j = 1; j < pts.size(); j++) {
                     Vec3 mid = pts.get(j - 1).add(pts.get(j)).scale(0.5);
                     tube(vc, m, pts.get(j - 1), pts.get(j), r, g, b, LevelRenderer.getLightColor(level, BlockPos.containing(mid)), k++);

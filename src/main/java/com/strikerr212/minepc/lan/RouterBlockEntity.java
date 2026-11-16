@@ -10,7 +10,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import java.util.Locale;
 
 /** Настройки роутера: имя сети (SSID), пароль, радиус. */
-public class RouterBlockEntity extends BlockEntity implements CordList.Holder {
+public class RouterBlockEntity extends BlockEntity {
 
     public static final int MIN_RADIUS = 4, MAX_RADIUS = 48, MAX_SSID = 24, MIN_PASSWORD = 8, MAX_PASSWORD = 32;
     /** Скорость Wi-Fi со стороны роутера, Мбит/с (как у Wi-Fi 5): клиент получит не больше, чем умеет его адаптер. */
@@ -19,12 +19,7 @@ public class RouterBlockEntity extends BlockEntity implements CordList.Holder {
     private String ssid = "";
     private String password = "";
     private int radius = 32;
-    private final CordList cords = new CordList();
 
-    @Override
-    public CordList cords() {
-        return cords;
-    }
 
     public RouterBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.ROUTER.get(), pos, state);
@@ -85,7 +80,6 @@ public class RouterBlockEntity extends BlockEntity implements CordList.Holder {
         tag.putString("ssid", ssid());
         tag.putString("password", password);
         tag.putInt("radius", radius);
-        cords.save(tag);
     }
 
     @Override
@@ -94,14 +88,12 @@ public class RouterBlockEntity extends BlockEntity implements CordList.Holder {
         ssid = tag.getString("ssid");
         password = tag.getString("password");
         radius = tag.contains("radius") ? Math.max(MIN_RADIUS, Math.min(MAX_RADIUS, tag.getInt("radius"))) : radius;
-        cords.load(tag);
     }
 
-    /** Корды и радиус (для карты покрытия) видны игрокам; пароль роутера игрокам не отправляем. */
+    /** Радиус (для карты покрытия) и имя сети видны игрокам; пароль роутера игрокам не отправляем. */
     @Override
     public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
         CompoundTag tag = new CompoundTag();
-        cords.save(tag);
         tag.putInt("radius", radius);
         tag.putString("ssid", ssid());
         return tag;
@@ -109,7 +101,6 @@ public class RouterBlockEntity extends BlockEntity implements CordList.Holder {
 
     @Override
     public void handleUpdateTag(CompoundTag tag, HolderLookup.Provider registries) {
-        cords.load(tag);
         if (tag.contains("radius")) radius = tag.getInt("radius");
         if (tag.contains("ssid")) ssid = tag.getString("ssid");
     }
@@ -122,7 +113,6 @@ public class RouterBlockEntity extends BlockEntity implements CordList.Holder {
     @Override
     public void onDataPacket(net.minecraft.network.Connection net, net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket pkt,
                              HolderLookup.Provider registries) {
-        cords.load(pkt.getTag());
         if (pkt.getTag().contains("radius")) radius = pkt.getTag().getInt("radius");
         if (pkt.getTag().contains("ssid")) ssid = pkt.getTag().getString("ssid");
     }

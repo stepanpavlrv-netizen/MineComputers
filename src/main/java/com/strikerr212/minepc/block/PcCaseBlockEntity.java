@@ -55,7 +55,7 @@ import java.util.Locale;
  * "Мозг" системного блока: хранит установленные детали, проверяет совместимость
  * и управляет компьютером (см. {@link CaseComputer}).
  */
-public class PcCaseBlockEntity extends BlockEntity implements com.strikerr212.minepc.lan.CordList.Holder, MenuProvider,
+public class PcCaseBlockEntity extends BlockEntity implements MenuProvider,
         com.strikerr212.minepc.lan.NetEndpoint {
 
     // ----- Раскладка слотов -----
@@ -622,12 +622,7 @@ public class PcCaseBlockEntity extends BlockEntity implements com.strikerr212.mi
         }
     }
 
-    private final com.strikerr212.minepc.lan.CordList cords = new com.strikerr212.minepc.lan.CordList();
 
-    @Override
-    public com.strikerr212.minepc.lan.CordList cords() {
-        return cords;
-    }
 
     /** Чанк загрузился (или корпус только что поставили): занести в схему сети. */
     @Override
@@ -1085,7 +1080,6 @@ public class PcCaseBlockEntity extends BlockEntity implements com.strikerr212.mi
         if (!pc.label().isEmpty()) tag.putString("label", pc.label());
         tag.putString("address", pc.getAddress());
         tag.putInt("state", pc.stateCode());
-        cords.save(tag);
         bmc.save(tag);
         if (!accounts.open() || !accounts.journal(1).isEmpty()) tag.putString("accounts", accounts.save());
         tag.putInt("rebuild_bay", pc.rebuildBay());
@@ -1115,7 +1109,6 @@ public class PcCaseBlockEntity extends BlockEntity implements com.strikerr212.mi
         pc.setAddress(tag.getString("address"));
         pc.setWifi(tag.getString("wifi_ssid"), tag.getString("wifi_password"));
         clientState = tag.getInt("state");
-        cords.load(tag);
         bmc.load(tag);
         accounts.load(tag.getString("accounts"));
         clientRebuild = tag.contains("rebuild_bay") ? tag.getInt("rebuild_bay") : -1;

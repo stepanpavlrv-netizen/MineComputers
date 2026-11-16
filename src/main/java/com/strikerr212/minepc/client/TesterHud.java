@@ -3,9 +3,7 @@ package com.strikerr212.minepc.client;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.strikerr212.minepc.MineComputers;
-import com.strikerr212.minepc.lan.CableBlockEntity;
 import com.strikerr212.minepc.lan.CableTesterItem;
-import com.strikerr212.minepc.lan.Wire;
 import com.strikerr212.minepc.network.TesterPayload;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -38,12 +36,10 @@ public final class TesterHud {
     /** Сколько тиков держится подсветка. */
     private static final int SHOW_TICKS = 200;
 
-    private static final List<AABB> wireBoxes = new ArrayList<>();
     private static final List<AABB> passiveBoxes = new ArrayList<>();
     private static final List<AABB> endBoxes = new ArrayList<>();
     private static final List<AABB> openBoxes = new ArrayList<>();
-    private static final List<Vec3[]> cordLines = new ArrayList<>();
-    /** Провода 3.0: прямые отрезки (лежат вдоль блоков) — коробками, висящие — линиями; цвет по виду провода. */
+    /** Провода: прямые отрезки (лежат вдоль блоков) — коробками, висящие — линиями; цвет по виду провода. */
     private static final List<AABB> lineBoxes = new ArrayList<>();
     private static final List<Boolean> lineFiber = new ArrayList<>();
     private static final List<Vec3[]> lineArcs = new ArrayList<>();
@@ -56,11 +52,9 @@ public final class TesterHud {
     public static void onResult(TesterPayload p) {
         var mc = Minecraft.getInstance();
         if (mc.level == null) return;
-        wireBoxes.clear();
         passiveBoxes.clear();
         endBoxes.clear();
         openBoxes.clear();
-        cordLines.clear();
         lineBoxes.clear();
         lineFiber.clear();
         lineArcs.clear();
@@ -71,7 +65,7 @@ public final class TesterHud {
             for (int i = 0; i + 1 < l.nodes() && lineBoxes.size() < 6000; i++) {
                 Vec3 a = l.node(i), c = l.node(i + 1);
                 if (l.hang[i]) {
-                    List<Vec3> pts = com.strikerr212.minepc.lan.CordShape.points(a, c);
+                    List<Vec3> pts = com.strikerr212.minepc.wire.CordShape.points(a, c);
                     for (int k = 1; k < pts.size(); k++) {
                         lineArcs.add(new Vec3[]{pts.get(k - 1), pts.get(k)});
                         arcFiber.add(l.fiber);
@@ -82,20 +76,9 @@ public final class TesterHud {
                 }
             }
         }
-        for (int i = 0; i + 1 < p.wires().length && wireBoxes.size() < 6000; i += 2) {
-            BlockPos cell = BlockPos.of(p.wires()[i]);
-            Wire w = Wire.unpack(p.wires()[i + 1]);
-            for (float[] b : CableBlockEntity.boxes(w)) {
-                wireBoxes.add(new AABB(b[0] / 16, b[1] / 16, b[2] / 16, b[3] / 16, b[4] / 16, b[5] / 16).move(cell.getX(), cell.getY(), cell.getZ()));
-            }
-        }
-        for (long t : p.trays()) wireBoxes.add(new AABB(BlockPos.of(t)).deflate(0.25, 0.25, 0.25));
         for (long t : p.passives()) passiveBoxes.add(new AABB(BlockPos.of(t)).deflate(0.15));
         for (long t : p.ends()) endBoxes.add(new AABB(BlockPos.of(t)).inflate(0.03));
         for (long t : p.open()) openBoxes.add(new AABB(BlockPos.of(t)).deflate(0.2));
-        for (int i = 0; i + 1 < p.cords().length; i += 2) {
-            cordLines.add(new Vec3[]{Vec3.atCenterOf(BlockPos.of(p.cords()[i])), Vec3.atCenterOf(BlockPos.of(p.cords()[i + 1]))});
-        }
         until = mc.level.getGameTime() + SHOW_TICKS;
         buildScreen(p.info());
     }
@@ -139,8 +122,7 @@ public final class TesterHud {
         Minecraft mc = Minecraft.getInstance();
         if (mc.level == null) return;
         long now = mc.level.getGameTime();
-        if (now > until || wireBoxes.isEmpty() && endBoxes.isEmpty() && openBoxes.isEmpty() && cordLines.isEmpty()
-                && lineBoxes.isEmpty() && lineArcs.isEmpty()) return;
+        if (now > until || endBoxes.isEmpty() && openBoxes.isEmpty() && lineBoxes.isEmpty() && lineArcs.isEmpty()) return;
         float pulse = 0.75f + 0.25f * (float) Math.sin(now * 0.35);
         float fade = Math.min(1f, (until - now) / 40f);
         PoseStack pose = event.getPoseStack();
@@ -148,11 +130,9 @@ public final class TesterHud {
         MultiBufferSource.BufferSource buffers = mc.renderBuffers().bufferSource();
         pose.pushPose();
         pose.translate(-cam.x, -cam.y, -cam.z);
-        // Заливка провода — оранжевая, пульсирует
+        // Провода пульсируют: медь — голубым, оптика — жёлтым
         VertexConsumer q = buffers.getBuffer(XrayRenderTypes.QUADS);
         Matrix4f m = pose.last().pose();
-        for (AABB b : wireBoxes) fill(q, m, b.inflate(0.03), 1f, 0.55f, 0.1f, 0.6f * pulse * fade);
-        // Провода 3.0: медь — голубым, оптика — жёлтым
         for (int i = 0; i < lineBoxes.size(); i++) {
             if (lineFiber.get(i)) fill(q, m, lineBoxes.get(i), 1f, 0.82f, 0.2f, 0.55f * pulse * fade);
             else fill(q, m, lineBoxes.get(i), 0.35f, 0.85f, 1f, 0.55f * pulse * fade);
@@ -164,7 +144,6 @@ public final class TesterHud {
         buffers.endBatch(XrayRenderTypes.QUADS);
         com.mojang.blaze3d.systems.RenderSystem.enableDepthTest();
         VertexConsumer vc = buffers.getBuffer(XrayRenderTypes.LINES);
-        for (AABB b : wireBoxes) LevelRenderer.renderLineBox(pose, vc, b.inflate(0.03), 1f, 0.62f, 0.15f, pulse * fade);
         for (AABB b : passiveBoxes) LevelRenderer.renderLineBox(pose, vc, b, 0.55f, 0.82f, 1f, 0.9f * fade);
         if (blink) for (AABB b : endBoxes) LevelRenderer.renderLineBox(pose, vc, b, 0.35f, 1f, 0.45f, fade);
         if (blink) for (AABB b : openBoxes) LevelRenderer.renderLineBox(pose, vc, b, 1f, 0.25f, 0.25f, fade);
@@ -175,11 +154,6 @@ public final class TesterHud {
             float r = arcFiber.get(i) ? 1f : 0.35f, gg = arcFiber.get(i) ? 0.82f : 0.85f, bb = arcFiber.get(i) ? 0.2f : 1f;
             vc.addVertex(last, (float) l[0].x, (float) l[0].y, (float) l[0].z).setColor(r, gg, bb, fade).setNormal(last, (float) n.x, (float) n.y, (float) n.z);
             vc.addVertex(last, (float) l[1].x, (float) l[1].y, (float) l[1].z).setColor(r, gg, bb, fade).setNormal(last, (float) n.x, (float) n.y, (float) n.z);
-        }
-        for (Vec3[] l : cordLines) {
-            Vec3 n = l[1].subtract(l[0]).normalize();
-            vc.addVertex(last, (float) l[0].x, (float) l[0].y, (float) l[0].z).setColor(1f, 0.6f, 0.15f, fade).setNormal(last, (float) n.x, (float) n.y, (float) n.z);
-            vc.addVertex(last, (float) l[1].x, (float) l[1].y, (float) l[1].z).setColor(1f, 0.6f, 0.15f, fade).setNormal(last, (float) n.x, (float) n.y, (float) n.z);
         }
         pose.popPose();
         com.mojang.blaze3d.systems.RenderSystem.disableDepthTest();

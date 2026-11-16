@@ -109,7 +109,6 @@ public class BracketBlock extends FaceAttachedHorizontalDirectionalBlock impleme
         super.onPlace(state, level, pos, old, moved);
         if (!level.isClientSide) {
             LanManager.updateDevice(level, pos);
-            CableBlockEntity.reconnectAround(level, pos);
         }
     }
 
@@ -118,7 +117,6 @@ public class BracketBlock extends FaceAttachedHorizontalDirectionalBlock impleme
         super.onRemove(state, level, pos, newState, moved);
         if (!level.isClientSide && !state.is(newState.getBlock())) {
             LanManager.updateDevice(level, pos);
-            CableBlockEntity.reconnectAround(level, pos);
         }
     }
 

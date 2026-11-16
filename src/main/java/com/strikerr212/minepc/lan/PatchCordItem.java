@@ -1,5 +1,6 @@
 package com.strikerr212.minepc.lan;
 
+import com.strikerr212.minepc.wire.CordShape;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -86,9 +87,9 @@ public class PatchCordItem extends Item {
         return taken(data, pos, port) || LanManager.usedPorts(data, pos, d).contains(port);
     }
 
-    /** Занят ли порт: старым кордом или проводом 3.0. */
+    /** Занят ли порт проводом. */
     private static boolean taken(LanData data, BlockPos pos, int port) {
-        return data.cordAt(pos, port) || data.lineAt(pos, port) != null;
+        return data.lineAt(pos, port) != null;
     }
 
     /** Ответ pickPort: гнездо, в которое целились, занято. */
@@ -152,7 +153,7 @@ public class PatchCordItem extends Item {
         CompoundTag first = pending(stack);
 
         if (player != null && player.isShiftKeyDown() && first == null) {
-            // короткие провода 3.0 (патч-корды) от этого устройства — тоже снять
+            // снять короткие провода (патч-корды) от этого устройства
             int lines = 0;
             for (var l : List.copyOf(data.linesAt(pos))) {
                 if (l.meters() > MAX_LENGTH + 1) continue;
@@ -162,14 +163,8 @@ public class PatchCordItem extends Item {
                 Block.popResource(level, pos, drop);
                 lines++;
             }
-            List<LanData.Cord> removed = data.removeCords(pos);
-            for (LanData.Cord c : removed) {
-                Block.popResource(level, pos, CableLabels.cordDrop(level, c));
-                CordList.refresh(server, c.a().equals(pos) ? c.b() : c.a());
-            }
-            CordList.refresh(server, pos);
-            if (!removed.isEmpty() || lines > 0) level.playSound(null, pos, com.strikerr212.minepc.registry.ModSounds.LAN_PLUG_OUT.get(), SoundSource.BLOCKS, 0.9f, 1.0f);
-            if (player != null) player.displayClientMessage(Component.translatable("message.minepc.cord.removed", removed.size() + lines), true);
+            if (lines > 0) level.playSound(null, pos, com.strikerr212.minepc.registry.ModSounds.LAN_PLUG_OUT.get(), SoundSource.BLOCKS, 0.9f, 1.0f);
+            if (player != null) player.displayClientMessage(Component.translatable("message.minepc.cord.removed", lines), true);
             return InteractionResult.CONSUME;
         }
 

@@ -191,8 +191,7 @@ public class RackBlockEntity extends BlockEntity {
         if (level != null && !level.isClientSide) {
             level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), Block.UPDATE_ALL);
             com.strikerr212.minepc.lan.LanManager.updateDevice(level, worldPosition);
-            // Гнёзда зависят от модулей: провода рядом перепроверяют, куда воткнуты
-            com.strikerr212.minepc.lan.CableBlockEntity.reconnectAround(level, worldPosition);
+            // Гнёзда зависят от модулей — схему сети пересчитать
             com.strikerr212.minepc.lan.LanManager.invalidate(level);
         }
     }

@@ -49,13 +49,6 @@ public class ModNetwork {
                 context.enqueueWork(() -> {
                     if (context.player() instanceof net.minecraft.server.level.ServerPlayer sp) com.strikerr212.minepc.wire.WireService.lay(sp, payload);
                 }));
-        registrar.playToServer(CableLayPayload.TYPE, CableLayPayload.STREAM_CODEC, (payload, context) ->
-                context.enqueueWork(() -> {
-                    if (context.player() instanceof net.minecraft.server.level.ServerPlayer sp) {
-                        com.strikerr212.minepc.lan.CableLaying.lay(sp, payload.offhand()
-                                ? net.minecraft.world.InteractionHand.OFF_HAND : net.minecraft.world.InteractionHand.MAIN_HAND, payload.points());
-                    }
-                }));
         registrar.playToClient(TesterPayload.TYPE, TesterPayload.STREAM_CODEC, (payload, context) ->
                 context.enqueueWork(() -> ClientAccess.onTester(payload)));
         registrar.playToClient(LanActivityPayload.TYPE, LanActivityPayload.STREAM_CODEC, (payload, context) ->
