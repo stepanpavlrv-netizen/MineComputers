@@ -772,10 +772,13 @@ public class HeadlessTest {
 
     /** Открыть test.mine/more и коротко описать ответ: код и что в нём (заглушка, причина, «закончился», сама страница). */
     static String probe(Computer[] box, String tag) throws Exception {
-        command("local b, c = require('http').get('test.mine/more', nil, nil, 10) b = tostring(b) print('" + tag + "' .. '=' .. tostring(c)"
-                + " .. (b:find('временно не работает') and ' stub' or '') .. (b:find('ремонт') and ' reason' or '')"
-                + " .. (b:find('закончился') and ' ended' or '') .. (b:find('Ещё страница') and ' page' or ''))");
+        // в две строки: строка ввода оболочки короткая, длинная команда обрезается
+        command("B, C = require('http').get('test.mine/more', nil, nil, 10) B = tostring(B) print('" + tag + "' .. '_got')");
         long end = System.currentTimeMillis() + 8000;
+        while (System.currentTimeMillis() < end && !screen().contains(tag + "_got")) { for (Computer c : box) c.tick(); Thread.sleep(5); }
+        command("print('" + tag + "' .. '=' .. tostring(C) .. (B:find('временно') and ' stub' or '') .. (B:find('ремонт') and ' reason' or '')"
+                + " .. (B:find('закончил') and ' ended' or '') .. (B:find('Ещё') and ' page' or ''))");
+        end = System.currentTimeMillis() + 3000;
         while (System.currentTimeMillis() < end && !screen().contains(tag + "=")) { for (Computer c : box) c.tick(); Thread.sleep(5); }
         for (String l : screen().split("\n")) {
             int i = l.indexOf(tag + "=");
