@@ -6,7 +6,7 @@ local BOOKMARKS = "/home/.bookmarks"
 -- ======================= загрузка =======================
 
 --- Страница с сайта (внутри фоновой задачи). Возвращает текст, код, тип или nil, ошибка.
-local function fetch(url, params, progress)
+local function fetch(url, params, progress, wait)
   if url:match("^file:") then
     local path = url:gsub("^file:", "")
     local f = fs.open(path, "r")
@@ -27,7 +27,7 @@ local function fetch(url, params, progress)
     return nil, "Нет сети"
   end
   local parts, got, total, status, ctype = {}, 0, 1, nil, nil
-  local timer = os.startTimer(5)
+  local timer = os.startTimer(wait or 5)
   local err
   while true do
     local ev = { os.pullEvent() }
@@ -95,6 +95,26 @@ local function saveBookmarks(list)
   f.close()
 end
 
+--- Сайты, которые игрок убрал из списка (пока они не отвечают): по одному имени в строке.
+local HIDDEN = "/home/.browser_hidden"
+
+local function loadHidden()
+  local out = {}
+  local f = fs.exists(HIDDEN) and fs.open(HIDDEN, "r")
+  if f then
+    for line in (f.readAll() or ""):gmatch("[^\n]+") do out[line] = true end
+    f.close()
+  end
+  return out
+end
+
+local function saveHidden(set)
+  local f = fs.open(HIDDEN, "w")
+  if not f then return end
+  for name in pairs(set) do f.write(name .. "\n") end
+  f.close()
+end
+
 -- ======================= окно =======================
 
 return function(start)
@@ -104,8 +124,59 @@ return function(start)
   local images = {}
   local win
   local addr = U.field("", "addr")
+  -- Стартовая страница: сайты, которые видно в майннете (имена из DNS), — проверяем каждый, берём заголовок
+  local sites, hidden, scanning = {}, loadHidden(), 0
+  local search = U.field("", "search")
 
   local function tab() return tabs[cur] end
+
+  local function scan()
+    if scanning > 0 then return end
+    local ok, list = net.dns("all")
+    sites = {}
+    if not ok or type(list) ~= "table" then wm.redraw(win) return end
+    for _, row in ipairs(list) do
+      local s = { name = tostring(row.name), state = "check", title = "" }
+      sites[#sites + 1] = s
+      scanning = scanning + 1
+      local started = os.epoch and os.epoch("utc") or 0
+      wm.spawn(function() return fetch(s.name, nil, nil, 3) end, function(ok2, body, code, ctype)
+        scanning = scanning - 1
+        if ok2 and body then
+          s.state, s.ms = "on", math.max(1, (os.epoch and os.epoch("utc") or 0) - started)
+          if ctype == "page" then s.title = ((body:match("^# ([^\n]+)") or ""):gsub("{%a*}", "")) end
+          if hidden[s.name] then hidden[s.name] = nil saveHidden(hidden) end   -- снова отвечает — вернуть в список
+        else
+          s.state = "off"
+        end
+        wm.redraw(win)
+      end)
+    end
+    wm.redraw(win)
+  end
+
+  --- Показать в вкладке стартовую страницу со списком сайтов.
+  local function goHome(t)
+    t.home, t.url, t.title, t.top, t.status = true, nil, "Сайты Майннета", 0, ""
+    addr.text, addr.pos = "", 0
+    if win then wm.setTitle(win, "Браузер — сайты Майннета") end
+    scan()
+  end
+
+  --- Строки списка сайтов: работающие (по имени), затем не отвечающие и ещё проверяемые; с учётом поиска.
+  local function siteRows()
+    local q = (unicode and unicode.lower or string.lower)(search.text or "")
+    local on, rest = {}, {}
+    for _, s in ipairs(sites) do
+      local hay = (unicode and unicode.lower or string.lower)(s.name .. " " .. s.title)
+      if (q == "" or hay:find(q, 1, true)) and not (s.state == "off" and hidden[s.name]) then
+        if s.state == "on" then on[#on + 1] = s else rest[#rest + 1] = s end
+      end
+    end
+    table.sort(on, function(a, b) return a.name < b.name end)
+    table.sort(rest, function(a, b) return a.name < b.name end)
+    return on, rest
+  end
 
   local function newTab(url)
     tabs[#tabs + 1] = { url = url, title = "Новая вкладка", rows = {}, blocks = {}, top = 0, fields = {}, back = {}, fwd = {},
@@ -153,6 +224,7 @@ return function(start)
     local t = tab()
     url = tostring(url or ""):gsub("^mine://", "")
     if url == "" then return end
+    t.home = false
     if how ~= "nav" and t.url and t.url ~= "" then t.back[#t.back + 1] = t.url t.fwd = {} end
     t.url, t.loading, t.err, t.status = url, true, nil, "Загрузка…"
     addr.text, addr.pos, addr.focused = url, G.len(url), false
@@ -214,12 +286,73 @@ return function(start)
     if type(start) == "string" and start ~= "" then
       open(start:match("^/") and ("file:" .. start) or start)
     else
-      show(tab(), "# Браузер Майннета\nНаберите адрес сайта вверху: например {yellow}shop.mine{}.\n\n" ..
-        "## Как сделать свой сайт\nСайтостроитель (дискета из деревни) или команда {lightBlue}httpd{} в Терминале.\n---\n" ..
-        "Имена сайтов: {lightBlue}dns all{} в Терминале.", "page")
-      tab().title = "Новая вкладка"
-      addr.focused = true
+      goHome(tab())
     end
+  end
+
+  --- Стартовая страница: список сайтов майннета.
+  local function drawHome(t, c)
+    local BG, FG, DIM, FAINT, OK = P.BG, P.C.text, P.C.quote, 0x5a5470, 0x57c47a
+    local ph = c.h - 4
+    c.fill(1, 4, c.w, ph, BG)
+    local pw = math.min(c.w, 100)
+    local x = math.floor((c.w - pw) / 2) + 3
+    local on, rest = siteRows()
+    local total, working = 0, 0
+    for _, s in ipairs(sites) do
+      total = total + 1
+      if s.state == "on" then working = working + 1 end
+    end
+    c.text(x, 5, "Сайты Майннета", P.C.h1, BG)
+    local info = scanning > 0 and ("· проверяю… " .. (total - scanning) .. " из " .. total)
+      or ("· видно в сети: " .. total .. ", работают: " .. working)
+    c.text(x + 16, 5, G.cut(info, math.max(0, pw - 34)), DIM, BG)
+    c.text(x + pw - 16, 5, "↻ обновить", P.C.link, BG)
+    c.hit(x + pw - 16, 5, 10, 1, "rescan")
+    c.field(x, 7, math.min(34, pw - 4), search, "⌕ найти сайт…")
+    -- строки: { сайт } или { заголовок раздела }
+    local lines = {}
+    for _, s in ipairs(on) do lines[#lines + 1] = s end
+    if #rest > 0 then
+      lines[#lines + 1] = false
+      lines[#lines + 1] = { header = "Не отвечают" }
+      for _, s in ipairs(rest) do lines[#lines + 1] = s end
+    end
+    if total == 0 then
+      lines[1] = { header = scanning > 0 and "Ищу сайты…" or "В майннете пока нет ни одного сайта — свой можно сделать в Сайтостроителе или командой httpd" }
+    elseif #on == 0 and #rest == 0 then
+      lines[1] = { header = "Ничего не нашлось" }
+    end
+    local nameW = 12
+    for _, s in ipairs(sites) do nameW = math.max(nameW, G.len(s.name) + 2) end
+    nameW = math.min(nameW, 24)
+    local top0, shown = 9, ph - 6
+    t.top = math.max(0, math.min(t.top or 0, #lines - shown))
+    for i = 1, shown do
+      local ln = lines[i + t.top]
+      local y = top0 + i - 1
+      if ln == nil then break end
+      if ln and ln.header then
+        c.text(x, y, G.cut(ln.header, pw - 4), DIM, BG)
+      elseif ln then
+        local live = ln.state == "on"
+        c.text(x, y, live and "●" or "○", live and OK or FAINT, BG)
+        c.text(x + 2, y, G.cut(ln.name, nameW - 1), live and P.C.link or FAINT, BG)
+        local note = live and (ln.title ~= "" and ln.title or "без заголовка")
+          or (ln.state == "check" and "проверяю…" or "сайт выключен или нет связи")
+        c.text(x + 2 + nameW, y, G.cut(note, math.max(0, pw - nameW - 16)), live and FG or FAINT, BG)
+        if live then
+          c.text(x + pw - 12, y, ln.ms .. " мс", FAINT, BG)
+          c.hit(x, y, pw - 4, 1, "site", ln.name)
+        elseif ln.state == "off" then
+          c.text(x + pw - 12, y, "✕ убрать", DIM, BG)
+          c.hit(x + pw - 12, y, 8, 1, "hide", ln.name)
+          c.hit(x, y, pw - 14, 1, "site", ln.name)
+        end
+      end
+    end
+    c.scrollbar(c.w, 4, ph, t.top, #lines, shown)
+    t.homeLines = #lines - shown
   end
 
   function app.draw(w, c)
@@ -268,6 +401,12 @@ return function(start)
     end
     if #marks == 0 then c.text(2, 3, "Закладок нет: ☆ — добавить страницу", T.faint) end
     -- страница
+    if t.home then
+      drawHome(t, c)
+      c.fill(1, c.h, c.w, 1, T.bar)
+      c.text(2, c.h, "Нажмите на сайт, чтобы открыть его", T.faint, T.bar)
+      return
+    end
     local ph = c.h - 4
     local pw = math.min(c.w, 100)
     local px = math.floor((c.w - pw) / 2) + 1
@@ -284,13 +423,18 @@ return function(start)
     local t = tab()
     if ev == "click" or ev == "dblclick" then
       addr.focused = a == "addr"
+      search.focused = a == "search"
       if a == "addr" then addr.pos = G.len(addr.text)
+      elseif a == "search" then search.pos = G.len(search.text)
+      elseif a == "site" then open(b)
+      elseif a == "hide" then hidden[b] = true saveHidden(hidden)
+      elseif a == "rescan" or (a == "reload" and t.home) then scan()
       elseif a == "back" and #t.back > 0 then t.fwd[#t.fwd + 1] = t.url open(table.remove(t.back), nil, "nav")
       elseif a == "fwd" and #t.fwd > 0 then t.back[#t.back + 1] = t.url open(table.remove(t.fwd), nil, "nav")
       elseif a == "reload" and t.url then open(t.url, nil, "nav")
       elseif a == "home" then
-        local m = marks[1]
-        if m then open(m.url) end
+        if t.url then t.back[#t.back + 1] = t.url t.fwd = {} end
+        goHome(t)
       elseif a == "star" and t.url then
         local found
         for i, m in ipairs(marks) do if m.url == t.url then found = i end end
@@ -305,16 +449,24 @@ return function(start)
         addr.text = tab().url or ""
       elseif a == "newtab" then
         newTab(nil)
-        show(tab(), "# Новая вкладка\nНаберите адрес вверху.", "page")
-        tab().title = "Новая вкладка"
-        addr.text, addr.pos, addr.focused = "", 0, true
+        goHome(tab())
       elseif a == "plink" or a == "pbutton" or a == "pfield" then activate(t, b)
       elseif a == "pblock" then t.focus = nil end
+      wm.redraw(w)
+    elseif ev == "scroll" and t.home then
+      t.top = math.max(0, math.min(math.max(0, t.homeLines or 0), (t.top or 0) + a * 3))
       wm.redraw(w)
     elseif ev == "scroll" then
       t.top = math.max(0, math.min(math.max(0, #t.rows - (w.bh - 4)), t.top + a * 3))
       wm.redraw(w)
     elseif ev == "char" or ev == "key" or ev == "paste" then
+      if search.focused then
+        U.edit(search, ev, a)
+        if ev == "key" and a == "escape" then search.focused = false search.text, search.pos = "", 0 end
+        if t.home then t.top = 0 end
+        wm.redraw(w)
+        return
+      end
       if addr.focused then
         local r = U.edit(addr, ev, a)
         if r == "enter" then

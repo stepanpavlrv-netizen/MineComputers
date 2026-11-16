@@ -810,7 +810,18 @@ public class CiScreenshots {
             case 6126 -> { keyAt(lanJ2, "q"); logRazlom(); }
             case 6128 -> keyAt(lanJ2, "q");
             case 6150 -> { logRazlom(); logMouseLock(); shot(mc, "razlom_exit"); }
-            case 6154 -> mc.stop();
+            // Браузер с дискеты: стартовая страница — список сайтов майннета
+            case 6154 -> mc.setScreen(new TerminalScreen(wiredPos));
+            case 6156 -> server.execute(() -> wiredDisk(null));
+            case 6160 -> server.execute(() -> wiredDisk("browser"));
+            case 6182 -> server.execute(() -> clickText(wiredPos, " Установить ", 2, 0));
+            case 6194 -> server.execute(() -> clickText(wiredPos, " Установить ", 2, 0));
+            case 6240 -> server.execute(() -> clickText(wiredPos, " Открыть ", 2, 0));
+            case 6320 -> {
+                server.execute(() -> logWired("браузер: сайты майннета"));
+                shot(mc, "wired_browser_sites");
+            }
+            case 6324 -> mc.stop();
             default -> {
             }
         }
