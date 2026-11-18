@@ -49,6 +49,7 @@ public final class WireRenderer {
     @SubscribeEvent
     public static void onLogout(ClientPlayerNetworkEvent.LoggingOut event) {
         WireStore.clear();
+        cache.clear();
     }
 
     @SubscribeEvent
@@ -73,10 +74,20 @@ public final class WireRenderer {
         mc.gameRenderer.lightTexture().turnOnLightLayer();
         mc.gameRenderer.overlayTexture().setupOverlayColor();
         VertexConsumer vc = buffers.getBuffer(RenderType.entityCutoutNoCull(TEXTURE));
+        long now = level.getGameTime();
+        if (cache.size() > WireStore.all().size() + 64) cache.keySet().removeIf(id -> WireStore.get(id) == null);
         for (WireLine l : WireStore.all()) {
             var box = l.bounds();
             if (box.distanceToSqr(cam) > VIEW * VIEW || (frustum != null && !frustum.isVisible(box))) continue;
-            draw(vc, pose.last(), level, l);
+            // Форма провода (куски, свет, что спрятано в блоках) считается заранее: заново — когда провод поменялся
+            // или раз в пару секунд (поменялся свет, поставили или сломали блок на проводе); каждый кадр — только вывод
+            Mesh mesh = cache.get(l.id);
+            if (mesh == null || mesh.line != l || now - mesh.tick > REBUILD + (l.id % 16)) {
+                mesh = new Mesh(l, now);
+                draw(mesh, IDENTITY.last(), level, l);
+                cache.put(l.id, mesh);
+            }
+            mesh.replay(vc, pose.last());
         }
         buffers.endBatch(RenderType.entityCutoutNoCull(TEXTURE));
         VertexConsumer plug = buffers.getBuffer(RenderType.entityCutoutNoCull(PLUG));
@@ -104,6 +115,75 @@ public final class WireRenderer {
         mc.gameRenderer.overlayTexture().teardownOverlayColor();
         mc.gameRenderer.lightTexture().turnOffLightLayer();
         pose.popPose();
+    }
+
+    /** Раз в сколько тиков пересчитывать форму провода, если он сам не менялся. */
+    private static final int REBUILD = 40;
+    private static final PoseStack IDENTITY = new PoseStack();
+    private static final java.util.Map<Long, Mesh> cache = new java.util.HashMap<>();
+
+    /** Готовые вершины провода (в координатах мира): x, y, z, r, g, b, u, v, свет, нормаль. */
+    private static final class Mesh implements VertexConsumer {
+        final WireLine line;
+        final long tick;
+        float[] d = new float[64 * 12];
+        int n;
+
+        Mesh(WireLine line, long tick) {
+            this.line = line;
+            this.tick = tick;
+        }
+
+        @Override
+        public VertexConsumer addVertex(float x, float y, float z) {
+            if (n + 12 > d.length) d = java.util.Arrays.copyOf(d, d.length * 2);
+            d[n] = x;
+            d[n + 1] = y;
+            d[n + 2] = z;
+            n += 12;
+            return this;
+        }
+
+        @Override
+        public VertexConsumer setColor(int r, int g, int b, int a) {
+            d[n - 9] = r;
+            d[n - 8] = g;
+            d[n - 7] = b;
+            return this;
+        }
+
+        @Override
+        public VertexConsumer setUv(float u, float v) {
+            d[n - 6] = u;
+            d[n - 5] = v;
+            return this;
+        }
+
+        @Override
+        public VertexConsumer setUv1(int u, int v) {
+            return this;
+        }
+
+        @Override
+        public VertexConsumer setUv2(int u, int v) {
+            d[n - 4] = Float.intBitsToFloat((v << 16) | (u & 0xFFFF));
+            return this;
+        }
+
+        @Override
+        public VertexConsumer setNormal(float x, float y, float z) {
+            d[n - 3] = x;
+            d[n - 2] = y;
+            d[n - 1] = z;
+            return this;
+        }
+
+        void replay(VertexConsumer vc, PoseStack.Pose m) {
+            for (int i = 0; i < n; i += 12) {
+                vc.addVertex(m, d[i], d[i + 1], d[i + 2]).setColor((int) d[i + 3], (int) d[i + 4], (int) d[i + 5], 255).setUv(d[i + 6], d[i + 7])
+                        .setOverlay(OverlayTexture.NO_OVERLAY).setLight(Float.floatToRawIntBits(d[i + 8])).setNormal(m, d[i + 9], d[i + 10], d[i + 11]);
+            }
+        }
     }
 
     private static void draw(VertexConsumer vc, PoseStack.Pose m, Level level, WireLine l) {

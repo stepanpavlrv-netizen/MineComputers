@@ -37,6 +37,7 @@ public class CiScreenshots {
         return ENABLED;
     }
     private static int ticks;
+    private static boolean pauseWas = true;
     private static BlockPos casePos;
 
     @SubscribeEvent
@@ -47,7 +48,12 @@ public class CiScreenshots {
         ticks++;
         var server = mc.getSingleplayerServer();
         switch (ticks) {
-            case 60 -> server.execute(CiScreenshots::buildScene);
+            case 60 -> {
+                // окно игры может быть в фоне (прогон на компьютере автора): без паузы, иначе на снимках меню паузы
+                pauseWas = mc.options.pauseOnLostFocus;
+                mc.options.pauseOnLostFocus = false;
+                server.execute(CiScreenshots::buildScene);
+            }
             case 140 -> type("help");
             case 200 -> {
                 mc.options.hideGui = true;
@@ -260,8 +266,8 @@ public class CiScreenshots {
             case 1626 -> server.execute(() -> {
                 if (maskCell == null) return;
                 ServerPlayer p = server.getPlayerList().getPlayers().get(0);
-                // сверху: между глазом и кирпичом ничего нет
-                var eye = new net.minecraft.world.phys.Vec3(maskPoint.x + 0.02, maskCell.getY() + 2.4, maskPoint.z - 0.35);
+                // сверху: ноги выше кирпича (иначе игру выталкивает из блока вбок и прицел уходит мимо), между глазом и кирпичом ничего нет
+                var eye = new net.minecraft.world.phys.Vec3(maskPoint.x + 0.02, maskCell.getY() + 3.1, maskPoint.z - 0.35);
                 var d = maskPoint.subtract(eye);
                 float yaw = (float) Math.toDegrees(Math.atan2(-d.x, d.z)), pitch = (float) Math.toDegrees(-Math.atan2(d.y, Math.hypot(d.x, d.z)));
                 p.teleportTo(p.serverLevel(), eye.x, eye.y - 1.62, eye.z, yaw, pitch);
@@ -272,6 +278,12 @@ public class CiScreenshots {
                     if (maskCell == null) return;
                     ServerPlayer p = server.getPlayerList().getPlayers().get(0);
                     var hit = com.strikerr212.minepc.wire.WireService.aimed(p);
+                    var data = com.strikerr212.minepc.lan.LanData.get(p.serverLevel());
+                    var raw = com.strikerr212.minepc.wire.WireService.pick(data.lines(), p.getEyePosition(), p.getViewVector(1), p.blockInteractionRange() + 0.5);
+                    var blk = p.pick(p.blockInteractionRange() + 0.5, 1f, false);
+                    com.mojang.logging.LogUtils.getLogger().info("[CI-MASK] глаз {} взгляд {} | провод без учёта блоков: {} | блок под прицелом: {} {}",
+                            p.getEyePosition(), p.getViewVector(1), raw == null ? "нет" : raw.line().id + " в " + raw.point() + " на " + raw.dist(),
+                            blk.getType(), blk instanceof net.minecraft.world.phys.BlockHitResult bh ? bh.getBlockPos() + " " + blk.getLocation() : "");
                     com.mojang.logging.LogUtils.getLogger().info("[CI-MASK] блок {}, провод внутри спрятан {}, прицел видит провод {}, E видит {}",
                             p.serverLevel().getBlockState(maskCell).getBlock().getName().getString(),
                             com.strikerr212.minepc.wire.WireMask.inside(p.serverLevel(), maskPoint), hit == null ? "нет" : hit.line().id,
@@ -854,14 +866,21 @@ public class CiScreenshots {
                 shot(mc, "wired_browser_sites");
             }
             // Большая серверная: сотни проводов в лотках — нет ли подтормаживаний, сеть та же
-            case 6322 -> logPerf(mc, "до серверной");
-            case 6324 -> server.execute(CiScreenshots::placeBigRoom);
-            case 6380 -> {
+            // окно компьютера закрыть: снимок и замер — в мире, а не в окне браузера
+            case 6321 -> mc.setScreen(null);
+            case 6340 -> logPerf(mc, "до серверной");
+            case 6342 -> server.execute(CiScreenshots::placeBigRoom);
+            // прокладка 200+ проводов занимает у сервера несколько секунд — снимок и замер с запасом после неё
+            case 6440 -> {
+                mc.options.hideGui = true;
                 logPerf(mc, "серверная");
                 shot(mc, "world_big_room");
             }
-            case 6384 -> server.execute(CiScreenshots::logBigRoom);
-            case 6390 -> mc.stop();
+            case 6442 -> server.execute(CiScreenshots::logBigRoom);
+            case 6460 -> {
+                mc.options.pauseOnLostFocus = pauseWas;
+                mc.stop();
+            }
             default -> {
             }
         }
@@ -2043,8 +2062,15 @@ public class CiScreenshots {
         var fa = freeSocket(level, a, fiber, faceA);
         var fb = freeSocket(level, b, fiber, faceB);
         var l = fa == null || fb == null ? null : com.strikerr212.minepc.wire.WireService.layDirect(level, fiber, color, label, fa, clicks, fb);
-        if (l == null) com.mojang.logging.LogUtils.getLogger().info("[CI-LINK] провод {} → {} не проложился (гнёзда {} / {})",
-                a.toShortString(), b.toShortString(), fa, fb);
+        if (l == null) {
+            var r = fa == null || fb == null ? null : com.strikerr212.minepc.wire.WirePlan.build(level,
+                    com.strikerr212.minepc.wire.WirePlan.Lines.of(com.strikerr212.minepc.lan.LanData.get(level)), fiber, fa, clicks, fb,
+                    com.strikerr212.minepc.wire.WireService.SEARCH);
+            com.mojang.logging.LogUtils.getLogger().info("[CI-LINK] провод {} → {} не проложился: {} (гнёзда {}:{} / {}:{}, застрял {})",
+                    a.toShortString(), b.toShortString(), r == null ? "нет свободного гнезда" : r.problem(),
+                    fa == null ? "-" : fa.port(), fa == null ? "" : "", fb == null ? "-" : fb.port(), "",
+                    r == null || r.stuck() == null ? "-" : java.util.Arrays.toString(r.stuck()));
+        }
         return l;
     }
 
@@ -2194,7 +2220,9 @@ public class CiScreenshots {
         }
         log.info("[CI-BIG] проложено {} проводов (не вышло {}), всего {} мс, самый долгий {} мс; через лотки идут {}", laid, failed,
                 total / 1_000_000, worst / 1_000_000, inTray);
-        p.teleportTo(level, b.getX() + 6, b.getY() + 4.5, b.getZ() - 3.5, -20f, 35f);
+        // вид вдоль прохода с его западного конца, с подставки в блок: лотки с проводами и оба ряда панелей
+        level.setBlockAndUpdate(b.offset(-3, 0, 5), net.minecraft.world.level.block.Blocks.SMOOTH_STONE.defaultBlockState());
+        p.teleportTo(level, b.getX() - 2.5, b.getY() + 1, b.getZ() + 5.5, -90f, 28f);
     }
 
     private static void logBigRoom() {

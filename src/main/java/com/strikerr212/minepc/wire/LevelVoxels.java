@@ -92,7 +92,7 @@ public final class LevelVoxels implements WireRouter.Voxels {
             long[] ch = new long[64];
             for (double[] b : TrayBlock.channel(st)) fill(ch, b[0], b[1], b[2], b[3], b[4], b[5]);
             lanes.put(pos.asLong(), ch);
-            if (wires != null) occupy(bits, pos);
+            if (wires != null) occupy(bits, ch, pos);
         }
         return bits;
     }
@@ -109,8 +109,8 @@ public final class LevelVoxels implements WireRouter.Voxels {
         }
     }
 
-    /** Пиксели клетки pos, по которым уже лежат провода, — твёрдые. */
-    private void occupy(long[] bits, BlockPos pos) {
+    /** Пиксели желоба ch клетки pos, по которым уже лежат провода, — твёрдые (над лотком провода, как везде, могут пересекаться). */
+    private void occupy(long[] bits, long[] ch, BlockPos pos) {
         int cx = pos.getX(), cy = pos.getY(), cz = pos.getZ();
         for (WireLine l : wires.near(pos)) {
             if (exclude.contains(l.id)) continue;
@@ -125,7 +125,7 @@ public final class LevelVoxels implements WireRouter.Voxels {
                     int x = ax + sx * k, y = ay + sy * k, z = az + sz * k;
                     if (x >> 4 != cx || y >> 4 != cy || z >> 4 != cz) continue;
                     int idx = index(x, y, z);
-                    bits[idx >> 6] |= 1L << (idx & 63);
+                    if ((ch[idx >> 6] >>> (idx & 63) & 1) != 0) bits[idx >> 6] |= 1L << (idx & 63);
                 }
             }
         }

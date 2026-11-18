@@ -99,4 +99,31 @@ public class WireGameTests {
         h.assertTrue(TrayBlock.linkToward(wall, Direction.DOWN) == TrayBlock.Link.FLAT, "Лоток на стене не опускается к полу: " + wall);
         h.succeed();
     }
+
+    /**
+     * Маскировка «провод в стене»: на провод на полу ставят камень — провод цел, внутри камня спрятан, игрок,
+     * глядящий на камень сверху, «видит» провод (кусачки, тестер, бирка).
+     */
+    @GameTest(template = "empty", timeoutTicks = 100)
+    public static void wireMask(GameTestHelper h) {
+        for (int x = 0; x < 5; x++) for (int z = 0; z < 5; z++) h.setBlock(new BlockPos(x, 0, z), Blocks.SMOOTH_STONE);
+        BlockPos a = h.absolutePos(new BlockPos(0, 1, 2)), b = h.absolutePos(new BlockPos(4, 1, 2));
+        WireLine l = WireService.layDirect(h.getLevel(), false, 11, "",
+                WirePlan.Anchor.pixel(new int[]{a.getX() * 16 + 4, a.getY() * 16, a.getZ() * 16 + 8}), List.of(),
+                WirePlan.Anchor.pixel(new int[]{b.getX() * 16 + 12, b.getY() * 16, b.getZ() * 16 + 8}));
+        h.assertTrue(l != null, "Провод не проложился");
+        BlockPos mid = h.absolutePos(new BlockPos(2, 1, 2));
+        h.getLevel().setBlockAndUpdate(mid, Blocks.STONE.defaultBlockState());
+        var p = net.neoforged.neoforge.common.util.FakePlayerFactory.getMinecraft(h.getLevel());
+        p.moveTo(mid.getX() + 0.5, mid.getY() + 1.2, mid.getZ() + 0.5, 0f, 90f);
+        h.runAfterDelay(2, () -> {
+            var now = com.strikerr212.minepc.lan.LanData.get(h.getLevel()).line(l.id);
+            h.assertTrue(now != null && now.nodes() == l.nodes(), "Провод поменялся после камня: " + now);
+            h.assertTrue(com.strikerr212.minepc.wire.WireMask.inside(h.getLevel(), new net.minecraft.world.phys.Vec3(mid.getX() + 0.5,
+                    mid.getY() + 1 / 32.0, mid.getZ() + 0.5)), "Провод внутри камня не считается спрятанным");
+            var hit = WireService.aimed(p);
+            h.assertTrue(hit != null && hit.line().id == l.id, "Прицел сверху на камень не видит провод внутри");
+            h.succeed();
+        });
+    }
 }
