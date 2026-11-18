@@ -714,7 +714,7 @@
   "message.minepc.one_socket": "На этой плате один сокет",
   "message.minepc.need_cpu1": "Сначала поставьте первый процессор",
   "message.minepc.cpu_mismatch": "Второй процессор должен быть таким же, как первый",
-  "message.minepc.no_cooler_1u": "В модуль 1U кулер не влезет — процессоры охлаждает стена вентиляторов",
+  "message.minepc.no_cooler_1u": "В модуль сервера кулер не влезет — процессоры охлаждают вентиляторы модуля. Сильнее — «Вентиляторы стойки»",
   "message.minepc.need_ecc": "Серверной плате нужна память ECC",
   "message.minepc.ecc_server_only": "Память ECC встаёт только в серверную плату",
   "message.minepc.no_sata_short": "Свободных портов SATA нет",
@@ -914,5 +914,16 @@
   "message.minepc.wire.labeled": "Провод подписан: %s",
   "message.minepc.wire.unlabeled": "Подпись с провода снята",
   "gui.minepc.switch.free_end": "провод без второго конца",
-  "gui.minepc.switch.len": " · %s м"
+  "gui.minepc.switch.len": " · %s м",
+  "item.minepc.rack_fans_1": "Вентиляторы стойки (ур. 1)",
+  "item.minepc.rack_fans_2": "Вентиляторы стойки (ур. 2)",
+  "item.minepc.rack_fans_3": "Вентиляторы стойки (ур. 3)",
+  "tooltip.minepc.rack_fans.spec": "Отвод: %s на процессор (в модуле 2U — %s). Встроенные вентиляторы модуля — %s",
+  "tooltip.minepc.rack_fans.hint": "ПКМ по выдвинутому выключенному модулю сервера — вместо встроенных. Мощнее — громче",
+  "message.minepc.rack_fans_module_only": "Вентиляторы стойки ставятся только в модуль сервера",
+  "message.minepc.rack_fans_occupied": "В модуле уже стоят вентиляторы — сначала выньте их",
+  "message.minepc.fans.builtin": "встроенные",
+  "message.minepc.fans.tier": "ур. %s",
+  "message.minepc.cooling.server_ok": "Охлаждение в норме: процессоры греются на %s, вентиляторы модуля (%s) отводят до %s",
+  "message.minepc.cooling.server_hot": "Перегрев: процессоры греются на %s, а вентиляторы модуля (%s) отводят только %s — под нагрузкой %s%% частоты. Поставьте «Вентиляторы стойки» помощнее, модуль 2U или процессоры слабее"
 }

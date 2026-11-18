@@ -48,6 +48,25 @@ public class ComputerGameTests {
         be.input(TerminalInputPayload.KEY, "enter", false, false);
     }
 
+    /** Вентиляторы стойки: встают только в модуль сервера (место кулера) и добавляют отвод тепла; в 2U — в полтора раза больше. */
+    @GameTest(template = "empty", timeoutTicks = 20)
+    public static void rackFansCooling(GameTestHelper h) {
+        var state = ModBlocks.PC_CASE.get().defaultBlockState();
+        PcCaseBlockEntity mod = new PcCaseBlockEntity(h.absolutePos(new BlockPos(1, 1, 1)), state, 0);
+        mod.setLevel(h.getLevel());
+        h.assertTrue(mod.fanWallW() == 260, "Встроенные вентиляторы 1U: " + mod.fanWallW());
+        ItemStack fans = new ItemStack(com.strikerr212.minepc.registry.ModItems.RACK_FANS_3.get());
+        h.assertTrue(mod.placeError(PcCaseBlockEntity.SLOT_COOLER, fans) == null, "Вентиляторы не встают в модуль");
+        h.assertTrue(mod.placeError(PcCaseBlockEntity.SLOT_RAM, fans) != null, "Вентиляторы встали не на своё место");
+        ((IItemHandlerModifiable) mod.inventory()).setStackInSlot(PcCaseBlockEntity.SLOT_COOLER, fans);
+        h.assertTrue(mod.fansTier() == 3 && mod.fanWallW() == 550, "Ур. 3 в 1U: " + mod.fanWallW());
+        mod.setTall(true);
+        h.assertTrue(mod.fanWallW() == 825, "Ур. 3 в 2U: " + mod.fanWallW());
+        PcCaseBlockEntity pc = new PcCaseBlockEntity(h.absolutePos(new BlockPos(2, 1, 1)), state);
+        h.assertTrue(pc.placeError(PcCaseBlockEntity.SLOT_COOLER, fans) != null, "Вентиляторы стойки встали в обычный корпус");
+        h.succeed();
+    }
+
     /** Дисковод меньше блока: не должен прятать грани соседей (раньше сквозь камень рядом с ним было видно насквозь). */
     @GameTest(template = "empty", timeoutTicks = 20)
     public static void diskDriveDoesNotHideNeighbours(GameTestHelper h) {

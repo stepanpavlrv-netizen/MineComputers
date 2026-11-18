@@ -52,7 +52,13 @@ return function(arg)
     local temp = hw and hw.temp or stats.cpuTemp
     local tcol = (temp or 0) >= 90 and T.err or (temp or 0) >= 80 and T.warn or T.dim
     c.text(3, 9, G.cut((temp and (math.floor(temp) .. " °C") or "—") ..
-      (hw and (" · вентиляторы " .. (hw.rpm > 0 and (hw.rpm .. " об/мин") or "стоят") .. " (" .. hw.fans .. " шт.)") or ""), half - 2), tcol, T.side)
+      (hw and (" · вентиляторы " .. ((hw.fanTier or 0) > 0 and ("ур. " .. hw.fanTier) or "встроенные") .. ", " ..
+        (hw.rpm > 0 and (hw.rpm .. " об/мин") or "стоят")) or ""), half - 2), tcol, T.side)
+    if hw and hw.cooling then
+      local hot = (hw.heat or 0) > hw.cooling
+      c.text(3, 10, G.cut("Тепло " .. (hw.heat or 0) .. " Вт · отвод до " .. hw.cooling .. " Вт" ..
+        (hot and " — мало: «Вентиляторы стойки» помощнее" or ""), half - 2), hot and T.warn or T.dim, T.side)
+    end
     -- питание, память, BMC
     local x = 3 + half
     K.card(c, x, 1, half, 10, "Питание")

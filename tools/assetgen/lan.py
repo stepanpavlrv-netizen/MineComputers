@@ -118,6 +118,36 @@ def coil_icon(color=(52, 104, 200), name="network_cable", plug=(196, 214, 222)):
     im.save(os.path.join(ASSETS, "textures/item", name + ".png"))
 
 
+def rack_fans_icon(name, rim):
+    """Вентиляторы стойки: тёмная кассета с тремя вентиляторами, окантовка — цвет уровня (серебро, золото, голубой)."""
+    im = Image.new("RGBA", (16, 16), (0, 0, 0, 0))
+    def px(x, y, c):
+        im.putpixel((x, y), tuple(c) + (255,))
+    for x in range(1, 15):                      # кассета
+        for y in range(4, 12):
+            px(x, y, (42, 43, 48) if (x * 3 + y) % 7 else (36, 37, 42))
+    for x in range(1, 15):                      # окантовка уровня сверху и снизу
+        px(x, 4, rim)
+        px(x, 11, tuple(int(c * 0.7) for c in rim))
+    FAN = (" ff ", "fbhf", "fhbf", " ff ")      # круглая рамка, лопасти, ступица цвета уровня
+    for cx in (2, 6, 10):                       # три вентилятора
+        for dy, row in enumerate(FAN):
+            for dx, ch in enumerate(row):
+                col = {"f": (104, 108, 118), "b": (22, 23, 27), "h": rim}.get(ch)
+                if col:
+                    px(cx + dx, 6 + dy, col)
+    px(14, 7, (90, 200, 120))                   # лампочка
+    src = im.copy()
+    for x in range(16):
+        for y in range(16):
+            if src.getpixel((x, y))[3] == 0 and any(0 <= x + dx < 16 and 0 <= y + dy < 16 and src.getpixel((x + dx, y + dy))[3]
+                                                    for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))):
+                im.putpixel((x, y), (16, 16, 20, 255))
+    im.save(os.path.join(ASSETS, "textures/item", name + ".png"))
+    write(os.path.join(ASSETS, "models/item", name + ".json"),
+          {"parent": "minecraft:item/generated", "textures": {"layer0": f"minepc:item/{name}"}})
+
+
 def wifi_icon(name, stripe, led):
     """USB Wi-Fi адаптер: тёмный корпус с антенной, серебряный разъём, цветная полоска поколения и лампочка."""
     im = Image.new("RGBA", (16, 16), (0, 0, 0, 0))
@@ -283,6 +313,9 @@ def main():
         "type": "minecraft:crafting_shaped", "category": "redstone", "pattern": ["I I", "III", "I I"],
         "key": {"I": {"item": "minecraft:iron_bars"}},
         "result": {"id": "minepc:radio_mast", "count": 2}})
+    rack_fans_icon("rack_fans_1", (180, 186, 194))
+    rack_fans_icon("rack_fans_2", (216, 176, 64))
+    rack_fans_icon("rack_fans_3", (72, 200, 224))
     wifi_icon("wifi_adapter_g", (120, 128, 140), (80, 255, 120))
     wifi_icon("wifi_adapter_n", (52, 120, 230), (70, 150, 255))
     wifi_icon("wifi_adapter_ac", (230, 180, 60), (255, 220, 90))

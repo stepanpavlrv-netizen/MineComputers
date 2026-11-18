@@ -65,6 +65,7 @@ LSP-плагинам нужны сами языковые серверы в PATH
 | Wired без Minecraft (окна, программы, PNG экрана) | `python tools/wiredsim/t12.py` и др. `t*.py` (`sim.py` — эмулятор с заглушками) |
 | После добавления/удаления файлов в `computer/rom` или `computer/disks` | `python tools/computer/update_rom_list.py` — иначе файлы не попадут в игру |
 | Строки перевода (ru + en сразу) | `python tools/addlang.py keys.json` (`{"ключ": ["рус", "eng"]}`) |
+| Игра под управлением по ходу (одна игра — сколько угодно проверок) | `./gradlew runClient -PliveCtl` (мир `ci` — тот, что оставил сценарий; вместе с `-PciShots` — после сценария игра не закрывается), команды — `python tools/live.py "extend x y z 0" "face x y z" "shot имя"` → ответ сразу, снимок — `run/screenshots/live_имя.png`. Список команд — `client/LiveControl.java`, выход — `quit` |
 | Модель без игры (4 ракурса → PNG) | `python tools/assetgen/view.py <модель>`, все блоки — `--sheet all`; правила стиля — навык `minepc-art` (`.claude/skills/`) |
 
 **CI** (`.github/workflows/build.yml`) на пуш в `computers`: сборка, игровые тесты, HeadlessTest, запуск сервера и

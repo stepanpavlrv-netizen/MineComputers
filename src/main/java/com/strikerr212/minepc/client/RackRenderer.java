@@ -31,6 +31,8 @@ public class RackRenderer implements BlockEntityRenderer<RackBlockEntity> {
     private static final int BODY = 0x34373E, FRONT = 0x40444C, DARK = 0x1C1D21, EAR = 0x9A9EA6, BAY = 0x2A2C32;
     private static final int PCB = 0x22603F, STEEL = 0xC4C8CE, STEEL_D = 0x8C9096, RAM = 0x18191E, GOLD = 0xC8A03C;
     private static final int NICKEL = 0xA8ACB2, SOCKET = 0x5E6268, COPPER = 0xB87A4C;
+    /** Ступицы вентиляторов модуля: встроенные и «Вентиляторы стойки» ур. 1–3 (серебро, золото, голубой). */
+    private static final int[] FAN_HUB = {0x6A6E74, 0xB4BAC2, 0xD8B040, 0x48C8E0};
     private static final int LED_G = 0x50FF78, LED_R = 0xFF4030, LED_B = 0x5AA0FF, LED_A = 0xFFAA28, OFF = 0x2A2C30;
 
     /** Плавное выдвижение: насколько выдвинут модуль сейчас (0..1) — у игрока, по каждому блоку стойки. */
@@ -140,7 +142,13 @@ public class RackRenderer implements BlockEntityRenderer<RackBlockEntity> {
         for (int i = 0; i < 6; i++) {
             float x = 2 + i * 2;
             box(vc, pose, x, b, dz + 5, x + 1.8f, b + fanH, dz + 5.8f, i % 2 == 0 ? 0x26272B : 0x3A3C42, light);
-            box(vc, pose, x + 0.6f, b + fanH / 2 - 0.3f, dz + 4.9f, x + 1.2f, b + fanH / 2 + 0.3f, dz + 5, 0x6A6E74, light);
+            box(vc, pose, x + 0.6f, b + fanH / 2 - 0.3f, dz + 4.9f, x + 1.2f, b + fanH / 2 + 0.3f, dz + 5, FAN_HUB[s.fansTier()], light);
+        }
+        // Сменные «Вентиляторы стойки»: цветная окантовка по уровню (серебро, золото, голубой)
+        if (s.fansTier() > 0) {
+            int rim = FAN_HUB[s.fansTier()];
+            box(vc, pose, 1.8f, b + fanH, dz + 4.85f, 14.2f, b + fanH + 0.35f, dz + 5.9f, rim, light);
+            box(vc, pose, 1.8f, b, dz + 4.85f, 14.2f, b + 0.2f, dz + 5.9f, rim, light);
         }
         if (board != null) {
             float t = b + 0.25f;

@@ -150,7 +150,9 @@ public final class Bmc {
     /** Обороты стены вентиляторов: растут с температурой. 0 — сервер выключен. */
     private int fanRpm() {
         if (be.computerState() != 1) return 0;
-        return (int) Math.min(12000, 3200 + Math.max(0, cpuTemp() - 30) * 140);
+        // сменные вентиляторы стойки крутятся быстрее (и гудят громче)
+        float k = com.strikerr212.minepc.item.RackFansItem.SPEED[be.fansTier()];
+        return (int) Math.min(16000, (3200 + Math.max(0, cpuTemp() - 30) * 140) * k);
     }
 
     private Object[] status() {
@@ -253,6 +255,14 @@ public final class Bmc {
         d.put("temp", Math.round(cpuTemp()));
         d.put("fans", FANS);
         d.put("rpm", fanRpm());
+        d.put("fanTier", be.fansTier());
+        d.put("cooling", be.fanWallW());
+        int heat = 0;
+        for (int slot : new int[]{PcCaseBlockEntity.SLOT_CPU, PcCaseBlockEntity.SLOT_CPU2}) {
+            var cpu = be.getStack(slot);
+            if (cpu.getItem() instanceof com.strikerr212.minepc.item.HardwareItem h) heat += h.getHeat(cpu);
+        }
+        d.put("heat", heat);
         int watts = state == 1 ? in.powerDraw() : 8;
         d.put("watts", watts);
         Map<Object, Object> psu = new LinkedHashMap<>();

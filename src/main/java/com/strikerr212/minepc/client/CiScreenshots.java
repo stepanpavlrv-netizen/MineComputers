@@ -380,7 +380,20 @@ public class CiScreenshots {
             case 2554 -> typeHost(new com.strikerr212.minepc.block.HostRef(rackPos, 1), "ls /");
             case 2560 -> server.execute(() -> hotSwapTest(server.overworld(), true));
             case 2564 -> typeHost(new com.strikerr212.minepc.block.HostRef(rackPos, 1), "ls /");
-            case 2575 -> shot(mc, "world_server_rack");
+            case 2575 -> {
+                shot(mc, "world_server_rack");
+                for (BlockPos q : new BlockPos[]{rackPos, rackPos.above()}) {
+                    if (mc.level.getBlockEntity(q) instanceof com.strikerr212.minepc.block.RackBlockEntity cr) {
+                        StringBuilder sb = new StringBuilder("[CI-FANS] клиент, стойка " + q.toShortString() + ": выдвинут " + cr.extended());
+                        for (int k = 0; k < com.strikerr212.minepc.block.RackBlockEntity.SLOTS; k++) {
+                            var sv = cr.server(k);
+                            if (sv != null) sb.append(" | место ").append(k).append(": вентиляторы ур. ").append(sv.fansTier())
+                                    .append(", в месте кулера ").append(sv.getStack(PcCaseBlockEntity.SLOT_COOLER).getHoverName().getString());
+                        }
+                        com.mojang.logging.LogUtils.getLogger().info(sb.toString());
+                    }
+                }
+            }
             case 2578 -> server.execute(() -> {
                 ServerPlayer p = server.getPlayerList().getPlayers().get(0);
                 if (p.serverLevel().getBlockEntity(rackPos) instanceof com.strikerr212.minepc.block.RackBlockEntity r && r.server(1) != null) {
@@ -919,7 +932,8 @@ public class CiScreenshots {
             });
             case 6810 -> {
                 mc.options.pauseOnLostFocus = pauseWas;
-                mc.stop();
+                // вместе с управлением по ходу (-PliveCtl) игра после сценария остаётся открытой
+                if (!LiveControl.ENABLED) mc.stop();
             }
             default -> {
             }
@@ -1448,6 +1462,17 @@ public class CiScreenshots {
             inv.setStackInSlot(PcCaseBlockEntity.baySlot(2), HardwarePresets.server(com.strikerr212.minepc.hardware.HardwareType.HDD));
             inv.setStackInSlot(PcCaseBlockEntity.baySlot(3), HardwarePresets.server(com.strikerr212.minepc.hardware.HardwareType.HDD));
             fillServer(r.server(0), 8, 1);
+            // «Вентиляторы стойки» ур. 3 в сервере 2U: отвод тепла и цветная окантовка в модуле
+            inv.setStackInSlot(PcCaseBlockEntity.SLOT_COOLER, new ItemStack(com.strikerr212.minepc.registry.ModItems.RACK_FANS_3.get()));
+            // и в остальные серверы стойки — ур. 2 (виден в выдвинутом модуле)
+            for (int k = 1; k < com.strikerr212.minepc.block.RackBlockEntity.SLOTS; k++) {
+                if (r.server(k) != null && r.server(k).getStack(PcCaseBlockEntity.SLOT_COOLER).isEmpty()) {
+                    ((IItemHandlerModifiable) r.server(k).inventory()).setStackInSlot(PcCaseBlockEntity.SLOT_COOLER,
+                            new ItemStack(com.strikerr212.minepc.registry.ModItems.RACK_FANS_2.get()));
+                }
+            }
+            com.mojang.logging.LogUtils.getLogger().info("[CI-FANS] 2U: ур. {}, отвод {} Вт · {}", r.server(0).fansTier(),
+                    r.server(0).fanWallW(), r.server(0).statusLines(false).stream().map(net.minecraft.network.chat.Component::getString).toList());
         }
         // Сзади: два провода из гнёзд модулей 1 и 2 в коммутатор
         BlockPos sw = rk.south(3);

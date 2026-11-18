@@ -418,7 +418,10 @@ function S.status()
     if n == 0 then add("err", "нет блока питания")
     elseif n == 1 then add("warn", "один блок питания: если откажет — сервер выключится")
     elseif not hw2.reserve then add("warn", "нет резерва питания: один блок не тянет весь сервер") end
-    if (hw2.temp or 0) >= 90 then add("err", "перегрев процессоров: " .. hw2.temp .. " °C")
+    if (hw2.heat or 0) > (hw2.cooling or math.huge) then
+      add((hw2.temp or 0) >= 90 and "err" or "warn", "процессоры греются на " .. hw2.heat .. " Вт, а вентиляторы модуля отводят " ..
+        hw2.cooling .. " Вт — поставьте «Вентиляторы стойки» помощнее" .. ((hw2.fanTier or 0) >= 3 and " (уже ур. 3: модуль 2U или процессоры слабее)" or ""))
+    elseif (hw2.temp or 0) >= 90 then add("err", "перегрев процессоров: " .. hw2.temp .. " °C")
     elseif (hw2.temp or 0) >= 80 then add("warn", "процессоры горячие: " .. hw2.temp .. " °C") end
     if hw2.bmc and hw2.bmc.present and hw2.bmc.defaultPassword then add("warn", "у BMC пароль по умолчанию — смените") end
     local r = hw2.raid

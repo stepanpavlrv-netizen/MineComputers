@@ -714,7 +714,7 @@
   "message.minepc.one_socket": "This board has a single socket",
   "message.minepc.need_cpu1": "Install the first CPU first",
   "message.minepc.cpu_mismatch": "The second CPU must be identical to the first",
-  "message.minepc.no_cooler_1u": "A cooler doesn't fit a 1U module: the fan wall cools the CPUs",
+  "message.minepc.no_cooler_1u": "A cooler won't fit a server module — its fans cool the CPUs. For more cooling, use Rack Fans",
   "message.minepc.need_ecc": "A server board needs ECC memory",
   "message.minepc.ecc_server_only": "ECC memory fits only a server board",
   "message.minepc.no_sata_short": "No free SATA ports",
@@ -914,5 +914,16 @@
   "message.minepc.wire.labeled": "Wire labeled: %s",
   "message.minepc.wire.unlabeled": "Wire label removed",
   "gui.minepc.switch.free_end": "wire with a free end",
-  "gui.minepc.switch.len": " · %s m"
+  "gui.minepc.switch.len": " · %s m",
+  "item.minepc.rack_fans_1": "Rack Fans (Tier 1)",
+  "item.minepc.rack_fans_2": "Rack Fans (Tier 2)",
+  "item.minepc.rack_fans_3": "Rack Fans (Tier 3)",
+  "tooltip.minepc.rack_fans.spec": "Cooling: %s per CPU (%s in a 2U module). Built-in module fans: %s",
+  "tooltip.minepc.rack_fans.hint": "Right-click a pulled-out, powered-off server module to replace the built-in fans. Stronger is louder",
+  "message.minepc.rack_fans_module_only": "Rack fans only fit a server module",
+  "message.minepc.rack_fans_occupied": "The module already has fans — take them out first",
+  "message.minepc.fans.builtin": "built-in",
+  "message.minepc.fans.tier": "tier %s",
+  "message.minepc.cooling.server_ok": "Cooling OK: CPUs produce %s, module fans (%s) remove up to %s",
+  "message.minepc.cooling.server_hot": "Overheating: CPUs produce %s but module fans (%s) remove only %s — %s%% clock under load. Use stronger Rack Fans, a 2U module or weaker CPUs"
 }

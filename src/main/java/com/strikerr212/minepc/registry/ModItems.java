@@ -111,6 +111,10 @@ public class ModItems {
     public static final DeferredItem<BlockItem> MAST = ITEMS.registerSimpleBlockItem("radio_mast", ModBlocks.MAST);
     public static final DeferredItem<com.strikerr212.minepc.lan.PatchCordItem> PATCH_CORD = ITEMS.register("patch_cord",
             () -> new com.strikerr212.minepc.lan.PatchCordItem(new Item.Properties()));
+    // Вентиляторы стойки: сменная стена вентиляторов модуля сервера, три уровня
+    public static final DeferredItem<com.strikerr212.minepc.item.RackFansItem> RACK_FANS_1 = ITEMS.register("rack_fans_1", () -> new com.strikerr212.minepc.item.RackFansItem(1, new Item.Properties()));
+    public static final DeferredItem<com.strikerr212.minepc.item.RackFansItem> RACK_FANS_2 = ITEMS.register("rack_fans_2", () -> new com.strikerr212.minepc.item.RackFansItem(2, new Item.Properties()));
+    public static final DeferredItem<com.strikerr212.minepc.item.RackFansItem> RACK_FANS_3 = ITEMS.register("rack_fans_3", () -> new com.strikerr212.minepc.item.RackFansItem(3, new Item.Properties()));
     public static final DeferredItem<com.strikerr212.minepc.lan.WifiAdapterItem> WIFI_G = ITEMS.register("wifi_adapter_g",
             () -> new com.strikerr212.minepc.lan.WifiAdapterItem("802.11g", 16, 54, new Item.Properties()));
     public static final DeferredItem<com.strikerr212.minepc.lan.WifiAdapterItem> WIFI_N = ITEMS.register("wifi_adapter_n",

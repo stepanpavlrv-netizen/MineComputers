@@ -46,6 +46,9 @@ public class ModCreativeTabs {
                         output.accept(ModItems.SERVER_RACK.get());
                         output.accept(ModItems.SERVER_MODULE.get());
                         output.accept(ModItems.SERVER_MODULE_2U.get());
+                        output.accept(ModItems.RACK_FANS_1.get());
+                        output.accept(ModItems.RACK_FANS_2.get());
+                        output.accept(ModItems.RACK_FANS_3.get());
                         output.accept(ModItems.CONSOLE_MODULE.get());
                         output.accept(ModItems.SWITCH_MODULE.get());
                         output.accept(ModItems.PATCH_MODULE.get());

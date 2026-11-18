@@ -63,6 +63,12 @@ neoForge {
             // Только для проверки на GitHub: ./gradlew runClient -PciShots — игра сама делает скриншоты
             if (project.hasProperty('ciShots')) {
                 systemProperty 'minepc.ciShots', 'true'
+            }
+            // Управление игрой по ходу (для проверки модов): -PliveCtl, команды — в run/live/cmd.txt (см. client/LiveControl)
+            if (project.hasProperty('liveCtl')) {
+                systemProperty 'minepc.live', 'true'
+            }
+            if (project.hasProperty('ciShots') || project.hasProperty('liveCtl')) {
                 programArguments.addAll '--quickPlaySingleplayer', 'ci'
             }
         }

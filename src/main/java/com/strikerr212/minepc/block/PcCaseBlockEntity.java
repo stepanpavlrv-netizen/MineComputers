@@ -86,8 +86,8 @@ public class PcCaseBlockEntity extends BlockEntity implements MenuProvider,
     /** Отсеков дисков у самого большого шасси. */
     public static final int MAX_BAYS = HDD_SLOTS + SATA_SSD_SLOTS + BAY_EXTRA_SLOTS;
     public static final int SLOT_COUNT = 35;
-    /** Охлаждение серверного шасси без кулера: стена вентиляторов поперёк корпуса, Вт отвода на процессор. */
-    public static final int FAN_WALL_W = 260;
+    /** Охлаждение серверного шасси без кулера: встроенные вентиляторы поперёк корпуса, Вт отвода на процессор. */
+    public static final int FAN_WALL_W = com.strikerr212.minepc.item.RackFansItem.PER_CPU_1U[0];
 
     /** Номер слота i-й планки памяти (0..15). */
     public static int ramSlot(int i) {
@@ -293,6 +293,17 @@ public class PcCaseBlockEntity extends BlockEntity implements MenuProvider,
         return true;
     }
 
+    /** Уровень вентиляторов стойки в модуле: 0 — встроенные, 1–3 — сменные (лежат на месте кулера). */
+    public int fansTier() {
+        return module && getStack(SLOT_COOLER).getItem() instanceof com.strikerr212.minepc.item.RackFansItem f ? f.tier() : 0;
+    }
+
+    /** Сколько тепла отводят вентиляторы серверного шасси со всех процессоров, Вт. */
+    public int fanWallW() {
+        int sockets = getStack(SLOT_CPU2).getItem() instanceof CpuItem ? 2 : 1;
+        return com.strikerr212.minepc.item.RackFansItem.perCpu(fansTier(), tall) * sockets;
+    }
+
     /** Можно ли положить предмет в этот слот: подходит ли вид детали и совместимость. */
     public boolean canPlace(int slot, ItemStack stack) {
         return placeError(slot, stack) == null;
@@ -306,6 +317,10 @@ public class PcCaseBlockEntity extends BlockEntity implements MenuProvider,
             // В сервере в стойке Wi-Fi не нужен (и не поймает сквозь железо) — только флешки
             return stack.getItem() instanceof DriveItem d && d.kind() == DriveItem.Kind.FLASH
                     || !module && stack.getItem() instanceof com.strikerr212.minepc.lan.WifiAdapterItem ? null : "message.minepc.no_slot";
+        }
+        if (stack.getItem() instanceof com.strikerr212.minepc.item.RackFansItem) {
+            if (slot != SLOT_COOLER) return "message.minepc.no_slot";
+            return module ? null : "message.minepc.rack_fans_module_only";
         }
         if (!(stack.getItem() instanceof HardwareItem hw)) return "message.minepc.not_hardware";
         HardwareType type = hw.getHardwareType();
@@ -335,7 +350,7 @@ public class PcCaseBlockEntity extends BlockEntity implements MenuProvider,
         }
         if (slot == SLOT_COOLER) {
             if (type != HardwareType.COOLER) return "message.minepc.no_slot";
-            if (module) return "message.minepc.no_cooler_1u";   // в 1U башня не влезет — там стена вентиляторов
+            if (module) return "message.minepc.no_cooler_1u";   // в модуль кулер не влезет — там вентиляторы модуля
             return getStack(SLOT_CPU).isEmpty() ? "message.minepc.need_cpu" : null;
         }
         int ram = ramIndex(slot);
@@ -659,6 +674,14 @@ public class PcCaseBlockEntity extends BlockEntity implements MenuProvider,
     // ======================= Установка и снятие =======================
 
     public Component tryInstall(ItemStack held, Player player) {
+        if (held.getItem() instanceof com.strikerr212.minepc.item.RackFansItem) {
+            String err = placeError(SLOT_COOLER, held);
+            if (err != null) return error(err);
+            if (!getStack(SLOT_COOLER).isEmpty()) return error("message.minepc.rack_fans_occupied");
+            inventory.setStackInSlot(SLOT_COOLER, held.copyWithCount(1));
+            if (!player.getAbilities().instabuild) held.shrink(1);
+            return Component.translatable("message.minepc.installed", getStack(SLOT_COOLER).getHoverName()).withStyle(ChatFormatting.GREEN);
+        }
         if (held.getItem() instanceof DriveItem drive && drive.kind() == DriveItem.Kind.FLASH) {
             int usb = freeSlot(SLOT_USB, USB_SLOTS);
             if (usb < 0) return error("message.minepc.no_slot");
@@ -812,10 +835,12 @@ public class PcCaseBlockEntity extends BlockEntity implements MenuProvider,
         }
         CoolerData coolerData = cooler.getItem() instanceof CoolerItem ? CoolerItem.data(cooler) : null;
         if (serverChassis()) {
-            // Стена вентиляторов гонит воздух через радиаторы всех процессоров; кулер (в напольном корпусе) — в помощь
-            int wall = FAN_WALL_W * sockets * (tall ? 3 : 2) / 2;   // в 2U вентиляторы крупнее
+            // Вентиляторы модуля гонят воздух через радиаторы всех процессоров (сменные «Вентиляторы стойки» — сильнее);
+            // кулер (в напольном серверном корпусе) — в помощь
+            int wall = fanWallW();
             if (coolerData == null || coolerData.coolingW() < wall) {
-                coolerData = new CoolerData(coolerData == null ? 3 : coolerData.tier(), CoolerData.FAN_WALL, wall, 6 * sockets);
+                coolerData = new CoolerData(coolerData == null ? 3 : coolerData.tier(), CoolerData.FAN_WALL, wall,
+                        com.strikerr212.minepc.item.RackFansItem.DRAW[fansTier()] * sockets);
             }
         } else if (coolerData != null && sockets == 2) {
             coolerData = new CoolerData(coolerData.tier(), coolerData.kind(), coolerData.coolingW() * 2, coolerData.powerDraw());
@@ -1003,6 +1028,21 @@ public class PcCaseBlockEntity extends BlockEntity implements MenuProvider,
             return Component.translatable("message.minepc.cooling.no_cpu").withStyle(ChatFormatting.GRAY);
         }
         int heat = cpuItem.getHeat(cpu);
+        if (serverChassis() && !(cooler.getItem() instanceof CoolerItem)) {
+            // у сервера: оба процессора и вентиляторы модуля
+            ItemStack cpu2 = getStack(SLOT_CPU2);
+            if (cpu2.getItem() instanceof HardwareItem c2) heat += c2.getHeat(cpu2);
+            int tier = fansTier();
+            Component fans = tier == 0 ? Component.translatable("message.minepc.fans.builtin")
+                    : Component.translatable("message.minepc.fans.tier", tier);
+            int capacity = fanWallW();
+            if (heat > capacity) {
+                return Component.translatable("message.minepc.cooling.server_hot", Units.watts(heat), fans, Units.watts(capacity),
+                        pct(r.cpuThrottle())).withStyle(ChatFormatting.GOLD);
+            }
+            return Component.translatable("message.minepc.cooling.server_ok", Units.watts(heat), fans, Units.watts(capacity))
+                    .withStyle(ChatFormatting.GREEN);
+        }
         if (!(cooler.getItem() instanceof CoolerItem)) {
             if (r.cpuThrottle() >= 1) {
                 return Component.translatable("message.minepc.cooling.passive", Units.watts(heat)).withStyle(ChatFormatting.GREEN);
