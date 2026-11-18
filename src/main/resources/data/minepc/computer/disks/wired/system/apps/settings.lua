@@ -52,8 +52,9 @@ return function(arg)
       if col == T.accent then c.text(x + (i - 1) * 4, 8, "▔▔", T.fg) end
     end
     c.text(x, 11, "Обои", T.fg)
-    c.radio(x, 12, "Провода на закате", s.wallpaper ~= "plain", "wall_wires")
-    c.radio(x + 22, 12, "Однотонные", s.wallpaper == "plain", "wall_plain")
+    c.radio(x, 12, "Провода на закате", s.wallpaper == "wires" or s.wallpaper == nil, "wall_wires")
+    c.radio(x + 22, 12, "Серверная", s.wallpaper == "rack", "wall_rack")
+    c.radio(x + 36, 12, "Однотонные", s.wallpaper == "plain", "wall_plain")
   end
 
   local function drawUsers(c, x)
@@ -123,8 +124,8 @@ return function(arg)
 
   local function drawAbout(c, x)
     local info = computer.info and computer.info() or {}
-    c.text(x, 2, "◆ WIRED " .. wired.VERSION, T.accent)
-    c.text(x, 3, "Графическая система MineComputers", T.dim)
+    c.text(x, 2, wired.server and ("◆ SWIRED " .. wired.SVERSION .. " · на основе Wired " .. wired.VERSION) or ("◆ WIRED " .. wired.VERSION), T.accent)
+    c.text(x, 3, wired.server and "Система для серверов MineComputers" or "Графическая система MineComputers", T.dim)
     local rows = {
       { "Компьютер", os.getComputerLabel and os.getComputerLabel() or "—" },
       { "Процессор", tostring(info.cpu or "—") },
@@ -136,6 +137,15 @@ return function(arg)
       c.text(x, 4 + i * 2, r[1], T.dim)
       c.text(x + 14, 4 + i * 2, G.cut(r[2], c.w - x - 15), T.fg)
     end
+    -- установочный диск: Wired — для компьютеров, SWired — для серверов в стойке
+    local drive = fs.isDir("/usb") and "/usb" or (fs.isDir("/disk") and "/disk")
+    local y = 4 + #rows * 2 + 2
+    c.text(x, y, "Установочный диск", T.fg)
+    c.text(x, y + 1, G.cut(drive and ("Запишется на " .. (drive == "/usb" and "флешку" or "дискету") .. " " .. drive .. " — всё на ней сотрётся.")
+      or "Вставьте флешку (или дискету) — на неё запишется установка системы.", c.w - x), T.dim)
+    local bx2 = c.button(x, y + 3, "Создать флешку SWired (для сервера)", "mkinst", drive and "primary" or "off", true) + 1
+    c.button(bx2, y + 3, "Создать диск Wired", "mkinst", drive and "normal" or "off", false)
+    if st.busy then c.text(x, y + 5, G.pad(st.busy, c.w - x), T.warn) end
     c.text(x, c.h - 1, "present day · present time", T.faint)
   end
 
@@ -178,8 +188,8 @@ return function(arg)
       s.accent = b
       wired.saveSettings()
       wired.applyTheme()
-    elseif a == "wall_wires" or a == "wall_plain" then
-      s.wallpaper = a == "wall_plain" and "plain" or "wires"
+    elseif a == "wall_wires" or a == "wall_plain" or a == "wall_rack" then
+      s.wallpaper = a == "wall_plain" and "plain" or a == "wall_rack" and "rack" or "wires"
       wired.saveSettings()
       wired.applyTheme()
     elseif a == "useradd" then terminal("users add", "Новый пользователь")
@@ -191,6 +201,20 @@ return function(arg)
       wm.confirm("Удалить программу", "Удалить «" .. b .. "» с компьютера?", function(ok)
         if ok then A.uninstall(b) wm.redraw(w) end
       end, "Удалить")
+    elseif a == "mkinst" then
+      local drive = fs.isDir("/usb") and "/usb" or (fs.isDir("/disk") and "/disk")
+      if not drive then return end
+      local what = b and "SWired" or "Wired"
+      wm.confirm("Установочный диск " .. what, "Записать установку " .. what .. " на " .. drive .. "? Всё, что на нём есть, сотрётся.", function(ok)
+        if not ok then return end
+        st.busy = "Записываю…"
+        A.makeInstaller(drive, b, function(i, n) st.busy = "Записываю… " .. math.floor(100 * i / n) .. " %" wm.redraw(w) end, function(okW, err)
+          st.busy = nil
+          wm.notify({ title = okW and ("Готово: диск " .. what) or "Не записалось",
+            text = okW and (b and "Вставьте флешку в сервер стойки и включите его — установка начнётся сама" or "Вставьте диск в компьютер и включите его") or tostring(err) })
+          wm.redraw(w)
+        end)
+      end, "Записать")
     elseif a == "write" then
       local drive = fs.isDir("/disk") and "/disk" or "/usb"
       st.busy = "Записываю…"

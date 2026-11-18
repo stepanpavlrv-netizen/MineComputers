@@ -1,17 +1,26 @@
--- Wired 1.3 — графическая система MineComputers.
+-- Wired 1.4 — графическая система MineComputers (и SWired — она же для серверов в стойке).
 -- Запускается из /startup.lua. Удалить /startup.lua — компьютер снова загрузится в командную строку.
 local ROOT = "/wired"
 local CFG = ROOT .. "/settings.cfg"
+-- SWired: файл /wired/edition со словом server — свой набор программ, свой вид, надзиратель служб
+local server = false
+if fs.exists(ROOT .. "/edition") then
+  local f = fs.open(ROOT .. "/edition", "r")
+  server = f and (f.readAll() or ""):find("server") ~= nil
+  if f then f.close() end
+end
 
 if not term.isColor() then
   print("Wired нужна цветная видеокарта.")
   return
 end
 
-_G.wired = { VERSION = "1.3", root = ROOT }
+_G.wired = { VERSION = "1.4", root = ROOT, server = server, NAME = server and "SWired" or "Wired" }
+wired.SVERSION = "1.0"
+wired.TITLE = server and ("SWired " .. wired.SVERSION) or ("Wired " .. wired.VERSION)
 
 local function loadSettings()
-  local s = { scale = "auto", theme = "dark", accent = 0xff4f5e, wallpaper = "wires" }
+  local s = { scale = "auto", theme = "dark", accent = server and 0x4fd1e8 or 0xff4f5e, wallpaper = server and "rack" or "wires" }
   if fs.exists(CFG) then
     local f = fs.open(CFG, "r")
     local text = f and f.readAll() or ""
@@ -54,6 +63,7 @@ lib("wm")
 lib("vterm")
 lib("apps")
 lib("page")
+lib("srvkit")
 
 local gpu = wired.gfx.gpu
 local maxW, maxH = gpu.maxResolution()
@@ -133,6 +143,14 @@ end
 
 function wired.onLogin()
   pcall(wired.apps.startServices)
+  -- SWired: надзиратель служб должен работать всегда (он же отвечает «Серверам» по сети)
+  if server and fs.exists("/rom/programs/swiredd.lua") then
+    local okS, S = pcall(require, "swired")
+    if okS and not S.pidOf(S.SWIREDD) then
+      S.autostartLine(S.SWIREDD .. " serve", true)
+      pcall(computer.spawn, S.SWIREDD, "serve")
+    end
+  end
 end
 
 wired.applyScale()

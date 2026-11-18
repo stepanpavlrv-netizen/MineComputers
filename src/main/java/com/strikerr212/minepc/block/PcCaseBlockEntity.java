@@ -836,7 +836,7 @@ public class PcCaseBlockEntity extends BlockEntity implements MenuProvider,
         return new PsuData(Math.max(pa.tier(), pb.tier()), pa.wattage() + pb.wattage(), Math.min(pa.efficiency(), pb.efficiency()));
     }
 
-    private PsuData psu(int slot) {
+    public PsuData psu(int slot) {
         ItemStack s = getStack(slot);
         return s.getItem() instanceof PsuItem ? PsuItem.data(s) : null;
     }

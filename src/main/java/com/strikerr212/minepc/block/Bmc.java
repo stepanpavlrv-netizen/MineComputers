@@ -235,6 +235,67 @@ public final class Bmc {
         return reply(true, sb.toString(), d);
     }
 
+    /**
+     * Всё о железе сервера для программ на нём самом (SWired): питание, процессоры, вентиляторы, блоки питания,
+     * отсеки дисков с износом, RAID, адрес и пароль BMC, журнал. Для обычного корпуса — null.
+     */
+    public Map<String, Object> info() {
+        if (!be.serverChassis()) return null;
+        int state = be.computerState();
+        SystemModel.Input in = be.collectInput();
+        var c = be.caseComputer().computer();
+        Map<String, Object> d = new LinkedHashMap<>();
+        d.put("power", state == 1 ? "on" : state == 2 ? "crashed" : "off");
+        if (state == 1 && c != null) d.put("uptime", c.uptimeSeconds());
+        d.put("slot", be.moduleSlot() + 1);
+        d.put("cpus", (be.getStack(PcCaseBlockEntity.SLOT_CPU).isEmpty() ? 0 : 1) + (be.getStack(PcCaseBlockEntity.SLOT_CPU2).isEmpty() ? 0 : 1));
+        if (in.cpu() != null) d.put("cores", in.cpu().cores());
+        d.put("temp", Math.round(cpuTemp()));
+        d.put("fans", FANS);
+        d.put("rpm", fanRpm());
+        int watts = state == 1 ? in.powerDraw() : 8;
+        d.put("watts", watts);
+        Map<Object, Object> psu = new LinkedHashMap<>();
+        int[] psuSlots = {PcCaseBlockEntity.SLOT_PSU, PcCaseBlockEntity.SLOT_PSU2};
+        for (int k = 0; k < 2; k++) {
+            Map<String, Object> p = new LinkedHashMap<>();
+            var data = be.psu(psuSlots[k]);
+            p.put("present", data != null);
+            if (data != null) p.put("wattage", data.wattage());
+            psu.put(k + 1, p);
+        }
+        d.put("psu", psu);
+        d.put("reserve", be.reserve(watts) == 1);
+        Map<Object, Object> disks = new LinkedHashMap<>();
+        int rebuild = be.rebuildingBay();
+        for (int i = 0; i < be.bayCount(); i++) {
+            var disk = be.getStack(PcCaseBlockEntity.baySlot(i));
+            DiskHealth h = DiskHealth.of(disk);
+            Map<String, Object> b = new LinkedHashMap<>();
+            String st = disk.isEmpty() ? "empty" : h.failed() ? "failed" : i == rebuild ? "rebuilding" : h.warning() ? "warning" : "ok";
+            b.put("state", st);
+            if (!disk.isEmpty()) {
+                b.put("name", disk.getHoverName().getString());
+                b.put("wear", h.percent());
+                if (!h.raid().isEmpty()) b.put("raid", true);
+            }
+            disks.put(i + 1, b);
+        }
+        d.put("bays", disks);
+        Map<String, Object> raid = be.caseComputer().raidStatus();
+        if (raid != null) d.put("raid", raid);
+        Map<String, Object> bmc = new LinkedHashMap<>();
+        bmc.put("present", present());
+        bmc.put("address", address());
+        bmc.put("defaultPassword", defaultPassword());
+        d.put("bmc", bmc);
+        Map<Object, Object> logs = new LinkedHashMap<>();
+        int n = 1;
+        for (String s : log) logs.put(n++, s);
+        d.put("log", logs);
+        return d;
+    }
+
     private Object[] sensors() {
         int state = be.computerState();
         SystemModel.Input in = be.collectInput();

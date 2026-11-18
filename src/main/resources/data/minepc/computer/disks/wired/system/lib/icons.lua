@@ -53,6 +53,20 @@ I.ART = {
             ".wwwwwww.", ".wwwwwww.", "...www...", "........." },
   host = { ".ddddddd.", ".dkkkkkd.", ".dknkkgd.", ".dkkkkkd.", ".ddddddd.", ".dkkkkkd.", ".dknkkgd.", ".dkkkkkd.",
            ".ddddddd.", ".dkckkgd.", ".ddddddd.", "..d...d.." },
+  srv = { ".ddddddd.", ".dkkkkkd.", ".dkcckkd.", ".dkkkkkd.", ".ddddddd.", ".dkkkkkd.", ".dkcknkd.", ".dkkkkkd.",
+          ".ddddddd.", ".dkcckkd.", ".ddddddd.", "..d...d.." },
+  svc = { ".........", ".nnn.....", "nNNNn.ggg", "nNkNn.ggg", "nNNNn....", ".nnn.....", ".........", ".rrr.....",
+          "rRRRr.ggg", "rRkRr.ggg", "rRRRr....", ".rrr....." },
+  health = { ".........", "...bb....", "..bbbb...", ".bbBBbb..", ".bbBBbb..", "bbbbbbbbb", "bbbwbwbbb", "bbwbwbwbb",
+             ".bbbbbb..", "..bbbb...", "...bb....", "........." },
+  journal = { ".yyyyyyy.", ".yAAAAAy.", ".yAgggAy.", ".yAAAAAy.", ".yAgggAy.", ".yAAAAAy.", ".yArrrAy.", ".yAAAAAy.",
+              ".yAgggAy.", ".yAAAAAy.", ".yyyyyyy.", "........." },
+  users = { ".........", "..ppp....", ".ppppp...", ".ppppp.cc", "..ppp.ccc", "......ccc", ".ppppp.cc", "ppppppp..",
+            "ppppppp..", "ppppppp..", ".........", "........." },
+  backup = { ".........", "..oooo...", ".o....o..", "o......o.", "o..o...o.", "o.ooo..o.", "...o.....", "...o..ooo",
+             "ddddd.o.o", "dkkkd.ooo", "ddddd....", "........." },
+  servers = { ".ddddddd.", ".dkcknkd.", ".ddddddd.", ".dkcknkd.", ".ddddddd.", ".dkcknkd.", ".ddddddd.", "....c....",
+              "...ccc...", "..c.c.c..", ".c..c..c.", "........." },
   app = { ".........", "ddddddddd", "dpppppppd", "dwwwwwwwd", "dwppwppwd", "dwppwppwd", "dwwwwwwwd", "dwppwppwd",
           "dwppwppwd", "dwwwwwwwd", "ddddddddd", "........." },
 }
@@ -65,6 +79,8 @@ I.MINI = {
   app = { "◆", 0xc77dff }, chat = { "◌", 0x4fd1e8 }, net = { "⇄", 0x5fd38a }, pult = { "⚡", 0xffc857 },
   paint = { "✎", 0xffc857 }, music = { "♪", 0xc77dff }, games = { "♠", 0xff4f5e }, archive = { "▤", 0xffc857 },
   calc = { "±", 0x5fd38a }, clock = { "◷", 0xece8f4 }, host = { "☁", 0x4fd1e8 },
+  srv = { "▤", 0x4fd1e8 }, svc = { "●", 0x5fd38a }, health = { "♥", 0x6b95ff }, journal = { "≡", 0xffc857 },
+  users = { "☺", 0xc77dff }, backup = { "↺", 0xff8a3d }, servers = { "▤", 0x4fd1e8 },
 }
 
 --- Значок программы из файла icon.pix (или nil).

@@ -20,9 +20,21 @@ local SYSTEM = {
   calc = { id = "calc", name = "Калькулятор", icon = "calc", file = "calc" },
   clock = { id = "clock", name = "Часы", icon = "clock", file = "clock" },
   hosting = { id = "hosting", name = "Хостинг", icon = "host", file = "hosting" },
+  servers = { id = "servers", name = "Серверы", icon = "servers", file = "servers" },
+  -- SWired: программы сервера
+  srv_server = { id = "srv_server", name = "Сервер", icon = "srv", file = "srv_server" },
+  srv_services = { id = "srv_services", name = "Службы", icon = "svc", file = "srv_services" },
+  srv_health = { id = "srv_health", name = "Состояние", icon = "health", file = "srv_health" },
+  srv_journal = { id = "srv_journal", name = "Журнал", icon = "journal", file = "srv_journal" },
+  srv_users = { id = "srv_users", name = "Пользователи", icon = "users", file = "srv_users" },
+  srv_backup = { id = "srv_backup", name = "Копии", icon = "backup", file = "srv_backup" },
 }
 -- Встроенные программы в «Пуске» (по порядку)
-local BUILTIN = { "chat", "network", "pult", "paint", "music", "games", "archive", "calc", "clock", "hosting" }
+local BUILTIN = { "chat", "network", "pult", "paint", "music", "games", "archive", "calc", "clock", "hosting", "servers" }
+-- SWired: свой набор — для сервера (без игр, музыки и рисовалки)
+local SERVER = { "srv_server", "srv_services", "srv_health", "srv_journal", "srv_users", "srv_backup" }
+local SERVER_MORE = { "hosting", "network", "servers", "archive", "chat", "calc", "clock" }
+if wired.server then BUILTIN = SERVER_MORE end
 
 --- Описание программы из папки dir (там app.lua: return { name = ..., main = ..., ... }).
 function A.manifest(dir)
@@ -75,6 +87,17 @@ end
 
 --- Для «Пуска»: всё по порядку.
 function A.list()
+  if wired.server then
+    local out = {}
+    for _, id in ipairs(SERVER) do out[#out + 1] = SYSTEM[id] end
+    out[#out + 1] = SYSTEM.files
+    out[#out + 1] = SYSTEM.terminal
+    for _, e in ipairs(A.installed()) do out[#out + 1] = e end
+    for _, id in ipairs(BUILTIN) do out[#out + 1] = SYSTEM[id] end
+    out[#out + 1] = SYSTEM.taskmgr
+    out[#out + 1] = SYSTEM.settings
+    return out
+  end
   local out = { SYSTEM.files, SYSTEM.terminal }
   for _, e in ipairs(A.installed()) do out[#out + 1] = e end
   for _, id in ipairs(BUILTIN) do out[#out + 1] = SYSTEM[id] end
@@ -85,6 +108,16 @@ end
 
 --- Значки рабочего стола.
 function A.desktop()
+  if wired.server then
+    local out = {}
+    for _, id in ipairs(SERVER) do out[#out + 1] = SYSTEM[id] end
+    out[#out + 1] = SYSTEM.hosting
+    out[#out + 1] = SYSTEM.terminal
+    out[#out + 1] = SYSTEM.files
+    for _, e in ipairs(A.installed()) do out[#out + 1] = e end
+    out[#out + 1] = SYSTEM.settings
+    return out
+  end
   local out = { SYSTEM.files, SYSTEM.terminal }
   for _, e in ipairs(A.installed()) do out[#out + 1] = e end
   out[#out + 1] = SYSTEM.settings
@@ -262,6 +295,72 @@ function A.writeTo(id, drive, step, done)
   local dst = fs.combine(drive, "app")
   if fs.exists(dst) then fs.delete(dst) end
   A.copyTree("/apps/" .. id, dst, step, done)
+end
+
+local WRAPPER = [[
+-- Установка Wired / SWired: сам установщик — system/install.lua.
+local src = ...
+if not src then
+  for _, d in ipairs({ "/disk", "/disk2", "/disk3", "/usb", "/usb2" }) do
+    if fs.exists(d .. "/system/boot.lua") then src = d break end
+  end
+end
+if not src then printError("Не нашёл файлы Wired на дисках") return end
+os.run({}, src .. "/system/install.lua", src)
+]]
+local STARTUP = [[
+-- Установочный диск Wired / SWired: при загрузке с него запускается установка.
+for _, d in ipairs({ "/disk", "/disk2", "/disk3", "/usb", "/usb2" }) do
+  if fs.exists(d .. "/install.lua") and fs.exists(d .. "/system/boot.lua") then
+    os.run({}, d .. "/install.lua", d)
+    return
+  end
+end
+]]
+
+--- Записать установочный диск системы (server — SWired) на дискету или флешку drive. Всё на диске стирается.
+function A.makeInstaller(drive, server, step, done)
+  if not fs.exists("/wired/install.lua") then
+    return done(false, "В этой системе нет установщика — сначала обновите Wired с дискеты")
+  end
+  local need = A.size("/wired")
+  local free = fs.getFreeSpace and fs.getFreeSpace(drive)
+  for _, n in ipairs(fs.list(drive)) do
+    local p = fs.combine(drive, n)
+    if fs.isDir(p) then free = free and free + A.size(p) else free = free and free + (fs.getSize(p) or 0) end
+  end
+  if free and free < need + 2048 then
+    return done(false, "Мало места: нужно " .. textutils.formatSize(need) .. ", на диске " .. textutils.formatSize(free))
+  end
+  for _, n in ipairs(fs.list(drive)) do pcall(fs.delete, fs.combine(drive, n)) end
+  local list = A.files("/wired")
+  local i = 0
+  local function write(path, text)
+    local f = fs.open(fs.combine(drive, path), "w")
+    if f then f.write(text) f.close() end
+  end
+  local function tick()
+    for _ = 1, 4 do
+      i = i + 1
+      if i > #list then
+        write("install.lua", WRAPPER)
+        write("startup.lua", STARTUP)
+        write("readme.txt", (server and "SWired 1.0 — система для серверов MineComputers" or "Wired " .. wired.VERSION .. " — графическая система MineComputers") ..
+          "\n\nВставьте в компьютер (сервер — в его USB) и включите: установка начнётся сама.\n")
+        if server then write("edition", "server\n") end
+        if fs.setLabel then pcall(fs.setLabel, drive, server and "SWired 1.0" or ("Wired " .. wired.VERSION)) end
+        return done(true, nil, #list)
+      end
+      local f = list[i]
+      if f ~= "settings.cfg" and f ~= "edition" then
+        local okc, err = pcall(copyFile, fs.combine("/wired", f), fs.combine(drive, "system/" .. f))
+        if not okc then return done(false, err) end
+      end
+      if step then step(i, #list) end
+    end
+    wm.after(0.05, tick)
+  end
+  tick()
 end
 
 function A.size(dir)

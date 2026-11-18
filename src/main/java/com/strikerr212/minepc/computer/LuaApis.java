@@ -686,6 +686,8 @@ final class LuaApis {
                 RegisteredFunction.ofV("info", (s, a) -> toLua(c.host().biosInfo())),
                 // RAID-контроллер серверной платы
                 RegisteredFunction.ofV("raid", (s, a) -> toLua(c.host().raidInfo())),
+                // всё о железе сервера (отсеки, износ дисков, блоки питания, BMC): для SWired
+                RegisteredFunction.ofV("server", (s, a) -> toLua(c.host().serverInfo())),
                 RegisteredFunction.ofV("raidCreate", (s, a) -> {
                     String err = c.host().raidCreate(text(a.arg(1).checkLuaString()));
                     return err == null ? Constants.TRUE : varargsOf(new LuaValue[]{Constants.NIL, str(err)});

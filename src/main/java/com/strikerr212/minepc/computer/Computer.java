@@ -130,6 +130,9 @@ public final class Computer {
         /** Массив RAID и диски в отсеках; null — нет RAID-контроллера (обычная плата). */
         default java.util.Map<String, Object> raidInfo() { return null; }
 
+        /** Железо сервера для SWired (см. Bmc.info): null — не серверное шасси. */
+        default java.util.Map<String, Object> serverInfo() { return null; }
+
         /** Создать массив из всех дисков в отсеках (уровень: stripe, mirror, raid5). null — готово, иначе ошибка. */
         default String raidCreate(String level) { return "Нет RAID-контроллера: нужна серверная плата"; }
 

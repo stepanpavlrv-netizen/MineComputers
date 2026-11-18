@@ -19,6 +19,7 @@ function W.build(w, rows, style, dark, plainColor)
     for cy = 1, rows do out[cy] = { 1, w, plainColor, plainColor } end
     return out
   end
+  if style == "rack" then return W.rack(w, rows, dark) end
   local sky0, sky1, gnd, sil
   if dark then
     sky0, sky1, gnd, sil = 0x09080f, 0x4a1a36, 0x07060a, 0x060509
@@ -72,6 +73,55 @@ function W.build(w, rows, style, dark, plainColor)
     for x = 0, w - 1 do
       local t = mark[yt * w + x] and sil or ct
       local b = mark[yb * w + x] and sil or cb
+      if rx and t == rt and b == rb then
+        runs[#runs - 2] = x + 1
+      else
+        runs[#runs + 1] = x + 1
+        runs[#runs + 1] = x + 1
+        runs[#runs + 1] = t
+        runs[#runs + 1] = b
+        rx, rt, rb = x, t, b
+      end
+    end
+    out[cy + 1] = runs
+  end
+  return out
+end
+
+--- Обои SWired «Серверная»: тёмно-синий зал и силуэты стоек с огоньками справа.
+function W.rack(w, rows, dark)
+  local H = rows * 2
+  local top0, top1, sil, rim = 0x06090d, 0x0f2a36, 0x081016, 0x13222c
+  if not dark then top0, top1, sil, rim = 0xc9d6e0, 0x9fb8c8, 0x3a4a56, 0x55697a end
+  local leds = { 0x4fd1e8, 0x5fd38a, 0x4fd1e8, 0xffc857 }
+  local color = {}
+  local function put(x, y, c) if x >= 0 and x < w and y >= 0 and y < H then color[y * w + x] = c end end
+  local rw = math.max(6, floor(w / 22))
+  local n = 4
+  local x0 = w - n * (rw + 2) - 2
+  for i = 0, n - 1 do
+    local x = x0 + i * (rw + 2)
+    local hgt = floor(H * (0.55 + 0.08 * ((i * 7) % 3)))
+    local y0 = H - hgt
+    for yy = y0, H - 1 do
+      for xx = x, x + rw - 1 do put(xx, yy, (xx == x or xx == x + rw - 1 or yy == y0) and rim or sil) end
+    end
+    -- огоньки модулей: через каждые 3 полупикселя
+    for yy = y0 + 3, H - 3, 3 do
+      put(x + 2, yy, leds[(i + floor(yy / 3)) % #leds + 1])
+      if (yy + i) % 2 == 0 then put(x + 4, yy, 0x2a8ea3) end
+    end
+  end
+  local out = {}
+  for cy = 0, rows - 1 do
+    local yt, yb = cy * 2, cy * 2 + 1
+    local ct = lerp(top0, top1, yt / H)
+    local cb = lerp(top0, top1, yb / H)
+    local runs = {}
+    local rx, rt, rb
+    for x = 0, w - 1 do
+      local t = color[yt * w + x] or ct
+      local b = color[yb * w + x] or cb
       if rx and t == rt and b == rb then
         runs[#runs - 2] = x + 1
       else

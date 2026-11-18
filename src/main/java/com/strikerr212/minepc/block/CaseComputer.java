@@ -1129,6 +1129,11 @@ public final class CaseComputer implements Computer.Host {
     // ======================= RAID для программ =======================
 
     @Override
+    public Map<String, Object> serverInfo() {
+        return onServer(level -> be.bmc().info(), null);
+    }
+
+    @Override
     public Map<String, Object> raidInfo() {
         return onServer(level -> {
             MotherboardData board = be.motherboard();

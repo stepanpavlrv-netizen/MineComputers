@@ -346,13 +346,17 @@ class Sim:
         def os_date(fmt="%c", t=None):
             fmt = str(fmt)
             d = NOW if t is None else datetime.datetime(1970, 1, 1) + datetime.timedelta(seconds=float(t))
+            if fmt.lstrip("!").startswith("*t"):
+                return tbl({"year": d.year, "month": d.month, "day": d.day, "hour": d.hour, "min": d.minute, "sec": d.second,
+                            "wday": d.isoweekday() % 7 + 1, "yday": d.timetuple().tm_yday, "isdst": False})
             return d.strftime(fmt.lstrip("!"))
 
         def os_time(t=None):
             if t is None:
                 d = NOW
             else:
-                d = datetime.datetime(int(t["year"]), int(t["month"]), int(t["day"]), int(t["hour"] or 12), int(t["min"] or 0))
+                h = t["hour"]
+                d = datetime.datetime(int(t["year"]), int(t["month"]), int(t["day"]), 12 if h is None else int(h), int(t["min"] or 0))
             return int((d - datetime.datetime(1970, 1, 1)).total_seconds())
 
         osT = L.eval("os")

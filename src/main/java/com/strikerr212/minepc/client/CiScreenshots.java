@@ -877,7 +877,47 @@ public class CiScreenshots {
                 shot(mc, "world_big_room");
             }
             case 6442 -> server.execute(CiScreenshots::logBigRoom);
-            case 6460 -> {
+            // SWired: тот же компьютер с Wired становится сервером (файл /wired/edition) — рабочий стол, «Сервер», «Службы»
+            case 6446 -> {
+                mc.options.hideGui = false;
+                mc.setScreen(new TerminalScreen(wiredPos));
+            }
+            case 6450 -> server.execute(() -> clickText(wiredPos, "◆ WIRED", 1, 0));
+            case 6456 -> server.execute(() -> clickText(wiredPos, "> Терминал", 3, 0));
+            case 6470 -> typeAt(wiredPos, "lua");
+            case 6476 -> typeAt(wiredPos, "local f = fs.open('/wired/edition', 'w') f.write('server') f.close()");
+            case 6480 -> typeAt(wiredPos, "exit()");
+            case 6484 -> typeAt(wiredPos, "reboot");
+            case 6640 -> typeAt(wiredPos, "admin");
+            case 6644 -> typeAt(wiredPos, "secret1");
+            case 6690 -> {
+                server.execute(() -> logWired("SWired: рабочий стол"));
+                shot(mc, "swired_desktop");
+            }
+            case 6692, 6693 -> server.execute(() -> clickText(wiredPos, "Сервер", 2, -2));
+            case 6740 -> {
+                server.execute(() -> logWired("SWired: Сервер"));
+                shot(mc, "swired_server");
+            }
+            case 6742 -> server.execute(() -> clickText(wiredPos, "Службы", 2, -2));
+            case 6743 -> server.execute(() -> clickText(wiredPos, "Службы", 2, -2));
+            case 6780 -> {
+                server.execute(() -> logWired("SWired: Службы"));
+                shot(mc, "swired_services");
+            }
+            // железо сервера в стойке для SWired: bios.server() — место, отсеки, блоки питания, BMC
+            case 6784 -> typeHost(new com.strikerr212.minepc.block.HostRef(rackPos, 0), "lua");
+            case 6790 -> typeHost(new com.strikerr212.minepc.block.HostRef(rackPos, 0),
+                    "local s = bios.server() print('SRVINFO', s and s.slot, s and #s.bays, s and s.psu[1].present, s and s.bmc.present, s and s.watts)");
+            case 6800 -> server.execute(() -> {
+                if (server.overworld().getBlockEntity(rackPos) instanceof com.strikerr212.minepc.block.RackBlockEntity r && r.server(0) != null) {
+                    for (String line : r.server(0).screenLines()) {
+                        if (!line.isBlank()) com.mojang.logging.LogUtils.getLogger().info("[CI-SWIRED] | {}", line.stripTrailing());
+                    }
+                    com.mojang.logging.LogUtils.getLogger().info("[CI-SWIRED] bmc.info = {}", r.server(0).bmc().info());
+                } else com.mojang.logging.LogUtils.getLogger().info("[CI-SWIRED] нет сервера в месте 0 стойки");
+            });
+            case 6810 -> {
                 mc.options.pauseOnLostFocus = pauseWas;
                 mc.stop();
             }

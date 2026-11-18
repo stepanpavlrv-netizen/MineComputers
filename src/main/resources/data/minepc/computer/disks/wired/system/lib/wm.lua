@@ -259,7 +259,11 @@ local function drawDesktop()
   end
   if wired.settings.wallpaper ~= "plain" and DH > 12 then
     local tag = "present day · present time"
-    G.textOver(G.W - G.len(tag) - 2, DH - 1, tag, T.dark and 0x5a2c48 or 0x4b3f5a)
+    if wired.server then
+      local name = (net and net.hostname and net.hostname()) or ""
+      tag = (name ~= "" and (name .. " · ") or "") .. ((net and net.address and net.address():sub(1, 8)) or "") .. " · SWired"
+    end
+    G.textOver(G.W - G.len(tag) - 2, DH - 1, tag, wired.server and (T.dark and 0x2f5866 or 0x3f5a66) or (T.dark and 0x5a2c48 or 0x4b3f5a))
   end
 end
 
@@ -269,7 +273,7 @@ local function drawBar()
   barHits = {}
   local sb = menuOpen and T.accent or T.sel
   G.fill(1, y, 11, TB, sb)
-  G.text(2, y, "◆ WIRED", menuOpen and T.ink or T.accent, sb)
+  G.text(2, y, wired.server and "◆ SWIRED" or "◆ WIRED", menuOpen and T.ink or T.accent, sb)
   if TB > 1 then G.text(2, y + 1, "  пуск", menuOpen and T.ink or T.dim, sb) end
   barHits[#barHits + 1] = { 1, 11, "start" }
   local x = 13
@@ -444,7 +448,7 @@ local function drawLogin()
   local x, y = floor((G.W - w) / 2) + 1, max(1, floor((DH - h) / 2))
   G.fill(x, y, w, h, T.win)
   G.fill(x, y, w, 1, T.accent)
-  G.text(x + 3, y + 2, "◆ WIRED", T.accent, T.win)
+  G.text(x + 3, y + 2, wired.server and "◆ SWIRED" or "◆ WIRED", T.accent, T.win)
   local name = os.getComputerLabel and os.getComputerLabel() or ""
   G.text(x + 3, y + 3, G.cut("Вход" .. (name ~= "" and (" в " .. name) or ""), w - 6), T.dim, T.win)
   login.hits = {}
@@ -729,9 +733,9 @@ local function dialog(title, w, h, draw, event)
   return wm.open(app)
 end
 
---- Спросить строку: fn(текст) или fn(nil) при отмене.
-function wm.prompt(title, label, default, fn)
-  local f = U.field(default or "", "f")
+--- Спросить строку: fn(текст) или fn(nil) при отмене. mask — знак вместо букв (для пароля).
+function wm.prompt(title, label, default, fn, mask)
+  local f = U.field(default or "", "f", mask)
   f.focused = true
   f.fresh = (default or "") ~= ""      -- первая буква заменяет подсказанный текст, стрелки — правят его
   local win

@@ -373,6 +373,7 @@ public class HeadlessTest {
         testWifi();
         testAuth();
         testWired();
+        testSwired();
 
         System.out.println(failures == 0 ? "ВСЁ ХОРОШО" : "ОШИБОК: " + failures);
         System.exit(failures == 0 ? 0 : 1);
@@ -435,6 +436,125 @@ public class HeadlessTest {
         c.fileSystem().mount("", new DirMount(dir, 64 * 1024, "SSD"));
         c.terminal().resize(50, 16);
         return c;
+    }
+
+    /** Тикать оба компьютера, пока на экране pc не появится текст (или не кончится время). */
+    static void both(Computer[] box, String until, int max) throws Exception {
+        for (int i = 0; i < max; i++) {
+            for (Computer c : box) c.tick();
+            Thread.sleep(2);
+            if (until != null && screen().contains(until)) break;
+        }
+    }
+
+    /** SWired: надзиратель служб, журнал, копии, управление по сети с другого компьютера. */
+    static void testSwired() throws Exception {
+        System.out.println("── SWired ──");
+        Computer[] box = new Computer[2];
+        box[0] = netComputer("aaaaaaaa-1111-4000-8000-0000000000aa", box, 1, "srv");
+        box[1] = netComputer("bbbbbbbb-2222-4000-8000-0000000000bb", box, 0, "pc");
+        Path dirS = Files.createTempDirectory("minepc_srv");
+        box[1].fileSystem().mount("", new DirMount(dirS, 256 * 1024, "SSD"));
+        Files.createDirectories(dirS.resolve("www"));
+        Files.writeString(dirS.resolve("www/index.page"), "# Сайт сервера");
+        Files.writeString(dirS.resolve("bot.lua"), "while true do os.sleep(1) end");
+        Files.writeString(dirS.resolve("crash.lua"), "os.sleep(0.2) error('бот упал')");
+        Files.writeString(dirS.resolve("srv.lua"), String.join("\n",
+                "local S = require('swired')",
+                "print('ADD', auth.add('admin', 'pass1234', true))",
+                "print('D', computer.spawn('/rom/programs/swiredd.lua', 'serve') ~= nil)",
+                "local id = S.addCustom('Бот', '/bot.lua')",
+                "print('C1', S.start(id))",
+                "local id2 = S.addCustom('Падучий', '/crash.lua')",
+                "S.set(id2, 'restart', true)",
+                "print('C2', S.start(id2))",
+                "local b = S.saveBackup({ name = 'Сайт', dirs = { '/www' }, to = { kind = 'path', target = '/backups' }, every = 'manual', keep = 2 })",
+                "print('B1', S.runBackup(b))",
+                "local f = fs.open('/www/index.page', 'w') f.write('испорчено') f.close()",
+                "local list = S.copies(b)",
+                "print('B2', #list, S.restore(b, list[1].name))",
+                "local f2 = fs.open('/www/index.page', 'r') print('B3', f2.readAll()) f2.close()",
+                "local pw = S.saveBackup({ name = 'Тайное', dirs = { '/www' }, to = { kind = 'path', target = '/backups' }, every = 'manual', password = 'k' })",
+                "S.runBackup(pw)",
+                "print('B4', S.restore(pw, S.copies(pw)[1].name, 'чужой'))",
+                "print('SRVOK')",
+                ""));
+        Files.writeString(dirS.resolve("srv2.lua"), String.join("\n",
+                "local S = require('swired')",
+                "for _, sv in ipairs(S.services()) do if sv.name == 'Падучий' then print('CR', sv.crashes, sv.failed) end end",
+                "local j = S.journal(80)",
+                "local up, gave = 0, false",
+                "for _, e in ipairs(j) do if e.text:find('перезапущена') then up = up + 1 end if e.text:find('сдался') then gave = true end end",
+                "print('J', #j > 0, up, gave)",
+                "print('SRV2OK')",
+                ""));
+        Path dirC = Files.createTempDirectory("minepc_cli");
+        box[0].fileSystem().mount("", new DirMount(dirC, 256 * 1024, "SSD"));
+        Files.createDirectories(dirC.resolve("docs"));
+        Files.writeString(dirC.resolve("docs/plan.txt"), "план работ");
+        Files.writeString(dirC.resolve("cli.lua"), String.join("\n",
+                "local S = require('swired')",
+                "local list = S.discover(1)",
+                "print('DISC', #list, list[1] and list[1].version)",
+                "local R = S.remote('bbbbbbbb', 'admin', 'pass1234')",
+                "local st, err = R.status() print('STAT', st and st.name ~= nil, err)",
+                "local sv = R.services() print('SVC', sv and #sv)",
+                "print('SSH', R.start('sshd'))",
+                "local au = R.addUser('lena', 'qwerty12', false)",
+                "local names = '' for _, u in ipairs(R.users() or {}) do names = names .. u.name .. ',' end",
+                "print('USR', au, names)",
+                "local b = S.saveBackup({ name = 'Документы', dirs = { '/docs' }, to = { kind = 'server', target = 'bbbbbbbb', user = 'admin', pass = 'pass1234' }, every = 'manual' })",
+                "print('RB1', S.runBackup(b))",
+                "local f = fs.open('/docs/plan.txt', 'w') f.write('x') f.close()",
+                "local c = S.copies(b)",
+                "print('RB2', #c, S.restore(b, c[1] and c[1].name))",
+                "local f2 = fs.open('/docs/plan.txt', 'r') print('RB3', f2.readAll()) f2.close()",
+                "local bad = S.remote('bbbbbbbb', 'admin', 'неверно')",
+                "local v, e = bad.status() print('BAD', v, e)",
+                "print('CLIOK')",
+                ""));
+        for (Computer c : box) c.turnOn();
+        for (int i = 0; i < 300; i++) {
+            for (Computer c : box) c.tick();
+            Thread.sleep(2);
+            pc = box[1];
+            boolean a = screen().contains("/>");
+            pc = box[0];
+            if (a && screen().contains("/>")) break;
+        }
+        pc = box[1];
+        type("srv");
+        pc.queueEvent("key", "enter", false, false);
+        both(box, "SRVOK", 800);
+        show("сервер: службы и копии");
+        String s1 = flat();
+        expect("SWired: первый пользователь — администратор", s1.contains("ADD") && s1.contains("true"));
+        expect("SWired: свои службы запущены", s1.contains("C1 true") && s1.contains("C2 true"));
+        expect("SWired: копия на диск сделана", s1.contains("B1 true"));
+        expect("SWired: восстановлено из копии", s1.contains("B2 1 1") && s1.contains("B3 # Сайт сервера"));
+        expect("SWired: копия под паролем не открывается чужим паролем", s1.contains("B4 nil") && s1.contains("Неверный пароль"));
+        // надзиратель: падучая служба поднимается 5 раз и сдаётся
+        for (int i = 0; i < 1400; i++) { for (Computer c : box) c.tick(); Thread.sleep(3); }
+        command("clear");
+        type("srv2");
+        pc.queueEvent("key", "enter", false, false);
+        both(box, "SRV2OK", 400);
+        show("сервер: надзиратель");
+        String s2 = flat();
+        expect("SWired: упавшую службу перезапускали", s2.matches(".*J true [1-5] .*"));
+        expect("SWired: после 5 падений надзиратель сдался", s2.contains("J true 5 true") && s2.contains("CR 5 true"));
+        pc = box[0];
+        type("cli");
+        pc.queueEvent("key", "enter", false, false);
+        both(box, "CLIOK", 2500);
+        show("клиент: «Серверы» по сети");
+        String s3 = flat();
+        expect("SWired: сервер найден в сети", s3.contains("DISC 1 1.0"));
+        expect("SWired: неверный пароль — отказ", s3.contains("BAD nil") && s3.contains("Неверное имя"));
+        expect("SWired: состояние и службы по сети", s3.contains("STAT true") && s3.contains("SVC 6"));
+        expect("SWired: служба запущена по сети", s3.contains("SSH true"));
+        expect("SWired: пользователь добавлен по сети", s3.contains("USR true") && s3.contains("lena"));
+        expect("SWired: копия на другой сервер и обратно", s3.contains("RB1 true") && s3.contains("RB2 1 1") && s3.contains("RB3 план работ"));
     }
 
     static void mouse(int x, int y) throws Exception {

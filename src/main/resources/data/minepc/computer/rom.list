@@ -16,6 +16,7 @@ openos/process.lua
 openos/serialization.lua
 openos/shell.lua
 openos/sides.lua
+openos/swired.lua
 openos/term.lua
 openos/text.lua
 openos/uuid.lua
@@ -63,6 +64,7 @@ programs/sh.lua
 programs/shutdown.lua
 programs/sshd.lua
 programs/sudo.lua
+programs/swiredd.lua
 programs/switch.lua
 programs/top.lua
 programs/users.lua
