@@ -20,7 +20,10 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BooleanProperty;
+import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.shapes.CollisionContext;
+import net.minecraft.world.phys.shapes.VoxelShape;
 
 /**
  * Дисковод. ПКМ дискетой — вставить, ПКМ пустой рукой — вынуть.
@@ -30,6 +33,8 @@ public class DiskDriveBlock extends DeviceBlock {
 
     public static final MapCodec<DiskDriveBlock> CODEC = simpleCodec(DiskDriveBlock::new);
     public static final BooleanProperty HAS_DISK = BooleanProperty.create("disk");
+    /** Как модель: коробка 14×8×14 пикселей (не полный блок — соседи не прячут прилегающие грани). */
+    private static final VoxelShape SHAPE = Block.box(1, 0, 1, 15, 8, 15);
 
     public DiskDriveBlock(Properties properties) {
         super(properties);
@@ -39,6 +44,11 @@ public class DiskDriveBlock extends DeviceBlock {
     @Override
     protected MapCodec<? extends BaseEntityBlock> codec() {
         return CODEC;
+    }
+
+    @Override
+    protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+        return SHAPE;
     }
 
     @Override

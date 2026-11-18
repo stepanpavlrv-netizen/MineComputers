@@ -48,6 +48,19 @@ public class ComputerGameTests {
         be.input(TerminalInputPayload.KEY, "enter", false, false);
     }
 
+    /** Дисковод меньше блока: не должен прятать грани соседей (раньше сквозь камень рядом с ним было видно насквозь). */
+    @GameTest(template = "empty", timeoutTicks = 20)
+    public static void diskDriveDoesNotHideNeighbours(GameTestHelper h) {
+        BlockPos p = new BlockPos(1, 1, 1);
+        h.setBlock(p, ModBlocks.DISK_DRIVE.get());
+        h.setBlock(p.east(), net.minecraft.world.level.block.Blocks.STONE);
+        var state = h.getBlockState(p);
+        h.assertTrue(!state.canOcclude(), "Дисковод закрывает соседей, как полный блок");
+        var box = state.getShape(h.getLevel(), h.absolutePos(p)).bounds();
+        h.assertTrue(box.maxY <= 0.5 + 1e-6 && box.minX >= 1 / 16.0 - 1e-6, "Рамка дисковода не по модели: " + box);
+        h.succeed();
+    }
+
     @GameTest(template = "empty", timeoutTicks = 800)
     public static void computerBootsAndRunsLua(GameTestHelper h) {
         PcCaseBlockEntity be = buildComputer(h, 3);

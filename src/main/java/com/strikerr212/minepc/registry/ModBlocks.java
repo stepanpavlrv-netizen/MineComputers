@@ -182,7 +182,8 @@ public class ModBlocks {
             () -> new DiskDriveBlock(BlockBehaviour.Properties.of()
                     .mapColor(MapColor.COLOR_LIGHT_GRAY)
                     .strength(2.0f, 6.0f)
-                    .sound(SoundType.METAL)));
+                    .sound(SoundType.METAL)
+                    .noOcclusion()));   // модель меньше блока: иначе грани соседей рядом с ним пропадают
 
     public static void register(IEventBus eventBus) {
         BLOCKS.register(eventBus);
