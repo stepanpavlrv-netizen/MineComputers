@@ -25,6 +25,17 @@ FIGURES = {
     "eye2": ("Око (новое)", [("eye2", 0, 0.95, 0, 0), ("tentacle2", -0.08, 0.66, 0.14, 0), ("tentacle2", -0.08, 0.66, -0.14, 40),
                              ("tentacle2", 0.1, 0.64, 0.0, 90)], 2.0),
     "shotgun2": ("Дробовик (новый)", [("shotgun2", -0.12, 0.4, 0, 0)], 0.9),
+    "blaster2": ("Бластер (новый)", [("blaster2", -0.1, 0.4, 0, 0)], 0.65),
+    "plasmagun2": ("Плазмомёт (новый)", [("plasmagun2", -0.12, 0.4, 0, 0)], 0.9),
+    "medkit2": ("Аптечка (новая)", [("medkit2", 0, 0, 0, 0)], 0.6),
+    "armor2": ("Бронежилет (новый)", [("armor2", 0, 0, 0, 0)], 0.9),
+    "ammo2": ("Патроны и энергоячейка (новые)", [("shells2", 0, 0, -0.22, 0), ("cells2", 0, 0, 0.22, 0)], 0.75),
+    "keys2": ("Ключ-карты (новые)", [("keyRed2", 0, 0, -0.24, 0), ("keyYellow2", 0, 0, 0, 0), ("keyBlue2", 0, 0, 0.24, 0)], 0.75),
+    "scientist2": ("Заражённый учёный (новый)", [("scientist2Body", 0, 0, 0, 0), ("scientist2Leg", 0, 0.7, 0.12, 0),
+                                                   ("scientist2Leg", 0, 0.7, -0.12, 0)], 2.0),
+    "turret2": ("Турель охраны (новая)", [("turret2", 0, 0, 0, 0)], 1.3),
+    "crawler2": ("Ползун (новый)", [("crawler2", 0, 0, 0, 0)], 1.2),
+    "boss2": ("Босс «Сердце разлома»", [("boss2", 0, 0, 0, 0)], 3.6),
 }
 BG = (34, 37, 44)
 
@@ -74,14 +85,14 @@ def render(textures, meshes, names, parts, yaw_deg, pitch_deg, size, height_m):
         for (x, y, z, u, v, l) in verts:
             X, Z, Y = x * ca - z * sa + ox, x * sa + z * ca + oz, y + oy
             ex = X * cy + Z * sy               # к зрителю (при yaw=0 модель смотрит на нас: вперёд — +x)
-            sx = -X * sy + Z * cy              # вправо по экрану
+            sx = X * sy - Z * cy               # вправо по экрану (правый бок модели, +z, у зрителя слева)
             up = Y * cp - ex * sp
             dz = Y * sp + ex * cp
             P.append((W / 2 + sx * scale, base - up * scale, dz, u, v, l))
         for (i1, i2, i3, tex) in tris:
             p1, p2, p3 = P[i1 - 1], P[i2 - 1], P[i3 - 1]
             area = (p2[0] - p1[0]) * (p3[1] - p1[1]) - (p3[0] - p1[0]) * (p2[1] - p1[1])
-            if abs(area) < 1e-9 or (cull and area > 0):
+            if abs(area) < 1e-9:      # грани не отбрасываем: коробки закрытые, порядок решает буфер глубины
                 continue
             tp = textures.get(tex)
             if tp is None:
