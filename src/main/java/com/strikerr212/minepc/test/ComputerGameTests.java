@@ -67,7 +67,35 @@ public class ComputerGameTests {
         h.succeed();
     }
 
-    /** Дисковод меньше блока: не должен прятать грани соседей (раньше сквозь камень рядом с ним было видно насквозь). */
+    /** Пароль камеры: вход по сети, журнал, пауза после неверного пароля, игрокам не уходит отпечаток. */
+    @GameTest(template = "empty", timeoutTicks = 20)
+    public static void cameraPassword(GameTestHelper h) {
+        BlockPos p = new BlockPos(1, 1, 1);
+        h.setBlock(p, ModBlocks.CAMERA.get());
+        var cam = (com.strikerr212.minepc.lan.CameraBlockEntity) h.getBlockEntity(p);
+        h.assertTrue(!cam.locked() && cam.allows("") && cam.login("a1", "ПК", "что угодно", 0) == null, "Без пароля камера должна пускать всех");
+        h.assertTrue(cam.accessLog().isEmpty(), "Без пароля входы не пишутся");
+        cam.setPassword("1234");
+        h.assertTrue(cam.locked() && !cam.allows("") && cam.allows(com.strikerr212.minepc.lan.CameraBlockEntity.hash("1234")), "Пароль не встал");
+        h.assertTrue("Неверный пароль".equals(cam.login("a1", "Сосед", "0000", 1000)), "Неверный пароль пустил");
+        h.assertTrue(cam.login("a1", "Сосед", "1234", 1500) != null, "Сразу после ошибки — пауза");
+        h.assertTrue(cam.login("a2", "Кабинет", "1234", 1500) == null, "Другой адрес не должен ждать");
+        h.assertTrue(cam.login("a1", "Сосед", "1234", 2100) == null, "После паузы верный пароль должен пускать");
+        var log = cam.accessLog();
+        h.assertTrue(log.size() == 3 && !log.get(0).ok() && log.get(1).ok() && log.get(1).computer().equals("Кабинет"), "Журнал: " + log);
+        for (int i = 0; i < 60; i++) cam.login("a3", "x", "1234", 10_000 + i);
+        h.assertTrue(cam.accessLog().size() == com.strikerr212.minepc.lan.CameraBlockEntity.LOG_MAX, "Журнал не обрезается до 50");
+        var upd = cam.getUpdateTag(h.getLevel().registryAccess());
+        h.assertTrue(!upd.contains("PassHash") && !upd.contains("AccessLog") && upd.getBoolean("Locked"), "Игрокам ушёл отпечаток или журнал: " + upd);
+        h.assertTrue(!upd.toString().contains("1234"), "Пароль в пакете игрокам");
+        cam.setPassword("");
+        h.assertTrue(!cam.locked() && cam.allows(""), "Пароль не убрался");
+        h.assertTrue(com.strikerr212.minepc.lan.CameraBlockEntity.strength("1234") == 1
+                && com.strikerr212.minepc.lan.CameraBlockEntity.strength("Ворота-склад-7") == 4, "Оценка надёжности пароля");
+        h.succeed();
+    }
+
+    /** Дисковод меньше блока:не должен прятать грани соседей (раньше сквозь камень рядом с ним было видно насквозь). */
     @GameTest(template = "empty", timeoutTicks = 20)
     public static void diskDriveDoesNotHideNeighbours(GameTestHelper h) {
         BlockPos p = new BlockPos(1, 1, 1);

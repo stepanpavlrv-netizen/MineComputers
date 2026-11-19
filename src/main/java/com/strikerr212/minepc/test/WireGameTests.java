@@ -39,6 +39,42 @@ public class WireGameTests {
         return out;
     }
 
+    /** Камера на полу и на стене: провод от её гнезда до коммутатора должен прокладываться (раньше путь не находился). */
+    @GameTest(template = "empty", timeoutTicks = 100)
+    public static void cameraWire(GameTestHelper h) {
+        for (int x = 0; x < 9; x++) for (int z = 0; z < 7; z++) h.setBlock(new BlockPos(x, 0, z), Blocks.SMOOTH_STONE);
+        for (int z = 0; z < 7; z++) for (int y = 1; y < 4; y++) h.setBlock(new BlockPos(0, y, z), Blocks.SMOOTH_STONE);
+        BlockPos sw = new BlockPos(6, 1, 3);
+        h.setBlock(sw, ModBlocks.NETWORK_SWITCH.get());
+        BlockPos floorCam = new BlockPos(2, 1, 1), wallCam = new BlockPos(1, 2, 5);
+        h.setBlock(floorCam, ModBlocks.CAMERA.get().defaultBlockState()
+                .setValue(com.strikerr212.minepc.lan.CameraBlock.FACE, net.minecraft.world.level.block.state.properties.AttachFace.FLOOR)
+                .setValue(com.strikerr212.minepc.lan.CameraBlock.FACING, Direction.NORTH));
+        h.setBlock(wallCam, ModBlocks.CAMERA.get().defaultBlockState()
+                .setValue(com.strikerr212.minepc.lan.CameraBlock.FACE, net.minecraft.world.level.block.state.properties.AttachFace.WALL)
+                .setValue(com.strikerr212.minepc.lan.CameraBlock.FACING, Direction.EAST));
+        var level = h.getLevel();
+        StringBuilder bad = new StringBuilder();
+        for (BlockPos rel : new BlockPos[]{floorCam, wallCam}) {
+            BlockPos cam = h.absolutePos(rel);
+            var socks = com.strikerr212.minepc.lan.LanDevice.socketsAt(level, cam);
+            int ok = 0;
+            for (int i = 0; i < socks.size(); i++) {
+                BlockPos swAbs = h.absolutePos(sw);
+                int port = -1;
+                var ss = com.strikerr212.minepc.lan.LanDevice.socketsAt(level, swAbs);
+                for (int k = 0; k < ss.size(); k++) if (com.strikerr212.minepc.wire.WireSockets.socketFree(level, swAbs, k)) { port = k; break; }
+                var r = WirePlan.build(level, WirePlan.Lines.of(com.strikerr212.minepc.lan.LanData.get(level)), false,
+                        WirePlan.Anchor.socket(cam, i), List.of(), WirePlan.Anchor.socket(swAbs, port), WireService.SEARCH);
+                if (r.ok()) ok++;
+                else bad.append(rel.toShortString()).append(" гнездо ").append(i).append(" (").append(socks.get(i).face()).append("): ")
+                        .append(r.problem()).append(" застрял ").append(java.util.Arrays.toString(r.stuck())).append("\n");
+            }
+            if (ok < socks.size()) h.fail("Не все гнёзда камеры " + rel.toShortString() + " прокладываются:\n" + bad);
+        }
+        h.succeed();
+    }
+
     /**
      * Ряд из трёх лотков на полу; три провода с пола через лоток на пол: лотки соединились в прямой ряд, провода
      * легли в желоб (над перекладинами), каждый — на свою дорожку.

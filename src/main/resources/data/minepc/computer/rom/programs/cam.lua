@@ -1,10 +1,16 @@
 -- Камеры наблюдения.
 --   cam                       — камеры в сети
---   cam <имя>                 — смотреть. Стрелки или WASD — повернуть, + и − (колесо) — зум, мышью тянуть — повернуть,
+--   cam <имя> [-p пароль]     — смотреть (камера с паролем спросит его и запомнит на этом компьютере). Стрелки или WASD — повернуть, + и − (колесо) — зум, мышью тянуть — повернуть,
 --                               n — ночное видение, p — патруль, r — разрешение, f — частота, q — выход
 --   cam wall <имя> <имя> ...  — видеостена: до 4 камер на экране
 --   cam turn <имя> <вбок> [вверх]   cam look <имя> <угол> [наклон]   cam set <имя> res|fps|night|patrol|name <значение>
 local args = { ... }
+local K = require("camkeys")
+-- «-p пароль» где угодно в строке
+local givenPass
+for i = #args - 1, 1, -1 do
+  if args[i] == "-p" then givenPass = args[i + 1] table.remove(args, i + 1) table.remove(args, i) end
+end
 local cmd = args[1]
 
 local function color(c) if term.isColor() then term.setTextColor(c) end end
@@ -18,12 +24,53 @@ if not cmd then
   print(pad("Имя", 14) .. pad("Адрес", 10) .. pad("Кадр", 10) .. pad("Линия", 11) .. "Переходов")
   color(colors.white)
   for _, c in ipairs(list) do
-    print(pad(c.name ~= "" and c.name or "-", 14) .. pad(c.address, 10) .. pad(c.width .. "×" .. c.height, 10) ..
-      pad(kb(c.link), 11) .. c.hops)
+    local open = K.auto(c)
+    write(pad(c.name ~= "" and c.name or "-", 14) .. pad(c.address, 10) .. pad(c.width .. "×" .. c.height, 10) ..
+      pad(kb(c.link), 11) .. pad(c.hops, 4))
+    if c.password then
+      color(open and colors.lime or colors.yellow)
+      write(open and "пароль ✓" or "пароль")
+      color(colors.white)
+    end
+    print()
   end
   print("Смотреть: cam <имя>")
   return
 end
+
+-- Камера с паролем: войти сохранённым или спросить. true — можно работать дальше.
+local function unlock(name)
+  local list = camera.list()
+  local c
+  for _, x in ipairs(list) do
+    if x.address == name or (x.name ~= "" and x.name:lower() == name:lower()) or (#name >= 4 and x.address:sub(1, #name) == name) then c = x break end
+  end
+  if not c or not c.locked then return true end
+  if givenPass then
+    local r, err = K.login(name, givenPass, true)
+    if r then return true end
+    printError(err) return false
+  end
+  if K.auto(c) then return true end
+  print("Камера «" .. name .. "» закрыта паролем.")
+  for _ = 1, 3 do
+    write("Пароль: ")
+    local pw = read("*")
+    if not pw or pw == "" then return false end
+    local r, err = camera.login(name, pw)
+    if r then
+      write("Запомнить на этом компьютере? (д/н) ")
+      local a = (read() or ""):lower()
+      if a == "" or a == "д" or a == "y" or a == "да" or a == "l" then K.login(name, pw, true) end
+      return true
+    end
+    color(colors.red) print(err) color(colors.white)
+    if err ~= "Неверный пароль" then sleep(1) end
+  end
+  return false
+end
+
+if (cmd == "turn" or cmd == "look" or cmd == "set") and not unlock(args[2] or "") then return end
 
 if cmd == "turn" or cmd == "look" then
   local r, err = camera[cmd](args[2] or "", tonumber(args[3] or "0"), tonumber(args[4] or "0"))
@@ -53,6 +100,7 @@ else
   names[1] = cmd
 end
 for _, n in ipairs(names) do
+  if not unlock(n) then return end
   local _, err = camera.info(n)
   if err then printError(err) return end
 end

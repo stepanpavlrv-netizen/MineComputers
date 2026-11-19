@@ -769,6 +769,10 @@ public final class Computer {
             if (st.feed == null) return "Камера «" + target + "» не найдена: нет в сети или до неё нет связи";
         }
         CameraFeed f = st.feed;
+        if (f.locked()) {
+            st.ready = false;
+            return "Камера «" + target + "» закрыта паролем";
+        }
         int fw = f.width(), fh = f.height(), fps = f.effectiveFps();
         if (st.frame == null || st.fw != fw || st.fh != fh) {
             st.frame = new int[fw * fh];

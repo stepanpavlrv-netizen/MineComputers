@@ -22,6 +22,11 @@ public interface CameraFeed {
     /** Нарисовать кадр камеры (w×h — её разрешение). false — снимок мира ещё собирается. */
     boolean render(int[] px, int w, int h);
 
+    /** Камера закрыта паролем, а этот компьютер его не ввёл (или пароль сменили). */
+    default boolean locked() {
+        return false;
+    }
+
     /** Всё о камере (для программ). */
     Map<Object, Object> info();
 }

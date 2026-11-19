@@ -76,6 +76,11 @@ public final class ClientAccess {
         if (Minecraft.getInstance().screen instanceof CameraScreen s) s.frame(payload);
     }
 
+    /** Журнал входов камеры пришёл с сервера (окно «Доступ»). */
+    public static void cameraAccess(com.strikerr212.minepc.network.CameraAccessPayload payload) {
+        if (Minecraft.getInstance().screen instanceof CameraScreen s) s.access(payload);
+    }
+
     /** Окно контроллера ввода-вывода (данные — из блок-сущности, она синхронизируется сама). */
     public static void openIoController(net.minecraft.core.BlockPos pos) {
         Minecraft.getInstance().setScreen(new IoScreen(pos));

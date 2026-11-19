@@ -36,10 +36,29 @@ public class CameraScreen extends Screen {
     private boolean dragging;
     private double dragDx, dragDy;
     private Button resBtn, fpsBtn, nightBtn, patrolBtn;
+    /** Кнопки управления головой и зумом — прячутся, пока открыта панель «Доступ». */
+    private final java.util.List<Button> turnBtns = new java.util.ArrayList<>();
+
+    // ----- панель «Доступ»: пароль и журнал входов -----
+    private boolean accessMode;
+    private Button accessBtn, backBtn, saveBtn, removeBtn;
+    private net.minecraft.client.gui.components.EditBox passBox;
+    private java.util.List<net.minecraft.nbt.CompoundTag> log = java.util.List.of();
+    private boolean logLoaded;
+    private int logScroll;
+    private Component status;
+    private long statusUntil;
+    private static final int LOG_ROWS = 6;
 
     public CameraScreen(BlockPos pos) {
         super(Component.translatable("block.minepc.camera"));
         this.pos = pos;
+    }
+
+    /** Открыть сразу на панели «Доступ». */
+    public CameraScreen withAccess() {
+        accessMode = true;
+        return this;
     }
 
     private CameraBlockEntity be() {
@@ -55,16 +74,17 @@ public class CameraScreen extends Screen {
         left = (width - W) / 2;
         top = (height - H) / 2;
         int bx = left + 8 + PW + 8, by = top + 22;
-        addRenderableWidget(Button.builder(Component.literal("▲"), b -> send(CameraActionPayload.TURN, 0, 10)).bounds(bx + 18, by, 18, 18).build());
-        addRenderableWidget(Button.builder(Component.literal("◀"), b -> send(CameraActionPayload.TURN, -10, 0)).bounds(bx, by + 20, 18, 18).build());
-        addRenderableWidget(Button.builder(Component.literal("●"), b -> send(CameraActionPayload.LOOK, 0, -15)).bounds(bx + 18, by + 20, 18, 18)
-                .tooltip(net.minecraft.client.gui.components.Tooltip.create(Component.translatable("gui.minepc.camera.center"))).build());
-        addRenderableWidget(Button.builder(Component.literal("▶"), b -> send(CameraActionPayload.TURN, 10, 0)).bounds(bx + 36, by + 20, 18, 18).build());
-        addRenderableWidget(Button.builder(Component.literal("▼"), b -> send(CameraActionPayload.TURN, 0, -10)).bounds(bx + 18, by + 40, 18, 18).build());
-        addRenderableWidget(Button.builder(Component.literal("+"), b -> zoom(-10)).bounds(bx, by + 66, 26, 18)
-                .tooltip(net.minecraft.client.gui.components.Tooltip.create(Component.translatable("gui.minepc.camera.zoom_in"))).build());
-        addRenderableWidget(Button.builder(Component.literal("−"), b -> zoom(10)).bounds(bx + 28, by + 66, 26, 18)
-                .tooltip(net.minecraft.client.gui.components.Tooltip.create(Component.translatable("gui.minepc.camera.zoom_out"))).build());
+        turnBtns.clear();
+        turn(Button.builder(Component.literal("▲"), b -> send(CameraActionPayload.TURN, 0, 10)).bounds(bx + 18, by, 18, 18));
+        turn(Button.builder(Component.literal("◀"), b -> send(CameraActionPayload.TURN, -10, 0)).bounds(bx, by + 20, 18, 18));
+        turn(Button.builder(Component.literal("●"), b -> send(CameraActionPayload.LOOK, 0, -15)).bounds(bx + 18, by + 20, 18, 18)
+                .tooltip(net.minecraft.client.gui.components.Tooltip.create(Component.translatable("gui.minepc.camera.center"))));
+        turn(Button.builder(Component.literal("▶"), b -> send(CameraActionPayload.TURN, 10, 0)).bounds(bx + 36, by + 20, 18, 18));
+        turn(Button.builder(Component.literal("▼"), b -> send(CameraActionPayload.TURN, 0, -10)).bounds(bx + 18, by + 40, 18, 18));
+        turn(Button.builder(Component.literal("+"), b -> zoom(-10)).bounds(bx, by + 66, 26, 18)
+                .tooltip(net.minecraft.client.gui.components.Tooltip.create(Component.translatable("gui.minepc.camera.zoom_in"))));
+        turn(Button.builder(Component.literal("−"), b -> zoom(10)).bounds(bx + 28, by + 66, 26, 18)
+                .tooltip(net.minecraft.client.gui.components.Tooltip.create(Component.translatable("gui.minepc.camera.zoom_out"))));
         int ry = top + 22 + PH + 6, rw = (PW + 62) / 4 - 2;
         resBtn = addRenderableWidget(Button.builder(Component.empty(), b -> {
             CameraBlockEntity c = be();
@@ -82,7 +102,78 @@ public class CameraScreen extends Screen {
             CameraBlockEntity c = be();
             if (c != null) send(CameraActionPayload.PATROL, c.patrol() ? 0 : 1, 0);
         }).bounds(left + 8 + 3 * (rw + 2), ry, rw, 18).build());
+        // «Доступ» — на месте подсказки про мышь
+        accessBtn = addRenderableWidget(Button.builder(Component.translatable("gui.minepc.camera.access"), b -> setAccess(true))
+                .bounds(bx, top + 140, 54, 18).build());
+        backBtn = addRenderableWidget(Button.builder(Component.translatable("gui.minepc.camera.back"), b -> setAccess(false))
+                .bounds(bx, top + 22, 54, 18).build());
+        int px = left + 8, py = top + 22;
+        String typed = passBox == null ? "" : passBox.getValue();
+        passBox = new net.minecraft.client.gui.components.EditBox(font, px + 50, py + 7, 120, 16, Component.translatable("gui.minepc.camera.password"));
+        passBox.setMaxLength(com.strikerr212.minepc.network.ModNetwork.MAX_CAM_PASSWORD);
+        passBox.setFormatter((text, start) -> net.minecraft.util.FormattedCharSequence.forward("•".repeat(text.length()), net.minecraft.network.chat.Style.EMPTY));
+        passBox.setValue(typed);
+        addRenderableWidget(passBox);
+        saveBtn = addRenderableWidget(Button.builder(Component.translatable("gui.minepc.camera.save"), b -> {
+            String pw = passBox.getValue();
+            if (pw.isEmpty()) return;
+            PacketDistributor.sendToServer(new com.strikerr212.minepc.network.CameraAccessPayload(pos, pw, new net.minecraft.nbt.CompoundTag()));
+            passBox.setValue("");
+            say(Component.translatable("gui.minepc.camera.saved"));
+        }).bounds(px + 176, py + 6, 74, 18).build());
+        removeBtn = addRenderableWidget(Button.builder(Component.translatable("gui.minepc.camera.remove"), b -> {
+            PacketDistributor.sendToServer(new com.strikerr212.minepc.network.CameraAccessPayload(pos, "", new net.minecraft.nbt.CompoundTag()));
+            say(Component.translatable("gui.minepc.camera.removed"));
+        }).bounds(px + 6, py + 40, 100, 18).build());
+        setAccess(accessMode);
         updateButtons();
+    }
+
+    private void turn(Button.Builder b) {
+        turnBtns.add(addRenderableWidget(b.build()));
+    }
+
+    private void say(Component c) {
+        status = c;
+        statusUntil = System.currentTimeMillis() + 4000;
+    }
+
+    private void setAccess(boolean on) {
+        accessMode = on;
+        for (Button b : turnBtns) b.visible = !on;
+        accessBtn.visible = !on;
+        backBtn.visible = on;
+        passBox.visible = on;
+        saveBtn.visible = on;
+        removeBtn.visible = on;
+        if (on) {
+            setFocused(passBox);
+            passBox.setFocused(true);
+            if (!logLoaded) PacketDistributor.sendToServer(new com.strikerr212.minepc.network.CameraAccessPayload(pos,
+                    com.strikerr212.minepc.network.CameraAccessPayload.ASK, new net.minecraft.nbt.CompoundTag()));
+        } else {
+            passBox.setFocused(false);
+            setFocused(null);
+        }
+    }
+
+    /** Журнал входов пришёл с сервера (с сервера — новые в конце, показываем новые сверху). */
+    public void access(com.strikerr212.minepc.network.CameraAccessPayload p) {
+        if (!p.pos().equals(pos)) return;
+        java.util.List<net.minecraft.nbt.CompoundTag> l = new java.util.ArrayList<>();
+        for (var t : p.data().getList("Log", net.minecraft.nbt.Tag.TAG_COMPOUND)) l.add((net.minecraft.nbt.CompoundTag) t);
+        java.util.Collections.reverse(l);
+        log = l;
+        logLoaded = true;
+        logScroll = Math.max(0, Math.min(logScroll, log.size() - LOG_ROWS));
+    }
+
+    private static String when(long t) {
+        java.time.ZonedDateTime z = java.time.Instant.ofEpochMilli(t).atZone(java.time.ZoneId.systemDefault());
+        java.time.LocalDate today = java.time.LocalDate.now();
+        if (z.toLocalDate().equals(today)) return String.format(java.util.Locale.ROOT, "%02d:%02d", z.getHour(), z.getMinute());
+        if (z.toLocalDate().equals(today.minusDays(1))) return Component.translatable("gui.minepc.camera.yesterday").getString();
+        return String.format(java.util.Locale.ROOT, "%02d.%02d", z.getDayOfMonth(), z.getMonthValue());
     }
 
     private void zoom(float d) {
@@ -97,6 +188,8 @@ public class CameraScreen extends Screen {
         fpsBtn.setMessage(Component.translatable("gui.minepc.camera.fps", c.frameRate()));
         nightBtn.setMessage(Component.translatable(c.night() ? "gui.minepc.camera.night_on" : "gui.minepc.camera.night_off"));
         patrolBtn.setMessage(Component.translatable(c.patrol() ? "gui.minepc.camera.patrol_on" : "gui.minepc.camera.patrol_off"));
+        if (removeBtn != null) removeBtn.active = c.locked();
+        if (saveBtn != null) saveBtn.active = !passBox.getValue().isEmpty();
     }
 
     @Override
@@ -110,6 +203,7 @@ public class CameraScreen extends Screen {
         long now = System.currentTimeMillis();
         int fps = Math.max(1, Math.min(20, c.frameRate()));
         // следующий кадр — когда пришёл прошлый и прошло 1/fps (или 1 с — вдруг кадр потерялся)
+        if (accessMode) return;     // картинка спрятана — кадры не нужны
         if ((lastFrame >= lastRequest && now - lastRequest >= 1000 / fps) || now - lastRequest > 1000) {
             lastRequest = now;
             send(CameraActionPayload.FRAME, 0, 0);
@@ -169,6 +263,12 @@ public class CameraScreen extends Screen {
         g.fill(left - 1, top - 1, left + W + 1, top + H + 1, 0xFF1B1B1B);
         g.fill(left, top, left + W, top + H, 0xFF2A2D31);
         g.fill(left, top, left + W, top + 1, 0xFF4A4E54);
+        if (accessMode) {
+            // фон панели «Доступ» — под кнопками и полем пароля (они рисуются после фона)
+            int px = left + 8, py = top + 22;
+            g.fill(px - 1, py - 1, px + PW + 1, py + PH + 1, 0xFF0B0C0E);
+            g.fill(px, py, px + PW, py + PH, 0xFF1D1F23);
+        }
     }
 
     @Override
@@ -179,8 +279,19 @@ public class CameraScreen extends Screen {
         String name = c.label().isEmpty() ? Component.translatable("block.minepc.camera").getString() : c.label();
         g.drawString(font, name, left + 8, top + 7, 0xFFE6E8EC, false);
         String addr = c.address();
-        g.drawString(font, addr, left + W - 8 - font.width(addr), top + 7, 0xFF8FE39A, false);
+        int ax = left + W - 8 - font.width(addr);
+        g.drawString(font, addr, ax, top + 7, 0xFF8FE39A, false);
+        if (c.locked()) {
+            Component lk = Component.translatable("gui.minepc.camera.locked");
+            int lx = ax - 8 - font.width(lk);
+            g.drawString(font, lk, lx, top + 7, 0xFFFFCF5A, false);
+            drawLock(g, lx - 10, top + 6);
+        }
         int px = left + 8, py = top + 22;
+        if (accessMode) {
+            renderAccess(g, c, px, py);
+            return;
+        }
         g.fill(px - 1, py - 1, px + PW + 1, py + PH + 1, 0xFF0B0C0E);
         if (texture != null && !loading) {
             g.blit(TEX, px, py, PW, PH, 0, 0, texW, texH, texW, texH);
@@ -199,11 +310,67 @@ public class CameraScreen extends Screen {
         long kb = c.bytesPerSecond() / 1024;
         g.drawString(font, Component.translatable("gui.minepc.camera.stream"), bx, top + 112, 0xFF8A9096, false);
         g.drawString(font, kb + " КБ/с", bx, top + 123, 0xFFE6E8EC, false);
-        g.drawString(font, Component.translatable("gui.minepc.camera.drag"), bx, top + 140, 0xFF6A7076, false);
-        g.drawString(font, Component.translatable("gui.minepc.camera.drag2"), bx, top + 150, 0xFF6A7076, false);
         // нижняя строка
         Component hint = Component.translatable("gui.minepc.camera.hint");
         g.drawString(font, hint, left + 8, top + H - 13, 0xFF8A9096, false);
+    }
+
+    /** Замочек 7×8 точек. */
+    private static void drawLock(GuiGraphics g, int x, int y) {
+        int c = 0xFFFFCF5A;
+        g.fill(x + 1, y, x + 6, y + 1, c);
+        g.fill(x + 1, y, x + 2, y + 4, c);
+        g.fill(x + 5, y, x + 6, y + 4, c);
+        g.fill(x, y + 3, x + 7, y + 8, c);
+        g.fill(x + 3, y + 5, x + 4, y + 7, 0xFF2A2D31);
+    }
+
+    private void renderAccess(GuiGraphics g, CameraBlockEntity c, int px, int py) {
+        g.drawString(font, Component.translatable("gui.minepc.camera.password"), px + 6, py + 11, 0xFFE6E8EC, false);
+        // надёжность того, что набрано
+        int st = CameraBlockEntity.strength(passBox.getValue());
+        int my = py + 28;
+        int[] colors = {0xFF8A9096, 0xFFFF6A5A, 0xFFFFCF5A, 0xFFB5E36A, 0xFF8FE39A};
+        if (st == 0) {
+            g.drawString(font, Component.translatable(c.locked() ? "gui.minepc.camera.pw_set" : "gui.minepc.camera.pw_none"), px + 6, my, colors[0], false);
+        } else {
+            for (int i = 0; i < 4; i++) g.fill(px + 6 + i * 15, my + 2, px + 19 + i * 15, my + 6, i < st ? colors[st] : 0xFF444444);
+            g.drawString(font, Component.translatable("gui.minepc.camera.pw_" + st), px + 70, my, colors[st], false);
+        }
+        // строка у «Убрать пароль» (после действия — что сделано)
+        boolean showStatus = status != null && System.currentTimeMillis() < statusUntil;
+        Component side = showStatus ? status : Component.translatable(c.locked() ? "gui.minepc.camera.remove_hint" : "gui.minepc.camera.open_hint");
+        g.drawString(font, side, px + 112, py + 45, showStatus ? 0xFF8FE39A : 0xFF6A7076, false);
+        // журнал входов по сети
+        g.drawString(font, Component.translatable("gui.minepc.camera.log", CameraBlockEntity.LOG_MAX), px + 6, py + 66, 0xFF8A9096, false);
+        int ly = py + 78;
+        if (!logLoaded) {
+            g.drawString(font, "…", px + 6, ly, 0xFF6A7076, false);
+        } else if (log.isEmpty()) {
+            g.drawString(font, Component.translatable("gui.minepc.camera.log_empty"), px + 6, ly, 0xFF6A7076, false);
+        } else {
+            for (int i = 0; i < LOG_ROWS && logScroll + i < log.size(); i++) {
+                var e = log.get(logScroll + i);
+                int y = ly + i * 10;
+                boolean ok = e.getBoolean("Ok");
+                g.drawString(font, when(e.getLong("T")), px + 6, y, 0xFFE6E8EC, false);
+                g.drawString(font, e.getString("A"), px + 42, y, 0xFFE6E8EC, false);
+                String who = e.getString("C");
+                g.drawString(font, font.plainSubstrByWidth(who.isEmpty() ? "—" : who, PW - 100 - 22), px + 100, y, 0xFFE6E8EC, false);
+                g.drawString(font, ok ? "✓" : "✗", px + PW - 14, y, ok ? 0xFF8FE39A : 0xFFFF6A5A, false);
+            }
+            if (log.size() > LOG_ROWS) {
+                String more = (logScroll + 1) + "–" + Math.min(log.size(), logScroll + LOG_ROWS) + " / " + log.size();
+                g.drawString(font, more, px + PW - 6 - font.width(more), py + 66, 0xFF6A7076, false);
+            }
+        }
+        // справа: рядом с камерой пароль не нужен
+        int bx = left + 8 + PW + 8, y = top + 48;
+        for (var line : font.split(Component.translatable("gui.minepc.camera.near"), left + W - bx - 4)) {
+            g.drawString(font, line, bx, y, 0xFF8A9096, false);
+            y += 10;
+        }
+        g.drawString(font, Component.translatable("gui.minepc.camera.access_hint"), left + 8, top + H - 13, 0xFF8A9096, false);
     }
 
     private boolean inPreview(double mx, double my) {
@@ -212,7 +379,7 @@ public class CameraScreen extends Screen {
 
     @Override
     public boolean mouseClicked(double mx, double my, int button) {
-        if (button == 0 && inPreview(mx, my)) {
+        if (button == 0 && !accessMode && inPreview(mx, my)) {
             dragging = true;
             return true;
         }
@@ -244,6 +411,10 @@ public class CameraScreen extends Screen {
 
     @Override
     public boolean mouseScrolled(double mx, double my, double sx, double sy) {
+        if (accessMode && inPreview(mx, my)) {
+            logScroll = Math.max(0, Math.min(log.size() - LOG_ROWS, logScroll - (int) Math.signum(sy)));
+            return true;
+        }
         if (inPreview(mx, my)) {
             zoom((float) (-sy * 5));
             return true;
@@ -253,6 +424,17 @@ public class CameraScreen extends Screen {
 
     @Override
     public boolean keyPressed(int key, int scan, int mods) {
+        if (accessMode) {
+            if (key == GLFW.GLFW_KEY_ENTER || key == GLFW.GLFW_KEY_KP_ENTER) {
+                if (saveBtn.active) saveBtn.onPress();
+                return true;
+            }
+            if (key != GLFW.GLFW_KEY_ESCAPE && passBox.isFocused()) {
+                passBox.keyPressed(key, scan, mods);
+                return true;     // буквы — в поле пароля, а не на поворот камеры (WASD) и не «E» — закрыть
+            }
+            return super.keyPressed(key, scan, mods);
+        }
         switch (key) {
             case GLFW.GLFW_KEY_LEFT, GLFW.GLFW_KEY_A -> send(CameraActionPayload.TURN, -5, 0);
             case GLFW.GLFW_KEY_RIGHT, GLFW.GLFW_KEY_D -> send(CameraActionPayload.TURN, 5, 0);

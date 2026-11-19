@@ -9,10 +9,22 @@ public final class CameraFeedImpl implements CameraFeed {
 
     private final CameraBlockEntity cam;
     private final long linkBytes;
+    private final java.util.function.Supplier<String> key;
 
     public CameraFeedImpl(CameraBlockEntity cam, long linkBytes) {
+        this(cam, linkBytes, () -> "");
+    }
+
+    /** key — отпечаток пароля, который помнит компьютер (сверяется с камерой при каждом кадре). */
+    public CameraFeedImpl(CameraBlockEntity cam, long linkBytes, java.util.function.Supplier<String> key) {
         this.cam = cam;
         this.linkBytes = linkBytes;
+        this.key = key;
+    }
+
+    @Override
+    public boolean locked() {
+        return !cam.allows(key.get());
     }
 
     @Override
@@ -49,7 +61,7 @@ public final class CameraFeedImpl implements CameraFeed {
 
     @Override
     public boolean render(int[] px, int w, int h) {
-        if (cam.isRemoved()) return false;
+        if (cam.isRemoved() || locked()) return false;
         cam.watched();
         int[] f = cam.render(w, h);
         if (f == null) return false;

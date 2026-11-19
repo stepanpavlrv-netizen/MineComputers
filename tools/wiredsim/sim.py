@@ -405,7 +405,7 @@ class Sim:
         cams = [{"name": "двор", "address": "3368c5f8", "width": 192, "height": 108, "link": 1250000, "hops": 1},
                 {"name": "склад", "address": "a1f07c22", "width": 128, "height": 72, "link": 1250000, "hops": 2},
                 {"name": "поле", "address": "7c0e19b4", "width": 256, "height": 144, "link": 125000, "hops": 1}]
-        cinfo = {c["name"]: {"name": c["name"], "width": c["width"], "height": c["height"], "fps": 10, "yaw": 0, "pitch": -12,
+        cinfo = {c["name"]: {"name": c["name"], "address": c["address"], "width": c["width"], "height": c["height"], "fps": 10, "yaw": 0, "pitch": -12,
                              "fov": 70, "night": False, "patrol": False, "res": 4} for c in cams}
 
         def c_info(n):
@@ -420,8 +420,37 @@ class Sim:
         def c_set(n, k, v):
             cinfo[str(n)][str(k)] = v; return c_info(n)
 
-        g.camera = tbl({"list": lambda: tbl({i + 1: tbl(c) for i, c in enumerate(cams)}), "info": c_info, "turn": c_turn,
-                        "zoom": c_zoom, "set": c_set})
+        # «склад» закрыт паролем 9999 (как camera.login в игре: неверный — nil, «Неверный пароль»)
+        cpass = {"склад": "9999"}
+        cin = set()
+
+        def c_list():
+            out = []
+            for c in cams:
+                d = dict(c); d["password"] = c["name"] in cpass; d["locked"] = c["name"] in cpass and c["name"] not in cin
+                out.append(d)
+            return tbl({i + 1: tbl(c) for i, c in enumerate(out)})
+
+        def c_name(n):
+            n = str(n)
+            for c in cams:
+                if n in (c["name"], c["address"]): return c["name"]
+            return n
+
+        def c_login(n, pw):
+            n = c_name(n)
+            sim.flags.setdefault("cam_logins", []).append((n, str(pw)))
+            if n in cpass and cpass[n] != str(pw): return None, "Неверный пароль"
+            cin.add(n); return c_info(n)
+
+        def c_guard(fn):
+            def g_(n, *a):
+                if c_name(n) in cpass and c_name(n) not in cin: return None, "Камера «%s» закрыта паролем" % n
+                return fn(c_name(n), *a)
+            return g_
+
+        g.camera = tbl({"list": c_list, "info": c_guard(c_info), "turn": c_guard(c_turn),
+                        "zoom": c_guard(c_zoom), "set": c_guard(c_set), "login": c_login, "logout": lambda n: cin.discard(c_name(n))})
         # ---- сеть (почта уходит «в никуда»: отвечаем MAILOK сразу) ----
         def n_send(host, port, kind, *rest):
             if str(kind) == "GET":

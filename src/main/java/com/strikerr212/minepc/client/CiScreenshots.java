@@ -930,7 +930,28 @@ public class CiScreenshots {
                     com.mojang.logging.LogUtils.getLogger().info("[CI-SWIRED] bmc.info = {}", r.server(0).bmc().info());
                 } else com.mojang.logging.LogUtils.getLogger().info("[CI-SWIRED] нет сервера в месте 0 стойки");
             });
-            case 6810 -> {
+            // Пароль камеры: cam спрашивает пароль (сначала неверный), запоминает; окно камеры — панель «Доступ»
+            case 6812 -> {
+                mc.setScreen(null);
+                server.execute(() -> {
+                    if (server.overworld().getBlockEntity(camPos) instanceof com.strikerr212.minepc.lan.CameraBlockEntity cam) cam.setPassword("1234");
+                    ServerPlayer p = server.getPlayerList().getPlayers().get(0);
+                    p.teleportTo(server.overworld(), camPos.getX() + 2.1, camPos.getY(), camPos.getZ() - 1.1, 45f, 28f);
+                });
+            }
+            case 6814 -> typeAt(drawPcA, "exit()");
+            case 6818 -> typeAt(drawPcA, "clear");
+            case 6822 -> typeAt(drawPcA, "cam set двор night on");
+            case 6832 -> typeAt(drawPcA, "0000");
+            case 6872 -> typeAt(drawPcA, "1234");
+            case 6882 -> typeAt(drawPcA, "д");
+            case 6890 -> server.execute(() -> logScreens("[CI-CAMPW]"));
+            case 6892 -> typeAt(drawPcA, "cam");
+            case 6904 -> server.execute(() -> logScreens("[CI-CAMPW]"));
+            case 6908 -> mc.setScreen(new CameraScreen(camPos).withAccess());
+            case 6930 -> shot(mc, "camera_access");
+            case 6934 -> {
+                mc.setScreen(null);
                 mc.options.pauseOnLostFocus = pauseWas;
                 // вместе с управлением по ходу (-PliveCtl) игра после сценария остаётся открытой
                 if (!LiveControl.ENABLED) mc.stop();
@@ -1709,6 +1730,11 @@ public class CiScreenshots {
             return;
         }
         com.strikerr212.minepc.wire.WireService.lay(p, new com.strikerr212.minepc.network.WireLayPayload(false, a, List.of(), b));
+        if (com.strikerr212.minepc.wire.WireSockets.socketFree(level, camPos, a.port())) {
+            // как игрок — не проложился (путь от камеры на полу): напрямую
+            var l = link(level, camPos, drawSwitch, net.minecraft.world.item.DyeColor.GRAY.getId(), false, "камера");
+            com.mojang.logging.LogUtils.getLogger().info("[CI-CAM] провод камеры: как игрок — нет, напрямую — {}", l != null);
+        }
     }
 
     private static void logCam(String when) {

@@ -330,8 +330,17 @@ public final class CaseComputer implements Computer.Host {
     public com.strikerr212.minepc.computer.CameraFeed camera(String target) {
         return onServer(level -> {
             var cam = findCamera(level, target);
-            return cam == null ? null : new com.strikerr212.minepc.lan.CameraFeedImpl(cam.cam, cam.bits / 800);
+            if (cam == null) return null;
+            String addr = cam.cam.address();
+            return new com.strikerr212.minepc.lan.CameraFeedImpl(cam.cam, cam.bits / 800, () -> camKeys.getOrDefault(addr, ""));
         }, null);
+    }
+
+    /** Пароли камер, введённые на этом компьютере: адрес камеры → отпечаток. Живут, пока компьютер загружен. */
+    private final Map<String, String> camKeys = new java.util.concurrent.ConcurrentHashMap<>();
+
+    private boolean camAllowed(com.strikerr212.minepc.lan.CameraBlockEntity cam) {
+        return cam.allows(camKeys.getOrDefault(cam.address(), ""));
     }
 
     private record FoundCamera(com.strikerr212.minepc.lan.CameraBlockEntity cam, long bits, int hops) {
@@ -362,6 +371,8 @@ public final class CaseComputer implements Computer.Host {
                     m.put("width", cam.width());
                     m.put("height", cam.height());
                     m.put("fps", cam.frameRate());
+                    m.put("password", cam.locked());
+                    m.put("locked", !camAllowed(cam));
                     out.add(m);
                 }
             }
@@ -375,7 +386,20 @@ public final class CaseComputer implements Computer.Host {
             var found = findCamera(level, target);
             if (found == null) return new Object[]{false, "Камера «" + target + "» не найдена: нет в сети или до неё нет связи"};
             var cam = found.cam;
-            switch (command) {
+            String op = command;
+            if (op.startsWith("login:")) {
+                String pass = op.substring(6);
+                String err = cam.login(be.address(), be.label(), pass, System.currentTimeMillis());
+                if (err != null) return new Object[]{false, err};
+                camKeys.put(cam.address(), com.strikerr212.minepc.lan.CameraBlockEntity.hash(pass));
+                op = "info";
+            } else if (op.equals("logout")) {
+                camKeys.remove(cam.address());
+                return new Object[]{true, cam.info()};
+            } else if (!camAllowed(cam)) {
+                return new Object[]{false, "Камера «" + target + "» закрыта паролем"};
+            }
+            switch (op) {
                 case "info" -> {
                 }
                 case "look" -> cam.look((float) a, (float) b);
@@ -392,8 +416,8 @@ public final class CaseComputer implements Computer.Host {
                 case "night" -> cam.setNight(a != 0);
                 case "patrol" -> cam.setPatrol(a != 0);
                 default -> {
-                    if (command.startsWith("name:")) cam.setLabel(command.substring(5));
-                    else return new Object[]{false, "Неизвестная настройка: " + command};
+                    if (op.startsWith("name:")) cam.setLabel(op.substring(5));
+                    else return new Object[]{false, "Неизвестная настройка: " + op};
                 }
             }
             Map<Object, Object> m = cam.info();

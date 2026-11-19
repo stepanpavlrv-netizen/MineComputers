@@ -51,6 +51,20 @@ public class CameraBlockEntity extends BlockEntity implements NetEndpoint {
     private boolean night, patrol;
     private int patrolDir = 1;
 
+    // ----- доступ по сети -----
+    /** Отпечаток пароля (SHA-256, hex); пусто — камера открыта всем в сети. Сам пароль нигде не хранится. */
+    private String passHash = "";
+    /** Журнал попыток входа по сети, новые — в конце. */
+    private final List<Access> accessLog = new ArrayList<>();
+    /** Адрес → когда можно пробовать снова после неверного пароля (мс). */
+    private final java.util.Map<String, Long> retryAt = new java.util.HashMap<>();
+    public static final int LOG_MAX = 50;
+    public static final long RETRY_MS = 1000;
+
+    /** Попытка входа: время (мс, настоящие часы), адрес и имя компьютера, пустили ли. */
+    public record Access(long time, String address, String computer, boolean ok) {
+    }
+
     // ----- снимок мира (только сервер) -----
     private volatile CameraRender.Snapshot snapshot;
     private int buildLayer;
@@ -225,6 +239,77 @@ public class CameraBlockEntity extends BlockEntity implements NetEndpoint {
     public void setPatrol(boolean v) {
         patrol = v;
         changed();
+    }
+
+    // ======================= Пароль и журнал =======================
+
+    public static String hash(String password) {
+        if (password == null || password.isEmpty()) return "";
+        try {
+            byte[] d = java.security.MessageDigest.getInstance("SHA-256").digest(("minepc-cam:" + password).getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            return java.util.HexFormat.of().formatHex(d);
+        } catch (java.security.NoSuchAlgorithmException e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
+    /** Насколько надёжен пароль: 0 — пусто, 1 — слабый … 4 — надёжный. */
+    public static int strength(String pw) {
+        if (pw.isEmpty()) return 0;
+        int kinds = 0;
+        if (pw.chars().anyMatch(Character::isDigit)) kinds++;
+        if (pw.chars().anyMatch(Character::isLowerCase)) kinds++;
+        if (pw.chars().anyMatch(Character::isUpperCase)) kinds++;
+        if (pw.chars().anyMatch(ch -> !Character.isLetterOrDigit(ch))) kinds++;
+        int n = pw.length();
+        if (n < 6) return 1;
+        if (n >= 12 && kinds >= 2) return 4;
+        if (n >= 10 || (n >= 8 && kinds >= 2)) return 3;
+        return 2;
+    }
+
+    /** Закрыта ли камера паролем (на клиенте — по пакету обновления, без самого отпечатка). */
+    public boolean locked() {
+        return !passHash.isEmpty() || clientLocked;
+    }
+
+    private boolean clientLocked;
+
+    /** Поставить пароль (пустой — убрать). Все, кто входил со старым, больше не подходят. */
+    public void setPassword(String password) {
+        passHash = hash(password);
+        retryAt.clear();
+        changed();
+    }
+
+    /** Подходит ли отпечаток (то, что помнит компьютер). Камера без пароля пускает всех. */
+    public boolean allows(String hash) {
+        return passHash.isEmpty() || passHash.equals(hash);
+    }
+
+    /**
+     * Вход по сети с компьютера: пароль сверяется, попытка пишется в журнал. После неверного пароля тот же адрес
+     * может пробовать снова только через {@link #RETRY_MS} (такие попытки не пишутся). Ответ: null — пустили,
+     * иначе текст ошибки.
+     */
+    public String login(String fromAddress, String fromName, String password, long now) {
+        if (passHash.isEmpty()) return null;
+        Long wait = retryAt.get(fromAddress);
+        if (wait != null && now < wait) return "Слишком часто: подождите секунду";
+        boolean ok = passHash.equals(hash(password));
+        if (ok) retryAt.remove(fromAddress);
+        else retryAt.put(fromAddress, now + RETRY_MS);
+        if (retryAt.size() > 256) retryAt.values().removeIf(t -> t < now);
+        // в журнале адрес — как везде в сети: первые 8 знаков
+        String shortAddr = fromAddress.length() > 8 ? fromAddress.substring(0, 8) : fromAddress;
+        accessLog.add(new Access(now, shortAddr, fromName == null ? "" : fromName, ok));
+        while (accessLog.size() > LOG_MAX) accessLog.remove(0);
+        setChanged();
+        return ok ? null : "Неверный пароль";
+    }
+
+    public List<Access> accessLog() {
+        return List.copyOf(accessLog);
     }
 
     private void changed() {
@@ -556,6 +641,7 @@ public class CameraBlockEntity extends BlockEntity implements NetEndpoint {
         m.put("fps", frameRate());
         m.put("night", night);
         m.put("patrol", patrol);
+        m.put("password", locked());
         m.put("res", res + 1);
         m.put("mount", face().getSerializedName());
         m.put("yawMin", (double) -yawLimit());
@@ -591,6 +677,19 @@ public class CameraBlockEntity extends BlockEntity implements NetEndpoint {
         tag.putBoolean("Night", night);
         tag.putBoolean("Patrol", patrol);
         tag.putBoolean("Live", live);
+        if (!passHash.isEmpty()) tag.putString("PassHash", passHash);
+        if (!accessLog.isEmpty()) {
+            net.minecraft.nbt.ListTag list = new net.minecraft.nbt.ListTag();
+            for (Access a : accessLog) {
+                CompoundTag e = new CompoundTag();
+                e.putLong("T", a.time());
+                e.putString("A", a.address());
+                e.putString("C", a.computer());
+                e.putBoolean("Ok", a.ok());
+                list.add(e);
+            }
+            tag.put("AccessLog", list);
+        }
     }
 
     @Override
@@ -606,6 +705,13 @@ public class CameraBlockEntity extends BlockEntity implements NetEndpoint {
         night = tag.getBoolean("Night");
         patrol = tag.getBoolean("Patrol");
         live = tag.getBoolean("Live");
+        passHash = tag.getString("PassHash");
+        clientLocked = tag.getBoolean("Locked");
+        accessLog.clear();
+        for (var t : tag.getList("AccessLog", net.minecraft.nbt.Tag.TAG_COMPOUND)) {
+            CompoundTag e = (CompoundTag) t;
+            accessLog.add(new Access(e.getLong("T"), e.getString("A"), e.getString("C"), e.getBoolean("Ok")));
+        }
     }
 
     @Override
@@ -623,7 +729,12 @@ public class CameraBlockEntity extends BlockEntity implements NetEndpoint {
 
     @Override
     public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
-        return saveWithoutMetadata(registries);
+        // игрокам — без отпечатка пароля и журнала: только «закрыта или нет» (журнал окно просит отдельно)
+        CompoundTag t = saveWithoutMetadata(registries);
+        t.remove("PassHash");
+        t.remove("AccessLog");
+        t.putBoolean("Locked", !passHash.isEmpty());
+        return t;
     }
 
     @Override

@@ -4,6 +4,7 @@ local gpu = G.gpu
 
 local function kb(b) return b >= 1048576 and string.format("%.1f МБ/с", b / 1048576) or string.format("%d КБ/с", math.floor(b / 1024)) end
 local FPS = { 5, 10, 15, 20, 30 }
+local K = require("camkeys")
 
 return function()
   local app = { title = "Камеры", icon = "cam", w = 120, h = 40, minW = 70, minH = 20 }
@@ -23,10 +24,92 @@ return function()
     return cv
   end
 
+  st.tried = {}
   local function refreshList()
     local ok, list = pcall(camera.list)
     st.cams = (ok and type(list) == "table") and list or {}
+    -- закрытые паролем: один раз за сеанс пробуем сохранённый пароль
+    for _, c in ipairs(st.cams) do
+      if c.locked and not st.tried[c.address] then
+        st.tried[c.address] = true
+        if K.auto(c) then c.locked = false end
+      end
+    end
     if st.sel > #st.cams then st.sel = math.max(1, #st.cams) end
+  end
+
+  local function camByName(name)
+    for _, c in ipairs(st.cams) do
+      if c.address == name or c.name == name then return c end
+    end
+  end
+
+  -- Окошко пароля камеры: done(true) — вошли, done(false) — отмена.
+  local function askPassword(name, done)
+    local f = U.field("", "f", "*")
+    f.focused = true
+    local remember, err = true, nil
+    local dlg
+    local function finish(ok)
+      wm.close(dlg, true)
+      done(ok)
+    end
+    local function try()
+      if f.text == "" then return end
+      local r, e = K.login(name, f.text, remember)
+      if r then
+        local c = camByName(name)
+        if c then c.locked = false end
+        finish(true)
+      else
+        err = e
+        f.text, f.pos = "", 0
+        wm.redraw(dlg)
+      end
+    end
+    dlg = wm.open({ title = "Камера «" .. name .. "»", icon = "cam", w = math.min(46, G.W - 2), h = 9, resizable = false,
+      draw = function(w, c)
+        c.text(3, 2, "Камера закрыта паролем.", T.fg)
+        c.field(3, 3, c.w - 4, f)
+        c.check(3, 5, "Запомнить на этом компьютере", remember, "remember")
+        if err then c.text(3, 6, G.cut(err, c.w - 4), T.err) end
+        local bx = c.w - 21
+        bx = c.button(bx, 7, "Отмена", "no") + 1
+        c.button(bx, 7, "Открыть", "ok", "primary")
+      end,
+      event = function(w, ev, a)
+        if ev == "click" then
+          if a == "ok" then try()
+          elseif a == "no" then finish(false)
+          elseif a == "remember" then remember = not remember wm.redraw(w) end
+        elseif ev == "key" and a == "escape" then finish(false)
+        elseif ev == "char" or ev == "key" or ev == "paste" then
+          if U.edit(f, ev, a) == "enter" then try() return end
+          wm.redraw(w)
+        end
+      end })
+    dlg.app.close = function() done(false) end
+  end
+
+  -- Перед просмотром: у закрытых камер спросить пароль по очереди; отменённые — не показывать.
+  local function unlockThen(names, fn)
+    local out, i = {}, 0
+    local function step()
+      i = i + 1
+      local name = names[i]
+      if not name then fn(out) return end
+      local c = camByName(name)
+      if c and c.locked then
+        askPassword(name, function(ok)
+          if ok then out[#out + 1] = name end
+          step()
+        end)
+      else
+        out[#out + 1] = name
+        step()
+      end
+    end
+    step()
   end
 
   local function info(name)
@@ -78,19 +161,30 @@ return function()
     end)
   end
 
+  local cycleNext
   local function retitle()
     wm.setTitle(win, "Камеры — " .. (#st.view == 1 and st.view[1] or ("сетка из " .. #st.view)) .. (st.cycle and " (по очереди)" or ""))
   end
 
-  local function openView(names)
+  local function openView(names, unlocked)
     if #names == 0 then return end
+    if not unlocked then
+      unlockThen(names, function(list)
+        if #list > 0 and not win.closed then
+          openView(list, true)
+          if st.wantCycle then st.wantCycle = nil st.cycle, st.cyclePos = true, 0 cycleNext() end
+        end
+        st.wantCycle = nil
+      end)
+      return
+    end
     st.mode, st.view, st.focus = "view", names, 1
     st.all = names
     retitle()
     wm.redraw(win)
   end
 
-  local function cycleNext()
+  function cycleNext()
     if not st.cycle or st.mode ~= "view" or win.closed then return end
     st.cyclePos = (st.cyclePos or 0) % #st.all + 1
     st.view = { st.all[st.cyclePos] }
@@ -145,8 +239,12 @@ return function()
       if cvok then
         local px, py = 6, (y - 1) * 2
         if sel then cv:fill(0, py, cvw, (rowH - 1) * 2, T.sel) end
-        local r, err = cv:camera(name, px, py, 16, (rowH - 1) * 2)
-        if not r and err then cv:fill(px, py, 16, (rowH - 1) * 2, 0x14111d) end
+        if cam.locked then
+          cv:fill(px, py, 16, (rowH - 1) * 2, 0x14111d)
+        else
+          local r, err = cv:camera(name, px, py, 16, (rowH - 1) * 2)
+          if not r and err then cv:fill(px, py, 16, (rowH - 1) * 2, 0x14111d) end
+        end
       end
     end
     if cvok then c.canvas(cv, 1, 1) end
@@ -164,7 +262,14 @@ return function()
       c.text(25, y, name, T.fg, bg)
       c.text(25, y + 1, cam.address, T.faint, bg)
       c.text(25, y + 2, cam.width .. "×" .. cam.height .. " · линия " .. kb(cam.link or 0) .. " · переходов " .. (cam.hops or 0), T.dim, bg)
-      c.text(70, y, "● в сети", T.ok, bg)
+      if cam.locked then
+        c.text(8, y + 1, "пароль", T.warn, 0x14111d)
+        c.text(70, y, "● закрыта паролем", T.warn, bg)
+      elseif cam.password then
+        c.text(70, y, "● в сети · пароль ✓", T.ok, bg)
+      else
+        c.text(70, y, "● в сети", T.ok, bg)
+      end
       c.button(c.w - 12, y + 1, "Открыть", "open1", "normal", name)
       c.hit(5, y, 60, rowH - 1, "row", k)
     end
@@ -278,9 +383,8 @@ return function()
         local names = {}
         for _, cam in ipairs(st.cams) do if st.picked[camName(cam)] then names[#names + 1] = camName(cam) end end
         if a == "cycle" and #names > 0 then
+          st.wantCycle = true
           openView(names)
-          st.cycle, st.cyclePos = true, 0
-          cycleNext()
         else
           openView(names)
         end
@@ -303,6 +407,8 @@ return function()
         st.cycle = not st.cycle
         if st.cycle then st.cyclePos = 0 cycleNext() else st.view = st.all end
       elseif a == "every" then st.every = math.max(2, math.min(60, st.every + b))
+      elseif a == "cell" and st.view[b] and select(2, camera.info(st.view[b])) and tostring(select(2, camera.info(st.view[b]))):find("паролем") then
+        askPassword(st.view[b], function() wm.redraw(w) end)
       elseif a == "cell" then
         st.focus = b
         if ev == "dblclick" and #st.view > 1 then

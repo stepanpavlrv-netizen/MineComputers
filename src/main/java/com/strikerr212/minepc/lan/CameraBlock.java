@@ -67,6 +67,10 @@ public class CameraBlock extends FaceAttachedHorizontalDirectionalBlock implemen
 
     @Override
     protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+        return shape(state);
+    }
+
+    private static VoxelShape shape(BlockState state) {
         AttachFace face = state.getValue(FACE);
         if (face == AttachFace.FLOOR) return Block.box(4, 0, 4, 12, 11, 12);
         if (face == AttachFace.CEILING) return Block.box(4, 5, 4, 12, 16, 12);
@@ -110,11 +114,15 @@ public class CameraBlock extends FaceAttachedHorizontalDirectionalBlock implemen
         boolean pos = a.getAxisDirection() == Direction.AxisDirection.POSITIVE;
         float layer = pos ? 15 : 0;
         List<Socket> out = new ArrayList<>();
+        var box = shape(state).bounds();
         for (Direction f : Direction.values()) {
             if (f.getAxis() == a.getAxis()) continue;
             Direction.Axis[] fa = LanDevice.faceAxes(f);
-            if (fa[0].ordinal() == t) out.add(new Socket(f, layer, 7.5f, 5, true, false));
-            else out.add(new Socket(f, 7.5f, layer, 5, true, false));
+            // гнездо — на поверхности корпуса: глубже — провод начинался бы внутри камеры и не прокладывался
+            double lo = box.min(f.getAxis()) * 16, hi = box.max(f.getAxis()) * 16;
+            float depth = (float) (f.getAxisDirection() == Direction.AxisDirection.POSITIVE ? 16 - hi : lo);
+            if (fa[0].ordinal() == t) out.add(new Socket(f, layer, 7.5f, depth, true, false));
+            else out.add(new Socket(f, 7.5f, layer, depth, true, false));
         }
         return out;
     }

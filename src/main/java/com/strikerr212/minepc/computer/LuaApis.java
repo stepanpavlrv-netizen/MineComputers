@@ -348,6 +348,10 @@ final class LuaApis {
                 RegisteredFunction.ofV("look", (s, a) -> camCmd(c, a, "look")),
                 RegisteredFunction.ofV("turn", (s, a) -> camCmd(c, a, "turn")),
                 RegisteredFunction.ofV("zoom", (s, a) -> camCmd(c, a, "zoom")),
+                // пароль камеры: вход — до перезагрузки мира/выгрузки компьютера; неверный — пауза 1 с
+                RegisteredFunction.ofV("login", (s, a) -> camResult(c.host().cameraCommand(text(a.arg(1).checkLuaString()),
+                        "login:" + text(a.arg(2).checkLuaString()), 0, 0))),
+                RegisteredFunction.ofV("logout", (s, a) -> camResult(c.host().cameraCommand(text(a.arg(1).checkLuaString()), "logout", 0, 0))),
                 RegisteredFunction.ofV("set", (s, a) -> {
                     String target = text(a.arg(1).checkLuaString());
                     String key = text(a.arg(2).checkLuaString());

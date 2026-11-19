@@ -164,6 +164,25 @@ public class ModNetwork {
                 }));
         registrar.playToClient(CameraFramePayload.TYPE, CameraFramePayload.STREAM_CODEC, (payload, context) ->
                 context.enqueueWork(() -> com.strikerr212.minepc.client.ClientAccess.cameraFrame(payload)));
+        // Пароль камеры и журнал входов (окно камеры ↔ сервер)
+        registrar.playBidirectional(CameraAccessPayload.TYPE, CameraAccessPayload.STREAM_CODEC, (payload, context) -> {
+            if (context.flow() == net.minecraft.network.protocol.PacketFlow.CLIENTBOUND) {
+                context.enqueueWork(() -> com.strikerr212.minepc.client.ClientAccess.cameraAccess(payload));
+                return;
+            }
+            context.enqueueWork(() -> {
+                if (!(context.player() instanceof net.minecraft.server.level.ServerPlayer player)) return;
+                BlockPos pos = payload.pos();
+                if (player.distanceToSqr(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5) > 8 * 8) return;
+                if (!(player.level().getBlockEntity(pos) instanceof com.strikerr212.minepc.lan.CameraBlockEntity cam)) return;
+                String pw = payload.password();
+                if (!CameraAccessPayload.ASK.equals(pw)) {
+                    if (pw.length() > MAX_CAM_PASSWORD || pw.chars().anyMatch(ch -> ch < 32)) return;
+                    cam.setPassword(pw);
+                }
+                net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(player, new CameraAccessPayload(pos, "", accessTag(cam)));
+            });
+        });
         // Текстуры блоков для камер: сервер просит, игрок присылает кусками
         registrar.playBidirectional(CameraTexturesPayload.TYPE, CameraTexturesPayload.STREAM_CODEC, (payload, context) -> {
             if (context.flow() == net.minecraft.network.protocol.PacketFlow.CLIENTBOUND) {
@@ -203,5 +222,24 @@ public class ModNetwork {
                     net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(player,
                             com.strikerr212.minepc.lan.SwitchPorts.openPayload(level, pos));
                 }));
+    }
+
+    public static final int MAX_CAM_PASSWORD = 32;
+
+    /** Журнал входов камеры для окна (новые — в конце). */
+    private static net.minecraft.nbt.CompoundTag accessTag(com.strikerr212.minepc.lan.CameraBlockEntity cam) {
+        net.minecraft.nbt.CompoundTag t = new net.minecraft.nbt.CompoundTag();
+        net.minecraft.nbt.ListTag list = new net.minecraft.nbt.ListTag();
+        for (var a : cam.accessLog()) {
+            net.minecraft.nbt.CompoundTag e = new net.minecraft.nbt.CompoundTag();
+            e.putLong("T", a.time());
+            e.putString("A", a.address());
+            e.putString("C", a.computer());
+            e.putBoolean("Ok", a.ok());
+            list.add(e);
+        }
+        t.put("Log", list);
+        t.putBoolean("Locked", cam.locked());
+        return t;
     }
 }
