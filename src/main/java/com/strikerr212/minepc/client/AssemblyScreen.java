@@ -350,6 +350,9 @@ public class AssemblyScreen extends AbstractContainerScreen<AssemblyMenu> {
         if (hoverName != null) g.renderTooltip(font, hoverName, mouseX, mouseY);
     }
 
+    /** Детали, у которых в инвентаре 2D-иконка, а объёмная модель — для мира (tools/assetgen, separate_transforms). */
+    private static final java.util.Set<String> PART_3D = java.util.Set.of("cpu", "gpu", "ram", "motherboard", "psu", "hdd", "ssd", "cooler");
+
     private void renderPreview(GuiGraphics g, ItemStack stack, ItemStack result, PartSpec spec, List<Integer> values,
                                int page, int mouseX, int mouseY) {
         int bx = leftPos + pvX, by = topPos + CONTENT_Y;
@@ -362,10 +365,22 @@ public class AssemblyScreen extends AbstractContainerScreen<AssemblyMenu> {
         pose.mulPose(Axis.YP.rotationDegrees(yaw));
         float z = zoom * pvH / 104f;
         pose.scale(z, z, z);
-        // renderItem сам сдвигает предмет на 150 по глубине. Мы уже повернули систему координат,
-        // и без компенсации этот сдвиг уводил бы модель вбок. Отменяем его заранее.
-        pose.translate(0, 0, -150);
-        g.renderItem(stack, -8, -8);
+        var key = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(stack.getItem());
+        if (PART_3D.contains(key.getPath())) {
+            // У деталей в инвентаре — плоская иконка, а «как в мире» (FIXED) — объёмная модель с тем же поворотом,
+            // что у иконки, только в масштабе 0,6. Рисуем объёмную, возвращая масштаб.
+            float k = 16f / 0.6f;
+            pose.scale(k, -k, k);
+            var mc = net.minecraft.client.Minecraft.getInstance();
+            mc.getItemRenderer().renderStatic(stack, net.minecraft.world.item.ItemDisplayContext.FIXED, 0xF000F0,
+                    net.minecraft.client.renderer.texture.OverlayTexture.NO_OVERLAY, pose, g.bufferSource(), mc.level, 0);
+            g.flush();
+        } else {
+            // renderItem сам сдвигает предмет на 150 по глубине. Мы уже повернули систему координат,
+            // и без компенсации этот сдвиг уводил бы модель вбок. Отменяем его заранее.
+            pose.translate(0, 0, -150);
+            g.renderItem(stack, -8, -8);
+        }
         pose.popPose();
         g.disableScissor();
         if (spec.pages() > 1) {

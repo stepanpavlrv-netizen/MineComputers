@@ -184,7 +184,7 @@ local DEF = {
                 name = "Заражённый учёный", body = "scientistBody", leg = "scientistLeg", hip = 0.7, hipW = 0.12 },
   crawler = { hp = 28, speed = 6.8, r = 0.32, h = 0.55, melee = 7, meleeRate = 0.55, sight = 18, eyeY = 0.4,
               name = "Ползун", mesh = "crawler" },
-  turret = { hp = 90, speed = 0, r = 0.3, h = 1.05, shot = "bolt", rate = 0.38, dmg = 5, speedShot = 20, sight = 22,
+  turret = { hp = 70, speed = 0, r = 0.3, h = 1.05, shot = "bolt", rate = 0.6, dmg = 4, speedShot = 18, sight = 18,
              eyeY = 0.75, name = "Турель", mesh = "turret", static = true, machine = true, muzzle = { 0.64, 0.64, 0 } },
   boss = { hp = 1500, speed = 0.8, r = 1.05, h = 3.3, shot = "bolt", rate = 2.2, dmg = 9, speedShot = 13, sight = 60,
            eyeY = 2.1, name = "Сердце разлома", mesh = "boss", boss = true, muzzle = { 1.0, 2.1, 0 } },
@@ -1059,7 +1059,8 @@ local function startLevelState()
   end
   P.x, P.z, P.yaw, P.pitch = st.x, st.z, st.yaw or 0, 0
   P.vx, P.vy, P.vz, P.dead, P.kick = 0, 0, 0, false, 0
-  P.y = Lv.ground(P.x, P.z, P.r, st.y or 0)
+  local sc = Lv.cellAt(P.x, P.z)
+  P.y = Lv.ground(P.x, P.z, P.r, st.y or (sc and sc.f) or 0)     -- старт может быть высоко (клеть лифта на 6 м)
   P.onGround = true
   P.keys = {}
   P.hurtT, P.pickT, P.fireT, P.acidHurtT = -10, -10, -10, -10
@@ -1538,6 +1539,9 @@ if mode == "check" then
     startLevelState()
     local name = "ур." .. n .. ": "
     local used = gpu.totalMemory and (gpu.totalMemory() - gpu.freeMemory()) or 0
+    local sc = Lv.cellAt(P.x, P.z)
+    ok(name .. "игрок на старте стоит на полу и может ходить",
+      sc ~= nil and abs(P.y - sc.f) < 0.01 and not Lv.blocked(P.x, P.y, P.z, P.r, P.h))
     ok(name .. "загрузился, врагов " .. stats.total .. ", видеопамять " .. used .. " клеток (кадр " .. CW .. "×" .. CH .. ")",
       stats.total > 0 and #levelMeshes > 0)
     -- двери под ключ-карту: без карты закрыта, с картой открывается и пропускает
