@@ -1,4 +1,5 @@
-import com.strikerr212.minepc.computer.*;
+package com.strikerr212.minepc.computer;
+
 import com.strikerr212.minepc.computer.fs.DirMount;
 
 import java.nio.file.*;
@@ -6,7 +7,8 @@ import java.nio.file.*;
 /**
  * Кадры «Разлома» без Minecraft: настоящая видеокарта мода (Raster3D), дискета из src/main/resources.
  * Запуск — через tools/razview/shot.py. Аргументы: ширина высота папка_вывода "аргументы game.lua" ...
- * Каждый набор аргументов — один кадр: game.lua shot <аргументы> out=<файл>.
+ * Набор аргументов — одна команда: кадр (game.lua shot … out=файл), «check …» — самопроверка уровней,
+ * «bench N …» — замер скорости. Экран может быть больше, чем передаёт мод (для макетов «картинкой»).
  */
 public class RazlomShot {
     public static void main(String[] args) throws Exception {
@@ -21,7 +23,8 @@ public class RazlomShot {
         Path disk = Files.createTempDirectory("razdisk");
         ProgramDisks.populate(disk, "razlom");
         pc.fileSystem().mount("razlom", new DirMount(disk, 4 << 20, "razlom"));
-        pc.terminal().setMaxSize(w, h);
+        if (w > Terminal.LIMIT_WIDTH || h > Terminal.LIMIT_HEIGHT) pc.terminal().setLimitUnchecked(w, h);
+        else pc.terminal().setMaxSize(w, h);
         pc.terminal().setMaxDepth(24);
         pc.turnOn();
         for (int i = 0; i < 400 && !screen(pc).contains("/>"); i++) tick(pc);
@@ -29,22 +32,27 @@ public class RazlomShot {
             String name = "f" + (k - 3) + ".txt";
             Path f = drive.resolve(name);
             Files.deleteIfExists(f);
-            String line = "/razlom/app/game.lua " + (args[k].startsWith("check") ? "" : "shot ") + args[k] + " out=/" + name;
+            boolean check = args[k].startsWith("check"), bench = args[k].startsWith("bench");
+            String line = "/razlom/app/game.lua " + (check || bench ? "" : "shot ") + args[k] + (bench ? "" : " out=/" + name);
+            if (bench) pc.terminal().clear();
             for (char ch : line.toCharArray()) pc.queueEvent("char", String.valueOf(ch));
             pc.queueEvent("key", "enter", false, false);
             boolean done = false;
             for (int i = 0; i < 40000 && !done; i++) {
                 tick(pc);
-                done = Files.exists(drive.resolve(name + ".ok"));
+                done = bench ? screen(pc).contains("RAZLOM ") && screen(pc).contains("клеток") : Files.exists(drive.resolve(name + ".ok"));
                 if (i % 50 == 0 && (screen(pc).contains("не запустился") || screen(pc).contains("rror"))) break;
             }
             if (!done) {
                 System.out.println("НЕ ВЫШЛО: " + args[k]);
                 System.out.println(screen(pc));
-                try (var l = Files.list(drive)) { l.forEach(x -> System.out.println("  файл: " + x.getFileName())); }
                 continue;
             }
-            if (args[k].startsWith("check")) { System.out.print(Files.readString(f)); continue; }
+            if (bench) {
+                for (String l : screen(pc).split("\n")) if (l.contains("RAZLOM")) System.out.println("ЗАМЕР " + l.trim());
+                continue;
+            }
+            if (check) { System.out.print(Files.readString(f)); continue; }
             Files.copy(f, out.resolve(name), StandardCopyOption.REPLACE_EXISTING);
             System.out.println("КАДР " + name + " " + args[k]);
         }

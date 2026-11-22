@@ -51,6 +51,7 @@ public final class ClientTerminals {
         if (data.length == 0) {          // компьютер выключен
             FRAMES.remove(host);
             SCREENS.remove(host);
+            IMAGES.remove(host);
             PixelLayer.release(host);
             return;
         }
@@ -64,6 +65,25 @@ public final class ClientTerminals {
         if (s == null) return;
         FRAMES.put(host, frame);
         SCREENS.put(host, s);
+    }
+
+    private static final Map<HostRef, com.strikerr212.minepc.computer.Terminal.Image> IMAGES = new HashMap<>();
+    private static int imageSerial;
+
+    /** Картинка поверх экрана (кадр игры в высоком разрешении). Пустые данные — картинки нет. */
+    public static void updateImage(HostRef host, byte[] data) {
+        try {
+            var im = com.strikerr212.minepc.computer.ImageCodec.decode(data);
+            if (im == null) IMAGES.remove(host);
+            else IMAGES.put(host, new com.strikerr212.minepc.computer.Terminal.Image(im.x(), im.y(), im.w(), im.h(), im.rgb(), ++imageSerial));
+        } catch (IllegalArgumentException e) {
+            IMAGES.remove(host);
+        }
+    }
+
+    /** Картинка поверх экрана компьютера или null. */
+    public static com.strikerr212.minepc.computer.Terminal.Image image(HostRef host) {
+        return host == null ? null : IMAGES.get(host);
     }
 
     /** Попросить сервер прислать экран целиком (не чаще раза в секунду). */
@@ -91,10 +111,12 @@ public final class ClientTerminals {
 
     public static void clear() {
         PixelLayer.releaseAll();
+        ImageLayer.releaseAll();
         ComputerAudio.clear();
         HumSounds.clear();
         FRAMES.clear();
         SCREENS.clear();
+        IMAGES.clear();
         KEYBOARD.clear();
         LAST_REQUEST.clear();
     }

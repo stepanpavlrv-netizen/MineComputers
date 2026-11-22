@@ -256,6 +256,24 @@ final class Canvas {
                     if (x >= 0 && y >= 0 && x < cv.w && y < cv.h) cv.px[y * cv.w + x] = a.arg(o + 3).checkInteger() & 0xFFFFFF;
                     return Constants.NONE;
                 }),
+                // Текст пиксельным шрифтом прямо в кадр: text(x, y, строка, цвет, [масштаб], [цвет обводки]) → ширина в точках
+                RegisteredFunction.ofV("text", (s, a) -> {
+                    int o = base(a, t);
+                    String str = LuaApis.text(a.arg(o + 3).checkLuaString());
+                    if (str.length() > 400) str = str.substring(0, 400);
+                    int outline = a.arg(o + 6).isNil() ? -1 : a.arg(o + 6).checkInteger() & 0xFFFFFF;
+                    int scale = a.arg(o + 5).optInteger(1);
+                    int wpx = PixelFont.draw(cv.px, cv.w, cv.h, a.arg(o + 1).checkInteger(), a.arg(o + 2).checkInteger(), str,
+                            a.arg(o + 4).checkInteger() & 0xFFFFFF, scale, outline);
+                    m.spend((long) str.length() * scale * scale / 2 + 4);
+                    return valueOf(wpx);
+                }),
+                // Ширина строки пиксельным шрифтом: textWidth(строка, [масштаб])
+                RegisteredFunction.ofV("textWidth", (s, a) -> {
+                    int o = base(a, t);
+                    int scale = Math.max(1, a.arg(o + 2).optInteger(1));
+                    return valueOf(PixelFont.width(LuaApis.text(a.arg(o + 1).checkLuaString())) * scale);
+                }),
                 RegisteredFunction.ofV("get", (s, a) -> {
                     int o = base(a, t);
                     int x = a.arg(o + 1).checkInteger(), y = a.arg(o + 2).checkInteger();
@@ -313,6 +331,20 @@ final class Canvas {
                     if (gpu.targetIsScreen()) c.chargeGpu(changed / 4);
                     m.spend(cv.px.length / 32 + 8);
                     return valueOf(changed);
+                }),
+                // Показать кадр картинкой (вдвое шире и вчетверо выше полублоков): image(x, y) — клетка левого верхнего угла.
+                // Только на экран компьютера (не в задний буфер). Возвращает true или nil, причина.
+                RegisteredFunction.ofV("image", (s, a) -> {
+                    int o = base(a, t);
+                    if (cv.freed) throw LuaApis.error("буфер освобождён");
+                    int x = a.arg(o + 1).optInteger(1) - 1, y = a.arg(o + 2).optInteger(1) - 1;
+                    if (!Terminal.imagesAllowed) return org.squiddev.cobalt.ValueFactory.varargsOf(Constants.NIL, LuaApis.str("картинки выключены на сервере"));
+                    if (!gpu.targetIsScreen()) return org.squiddev.cobalt.ValueFactory.varargsOf(Constants.NIL, LuaApis.str("картинка — только на экран"));
+                    Terminal.Image im = c.terminal().setImage(x, y, cv.w, cv.h, cv.px);
+                    if (im == null) return org.squiddev.cobalt.ValueFactory.varargsOf(Constants.NIL, LuaApis.str("картинка не помещается на экран"));
+                    c.chargeGpu(cv.px.length / 8);
+                    m.spend(cv.px.length / 32 + 8);
+                    return Constants.TRUE;
                 }),
                 // Кадр камеры наблюдения: canvas:camera(имя, [x, y, w, h]) → частота или nil, ошибка
                 RegisteredFunction.ofV("camera", (s, a) -> {

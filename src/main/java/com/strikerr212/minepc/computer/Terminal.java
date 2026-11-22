@@ -345,8 +345,47 @@ public final class Terminal {
         Arrays.fill(chars, ' ');
         Arrays.fill(fg, textColor);
         Arrays.fill(bg, backColor);
+        image = null;
         version++;
     }
+
+    // ======================= Картинка поверх клеток =======================
+    // Кадровый буфер можно показать картинкой: на клетку приходится IMAGE_CX × IMAGE_CY точек (вдвое шире и вчетверо
+    // выше, чем полублоками). Буквы рисуются поверх картинки, фон клеток под ней не виден.
+
+    /** Точек картинки на одну клетку: по ширине и по высоте. */
+    public static final int IMAGE_CX = 2, IMAGE_CY = 4;
+    /** Разрешены ли картинки (настройка сервера screenImages). */
+    public static volatile boolean imagesAllowed = true;
+
+    /** Картинка на экране: левый верхний угол в клетках (с нуля), размер в точках, цвета RGB. */
+    public record Image(int x, int y, int w, int h, int[] rgb, int version) {
+        public int cellsW() { return (w + IMAGE_CX - 1) / IMAGE_CX; }
+        public int cellsH() { return (h + IMAGE_CY - 1) / IMAGE_CY; }
+    }
+
+    private Image image;
+    private int imageVersion;
+
+    /** Показать картинку w×h с клетки (x, y). Не больше экрана; null — если не влезла. */
+    public synchronized Image setImage(int x, int y, int w, int h, int[] rgb) {
+        int cw = (w + IMAGE_CX - 1) / IMAGE_CX, ch = (h + IMAGE_CY - 1) / IMAGE_CY;
+        if (w < 1 || h < 1 || rgb.length < w * h || x < 0 || y < 0 || x + cw > width || y + ch > height) return null;
+        image = new Image(x, y, w, h, Arrays.copyOf(rgb, w * h), ++imageVersion);
+        version++;
+        return image;
+    }
+
+    /** Убрать картинку. */
+    public synchronized void clearImage() {
+        if (image == null) return;
+        image = null;
+        imageVersion++;
+        version++;
+    }
+
+    /** Картинка на экране или null. Массив цветов не менять. */
+    public synchronized Image image() { return image; }
 
     public synchronized void clearLine() {
         if (cursorY < 0 || cursorY >= height) return;

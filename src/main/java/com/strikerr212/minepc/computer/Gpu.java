@@ -101,10 +101,11 @@ final class Gpu {
         return n;
     }
 
-    /** Кадровый буфер w×h точек (не больше экрана: ширина × двойная высота) или null, если не хватает видеопамяти. */
+    /** Кадровый буфер w×h точек (не больше картинки во весь экран) или null, если не хватает видеопамяти. */
     synchronized Canvas newCanvas(int w, int h) {
         Terminal screen = computer.terminal();
-        if (w < 1 || h < 1 || w > screen.maxWidth() || h > screen.maxHeight() * 2) return null;
+        // до размера картинки во весь экран (см. Terminal.IMAGE_CX/CY); полублоками показывается его часть
+        if (w < 1 || h < 1 || w > screen.maxWidth() * Terminal.IMAGE_CX || h > screen.maxHeight() * Terminal.IMAGE_CY) return null;
         Canvas c = new Canvas(w, h);
         if (usedCells() + c.cells() > totalCells()) return null;
         canvases.add(c);

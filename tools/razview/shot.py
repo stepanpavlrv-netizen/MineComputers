@@ -53,7 +53,7 @@ def main():
     subprocess.run([shutil.which("javac") or "javac", "-encoding", "UTF-8", "-nowarn", "-cp", jar, "-d", cls] + files, check=True)
     raw = os.path.join(work, "raw")
     os.makedirs(raw)
-    subprocess.run([shutil.which("java") or "java", "-Dstdout.encoding=UTF-8", "-Dvram=" + vram, "-cp", sep.join([cls, jar, RES]), "RazlomShot", w, h, raw] + args)
+    subprocess.run([shutil.which("java") or "java", "-Dstdout.encoding=UTF-8", "-Dvram=" + vram, "-cp", sep.join([cls, jar, RES]), "com.strikerr212.minepc.computer.RazlomShot", w, h, raw] + args)
     for k, a in enumerate(args):
         p = os.path.join(raw, "f%d.txt" % k)
         if not os.path.exists(p):

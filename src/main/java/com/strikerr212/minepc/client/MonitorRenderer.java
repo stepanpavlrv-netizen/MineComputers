@@ -128,6 +128,20 @@ public class MonitorRenderer implements BlockEntityRenderer<MonitorBlockEntity> 
             float u0 = (sx0 - ox) / (w * cw), u1 = (sx1 - ox) / (w * cw), v0 = (sy0 - oy) / (h * ch), v1 = (sy1 - oy) / (h * ch);
             texQuad(tc, m, sx0, sy0, sx1, sy1, u0, v0, u1, v1);
         }
+        // Картинка поверх клеток (кадр игры в высоком разрешении) — та её часть, что попадает в этот блок
+        var im = ClientTerminals.image(s.host());
+        if (im != null && im.x() + im.cellsW() <= w && im.y() + im.cellsH() <= h) {
+            float iw = (float) im.w() / com.strikerr212.minepc.computer.Terminal.IMAGE_CX * cw;
+            float ih = (float) im.h() / com.strikerr212.minepc.computer.Terminal.IMAGE_CY * ch;
+            float ix = ox + im.x() * cw, iy = oy + im.y() * ch;
+            float qx0 = Math.max(bx0, ix), qy0 = Math.max(by0, iy), qx1 = Math.min(bx1, ix + iw), qy1 = Math.min(by1, iy + ih);
+            if (qx0 < qx1 && qy0 < qy1) {
+                pose.translate(0, 0, 0.001f);
+                m = pose.last().pose();
+                VertexConsumer ic = buffers.getBuffer(RenderType.text(ImageLayer.of(s.host(), im)));
+                texQuad(ic, m, qx0, qy0, qx1, qy1, (qx0 - ix) / iw, (qy0 - iy) / ih, (qx1 - ix) / iw, (qy1 - iy) / ih);
+            }
+        }
         // Рамки, восьмушки, четвертинки — прямоугольниками чуть ближе к зрителю.
         // Буфер берём заново: после буфера текстуры прежний уже закрыт
         pose.translate(0, 0, 0.002f);

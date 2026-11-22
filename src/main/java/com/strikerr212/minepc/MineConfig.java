@@ -23,6 +23,7 @@ public final class MineConfig {
     private static final ModConfigSpec.IntValue SLICE_MS;
     private static final ModConfigSpec.IntValue SCREEN_FPS;
     private static final ModConfigSpec.IntValue SCREEN_KB;
+    private static final ModConfigSpec.BooleanValue SCREEN_IMAGE;
     private static final ModConfigSpec.BooleanValue BOOT_TIME;
     private static final ModConfigSpec.IntValue DISK_WEAR;
     private static final ModConfigSpec.DoubleValue DISK_LIFE_HOURS;
@@ -65,6 +66,9 @@ public final class MineConfig {
         SCREEN_KB = b.comment("Сколько КБ/с один компьютер может слать каждому зрителю на сервере (в одиночной игре без ограничения)",
                         "Max screen traffic per computer per viewer, KB/s (unlimited in singleplayer)")
                 .defineInRange("screenKbPerSecond", 2048, 64, 65536);
+        SCREEN_IMAGE = b.comment("Программы могут показывать кадр картинкой (игры вдвое чётче; около 90 КБ на кадр). Выключено — только символами",
+                        "Programs may show frames as images (twice sharper games, ~90 KB per frame). Off — characters only")
+                .define("screenImages", true);
         BOOT_TIME = b.comment("Загрузка системы занимает время (зависит от накопителя: SSD быстрее жёсткого диска)",
                         "System boot takes time depending on the drive")
                 .define("bootTime", true);
@@ -124,4 +128,5 @@ public final class MineConfig {
     public static boolean radioWeather() { return get(RADIO_WEATHER, true); }
     public static int screenFps() { return get(SCREEN_FPS, 60); }
     public static int screenKbPerSecond() { return get(SCREEN_KB, 2048); }
+    public static boolean screenImages() { return get(SCREEN_IMAGE, true); }
 }

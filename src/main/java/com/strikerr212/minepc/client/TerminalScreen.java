@@ -141,6 +141,17 @@ public class TerminalScreen extends Screen {
         // Фон и полублоки — одной текстурой (обновляется только с новым кадром), сверху буквы и рамки одной пачкой
         int w = s.width(), h = s.height();
         g.blit(PixelLayer.of(s), 0, 0, w * CELL_W, h * CELL_H, 0f, 0f, w, h * 2, w, h * 2);
+        // Картинка поверх клеток (кадр игры в высоком разрешении)
+        var im = ClientTerminals.image(s.host());
+        if (im != null && im.x() + im.cellsW() <= w && im.y() + im.cellsH() <= h) {
+            float sx = (float) CELL_W / com.strikerr212.minepc.computer.Terminal.IMAGE_CX;
+            float sy = (float) CELL_H / com.strikerr212.minepc.computer.Terminal.IMAGE_CY;
+            g.pose().pushPose();
+            g.pose().translate(im.x() * CELL_W, im.y() * CELL_H, 0);
+            g.pose().scale(sx, sy, 1);
+            g.blit(ImageLayer.of(s.host(), im), 0, 0, 0f, 0f, im.w(), im.h(), im.w(), im.h());
+            g.pose().popPose();
+        }
         g.drawManaged(() -> drawCells(g, s));
     }
 

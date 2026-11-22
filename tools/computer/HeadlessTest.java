@@ -1141,6 +1141,24 @@ public class HeadlessTest {
                 cvs.contains("CANVAS 16711680 255 16776960 true"));
         expect("кадровый буфер: вывод полублоками", pc.terminal().line(0).startsWith("\u2580\u2580"));
 
+        // Кадр картинкой: буфер больше полублоков (вдвое шире, вчетверо выше), текст пиксельным шрифтом,
+        // картинка лежит на экране и доезжает до игрока без потерь
+        command("clear");
+        command("lua");
+        command("CI = component.gpu.canvas(40, 24) CI:clear(0x203040) TW = CI:text(1, 1, 'Я9', 0xFF0000, 2, 0)");
+        command("print('IMG', CI:image(3, 2), TW, CI:get(1, 1), component.gpu.imageScale())");
+        command("exit()");
+        show("кадр картинкой");
+        String img = screen().replaceAll("\\s+", " ");
+        Terminal.Image im = pc.terminal().image();
+        Terminal.Image back = im == null ? null : ImageCodec.decode(ImageCodec.encode(im));
+        expect("картинка: буфер 40×24 показан с клетки (3,2), текст пиксельным шрифтом",
+                img.contains("IMG true 22 0 2 4") && im != null && im.w() == 40 && im.h() == 24 && im.x() == 2 && im.y() == 1);
+        expect("картинка: сжатие туда и обратно без потерь",
+                back != null && java.util.Arrays.equals(back.rgb(), im.rgb()) && back.x() == 2 && back.w() == 40);
+        command("clear");
+        expect("картинка: clear убирает её с экрана", pc.terminal().image() == null);
+
         // Звук: пищалка и звуковой чип отправляют команды, синтезатор у игрока собирает звук
         command("clear");
         AUDIO.clear();

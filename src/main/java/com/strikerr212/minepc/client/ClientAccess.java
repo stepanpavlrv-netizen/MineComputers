@@ -55,6 +55,10 @@ public final class ClientAccess {
         ClientTerminals.update(payload.host(), payload.data(), payload.keyboard());
     }
 
+    public static void onScreenImage(com.strikerr212.minepc.network.ScreenImagePayload payload) {
+        ClientTerminals.updateImage(payload.host(), payload.data());
+    }
+
     /** Консоль стойки: выбрать сервер и открыть его экран. */
     public static void openConsole(BlockPos rackPos) {
         Minecraft.getInstance().setScreen(new ConsoleScreen(rackPos));

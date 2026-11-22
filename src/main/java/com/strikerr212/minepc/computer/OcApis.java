@@ -128,6 +128,9 @@ final class OcApis {
                     return str(old);
                 }),
                 RegisteredFunction.ofV("maxResolution", (s, a) -> varargsOf(valueOf(c.terminal().maxWidth()), valueOf(c.terminal().maxHeight()))),
+                // Картинка поверх клеток (canvas:image): сколько точек на клетку и как её убрать
+                RegisteredFunction.ofV("imageScale", (s, a) -> varargsOf(valueOf(Terminal.IMAGE_CX), valueOf(Terminal.IMAGE_CY))),
+                RegisteredFunction.ofV("clearImage", (s, a) -> { c.terminal().clearImage(); return Constants.NONE; }),
                 RegisteredFunction.ofV("getResolution", (s, a) -> {
                     Terminal t = gpu.target();
                     return varargsOf(valueOf(t.width()), valueOf(t.height()));

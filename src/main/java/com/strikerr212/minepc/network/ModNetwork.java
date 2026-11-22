@@ -57,6 +57,8 @@ public class ModNetwork {
         // Экран компьютера: сервер → игроки рядом
         registrar.playToClient(TerminalPayload.TYPE, TerminalPayload.STREAM_CODEC, (payload, context) ->
                 context.enqueueWork(() -> ClientAccess.onTerminal(payload)));
+        registrar.playToClient(ScreenImagePayload.TYPE, ScreenImagePayload.STREAM_CODEC, (payload, context) ->
+                context.enqueueWork(() -> ClientAccess.onScreenImage(payload)));
 
         // Звук компьютера (пищалка, звуковой чип) и гул вентиляторов: сервер → игроки рядом
         // Звук — прямо в сетевом потоке, не дожидаясь следующего кадра игры (синтезатор потокобезопасен)

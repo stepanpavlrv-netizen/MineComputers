@@ -754,6 +754,7 @@ public final class CaseComputer implements Computer.Host {
         int w = size[0], h = size[1];
         computer.terminal().setMaxDepth(Perf.colorDepth(gpuTier));
         computer.terminal().setMaxSize(w, h);
+        com.strikerr212.minepc.computer.Terminal.imagesAllowed = com.strikerr212.minepc.MineConfig.screenImages();
 
         CpuData cpu = in.cpu();
         ItemStack cpuStack = be.getStack(PcCaseBlockEntity.SLOT_CPU);
@@ -1600,6 +1601,11 @@ public final class CaseComputer implements Computer.Host {
      * Отправить кадр, если экран изменился (из потока {@link ScreenSender} или из тика).
      * Не чаще screenFps раз в секунду и, на сервере, не больше screenKbPerSecond на зрителя.
      */
+    /** Последняя отправленная картинка поверх клеток (та же — не шлём заново). */
+    private com.strikerr212.minepc.computer.Terminal.Image lastImage;
+    /** Сколько байт картинок ушло игрокам (для замеров в CI). */
+    public static final java.util.concurrent.atomic.AtomicLong IMAGE_BYTES = new java.util.concurrent.atomic.AtomicLong();
+
     void flushScreen(boolean fromTick) {
         synchronized (screenLock) {
             long now = System.nanoTime();
@@ -1636,6 +1642,16 @@ public final class CaseComputer implements Computer.Host {
             }
             if (!viewers.isEmpty()) FRAMES_SENT.incrementAndGet();
             screenTokens -= data.length;
+            // Картинка поверх клеток (кадр игры в высоком разрешении): только если она сменилась или нужен весь экран
+            com.strikerr212.minepc.computer.Terminal.Image im = on ? c.terminal().image() : null;
+            if ((im != lastImage || (full && im != null)) && !viewers.isEmpty()) {
+                byte[] idata = com.strikerr212.minepc.computer.ImageCodec.encode(im);
+                com.strikerr212.minepc.network.ScreenImagePayload ip = new com.strikerr212.minepc.network.ScreenImagePayload(be.hostRef(), idata);
+                for (net.minecraft.server.level.ServerPlayer p : viewers) PacketDistributor.sendToPlayer(p, ip);
+                screenTokens -= idata.length;
+                IMAGE_BYTES.addAndGet(idata.length);
+            }
+            lastImage = im;
             lastSentNanos = now;
             if (full) lastFullNanos = now;
             lastVersion = version;
