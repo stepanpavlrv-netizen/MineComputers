@@ -77,6 +77,30 @@ final class Raster3D {
     private final double[][] poly = new double[8][8];
     private final double[][] clip = new double[8][8];
 
+    // ----- очередь треугольников: копятся за кадр и закрашиваются сразу всеми ядрами, каждое — своей полосой -----
+    private static final int QS = 24;                       // три вершины по 8 чисел (x, y, 1/z, u/z, v/z, r, g, b)
+    private double[] qv = new double[QS * 1024];
+    private Canvas.Texture[] qt = new Canvas.Texture[1024];
+    private int[] qf = new int[1024];
+    private int qn;
+    /** Помощники для закраски (на сервере их делят все компьютеры); null — одно ядро. */
+    private static final java.util.concurrent.ExecutorService POOL;
+    private static final int THREADS;
+
+    static {
+        int n = Math.max(0, Math.min(7, Runtime.getRuntime().availableProcessors() - 1));
+        THREADS = n + 1;
+        if (n == 0) POOL = null;
+        else {
+            java.util.concurrent.atomic.AtomicInteger k = new java.util.concurrent.atomic.AtomicInteger();
+            POOL = java.util.concurrent.Executors.newFixedThreadPool(n, r -> {
+                Thread t = new Thread(r, "MineComputers-3D-" + k.incrementAndGet());
+                t.setDaemon(true);
+                return t;
+            });
+        }
+    }
+
     Raster3D(Canvas cv) {
         this.cv = cv;
         this.w = cv.w;
@@ -244,7 +268,67 @@ final class Raster3D {
                 // на экране ось y вниз, поэтому у лицевой площадь по формуле шнурков отрицательная
                 if (area >= 0) continue;
             }
-            for (int k = 1; k + 1 < n; k++) work.pixels += tri(clip[0], clip[k], clip[k + 1], last, fr, fg, fb);
+            for (int k = 1; k + 1 < n; k++) work.pixels += enqueue(clip[0], clip[k], clip[k + 1], last, flash);
+        }
+    }
+
+    /** Треугольник в очередь; возвращает примерную площадь на экране (для оплаты). */
+    private long enqueue(double[] a, double[] b, double[] c, Canvas.Texture t, int flash) {
+        if (qn == qt.length) {
+            qt = Arrays.copyOf(qt, qn * 2);
+            qf = Arrays.copyOf(qf, qn * 2);
+            qv = Arrays.copyOf(qv, qn * 2 * QS);
+        }
+        int o = qn * QS;
+        System.arraycopy(a, 0, qv, o, 8);
+        System.arraycopy(b, 0, qv, o + 8, 8);
+        System.arraycopy(c, 0, qv, o + 16, 8);
+        qt[qn] = t;
+        qf[qn] = flash;
+        qn++;
+        double x0 = Math.max(0, Math.min(a[0], Math.min(b[0], c[0]))), x1 = Math.min(w, Math.max(a[0], Math.max(b[0], c[0])));
+        double y0 = Math.max(0, Math.min(a[1], Math.min(b[1], c[1]))), y1 = Math.min(h, Math.max(a[1], Math.max(b[1], c[1])));
+        return x1 > x0 && y1 > y0 ? (long) ((x1 - x0) * (y1 - y0) / 2) + 1 : 0;
+    }
+
+    /** Есть ли незакрашенные треугольники. */
+    boolean pending() {
+        return qn > 0;
+    }
+
+    /** Закрасить очередь: кадр делится на полосы, полосы — на все ядра. */
+    void flush() {
+        if (qn == 0) return;
+        int bands = (POOL == null || h < 48 || qn < 32) ? 1 : Math.min(THREADS * 2, h / 16);
+        if (bands <= 1) {
+            band(0, h - 1);
+        } else {
+            java.util.List<java.util.concurrent.Callable<Object>> jobs = new java.util.ArrayList<>(bands);
+            for (int i = 0; i < bands; i++) {
+                int y0 = h * i / bands, y1 = h * (i + 1) / bands - 1;
+                jobs.add(() -> { band(y0, y1); return null; });
+            }
+            try {
+                for (var f : POOL.invokeAll(jobs)) f.get();
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            } catch (java.util.concurrent.ExecutionException e) {
+                throw new RuntimeException(e.getCause());
+            }
+        }
+        qn = 0;
+        Arrays.fill(qt, null);
+    }
+
+    private void band(int y0, int y1) {
+        double[] a = new double[8], b = new double[8], c = new double[8];
+        for (int i = 0; i < qn; i++) {
+            int o = i * QS;
+            System.arraycopy(qv, o, a, 0, 8);
+            System.arraycopy(qv, o + 8, b, 0, 8);
+            System.arraycopy(qv, o + 16, c, 0, 8);
+            int f = qf[i];
+            tri(a, b, c, qt[i], (f >> 16) & 255, (f >> 8) & 255, f & 255, y0, y1);
         }
     }
 
@@ -305,7 +389,7 @@ final class Raster3D {
      * Закрасить треугольник. Вершины в экранных координатах: x, y, 1/z, u/z, v/z, r, g, b.
      * Точка закрашивается, если её центр внутри (без щелей и двойной закраски на общих рёбрах).
      */
-    private int tri(double[] p0, double[] p1, double[] p2, Canvas.Texture t, int fr, int fg, int fb) {
+    private int tri(double[] p0, double[] p1, double[] p2, Canvas.Texture t, int fr, int fg, int fb, int ylo, int yhi) {
         // сортировка по y
         if (p1[1] < p0[1]) { double[] s = p0; p0 = p1; p1 = s; }
         if (p2[1] < p0[1]) { double[] s = p0; p0 = p2; p2 = s; }
@@ -313,7 +397,7 @@ final class Raster3D {
         double x0 = p0[0], y0 = p0[1], x1 = p1[0], y1 = p1[1], x2 = p2[0], y2 = p2[1];
         double den = (x1 - x0) * (y2 - y0) - (x2 - x0) * (y1 - y0);
         if (Math.abs(den) < 1e-9 || y2 - y0 < 1e-9) return 0;
-        int ys = (int) Math.max(0, Math.ceil(y0 - 0.5)), ye = (int) Math.min(h - 1, Math.ceil(y2 - 0.5) - 1);
+        int ys = (int) Math.max(ylo, Math.ceil(y0 - 0.5)), ye = (int) Math.min(yhi, Math.ceil(y2 - 0.5) - 1);
         if (ys > ye) return 0;
         // градиенты: значение в точке = p0 + dx·(x − x0) + dy·(y − y0)
         double e1y = y1 - y0, e2y = y2 - y0, e1x = x1 - x0, e2x = x2 - x0;

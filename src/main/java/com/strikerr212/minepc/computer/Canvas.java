@@ -22,8 +22,18 @@ final class Canvas {
     /** Глубина по столбцам: что ближе, то закрывает спрайты (column() записывает, sprite() проверяет). */
     final float[] depth;
     boolean freed;
+    /**
+     * Во сколько раз точка этого буфера дешевле обычной: буфер для картинки (cv:image) мельче полублоков —
+     * на клетку экрана в нём 8 точек, а не 2, — поэтому тот же экран стоит видеокарте и процессору столько же.
+     */
+    int costDiv = 1;
     /** 3D: появляется при первой 3D-команде (буфер глубины по точкам — только тем, кому нужен). */
     private Raster3D r3d;
+
+    /** Закрасить накопленные 3D-треугольники (перед любой другой работой с кадром). */
+    void flush3d() {
+        if (r3d != null && r3d.pending()) r3d.flush();
+    }
 
     Raster3D r3d() {
         if (r3d == null) r3d = new Raster3D(this);
@@ -168,8 +178,9 @@ final class Canvas {
         cv.r3d().mesh(mesh, gpu::texture, a.arg(o + 2).checkDouble(), a.arg(o + 3).checkDouble(), a.arg(o + 4).checkDouble(),
                 a.arg(o + 5).optDouble(0), a.arg(o + 6).optDouble(0), a.arg(o + 7).optDouble(1), a.arg(o + 8).optDouble(1),
                 a.arg(o + 9).optInteger(0), onCamera, work, 4L * cv.px.length);
-        m.spend(work.verts / 4 + work.tris / 2 + work.pixels / 32 + 8);
-        c.chargeGpu(work.pixels / 8 + work.tris / 2);
+        long px = work.pixels / cv.costDiv;
+        m.spend(work.verts / 4 + work.tris / 2 + px / 32 + 8);
+        c.chargeGpu(px / 8 + work.tris / 2);
         return valueOf((int) work.pixels);
     }
 
@@ -181,25 +192,26 @@ final class Canvas {
         // Команды — дешевле, чем Lua: примерно 1 команда на 8 точек
         RegisteredFunction.bind(t, new RegisteredFunction[]{
                 RegisteredFunction.ofV("clear", (s, a) -> {
-                    int o = base(a, t);
+                    int o = base(a, t); cv.flush3d();
                     java.util.Arrays.fill(cv.px, a.arg(o + 1).optInteger(0) & 0xFFFFFF);
                     java.util.Arrays.fill(cv.depth, Float.MAX_VALUE);
                     if (cv.r3d != null) cv.r3d.clearDepth();
-                    m.spend(cv.px.length / 16 + 8);
+                    m.spend(cv.px.length / cv.costDiv / 16 + 8);
                     return Constants.NONE;
                 }),
                 RegisteredFunction.ofV("clearDepth", (s, a) -> {
+                    cv.flush3d();
                     java.util.Arrays.fill(cv.depth, Float.MAX_VALUE);
                     if (cv.r3d != null) {
                         cv.r3d.clearDepth();
-                        m.spend(cv.px.length / 64 + 4);
+                        m.spend(cv.px.length / cv.costDiv / 64 + 4);
                     }
                     return Constants.NONE;
                 }),
                 // ----- 3D: камера, туман, лампы, сетки (gpu.newMesh), спрайты в мире -----
                 // view(x, y, z, yaw, pitch, [угол обзора = 90], [сколько точка шире, чем выше = 4/3])
                 RegisteredFunction.ofV("view", (s, a) -> {
-                    int o = base(a, t);
+                    int o = base(a, t); cv.flush3d();
                     cv.r3d().view(a.arg(o + 1).checkDouble(), a.arg(o + 2).checkDouble(), a.arg(o + 3).checkDouble(),
                             a.arg(o + 4).optDouble(0), a.arg(o + 5).optDouble(0), a.arg(o + 6).optDouble(90),
                             a.arg(o + 7).optDouble(4.0 / 3.0));
@@ -207,14 +219,14 @@ final class Canvas {
                 }),
                 // fog(цвет, начало, конец) — даль растворяется в цвете; fog() — без тумана
                 RegisteredFunction.ofV("fog", (s, a) -> {
-                    int o = base(a, t);
+                    int o = base(a, t); cv.flush3d();
                     if (a.arg(o + 1).isNil()) cv.r3d().fogOff();
                     else cv.r3d().fog(a.arg(o + 1).checkInteger(), a.arg(o + 2).checkDouble(), a.arg(o + 3).checkDouble());
                     return Constants.NONE;
                 }),
                 // light(x, y, z, радиус, цвет, [сила = 1]) — лампа на этот кадр (до 16); clearLights() — убрать все
                 RegisteredFunction.ofV("light", (s, a) -> {
-                    int o = base(a, t);
+                    int o = base(a, t); cv.flush3d();
                     return valueOf(cv.r3d().light(a.arg(o + 1).checkDouble(), a.arg(o + 2).checkDouble(), a.arg(o + 3).checkDouble(),
                             a.arg(o + 4).checkDouble(), a.arg(o + 5).optInteger(0xFFFFFF), a.arg(o + 6).optDouble(1)));
                 }),
@@ -228,37 +240,37 @@ final class Canvas {
                 RegisteredFunction.ofV("held", (s, a) -> draw3d(c, m, gpu, cv, a, base(a, t), true)),
                 // billboard(текстура, x, y, z, ширина, высота, [яркость], [вспышка], [флаги: 1 светится, 2 не закрывает])
                 RegisteredFunction.ofV("billboard", (s, a) -> {
-                    int o = base(a, t);
+                    int o = base(a, t); cv.flush3d();
                     int n = cv.r3d().billboard(tex(gpu, a.arg(o + 1)), a.arg(o + 2).checkDouble(), a.arg(o + 3).checkDouble(),
                             a.arg(o + 4).checkDouble(), a.arg(o + 5).checkDouble(), a.arg(o + 6).checkDouble(),
                             a.arg(o + 7).optDouble(1), a.arg(o + 8).optInteger(0), a.arg(o + 9).optInteger(0));
-                    m.spend(n / 16 + 8);
-                    c.chargeGpu(n / 8 + 1);
+                    m.spend(n / cv.costDiv / 16 + 8);
+                    c.chargeGpu(n / cv.costDiv / 8 + 1);
                     return valueOf(n);
                 }),
                 // project(x, y, z) → x, y на кадре (с нуля) и расстояние, или nil — точка позади
                 RegisteredFunction.ofV("project", (s, a) -> {
-                    int o = base(a, t);
+                    int o = base(a, t); cv.flush3d();
                     double[] p = cv.r3d().project(a.arg(o + 1).checkDouble(), a.arg(o + 2).checkDouble(), a.arg(o + 3).checkDouble());
                     if (p == null) return Constants.NIL;
                     return org.squiddev.cobalt.ValueFactory.varargsOf(valueOf(p[0]), valueOf(p[1]), valueOf(p[2]));
                 }),
                 // tint(цвет, доля 0..1) — смешать весь кадр с цветом
                 RegisteredFunction.ofV("tint", (s, a) -> {
-                    int o = base(a, t);
+                    int o = base(a, t); cv.flush3d();
                     int n = cv.r3d().tint(a.arg(o + 1).checkInteger(), a.arg(o + 2).checkDouble());
-                    m.spend(n / 32 + 4);
+                    m.spend(n / cv.costDiv / 32 + 4);
                     return Constants.NONE;
                 }),
                 RegisteredFunction.ofV("pixel", (s, a) -> {
-                    int o = base(a, t);
+                    int o = base(a, t); cv.flush3d();
                     int x = a.arg(o + 1).checkInteger(), y = a.arg(o + 2).checkInteger();
                     if (x >= 0 && y >= 0 && x < cv.w && y < cv.h) cv.px[y * cv.w + x] = a.arg(o + 3).checkInteger() & 0xFFFFFF;
                     return Constants.NONE;
                 }),
                 // Текст пиксельным шрифтом прямо в кадр: text(x, y, строка, цвет, [масштаб], [цвет обводки]) → ширина в точках
                 RegisteredFunction.ofV("text", (s, a) -> {
-                    int o = base(a, t);
+                    int o = base(a, t); cv.flush3d();
                     String str = LuaApis.text(a.arg(o + 3).checkLuaString());
                     if (str.length() > 400) str = str.substring(0, 400);
                     int outline = a.arg(o + 6).isNil() ? -1 : a.arg(o + 6).checkInteger() & 0xFFFFFF;
@@ -270,56 +282,56 @@ final class Canvas {
                 }),
                 // Ширина строки пиксельным шрифтом: textWidth(строка, [масштаб])
                 RegisteredFunction.ofV("textWidth", (s, a) -> {
-                    int o = base(a, t);
+                    int o = base(a, t); cv.flush3d();
                     int scale = Math.max(1, a.arg(o + 2).optInteger(1));
                     return valueOf(PixelFont.width(LuaApis.text(a.arg(o + 1).checkLuaString())) * scale);
                 }),
                 RegisteredFunction.ofV("get", (s, a) -> {
-                    int o = base(a, t);
+                    int o = base(a, t); cv.flush3d();
                     int x = a.arg(o + 1).checkInteger(), y = a.arg(o + 2).checkInteger();
                     if (x < 0 || y < 0 || x >= cv.w || y >= cv.h) return Constants.NIL;
                     return valueOf(cv.px[y * cv.w + x]);
                 }),
                 RegisteredFunction.ofV("fill", (s, a) -> {
-                    int o = base(a, t);
+                    int o = base(a, t); cv.flush3d();
                     int n = cv.fill(a.arg(o + 1).checkInteger(), a.arg(o + 2).checkInteger(), a.arg(o + 3).checkInteger(),
                             a.arg(o + 4).checkInteger(), a.arg(o + 5).checkInteger());
-                    m.spend(n / 16 + 4);
+                    m.spend(n / cv.costDiv / 16 + 4);
                     return Constants.NONE;
                 }),
                 RegisteredFunction.ofV("gradient", (s, a) -> {
-                    int o = base(a, t);
+                    int o = base(a, t); cv.flush3d();
                     int n = cv.gradient(a.arg(o + 1).checkInteger(), a.arg(o + 2).checkInteger(), a.arg(o + 3).checkInteger(),
                             a.arg(o + 4).checkInteger(), a.arg(o + 5).checkInteger(), a.arg(o + 6).checkInteger());
-                    m.spend(n / 16 + 4);
+                    m.spend(n / cv.costDiv / 16 + 4);
                     return Constants.NONE;
                 }),
                 RegisteredFunction.ofV("column", (s, a) -> {
-                    int o = base(a, t);
+                    int o = base(a, t); cv.flush3d();
                     int n = cv.column(a.arg(o + 1).checkInteger(), a.arg(o + 2).checkDouble(), a.arg(o + 3).checkDouble(),
                             tex(gpu, a.arg(o + 4)), (int) Math.floor(a.arg(o + 5).checkDouble()), a.arg(o + 6).checkDouble(),
                             a.arg(o + 7).checkDouble(), (float) a.arg(o + 8).optDouble(1), (float) a.arg(o + 9).optDouble(-1));
-                    m.spend(n / 8 + 4);
+                    m.spend(n / cv.costDiv / 8 + 4);
                     return Constants.NONE;
                 }),
                 RegisteredFunction.ofV("span", (s, a) -> {
-                    int o = base(a, t);
+                    int o = base(a, t); cv.flush3d();
                     int n = cv.span(a.arg(o + 1).checkInteger(), a.arg(o + 2).checkDouble(), a.arg(o + 3).checkDouble(),
                             tex(gpu, a.arg(o + 4)), a.arg(o + 5).checkDouble(), a.arg(o + 6).checkDouble(),
                             a.arg(o + 7).checkDouble(), a.arg(o + 8).checkDouble(), (float) a.arg(o + 9).optDouble(1));
-                    m.spend(n / 8 + 4);
+                    m.spend(n / cv.costDiv / 8 + 4);
                     return Constants.NONE;
                 }),
                 RegisteredFunction.ofV("sprite", (s, a) -> {
-                    int o = base(a, t);
+                    int o = base(a, t); cv.flush3d();
                     int n = cv.sprite(tex(gpu, a.arg(o + 1)), a.arg(o + 2).checkDouble(), a.arg(o + 3).checkDouble(),
                             a.arg(o + 4).checkDouble(), a.arg(o + 5).checkDouble(), (float) a.arg(o + 6).optDouble(1),
                             (float) a.arg(o + 7).optDouble(-1), a.arg(o + 8).toBoolean());
-                    m.spend(n / 8 + 4);
+                    m.spend(n / cv.costDiv / 8 + 4);
                     return Constants.NONE;
                 }),
                 RegisteredFunction.ofV("present", (s, a) -> {
-                    int o = base(a, t);
+                    int o = base(a, t); cv.flush3d();
                     if (cv.freed) throw LuaApis.error("буфер освобождён");
                     int x = a.arg(o + 1).optInteger(1) - 1, y = a.arg(o + 2).optInteger(1) - 1;
                     // В активный буфер видеокарты (так программа с задним буфером, например Wired, рисует кадр к себе)
@@ -335,20 +347,21 @@ final class Canvas {
                 // Показать кадр картинкой (вдвое шире и вчетверо выше полублоков): image(x, y) — клетка левого верхнего угла.
                 // Только на экран компьютера (не в задний буфер). Возвращает true или nil, причина.
                 RegisteredFunction.ofV("image", (s, a) -> {
-                    int o = base(a, t);
+                    int o = base(a, t); cv.flush3d();
                     if (cv.freed) throw LuaApis.error("буфер освобождён");
                     int x = a.arg(o + 1).optInteger(1) - 1, y = a.arg(o + 2).optInteger(1) - 1;
                     if (!Terminal.imagesAllowed) return org.squiddev.cobalt.ValueFactory.varargsOf(Constants.NIL, LuaApis.str("картинки выключены на сервере"));
                     if (!gpu.targetIsScreen()) return org.squiddev.cobalt.ValueFactory.varargsOf(Constants.NIL, LuaApis.str("картинка — только на экран"));
                     Terminal.Image im = c.terminal().setImage(x, y, cv.w, cv.h, cv.px);
                     if (im == null) return org.squiddev.cobalt.ValueFactory.varargsOf(Constants.NIL, LuaApis.str("картинка не помещается на экран"));
-                    c.chargeGpu(cv.px.length / 8);
-                    m.spend(cv.px.length / 32 + 8);
+                    // как вывод полублоками той же площади экрана (клетка = 2 точки полублоками)
+                    c.chargeGpu(cv.px.length / cv.costDiv / 8);
+                    m.spend(cv.px.length / cv.costDiv / 32 + 8);
                     return Constants.TRUE;
                 }),
                 // Кадр камеры наблюдения: canvas:camera(имя, [x, y, w, h]) → частота или nil, ошибка
                 RegisteredFunction.ofV("camera", (s, a) -> {
-                    int o = base(a, t);
+                    int o = base(a, t); cv.flush3d();
                     String target = LuaApis.text(a.arg(o + 1).checkLuaString());
                     int x = a.arg(o + 2).optInteger(0), y = a.arg(o + 3).optInteger(0);
                     int fw = a.arg(o + 4).optInteger(cv.w - x), fh = a.arg(o + 5).optInteger(cv.h - y);

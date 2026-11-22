@@ -485,9 +485,11 @@ function L.build(art, progress)
   end
 
   local out = {}
-  for _, c in pairs(chunks) do
+  for key, c in pairs(chunks) do
     local nv = c.b.count()
-    if nv > 0 then out[#out + 1] = { id = c.b.mesh(), n = nv } end
+    local kx, kz = key:match("^(%-?%d+):(%-?%d+)$")
+    -- середина куска — чтобы рисовать ближние раньше (дальние точки за ними тогда не закрашиваются)
+    if nv > 0 then out[#out + 1] = { id = c.b.mesh(), n = nv, cx = (tonumber(kx) + 0.5) * CH, cz = (tonumber(kz) + 0.5) * CH } end
   end
   local acidMesh = acid.mesh()
   L.building = false

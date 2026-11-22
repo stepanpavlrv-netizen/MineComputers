@@ -38,6 +38,11 @@ def main():
     vram = "400000"
     if "--vram" in args:
         i = args.index("--vram"); vram = args[i + 1]; del args[i:i + 2]
+    extra = []
+    if "--gpucells" in args:
+        i = args.index("--gpucells"); extra.append("-Dgpucells=" + args[i + 1]); del args[i:i + 2]
+    if "--ops" in args:
+        i = args.index("--ops"); extra.append("-Dops=" + args[i + 1]); del args[i:i + 2]
     if "--out" in args:
         i = args.index("--out"); out = args[i + 1]; del args[i:i + 2]
     if not args:
@@ -53,7 +58,7 @@ def main():
     subprocess.run([shutil.which("javac") or "javac", "-encoding", "UTF-8", "-nowarn", "-cp", jar, "-d", cls] + files, check=True)
     raw = os.path.join(work, "raw")
     os.makedirs(raw)
-    subprocess.run([shutil.which("java") or "java", "-Dstdout.encoding=UTF-8", "-Dvram=" + vram, "-cp", sep.join([cls, jar, RES]), "com.strikerr212.minepc.computer.RazlomShot", w, h, raw] + args)
+    subprocess.run([shutil.which("java") or "java", "-Dstdout.encoding=UTF-8", "-Dvram=" + vram] + extra + ["-cp", sep.join([cls, jar, RES]), "com.strikerr212.minepc.computer.RazlomShot", w, h, raw] + args)
     for k, a in enumerate(args):
         p = os.path.join(raw, "f%d.txt" % k)
         if not os.path.exists(p):

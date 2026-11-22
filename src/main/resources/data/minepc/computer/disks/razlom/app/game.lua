@@ -1468,6 +1468,13 @@ function F.renderWorld(cam)
     local s = shots[i]
     if nl < 16 then cv:light(s.x, s.y, s.z, 3.5, s.light, 0.9) nl = nl + 1 end
   end
+  -- куски уровня — от ближних к дальним: закрытые точки дальних не закрашиваются
+  for i = 1, #levelMeshes do
+    local l = levelMeshes[i]
+    local dx, dz = (l.cx or 0) - ex, (l.cz or 0) - ez
+    l.d = dx * dx + dz * dz
+  end
+  table.sort(levelMeshes, function(a, b) return a.d < b.d end)
   for i = 1, #levelMeshes do cv:mesh(levelMeshes[i].id, 0, 0, 0) end
   if acidMesh then
     local g = floor(20 + sin(now * 3) * 18)

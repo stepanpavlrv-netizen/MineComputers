@@ -17,7 +17,7 @@ public class RazlomShot {
         Path drive = Files.createTempDirectory("razshot");
         Computer pc = new Computer(new Computer.Host() { });
         pc.setInfo(new Computer.Info("Тест", 4, 2800, "Lua", 2048, 2_000_000, "Видеокарта", 1000));
-        pc.setLimits(new Computer.Limits(5_000_000, 4, 512L << 20, 50_000_000, Long.getLong("vram", 400_000L), 0, 16));
+        pc.setLimits(new Computer.Limits(Integer.getInteger("ops", 5_000_000), 4, 512L << 20, Integer.getInteger("gpucells", 50_000_000), Long.getLong("vram", 400_000L), 0, 16));
         pc.fileSystem().mount("rom", ComputerRom.mount());
         pc.fileSystem().mount("", new DirMount(drive, 64L << 20, "SSD"));
         Path disk = Files.createTempDirectory("razdisk");

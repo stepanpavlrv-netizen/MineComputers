@@ -107,6 +107,9 @@ final class Gpu {
         // до размера картинки во весь экран (см. Terminal.IMAGE_CX/CY); полублоками показывается его часть
         if (w < 1 || h < 1 || w > screen.maxWidth() * Terminal.IMAGE_CX || h > screen.maxHeight() * Terminal.IMAGE_CY) return null;
         Canvas c = new Canvas(w, h);
+        // буфер больше полублочного экрана — для картинки: точка дешевле (до 4 раз, как 8 точек на клетку против 2)
+        long half = (long) screen.maxWidth() * screen.maxHeight() * 2;
+        c.costDiv = (int) Math.max(1, Math.min(Terminal.IMAGE_CX * Terminal.IMAGE_CY / 2, (long) w * h / Math.max(1, half)));
         if (usedCells() + c.cells() > totalCells()) return null;
         canvases.add(c);
         return c;
