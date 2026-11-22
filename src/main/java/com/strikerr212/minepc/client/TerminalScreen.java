@@ -88,7 +88,7 @@ public class TerminalScreen extends Screen {
         // Масштаб: экран занимает как можно больше места (большие экраны — почти во всё окно)
         scale = Math.min(2f, Math.min((width - 12f) / tw, (height - 56f) / th));
         if (scale > 1) scale = (float) Math.floor(scale * 2) / 2;   // целые и половинные — чётче
-        scale = Math.max(0.25f, scale);
+        scale = Math.max(0.05f, scale);   // большой экран в маленьком окне — целиком, хоть и мельче
         int sw = Math.round(tw * scale), sh = Math.round(th * scale);
         termX = (width - sw) / 2;
         termY = (height - sh) / 2 + 6;
@@ -352,6 +352,11 @@ public class TerminalScreen extends Screen {
 
     @Override
     public boolean mouseReleased(double mx, double my, int button) {
+        if (grabbed) {   // в игре кнопки независимы (огонь и прицел вместе): отпускаем ту, что отпустили
+            sendMouse(TerminalInputPayload.MOUSE_UP, button + 1, centerCell());
+            pressedButton = 0;
+            return true;
+        }
         if (pressedButton != 0) {
             int[] cell = grabbed ? null : cellAt(mx, my);
             if (cell == null) cell = new int[]{Math.max(1, lastCellX), Math.max(1, lastCellY)};
@@ -433,6 +438,13 @@ public class TerminalScreen extends Screen {
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
         if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
+            // Игра забрала Esc себе (меню паузы): отпускаем мышь и отдаём Esc программе. Shift+Esc — закрыть экран всегда
+            ClientTerminals.Snapshot snap = ClientTerminals.get(host);
+            if (snap != null && snap.escapeCapture() && (modifiers & GLFW.GLFW_MOD_SHIFT) == 0 && ClientTerminals.keyboard(host)) {
+                if (grabbed) { ungrab(); released = true; }
+                send(TerminalInputPayload.KEY, "escape", flags(modifiers) | TerminalInputPayload.FLAG_CLICK);
+                return true;
+            }
             if (grabbed) {   // первый Esc отпускает мышь, второй — закрывает экран
                 ungrab();
                 released = true;

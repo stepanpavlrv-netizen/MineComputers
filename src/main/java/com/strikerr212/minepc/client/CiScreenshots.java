@@ -851,9 +851,9 @@ public class CiScreenshots {
             case 5990 -> typeAt(lanJ2, "/razlom/app/game.lua play at=13.5,7.5,0 god give");
             case 6040 -> keyAt(lanJ2, "2");
             case 6042 -> keyUpAt(lanJ2, "2");
-            case 6046 -> keyAt(lanJ2, "ctrl");
+            case 6046 -> mouseAt(lanJ2, TerminalInputPayload.MOUSE_DOWN, 1);
             case 6066 -> { shot(mc, "razlom_fight"); logMouseLock(); }   // сверху подсказка «Мышь в игре · Esc — отпустить»
-            case 6090 -> { keyUpAt(lanJ2, "ctrl"); keyAt(lanJ2, "up"); }
+            case 6090 -> { mouseAt(lanJ2, TerminalInputPayload.MOUSE_UP, 1); keyAt(lanJ2, "up"); }
             case 6098 -> { keyUpAt(lanJ2, "up"); keyAt(lanJ2, "right"); }
             case 6110 -> keyUpAt(lanJ2, "right");
             case 6112 -> {   // поворот захваченной мышью: 45° вправо — как будто игрок двинул мышь
@@ -864,8 +864,7 @@ public class CiScreenshots {
                 });
             }
             case 6120 -> shot(mc, "razlom_look_up");
-            case 6126 -> { keyAt(lanJ2, "q"); logRazlom(); }
-            case 6128 -> keyAt(lanJ2, "q");
+            case 6126 -> { logRazlom(); terminateAt(lanJ2); }
             case 6150 -> { logRazlom(); logMouseLock(); shot(mc, "razlom_exit"); }
             // Браузер с дискеты: стартовая страница — список сайтов майннета
             case 6154 -> mc.setScreen(new TerminalScreen(wiredPos));
@@ -954,14 +953,21 @@ public class CiScreenshots {
             case 6936 -> mc.setScreen(new TerminalScreen(lanJ2));
             case 6940 -> typeAt(lanJ2, "/razlom/app/game.lua play lvl=2 god give at=21,16,-0.6");
             case 7100 -> shot(mc, "razlom_lvl2");
-            case 7102, 7104 -> keyAt(lanJ2, "q");
+            case 7102 -> terminateAt(lanJ2);
             case 7110 -> typeAt(lanJ2, "/razlom/app/game.lua play lvl=5 god give at=9.8,16.5,0");
             case 7270 -> keyAt(lanJ2, "e");
             case 7272 -> keyUpAt(lanJ2, "e");
             case 7290 -> shot(mc, "razlom_boss");
-            case 7292, 7294 -> keyAt(lanJ2, "q");
-            case 7310 -> logRazlom();
-            case 7314 -> {
+            case 7292 -> terminateAt(lanJ2);
+            // главное меню игры и пауза (Esc — меню паузы)
+            case 7300 -> typeAt(lanJ2, "/razlom/app/game.lua");
+            case 7420 -> shot(mc, "razlom_menu");
+            case 7424, 7426, 7428 -> keyAt(lanJ2, "down");   // Продолжить → Новая игра → Уровни → Настройки
+            case 7430 -> keyAt(lanJ2, "enter");
+            case 7440 -> shot(mc, "razlom_settings");
+            case 7444 -> terminateAt(lanJ2);
+            case 7460 -> logRazlom();
+            case 7464 -> {
                 mc.setScreen(null);
                 mc.options.pauseOnLostFocus = pauseWas;
                 // вместе с управлением по ходу (-PliveCtl) игра после сценария остаётся открытой
@@ -2080,6 +2086,20 @@ public class CiScreenshots {
         var server = Minecraft.getInstance().getSingleplayerServer();
         server.execute(() -> {
             if (server.overworld().getBlockEntity(pos) instanceof PcCaseBlockEntity be) be.input(TerminalInputPayload.KEY, key, false, false);
+        });
+    }
+
+    private static void mouseAt(BlockPos pos, int kind, int button) {
+        var server = Minecraft.getInstance().getSingleplayerServer();
+        server.execute(() -> {
+            if (server.overworld().getBlockEntity(pos) instanceof PcCaseBlockEntity be) be.mouse(kind, button, 1, 1);
+        });
+    }
+
+    private static void terminateAt(BlockPos pos) {
+        var server = Minecraft.getInstance().getSingleplayerServer();
+        server.execute(() -> {
+            if (server.overworld().getBlockEntity(pos) instanceof PcCaseBlockEntity be) be.input(TerminalInputPayload.TERMINATE, "", false, false);
         });
     }
 

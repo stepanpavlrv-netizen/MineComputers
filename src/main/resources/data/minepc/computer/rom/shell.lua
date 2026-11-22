@@ -119,6 +119,7 @@ while running do
     shell.run(line)
     -- программа могла упасть, не отпустив мышь (игры с обзором мышью) — в командной строке захват не нужен
     if term.getMouseLock and term.getMouseLock() then term.setMouseLock(false) end
+    if term.getEscapeCapture and term.getEscapeCapture() then term.setEscapeCapture(false) end
   end
 end
 

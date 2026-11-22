@@ -101,6 +101,17 @@ public final class Terminal {
         mouseLock = lock;
         version++;
     }
+
+    private boolean escapeCapture;
+
+    /** Программа забирает Esc себе (меню игры): у игрока Esc не закрывает экран, а приходит клавишей "escape". */
+    public synchronized boolean escapeCapture() { return escapeCapture; }
+
+    public synchronized void setEscapeCapture(boolean on) {
+        if (escapeCapture == on) return;
+        escapeCapture = on;
+        version++;
+    }
     public synchronized int version() { return version; }
 
     // ======================= Цвета =======================
@@ -469,7 +480,7 @@ public final class Terminal {
         out[5] = (byte) (cx >> 8);
         out[6] = (byte) cy;
         out[7] = (byte) (cy >> 8);
-        out[8] = (byte) ((cursorBlink ? 1 : 0) | (mouseLock ? 2 : 0));
+        out[8] = (byte) ((cursorBlink ? 1 : 0) | (mouseLock ? 2 : 0) | (escapeCapture ? 4 : 0));
         out[9] = (byte) depth;
         int c = TerminalCodec.HEADER, f = c + 2 * n, b = f + 3 * n;
         for (int i = 0; i < n; i++) {

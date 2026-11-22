@@ -895,6 +895,9 @@ final class LuaApis {
                 // Захват мыши для игр: курсор у игрока пропадает, движение приходит событием mouse_move (dx, dy в градусах)
                 RegisteredFunction.ofV("setMouseLock", (s, a) -> { t.setMouseLock(a.arg(1).toBoolean()); return Constants.NONE; }),
                 RegisteredFunction.ofV("getMouseLock", (s, a) -> valueOf(t.mouseLock())),
+                // Игра забирает Esc себе (меню паузы, «назад»): Esc приходит клавишей "escape", закрыть экран — Shift+Esc
+                RegisteredFunction.ofV("setEscapeCapture", (s, a) -> { t.setEscapeCapture(a.arg(1).toBoolean()); return Constants.NONE; }),
+                RegisteredFunction.ofV("getEscapeCapture", (s, a) -> valueOf(t.escapeCapture())),
                 RegisteredFunction.ofV("getSize", (s, a) -> varargsOf(valueOf(t.width()), valueOf(t.height()))),
                 RegisteredFunction.ofV("scroll", (s, a) -> { c.chargeGpu(t.cells() / 8); t.scroll(a.arg(1).checkInteger()); return Constants.NONE; }),
                 RegisteredFunction.ofV("getResolution", (s, a) -> varargsOf(valueOf(t.width()), valueOf(t.height()))),

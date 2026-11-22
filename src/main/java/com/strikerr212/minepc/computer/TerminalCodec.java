@@ -50,6 +50,11 @@ public final class TerminalCodec {
         return (frame[8] & 2) != 0;
     }
 
+    /** Программа забирает Esc себе (см. {@link Terminal#setEscapeCapture}). */
+    public static boolean escapeCapture(byte[] frame) {
+        return (frame[8] & 4) != 0;
+    }
+
     public static int depth(byte[] frame) {
         return frame[9] & 0xFF;
     }
