@@ -1207,6 +1207,14 @@ public class HeadlessTest {
         for (int i = 0; i < 600 && !flat().contains("RAZLOM") && !flat().contains("не запустился") && !flat().contains("Нужна"); i++) ticks(1);
         show("razlom bench");
         expect("razlom: 3D-кадры рисуются (замер)", flat().contains("RAZLOM") && flat().contains("клеток"));
+        // Пять уровней: двери под ключ-карту, пульты турелей, босс и его обруч, выходы ведут дальше
+        command("clear");
+        command("/razlom/app/game.lua check out=/razlom_check.txt");
+        for (int i = 0; i < 6000 && !flat().contains("RAZLOM CHECK"); i++) ticks(1);
+        show("razlom check");
+        String rc = Files.exists(root.resolve("razlom_check.txt")) ? Files.readString(root.resolve("razlom_check.txt")) : "";
+        for (String l : rc.split("\n")) if (l.contains("FAIL")) System.out.println("    " + l);
+        expect("razlom: самопроверка пяти уровней", flat().contains("RAZLOM CHECK: всё в порядке") && rc.contains("ур.5") && !rc.contains("FAIL"));
 
         // Захват мыши: признак едет в кадре вторым битом (мигание курсора не путается), событие mouse_move
         // доходит до программы, а оболочка снимает захват, если программа упала, не отпустив мышь
@@ -1230,7 +1238,7 @@ public class HeadlessTest {
         key("enter", false);
         boolean lockedInGame = false;
         for (int i = 0; i < 300 && !lockedInGame; i++) { ticks(1); lockedInGame = pc.terminal().mouseLock(); }
-        for (int i = 0; i < 600 && !flat().contains("Разлом: врагов"); i++) ticks(1);
+        for (int i = 0; i < 600 && !flat().contains("врагов уничтожено"); i++) ticks(1);
         expect("razlom: мышь захвачена в бою и отпущена после", lockedInGame && !pc.terminal().mouseLock());
 
         // BIOS: настройки сохраняются, порядок загрузки нормализуется

@@ -42,3 +42,8 @@ repo/
 ### Python ###
 __pycache__/
 *.pyc
+
+# кадры просмотрщиков «Разлома»
+tools/razview/shots/
+tools/razview/razlom_models.png
+tools/razview/__pycache__/

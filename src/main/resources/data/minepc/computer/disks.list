@@ -22,6 +22,11 @@ razlom/app/art.lua
 razlom/app/game.lua
 razlom/app/icon.pix
 razlom/app/level.lua
+razlom/app/levels/1.lua
+razlom/app/levels/2.lua
+razlom/app/levels/3.lua
+razlom/app/levels/4.lua
+razlom/app/levels/5.lua
 razlom/app/main.lua
 razlom/readme.txt
 site/app/app.lua

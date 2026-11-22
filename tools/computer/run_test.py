@@ -22,8 +22,8 @@ def main():
         files.append(os.path.join(os.path.dirname(__file__), "HeadlessTest.java"))
         out = os.path.join(work, "out")
         sep = ";" if os.name == "nt" else ":"
-        subprocess.run(["javac", "-encoding", "UTF-8", "-nowarn", "-cp", cobalt, "-d", out] + files, check=True)
-        res = subprocess.run(["java", "-Dstdout.encoding=UTF-8", "-cp", sep.join([out, cobalt, RES]), "HeadlessTest"]
+        subprocess.run([shutil.which("javac") or "javac", "-encoding", "UTF-8", "-nowarn", "-cp", cobalt, "-d", out] + files, check=True)
+        res = subprocess.run([shutil.which("java") or "java", "-Dstdout.encoding=UTF-8", "-cp", sep.join([out, cobalt, RES]), "HeadlessTest"]
                              + sys.argv[2:])
         sys.exit(res.returncode)
     finally:

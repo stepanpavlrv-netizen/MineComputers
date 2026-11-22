@@ -950,7 +950,18 @@ public class CiScreenshots {
             case 6904 -> server.execute(() -> logScreens("[CI-CAMPW]"));
             case 6908 -> mc.setScreen(new CameraScreen(camPos).withAccess());
             case 6930 -> shot(mc, "camera_access");
-            case 6934 -> {
+            // «Разлом» 2.0: уровень 2 (лаборатории) и бой с Сердцем разлома — излучатель обруча включён клавишей E
+            case 6936 -> mc.setScreen(new TerminalScreen(lanJ2));
+            case 6940 -> typeAt(lanJ2, "/razlom/app/game.lua play lvl=2 god give at=21,16,-0.6");
+            case 7100 -> shot(mc, "razlom_lvl2");
+            case 7102, 7104 -> keyAt(lanJ2, "q");
+            case 7110 -> typeAt(lanJ2, "/razlom/app/game.lua play lvl=5 god give at=9.8,16.5,0");
+            case 7270 -> keyAt(lanJ2, "e");
+            case 7272 -> keyUpAt(lanJ2, "e");
+            case 7290 -> shot(mc, "razlom_boss");
+            case 7292, 7294 -> keyAt(lanJ2, "q");
+            case 7310 -> logRazlom();
+            case 7314 -> {
                 mc.setScreen(null);
                 mc.options.pauseOnLostFocus = pauseWas;
                 // вместе с управлением по ходу (-PliveCtl) игра после сценария остаётся открытой

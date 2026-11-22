@@ -1,13 +1,15 @@
--- Разлом: 3D-шутер для видеокарт MineComputers (настоящее 3D: можно смотреть вверх и вниз,
--- ходить по мосту над залом и под ним, прыгать на площадки).
---   game            — играть
---   game demo [с]   — облёт уровня (сам), для показа
---   game bench [N]  — замер: N кадров облёта, печатает кадры в секунду
+-- Разлом: 3D-шутер для видеокарт MineComputers. Пять уровней станции «Глубина-7» над разломом.
+--   game [lvl=N]       — играть (с уровня N)
+--   game demo [с]      — облёт уровня (сам), для показа
+--   game bench [N]     — замер: N кадров облёта, печатает кадры в секунду
+--   game shot ... out=файл — один кадр в файл (для проверок без Minecraft: tools/razview/shot.py)
+--   game check [out=файл] — самопроверка правил всех уровней (двери, пульты, босс, выходы)
 -- Управление: мышь — обзор (захватывается на время боя, Esc отпускает), W/S/A/D — ходьба, ←/→ и ↑/↓ — поворот
--- и взгляд клавишами, пробел — прыжок, левая кнопка мыши, Ctrl или F — огонь, 1/2/3 — оружие, P — пауза, Q — выход.
+-- и взгляд клавишами, пробел — прыжок, левая кнопка мыши, Ctrl или F — огонь, 1/2/3 — оружие, E — пульт,
+-- P — пауза, Q — выход.
 local args = { ... }
 local mode = args[1] or "play"
--- «wired» среди аргументов — запущено из окна Wired: экран потом перерисует сама система
+if mode ~= "play" and mode ~= "demo" and mode ~= "bench" and mode ~= "shot" and mode ~= "check" then mode = "play" end
 local embedded = false
 for _, a in ipairs(args) do if a == "wired" then embedded = true end end
 local gpu = component and component.gpu
@@ -17,12 +19,19 @@ if not gpu or not gpu.newMesh or not gpu.canvas then
 end
 
 local floor, sqrt, abs, cos, sin, atan2, min, max = math.floor, math.sqrt, math.abs, math.cos, math.sin, math.atan2, math.min, math.max
-local pi, huge = math.pi, math.huge
+local pi = math.pi
 local uptime = computer.uptime
 local rnd = math.random
 math.randomseed(floor(uptime() * 1000) % 100000)
+local LEVELS = 5
 
--- Папка игры (рядом лежат art.lua и level.lua)
+-- аргументы вида имя=значение
+local opt = {}
+for _, a in ipairs(args) do
+  local k, v = a:match("^(%w+)=(.*)$")
+  if k then opt[k] = v else opt[a] = true end
+end
+
 local DIR = ((debug and debug.getinfo and debug.getinfo(1, "S").source) or ""):match("^@(.*)/[^/]*$") or "disk/app"
 if DIR:sub(1, 1) ~= "/" then DIR = "/" .. DIR end
 local function need(name, ...)
@@ -40,22 +49,27 @@ local MW, MH = gpu.maxResolution()
 if gpu.maxDepth() >= 24 then pcall(gpu.setDepth, 24) end
 local HUD = 2
 
--- Самый большой кадр, на который хватает видеопамяти (с запасом под текстуры и сетки)
--- (текстуры и сетки занимают около 6 тыс. клеток в простом качестве и 17 тыс. — в обычном)
-local W, H, cv
+-- Кадр и качество текстур под видеопамять: модели и текстуры занимают около 31 тыс. клеток в полном качестве,
+-- 10 тыс. — в простом и 5 тыс. — в самом простом, уровень — ещё до 3 тыс. Сначала ищем кадр покрупнее (не меньше
+-- половины экрана) с полными текстурами, потом с простыми; на самых слабых картах — что влезет.
+local W, H, cv, quality
 do
-  local scale = 1
-  while scale > 0.2 do
-    local w, h = max(40, floor(MW * scale)), max(14, floor(MH * scale))
-    gpu.setResolution(w, h)
-    local c = gpu.canvas(w, (h - HUD) * 2)
-    if c then
-      local free = gpu.freeMemory and gpu.freeMemory() or 1e9
-      if free >= 6500 or w <= 40 then W, H, cv = w, h, c break end
-      c:free()
+  local TIERS = { { q = false, need = 34500, minScale = 0.5 }, { q = 2, need = 14000, minScale = 0.5 }, { q = 4, need = 8000, minScale = 0.2 } }
+  for _, tier in ipairs(TIERS) do
+    local scale = 1
+    while scale >= tier.minScale - 1e-6 do
+      local w, h = max(40, floor(MW * scale)), max(14, floor(MH * scale))
+      gpu.setResolution(w, h)
+      local c = gpu.canvas(w, (h - HUD) * 2)
+      if c then
+        local free = gpu.freeMemory and gpu.freeMemory() or 1e9
+        if free >= tier.need - 300 then W, H, cv, quality = w, h, c, tier.q break end
+        c:free()
+      end
+      if w <= 40 and h <= 14 then break end
+      scale = scale - 0.1
     end
-    if w <= 40 and h <= 14 then break end
-    scale = scale - 0.1
+    if cv then break end
   end
 end
 if not cv then
@@ -67,7 +81,7 @@ if not cv then
   return
 end
 local CW, CH = cv.width, cv.height
-local lowVram = (gpu.freeMemory and gpu.freeMemory() or 1e9) < 20000
+local lowVram = quality
 
 -- Звук (звуковой чип платы; без него игра идёт молча). 1 — оружие, 2 — враги, 3 — предметы, 4 — игрок
 local snd = (sound and sound.channels and sound.channels() >= 1) and sound or nil
@@ -85,12 +99,11 @@ local function arpeggio(notes, len)
   pcall(snd.process)
 end
 
--- Экран загрузки
-local function loading(text, frac)
+local function loading(text, frac, title)
   gpu.setBackground(0x0c0b10)
   gpu.fill(1, 1, W, H, " ")
   gpu.setForeground(0xff8a3d)
-  local title = "Р А З Л О М"
+  title = title or "Р А З Л О М"
   gpu.set(floor((W - unicode.len(title)) / 2) + 1, floor(H / 2) - 2, title)
   gpu.setForeground(0x8d87a3)
   gpu.set(floor((W - unicode.len(text)) / 2) + 1, floor(H / 2), text)
@@ -105,18 +118,36 @@ end
 
 local art
 local okInit, initErr = pcall(function()
-  loading("Рисуем текстуры...", 0.05)
+  loading("Рисуем текстуры и модели...", 0.05)
   art = need("art", gpu, lowVram)
 end)
-local Lv
-local levelMeshes, acidMesh
-if okInit then
-  okInit, initErr = pcall(function()
-    Lv = need("level")
-    loading("Строим станцию и раскладываем свет...", 0.3)
-    levelMeshes, acidMesh = Lv.build(art, function(f) loading("Строим станцию и раскладываем свет...", 0.3 + f * 0.65) end)
-  end)
+local T, M = art and art.tex, art and art.mesh
+
+-- ======================= уровень =======================
+local Lv, levelNo
+local levelMeshes, acidMesh, doorMeshes = {}, nil, {}
+
+local function freeLevel()
+  for _, l in ipairs(levelMeshes) do pcall(gpu.freeMesh, l.id) end
+  if acidMesh then pcall(gpu.freeMesh, acidMesh) end
+  for _, id in pairs(doorMeshes) do pcall(gpu.freeMesh, id) end
+  levelMeshes, acidMesh, doorMeshes = {}, nil, {}
 end
+
+local function loadLevel(n)
+  freeLevel()
+  local fn, err = loadfile(DIR .. "/levels/" .. n .. ".lua")
+  if not fn then error("Не найден уровень " .. n .. ": " .. tostring(err), 0) end
+  local data = fn()
+  local title = "Уровень " .. n .. " · " .. data.name
+  loading("Строим станцию и раскладываем свет...", 0.3, title)
+  Lv = need("level", data)
+  levelMeshes, acidMesh, doorMeshes = Lv.build(art, function(f) loading("Строим станцию и раскладываем свет...", 0.3 + f * 0.65, title) end)
+  levelNo = n
+end
+
+local startLevel = max(1, min(LEVELS, tonumber(opt.lvl) or 1))
+if okInit then okInit, initErr = pcall(loadLevel, startLevel) end
 if not okInit then
   if gpu.freeAllBuffers then pcall(gpu.freeAllBuffers) end
   pcall(function() cv:free() end)
@@ -128,40 +159,55 @@ if not okInit then
   return
 end
 
-local T, M = art.tex, art.mesh
 local STEP = Lv.STEP
 local GRAV = 18
 local FOG = 0x0c0b10
 
 -- ======================= состояние =======================
 local P                         -- игрок
-local enemies, items, shots, parts, flashes
+local enemies, items, shots, parts, flashes, consoles
 local stats, portalOpen, state, message, messageT
 local t0, now
+local run = { time = 0, kills = 0, taken = 0, fromStart = startLevel == 1 }   -- весь забег (рекорд — с 1-го уровня)
+local snapshot                  -- игрок в начале уровня (после смерти — отсюда)
 
+-- Враги. hip/hipW — где ноги; muzzle — откуда летит выстрел (вперёд, вверх, вправо)
 local DEF = {
   guard = { hp = 45, speed = 4.0, r = 0.34, h = 1.6, melee = 9, meleeRate = 0.9, sight = 16, eyeY = 1.45,
-            name = "Страж", body = "guardBody", leg = "guardLeg", hip = 0.72, hipW = 0.15 },
+            name = "Охранник", body = "guardBody", leg = "guardLeg", hip = 0.72, hipW = 0.15 },
   gunner = { hp = 85, speed = 2.5, r = 0.4, h = 1.85, shot = "fire", rate = 1.8, dmg = 12, speedShot = 11, keep = 6,
-             sight = 26, eyeY = 1.7, name = "Стрелок", body = "gunnerBody", leg = "gunnerLeg", hip = 0.86, hipW = 0.18,
-             muzzle = { 0.7, 1.04, 0.47 } },
+             sight = 26, eyeY = 1.7, name = "Боевой робот", body = "gunnerBody", leg = "gunnerLeg", hip = 0.86, hipW = 0.2,
+             muzzle = { 0.84, 1.12, 0.49 } },
   eye = { hp = 35, speed = 3.2, r = 0.42, h = 0.84, fly = true, shot = "bolt", rate = 1.35, dmg = 8, speedShot = 15,
           sight = 22, eyeY = 0, name = "Око" },
+  scientist = { hp = 120, speed = 1.8, r = 0.36, h = 1.75, melee = 24, meleeRate = 1.5, sight = 14, eyeY = 1.42,
+                name = "Заражённый учёный", body = "scientistBody", leg = "scientistLeg", hip = 0.7, hipW = 0.12 },
+  crawler = { hp = 28, speed = 6.8, r = 0.32, h = 0.55, melee = 7, meleeRate = 0.55, sight = 18, eyeY = 0.4,
+              name = "Ползун", mesh = "crawler" },
+  turret = { hp = 90, speed = 0, r = 0.3, h = 1.05, shot = "bolt", rate = 0.38, dmg = 5, speedShot = 20, sight = 22,
+             eyeY = 0.75, name = "Турель", mesh = "turret", static = true, machine = true, muzzle = { 0.64, 0.64, 0 } },
+  boss = { hp = 1500, speed = 0.8, r = 1.05, h = 3.3, shot = "bolt", rate = 2.2, dmg = 9, speedShot = 13, sight = 60,
+           eyeY = 2.1, name = "Сердце разлома", mesh = "boss", boss = true, muzzle = { 1.0, 2.1, 0 } },
 }
 
 local WEAPONS = {
   { name = "Бластер", mesh = "blaster", rate = 0.36, dmg = 15, pellets = 1, spread = 0.006, kick = 0.12,
-    hold = { 0.11, -0.115, 0.24 }, scale = 0.75, tip = 0.27 },
+    hold = { 0.11, -0.115, 0.24 }, scale = 0.7, tip = 0.3 },
   { name = "Дробовик", mesh = "shotgun", rate = 0.8, ammo = "shells", dmg = 8, pellets = 8, spread = 0.065, kick = 0.3,
-    hold = { 0.11, -0.11, 0.2 }, scale = 0.6, tip = 0.52 },
+    hold = { 0.11, -0.11, 0.24 }, scale = 0.5, tip = 0.63 },
   { name = "Плазмомёт", mesh = "plasmagun", rate = 0.7, ammo = "cells", proj = true, dmg = 95, splash = 3.3, kick = 0.22,
-    hold = { 0.11, -0.12, 0.22 }, scale = 0.5, tip = 0.54 },
+    hold = { 0.12, -0.12, 0.26 }, scale = 0.45, tip = 0.63 },
 }
 
+local KEYNAME = { red = "красная", yellow = "жёлтая", blue = "синяя" }
+local KEYCOL = { red = 0xff5050, yellow = 0xffd040, blue = 0x5a8cff }
 local ITEMS = {
   medkit = { mesh = "medkit", name = "Аптечка" }, armor = { mesh = "armor", name = "Бронежилет" },
-  shells = { mesh = "shells", name = "Патроны" }, cells = { mesh = "cells", name = "Плазменные батареи" },
-  shotgun = { mesh = "shotgun", name = "Дробовик", scale = 1.6 }, plasmagun = { mesh = "plasmagun", name = "Плазмомёт", scale = 1.6 },
+  shells = { mesh = "shells", name = "Патроны" }, cells = { mesh = "cells", name = "Энергоячейка" },
+  shotgun = { mesh = "shotgun", name = "Дробовик", scale = 1.4 }, plasmagun = { mesh = "plasmagun", name = "Плазмомёт", scale = 1.3 },
+  keyRed = { mesh = "keyRed", name = "Красная ключ-карта", key = "red", noBob = true },
+  keyYellow = { mesh = "keyYellow", name = "Жёлтая ключ-карта", key = "yellow", noBob = true },
+  keyBlue = { mesh = "keyBlue", name = "Синяя ключ-карта", key = "blue", noBob = true },
 }
 
 local function say(text, sec)
@@ -170,7 +216,6 @@ local function say(text, sec)
 end
 
 -- ======================= движение тел (игрок и враги) =======================
---- Сдвинуть тело по горизонтали с заходом на ступеньки; потом гравитация. Возвращает true, если упёрлось.
 local function moveBody(b, dx, dz, dt)
   local r, h = b.r, b.h
   local bumped = false
@@ -194,7 +239,6 @@ local function moveBody(b, dx, dz, dt)
       else bumped = true end
     end
   end
-  -- вертикаль
   local g = Lv.ground(b.x, b.z, r, b.y)
   if b.onGround and b.vy <= 0 and b.y - g <= STEP + 0.02 then
     b.y = g
@@ -231,15 +275,22 @@ end
 local function flashLight(x, y, z, radius, color, power, life)
   flashes[#flashes + 1] = { x = x, y = y, z = z, r = radius, c = color, p = power, life = life, max = life }
 end
-
 local function dist3(ax, ay, az, bx, by, bz)
   local dx, dy, dz = ax - bx, ay - by, az - bz
   return sqrt(dx * dx + dy * dy + dz * dz)
 end
 
+--- Коробка тела врага по высоте.
+local function bodyY(e)
+  local d = e.def
+  if d.fly then return e.y - 0.45, e.y + 0.45 end
+  if d.boss then return e.y + 0.9, e.y + 3.3 end
+  return e.y, e.y + d.h
+end
+
 -- ======================= урон =======================
 local function hurtPlayer(dmg, fromX, fromZ)
-  if P.dead or state ~= "play" or P.god then return end
+  if P.dead or state ~= "play" or P.god or dmg <= 0 then return end
   local save = min(P.armor, floor(dmg * 2 / 3 + 0.5))
   P.armor = P.armor - save
   P.hp = P.hp - (dmg - save)
@@ -250,48 +301,74 @@ local function hurtPlayer(dmg, fromX, fromZ)
   if P.hp <= 0 then
     P.hp, P.dead, P.deadT = 0, true, now
     state = "dead"
-    say("Вы погибли. R — заново, Q — выход", 1e9)
+    say("Вы погибли. R — заново с начала уровня, Q — выход", 1e9)
     sfx(4, 300, 1.2, 1, "sawtooth", 40)
   end
 end
 
 local function aliveCount()
   local n = 0
-  for _, e in ipairs(enemies) do if not e.dead then n = n + 1 end end
+  for _, e in ipairs(enemies) do if not e.dead and not e.def.machine then n = n + 1 end end
   return n
+end
+
+local function openExit(text)
+  if portalOpen then return end
+  portalOpen = true
+  say(text, 5)
+  arpeggio({ 523, 659, 784, 1047 }, 110)
 end
 
 local function killEnemy(e)
   e.dead, e.deadT = true, now
-  stats.kills = stats.kills + 1
-  local cx, cy, cz = e.x, e.y + (e.def.fly and 0 or e.def.h * 0.6), e.z
-  burst(T.oil, cx, cy, cz, 10, 4, 0.9, 0.16, 10)
-  burst(T.spark, cx, cy, cz, 8, 6, 0.4, 0.1, 6, true)
-  if e.def.fly then
-    burst(T.fire, cx, cy, cz, 6, 3, 0.5, 0.5, -1, true)
-    flashLight(cx, cy, cz, 5, 0xff9040, 1.2, 0.4)
+  if not e.def.machine then stats.kills = stats.kills + 1 end
+  local y1, y2 = bodyY(e)
+  local cx, cy, cz = e.x, (y1 + y2) / 2, e.z
+  if e.def.machine then
+    burst(T.spark, cx, cy, cz, 14, 7, 0.5, 0.1, 8, true)
+    burst(T.smoke, cx, cy, cz, 4, 1.2, 1.2, 0.5, -1)
+  else
+    burst(T.oil, cx, cy, cz, 10, 4, 0.9, 0.16, 10)
+    burst(T.spark, cx, cy, cz, 8, 6, 0.4, 0.1, 6, true)
   end
-  sfx(2, e.def.fly and 900 or 480, 0.5, 0.9, "sawtooth", 40)
+  if e.def.fly or e.def.boss then
+    burst(T.fire, cx, cy, cz, e.def.boss and 20 or 6, e.def.boss and 6 or 3, 0.7, e.def.boss and 1.0 or 0.5, -1, true)
+    burst(T.glowGreen, cx, cy, cz, e.def.boss and 24 or 0, 7, 1.2, 0.3, 2, true)
+    flashLight(cx, cy, cz, e.def.boss and 14 or 5, 0xff9040, e.def.boss and 2 or 1.2, e.def.boss and 1.5 or 0.4)
+  end
+  sfx(2, e.def.fly and 900 or 480, e.def.boss and 1.6 or 0.5, 0.9, "sawtooth", 40)
+  if e.def.machine then return end
+  local need = Lv.exit and Lv.exit.need
   local left = aliveCount()
-  if left == 0 then
-    portalOpen = true
-    say("Все враги уничтожены! Портал открыт на северном балконе", 5)
-    arpeggio({ 523, 659, 784, 1047 }, 110)
-  elseif left <= 3 then
+  if e.def.boss and need == "boss" then
+    for _, o in ipairs(enemies) do if not o.dead and not o.def.machine then killEnemy(o) end end
+    openExit("Сердце разлома уничтожено! Портал домой открыт")
+  elseif need == "kills" and left == 0 then
+    openExit("Все враги уничтожены! Портал открыт " .. (Lv.exit.where or ""))
+  elseif need == "kills" and left <= 3 then
     say("Осталось врагов: " .. left)
   end
 end
 
 local function hurtEnemy(e, dmg, kx, kz)
   if e.dead then return end
+  if e.def.boss and now >= (e.exposedT or 0) then
+    dmg = dmg * 0.15                                 -- плоть гасит урон, пока обруч не вскрыл кристалл
+    if now >= (e.hintT or 0) then
+      e.hintT = now + 12
+      say("Плоть гасит выстрелы! Включите излучатели обруча на пультах (E)", 4)
+    end
+  end
   e.hp = e.hp - dmg
   e.flashT = now + 0.1
   e.alert = true
-  if kx and not e.def.fly then e.push = (e.push or 0) + dmg * 0.02; e.pushX, e.pushZ = kx, kz end
+  if kx and not e.def.fly and not e.def.static and not e.def.boss then
+    e.push = (e.push or 0) + dmg * 0.02; e.pushX, e.pushZ = kx, kz
+  end
   if e.hp <= 0 then killEnemy(e)
   elseif now - (e.painT or 0) > 0.3 then
     e.painT = now
-    sfx(2, 240 + rnd(0, 60), 0.12, 0.6, "square", 120)
+    sfx(2, e.def.machine and 900 or (240 + rnd(0, 60)), 0.12, 0.6, "square", 120)
   end
 end
 
@@ -304,8 +381,9 @@ local function explode(x, y, z, radius, dmg, owner)
   sfx(2, 380, 0.6, 1, "noise", 30)
   for _, e in ipairs(enemies) do
     if not e.dead then
-      local cy = e.def.fly and e.y or e.y + e.def.h * 0.5
-      local d = dist3(x, y, z, e.x, cy, e.z)
+      local y1, y2 = bodyY(e)
+      local d = dist3(x, y, z, e.x, max(y1, min(y2, y)), e.z) - (e.def.boss and 1 or 0)
+      d = max(0, d)
       if d < radius then hurtEnemy(e, dmg * (1 - d / radius * 0.7), (e.x - x) / max(0.1, d), (e.z - z) / max(0.1, d)) end
     end
   end
@@ -332,15 +410,13 @@ local function forward(yaw, pitch)
   return cp * cos(yaw), sin(pitch), cp * sin(yaw)
 end
 
---- Луч против врагов (коробка вокруг тела): ближайший враг и расстояние.
-local function rayEnemy(ox, oy, oz, dx, dy, dz, maxd)
+--- Луч против врагов (коробка вокруг тела): ближайший враг и расстояние. skip — кого не считать.
+local function rayEnemy(ox, oy, oz, dx, dy, dz, maxd, skip)
   local best, bestT = nil, maxd
   for _, e in ipairs(enemies) do
-    if not e.dead then
-      local d = e.def
-      local r = d.r + 0.08
-      local y1, y2
-      if d.fly then y1, y2 = e.y - 0.45, e.y + 0.45 else y1, y2 = e.y, e.y + d.h end
+    if not e.dead and e ~= skip then
+      local r = e.def.r + 0.08
+      local y1, y2 = bodyY(e)
       local tmin, tmax = 0, bestT
       local ok = true
       local bounds = { { ox, dx, e.x - r, e.x + r }, { oy, dy, y1, y2 }, { oz, dz, e.z - r, e.z + r } }
@@ -368,7 +444,6 @@ local function fire()
   if w.ammo and P.ammo[w.ammo] <= 0 then
     P.nextFire = now + 0.4
     sfx(1, 1400, 0.03, 0.4, "square")
-    -- нет патронов — берём что есть
     for i = #WEAPONS, 1, -1 do
       local o = WEAPONS[i]
       if P.have[i] and (not o.ammo or P.ammo[o.ammo] > 0) then P.weapon = i say(o.name) break end
@@ -382,13 +457,11 @@ local function fire()
   local ex, ey, ez = eyePos()
   local fx, fy, fz = forward(P.yaw, P.pitch)
   local rx, rz = -sin(P.yaw), cos(P.yaw)
-  -- вверх камеры = вправо × вперёд (у «вправо» нет вертикали)
   local ux, uy, uz = -rz * fy, rz * fx - rx * fz, rx * fy
   local tipX = ex + fx * 0.5 + rx * 0.14 - ux * 0.12
   local tipY = ey + fy * 0.5 - uy * 0.12
   local tipZ = ez + fz * 0.5 + rz * 0.14 - uz * 0.12
   flashLight(tipX, tipY, tipZ, w.proj and 4 or 5, w.proj and 0x60d0ff or 0xffc070, 1.0, 0.07)
-  -- враги слышат выстрел: рядом — сквозь стены, подальше — если видят
   for _, e in ipairs(enemies) do
     if not e.dead and not e.alert then
       local d = dist3(e.x, e.y, e.z, P.x, P.y, P.z)
@@ -403,7 +476,6 @@ local function fire()
   end
   if P.weapon == 2 then sfx(1, 700, 0.32, 1, "noise", 70) else sfx(1, 1700, 0.12, 0.7, "square", 380) end
   for _ = 1, w.pellets do
-    -- разброс в плоскости экрана
     local a, s = rnd() * pi * 2, w.spread * sqrt(rnd())
     local ox, oy = cos(a) * s, sin(a) * s
     local dx, dy, dz = fx + rx * ox + ux * oy, fy + uy * oy, fz + rz * ox + uz * oy
@@ -414,7 +486,7 @@ local function fire()
     local hx, hy, hz = ex + dx * (e and t or wall), ey + dy * (e and t or wall), ez + dz * (e and t or wall)
     if e then
       hurtEnemy(e, w.dmg, dx, dz)
-      particle(T.oil, hx, hy, hz, dx * -2 + rnd() - 0.5, 1.5, dz * -2 + rnd() - 0.5, 0.5, 0.14, 9)
+      particle(e.def.machine and T.spark or T.oil, hx, hy, hz, dx * -2 + rnd() - 0.5, 1.5, dz * -2 + rnd() - 0.5, 0.5, 0.14, 9)
     else
       particle(T.spark, hx - dx * 0.05, hy - dy * 0.05, hz - dz * 0.05, -dx * 2, 1.5, -dz * 2, 0.25, 0.1, 6, true)
       if rnd() < 0.5 then particle(T.smoke, hx - dx * 0.1, hy - dy * 0.1, hz - dz * 0.1, 0, 0.4, 0, 0.6, 0.3, -0.3) end
@@ -424,9 +496,11 @@ end
 
 -- ======================= враги =======================
 local flowT = -1
-local function enemyShoot(e)
+local spawnEnemy
+
+--- Выстрел врага в точку (tx, ty, tz); spread — разлёт по сторонам (рад).
+local function enemyShoot(e, tx, ty, tz, tvx, tvz, spread)
   local d = e.def
-  local px, py, pz = P.x, P.y + 1.0, P.z
   local sx, sy, sz
   if d.muzzle then
     local m = d.muzzle
@@ -436,31 +510,134 @@ local function enemyShoot(e)
     local fx, fy, fz = forward(e.yaw, e.pitch or 0)
     sx, sy, sz = e.x + fx * 0.5, e.y + fy * 0.5, e.z + fz * 0.5
   end
-  -- упреждение: туда, где игрок будет, плюс немного промаха
-  local dd = dist3(sx, sy, sz, px, py, pz)
+  local dd = dist3(sx, sy, sz, tx, ty, tz)
   local tt = dd / d.speedShot * 0.6
-  px, pz = px + P.vx * tt + (rnd() - 0.5) * 0.6, pz + P.vz * tt + (rnd() - 0.5) * 0.6
-  local dx, dy, dz = px - sx, py - sy, pz - sz
+  tx, tz = tx + (tvx or 0) * tt + (rnd() - 0.5) * 0.6, tz + (tvz or 0) * tt + (rnd() - 0.5) * 0.6
+  local dx, dy, dz = tx - sx, ty - sy, tz - sz
+  if spread and spread ~= 0 then
+    local c, s = cos(spread), sin(spread)
+    dx, dz = dx * c - dz * s, dx * s + dz * c
+  end
   local l = sqrt(dx * dx + dy * dy + dz * dz)
   local sp = d.speedShot
+  local fireShot = d.shot == "fire"
   shots[#shots + 1] = { x = sx, y = sy, z = sz, vx = dx / l * sp, vy = dy / l * sp, vz = dz / l * sp, owner = e,
-                        tex = d.shot == "fire" and T.fire or T.bolt, size = d.shot == "fire" and 0.4 or 0.26,
-                        dmg = d.dmg, splash = d.shot == "fire" and 1.3 or nil, life = 4,
-                        light = d.shot == "fire" and 0xff8030 or 0xff3020 }
-  local vol = max(0.1, 0.7 - dd / 40)
-  if d.shot == "fire" then sfx(2, 420, 0.25, vol, "triangle", 160) else sfx(2, 1500, 0.12, vol, "square", 700) end
+                        tex = fireShot and T.fire or T.bolt, size = fireShot and 0.4 or (d.boss and 0.45 or 0.26),
+                        dmg = d.dmg, splash = fireShot and 1.3 or nil, life = 4,
+                        light = fireShot and 0xff8030 or (d.boss and 0x60ff80 or 0xff3020) }
+  local vol = max(0.1, 0.7 - dist3(sx, sy, sz, P.x, P.y, P.z) / 40)
+  if fireShot then sfx(2, 420, 0.25, vol, "triangle", 160) else sfx(2, d.machine and 2200 or 1500, 0.08, vol, "square", 700) end
+end
+
+--- Турель: стреляет во всех подряд — в игрока и в тварей, кто ближе и на виду.
+local function updateTurret(e, dt)
+  local d = e.def
+  if e.off then e.anim = e.anim + dt * 0.2 return end
+  if now >= e.lookT then
+    e.lookT = now + 0.25
+    local best, bd = nil, d.sight
+    local ey = e.y + d.eyeY
+    if not P.dead then
+      local pd = dist3(e.x, ey, e.z, P.x, P.y + 1.2, P.z)
+      if pd < bd and Lv.sees(e.x, ey, e.z, P.x, P.y + 1.3, P.z) then best, bd = "player", pd end
+    end
+    for _, o in ipairs(enemies) do
+      if o ~= e and not o.dead and not o.def.machine then
+        local y1, y2 = bodyY(o)
+        local od = dist3(e.x, ey, e.z, o.x, (y1 + y2) / 2, o.z)
+        if od < bd and Lv.sees(e.x, ey, e.z, o.x, (y1 + y2) / 2, o.z) then best, bd = o, od end
+      end
+    end
+    e.target = best
+  end
+  local t = e.target
+  if t == nil or (t ~= "player" and t.dead) or (t == "player" and P.dead) then e.anim = e.anim + dt return end
+  local tx, ty, tz, tvx, tvz
+  if t == "player" then tx, ty, tz, tvx, tvz = P.x, P.y + 1.0, P.z, P.vx, P.vz
+  else local y1, y2 = bodyY(t) tx, ty, tz = t.x, (y1 + y2) / 2, t.z end
+  local want = atan2(tz - e.z, tx - e.x)
+  local diff = (want - e.yaw + pi) % (2 * pi) - pi
+  e.yaw = e.yaw + max(-dt * 3, min(dt * 3, diff))
+  if abs(diff) < 0.25 and now >= e.atkT then
+    e.atkT = now + d.rate
+    e.swingT = now
+    enemyShoot(e, tx, ty, tz, tvx, tvz)
+  end
+end
+
+--- Босс: висит над серединой пещеры, залпы веером, удар щупальцами вблизи, зовёт тварей на 60% и 30%.
+local function updateBoss(e, dt)
+  local d = e.def
+  local dx, dz = P.x - e.x, P.z - e.z
+  local dxz = sqrt(dx * dx + dz * dz)
+  e.alert = true
+  e.anim = e.anim + dt
+  local want = atan2(dz, dx)
+  local diff = (want - e.yaw + pi) % (2 * pi) - pi
+  e.yaw = e.yaw + max(-dt * 1.2, min(dt * 1.2, diff))
+  -- медленно плывёт за игроком, не дальше 3 м от своего места
+  local hx, hz = e.homeX + dx / max(1, dxz) * 3, e.homeZ + dz / max(1, dxz) * 3
+  local mx, mz = hx - e.x, hz - e.z
+  local ml = sqrt(mx * mx + mz * mz)
+  if ml > 0.1 then e.x, e.z = e.x + mx / ml * min(ml, d.speed * dt), e.z + mz / ml * min(ml, d.speed * dt) end
+  if state ~= "play" or P.dead then return end
+  local frac = e.hp / d.hp
+  local phase = frac > 0.6 and 1 or (frac > 0.3 and 2 or 3)
+  if phase > (e.phase or 1) then
+    e.phase = phase
+    say(phase == 2 and "Сердце зовёт ползунов из разлома!" or "Сердце в ярости: летят очи!", 3)
+    sfx(2, 90, 1.2, 1, "sawtooth", 50)
+  end
+  local exposed = now < (e.exposedT or 0)
+  -- залп веером
+  if now >= e.atkT and not exposed then
+    e.atkT = now + d.rate * (phase == 3 and 0.65 or 1)
+    e.swingT = now
+    local n = phase == 1 and 5 or 7
+    for i = 1, n do
+      enemyShoot(e, P.x, P.y + 1.0, P.z, 0, 0, (i - (n + 1) / 2) * 0.13)
+    end
+  end
+  -- удар щупальцами: волна по полу вокруг
+  if dxz < 4.2 and abs(P.y - e.y) < 2 and now >= (e.slamT or 0) then
+    e.slamT = now + 2.4
+    burst(T.oil, e.x, e.y + 0.2, e.z, 16, 6, 0.6, 0.2, 8)
+    flashLight(e.x, e.y + 0.5, e.z, 6, 0x80ff90, 1.2, 0.3)
+    sfx(2, 70, 0.5, 1, "noise", 40)
+    hurtPlayer(18, e.x, e.z)
+    P.vx, P.vz, P.vy = P.vx + dx / max(0.5, dxz) * 9, P.vz + dz / max(0.5, dxz) * 9, 5
+    P.onGround, P.air = false, true
+  end
+  -- твари из разлома
+  if phase >= 2 and now >= (e.spawnT or 0) then
+    e.spawnT = now + (phase == 3 and 9 or 12)
+    local alive = 0
+    for _, o in ipairs(enemies) do if not o.dead and o ~= e and not o.def.machine then alive = alive + 1 end end
+    if alive < 6 then
+      for i = 1, 2 do
+        local a = rnd() * pi * 2
+        local kind = (phase == 3 and i == 2) and "eye" or "crawler"
+        local sx, sz = e.homeX + cos(a) * 2.5, e.homeZ + sin(a) * 2.5
+        if Lv.cellAt(sx, sz) then
+          local o = spawnEnemy(kind, sx, kind == "eye" and e.y + 3 or Lv.ground(sx, sz, 0.3, e.y + 1), sz)
+          o.alert = true
+          burst(T.glowGreen, sx, e.y + 0.5, sz, 8, 3, 0.6, 0.25, -1, true)
+        end
+      end
+    end
+  end
 end
 
 local function updateEnemy(e, dt)
   local d = e.def
   if e.dead then return end
+  if d.static then return updateTurret(e, dt) end
+  if d.boss then return updateBoss(e, dt) end
   local dx, dz = P.x - e.x, P.z - e.z
   local dxz = sqrt(dx * dx + dz * dz)
   local ey = d.fly and e.y or e.y + d.eyeY
-  -- замечает игрока (проверка видимости не каждый кадр)
   if now >= e.lookT then
     e.lookT = now + 0.3 + rnd() * 0.2
-    -- пока не встревожен, видит только перед собой (или совсем рядом)
     local facing = e.alert or dxz < 4 or abs((atan2(dz, dx) - e.yaw + pi) % (2 * pi) - pi) < 1.1
     e.sees = not P.dead and facing and dxz < d.sight and Lv.sees(e.x, ey, e.z, P.x, P.y + 1.4, P.z)
     if e.sees then e.alert = true end
@@ -472,20 +649,17 @@ local function updateEnemy(e, dt)
   local want = atan2(dz, dx)
   local diff = (want - e.yaw + pi) % (2 * pi) - pi
   e.yaw = e.yaw + max(-dt * 5, min(dt * 5, diff))
-  -- отдача от попаданий
   if e.push and e.push > 0 and not d.fly then
     moveBody(e, e.pushX * e.push * dt * 8, e.pushZ * e.push * dt * 8, 0)
     e.push = max(0, e.push - dt * 3)
   end
 
   if d.fly then
-    -- око кружит над игроком и держит дистанцию
     e.orbit = e.orbit + dt * 0.6
     local tx = P.x - cos(e.orbit) * 5.5
     local tz = P.z - sin(e.orbit) * 5.5
     local ty = P.y + 2.6 + sin(now * 0.9 + e.orbit) * 0.8
     local mx, my, mz = tx - e.x, ty - e.y, tz - e.z
-    -- слишком близко к игроку — отлетает
     local pdx, pdy, pdz = e.x - P.x, e.y - (P.y + 1.5), e.z - P.z
     local pd = sqrt(pdx * pdx + pdy * pdy + pdz * pdz)
     if pd < 3.5 and pd > 0.01 then mx, my, mz = pdx / pd * 3, pdy / pd * 3 + 1, pdz / pd * 3 end
@@ -505,17 +679,16 @@ local function updateEnemy(e, dt)
     e.anim = e.anim + dt * 3
     if e.sees and now >= e.atkT then
       e.atkT = now + d.rate * (0.8 + rnd() * 0.4)
-      enemyShoot(e)
+      enemyShoot(e, P.x, P.y + 1.0, P.z, P.vx, P.vz)
     end
     return
   end
 
-  -- куда идти: прямо к игроку, если видно и путь свободен, иначе по полю расстояний
   local goX, goZ
   local stand = false
   if d.shot and e.sees and dxz < 18 then
     stand = dxz > d.keep
-    if dxz < d.keep - 1 then goX, goZ = -dx, -dz end         -- отступает
+    if dxz < d.keep - 1 then goX, goZ = -dx, -dz end
     if stand and rnd() < dt * 0.6 then e.strafe = (rnd() < 0.5) and -1 or 1 end
     if stand and e.strafe then goX, goZ = -dz * e.strafe, dx * e.strafe end
   elseif e.sees and (abs(P.y - e.y) < 1.2) then
@@ -528,7 +701,6 @@ local function updateEnemy(e, dt)
         for ox = -1, 1 do
           if ox ~= 0 or oz ~= 0 then
             local v = Lv.distAt(cx + ox + 0.5, cz + oz + 0.5)
-            -- по диагонали — только если обе соседние клетки проходимы
             if v and v < best and (ox == 0 or oz == 0 or (Lv.distAt(cx + ox + 0.5, cz + 0.5) and Lv.distAt(cx + 0.5, cz + oz + 0.5))) then
               best, bx, bz = v, cx + ox + 0.5, cz + oz + 0.5
             end
@@ -537,6 +709,11 @@ local function updateEnemy(e, dt)
       end
     end
     if bx then goX, goZ = bx - e.x, bz - e.z else goX, goZ = dx, dz end
+  end
+  -- ползун петляет зигзагом — в него трудно попасть
+  if d.mesh == "crawler" and goX then
+    local zig = sin(now * 7 + e.orbit) * 0.7
+    goX, goZ = goX - goZ * zig, goZ + goX * zig
   end
   local moving = false
   if goX and (d.melee and dxz > 1.0 or not d.melee) then
@@ -553,20 +730,18 @@ local function updateEnemy(e, dt)
     moveBody(e, 0, 0, dt)
   end
   if moving then e.anim = e.anim + dt * d.speed * 2.2 end
-  -- атака
   if d.melee then
     if dxz < d.r + 0.35 + 0.75 and abs(P.y - e.y) < 1.3 and now >= e.atkT then
       e.atkT = now + d.meleeRate
       e.swingT = now
       hurtPlayer(d.melee, e.x, e.z)
-      sfx(2, 160, 0.15, 0.8, "sawtooth", 60)
+      sfx(2, d.mesh == "crawler" and 600 or 160, 0.15, 0.8, "sawtooth", 60)
     end
   elseif e.sees and now >= e.atkT then
     e.atkT = now + d.rate * (0.8 + rnd() * 0.4)
     e.swingT = now
-    enemyShoot(e)
+    enemyShoot(e, P.x, P.y + 1.0, P.z, P.vx, P.vz)
   end
-  -- упал в кислоту
   local c = Lv.cellAt(e.x, e.z)
   if c and c.acid and e.y <= c.f + 0.05 then
     if now >= (e.acidT or 0) then e.acidT = now + 0.5 hurtEnemy(e, 6) end
@@ -580,22 +755,25 @@ local function updateShots(dt)
     local s = shots[i]
     s.life = s.life - dt
     local hit = s.life <= 0
+    local victim
     local steps = max(1, math.ceil(sqrt(s.vx * s.vx + s.vy * s.vy + s.vz * s.vz) * dt / 0.25))
     local sdt = dt / steps
+    local turretShot = s.owner ~= "player" and s.owner.def.machine
     for _ = 1, steps do
       if hit then break end
       local nx, ny, nz = s.x + s.vx * sdt, s.y + s.vy * sdt, s.z + s.vz * sdt
       if Lv.solidPoint(nx, ny, nz) then hit = true break end
       s.x, s.y, s.z = nx, ny, nz
-      if s.owner == "player" then
+      if s.owner == "player" or turretShot then
         for _, e in ipairs(enemies) do
-          if not e.dead then
-            local d = e.def
-            local y1, y2 = d.fly and e.y - 0.45 or e.y, d.fly and e.y + 0.45 or e.y + d.h
-            if abs(nx - e.x) < d.r + 0.2 and abs(nz - e.z) < d.r + 0.2 and ny > y1 - 0.2 and ny < y2 + 0.2 then hit = true break end
+          if not e.dead and e ~= s.owner then
+            local y1, y2 = bodyY(e)
+            local r = e.def.r + 0.2
+            if abs(nx - e.x) < r and abs(nz - e.z) < r and ny > y1 - 0.2 and ny < y2 + 0.2 then hit = true victim = e break end
           end
         end
-      elseif not P.dead then
+      end
+      if not hit and s.owner ~= "player" and not P.dead then
         if abs(nx - P.x) < 0.5 and abs(nz - P.z) < 0.5 and ny > P.y - 0.1 and ny < P.y + 1.8 then hit = true end
       end
     end
@@ -603,7 +781,8 @@ local function updateShots(dt)
       if s.splash and s.owner == "player" then
         explode(s.x, s.y, s.z, s.splash, s.dmg, "player")
       elseif s.owner ~= "player" then
-        if not P.dead and dist3(s.x, s.y, s.z, P.x, P.y + 0.9, P.z) < (s.splash or 0.9) + 0.4 then
+        if victim then hurtEnemy(victim, s.dmg)
+        elseif not P.dead and dist3(s.x, s.y, s.z, P.x, P.y + 0.9, P.z) < (s.splash or 0.9) + 0.4 then
           hurtPlayer(s.dmg, s.x, s.z)
         end
         burst(s.tex, s.x, s.y, s.z, 5, 3, 0.3, 0.2, 2, true)
@@ -611,7 +790,6 @@ local function updateShots(dt)
       end
       table.remove(shots, i)
     else
-      -- след
       if s.owner == "player" and rnd() < 0.6 then particle(T.plasma, s.x, s.y, s.z, 0, 0, 0, 0.18, 0.18, 0, true) end
       i = i + 1
     end
@@ -644,10 +822,14 @@ local function updateParts(dt)
   end
 end
 
--- ======================= предметы =======================
+-- ======================= предметы, двери, пульты =======================
 local function pickup(it)
   local k = it.kind
-  if k == "medkit" then
+  local def = ITEMS[k]
+  if def.key then
+    P.keys[def.key] = true
+    return true
+  elseif k == "medkit" then
     if P.hp >= 100 then return false end
     P.hp = min(100, P.hp + 25)
   elseif k == "armor" then
@@ -660,10 +842,12 @@ local function pickup(it)
     if P.ammo.cells >= 50 then return false end
     P.ammo.cells = min(50, P.ammo.cells + 10)
   elseif k == "shotgun" then
+    if P.have[2] and P.ammo.shells >= 60 then return false end
     P.have[2] = true
     P.ammo.shells = min(60, P.ammo.shells + 12)
     P.weapon = 2
   elseif k == "plasmagun" then
+    if P.have[3] and P.ammo.cells >= 50 then return false end
     P.have[3] = true
     P.ammo.cells = min(50, P.ammo.cells + 15)
     P.weapon = 3
@@ -679,7 +863,7 @@ local function updateItems()
           it.taken = true
           P.pickT = now
           say(ITEMS[it.kind].name)
-          if it.kind == "shotgun" or it.kind == "plasmagun" then arpeggio({ 392, 523, 659 }, 70)
+          if it.kind == "shotgun" or it.kind == "plasmagun" or ITEMS[it.kind].key then arpeggio({ 392, 523, 659 }, 70)
           else sfx(3, 620, 0.15, 0.6, "square", 1250) end
         end
       end
@@ -687,24 +871,87 @@ local function updateItems()
   end
 end
 
+local function openDoor(d)
+  if d.opening then return end
+  d.opening = true
+  sfx(3, 160, 0.9, 0.7, "sawtooth", 260)
+end
+
+local doorHintT = 0
+local function updateDoors(dt)
+  for _, d in pairs(Lv.doors) do
+    if d.opening and d.open < 1 then d.open = min(1, d.open + dt * 1.1) end
+    if not d.opening and not P.dead then
+      for _, c in ipairs(d.cells) do
+        local dx, dz = c[1] + 0.5 - P.x, c[2] + 0.5 - P.z
+        if dx * dx + dz * dz < 1.8 * 1.8 and abs(P.y - d.f) < 1.5 then
+          if d.key and P.keys[d.key] then openDoor(d)
+          elseif now >= doorHintT then
+            doorHintT = now + 2.5
+            say(d.key and ("Нужна " .. KEYNAME[d.key] .. " ключ-карта") or "Эта дверь открывается с пульта")
+          end
+          break
+        end
+      end
+    end
+  end
+end
+
+--- Пульт: target = "door:знак" — открыть дверь, "turrets:группа" — выключить турели, "ring" — излучатель обруча.
+local function useConsole(c)
+  local kind, arg = c.target:match("^(%a+):?(.*)$")
+  if kind == "ring" then
+    if now < c.readyT then say(string.format("Излучатель заряжается: %d с", math.ceil(c.readyT - now))) return end
+    local boss
+    for _, e in ipairs(enemies) do if e.def.boss and not e.dead then boss = e end end
+    if not boss then say("Излучатель молчит") return end
+    c.readyT = now + 16
+    c.beamT = now + 7
+    boss.exposedT = now + 7
+    say("Обруч вскрыл кристалл! Стреляйте в Сердце!", 3)
+    sfx(3, 300, 1.2, 0.9, "sine", 1600)
+    return
+  end
+  if c.used then say("Уже сделано") return end
+  c.used = true
+  if kind == "door" then
+    local d = Lv.doors[arg]
+    if d then openDoor(d) end
+    say(c.label or "Дверь открыта")
+  elseif kind == "turrets" then
+    local n = 0
+    for _, e in ipairs(enemies) do
+      if e.def.static and e.group == arg and not e.dead then e.off = true n = n + 1 end
+    end
+    say(c.label or ("Турели отключены: " .. n))
+  end
+  sfx(3, 880, 0.2, 0.6, "square", 440)
+end
+
+local function nearConsole()
+  for _, c in ipairs(consoles) do
+    local dx, dz = c.x - P.x, c.z - P.z
+    if dx * dx + dz * dz < 1.7 * 1.7 and abs(P.y - c.y) < 1.4 then return c end
+  end
+end
+
 -- ======================= игрок =======================
 local keys = {}
 local mouseFire, dragX, dragY = false, nil, nil
-local mouseLocked = nil   -- просили ли захват мыши (term.setMouseLock)
-local MOUSE_RAD = pi / 180  -- mouse_move приходит в градусах — с чувствительностью из настроек игрока
+local mouseLocked = nil
+local MOUSE_RAD = pi / 180
 
+local consoleHintT = 0
 local function updatePlayer(dt)
   if P.dead then
     P.vx, P.vz = P.vx * 0.9, P.vz * 0.9
     moveBody(P, P.vx * dt, P.vz * dt, dt)
     return
   end
-  -- поворот и взгляд
   local turn = (keys.right and 1 or 0) - (keys.left and 1 or 0)
   P.yaw = P.yaw + turn * 2.5 * dt
   local look = (keys.up and 1 or 0) - (keys.down and 1 or 0)
   P.pitch = max(-1.35, min(1.35, P.pitch + look * 1.7 * dt))
-  -- желаемое направление
   local fwd = (keys.w and 1 or 0) - (keys.s and 1 or 0)
   local side = (keys.d and 1 or 0) - (keys.a and 1 or 0)
   local c, s = cos(P.yaw), sin(P.yaw)
@@ -718,7 +965,6 @@ local function updatePlayer(dt)
     P.vz = P.vz + (wz * SPEED - P.vz) * k
     P.air = false
   elseif wl > 0 then
-    -- в воздухе управление слабее (полёт после взрыва не гасится)
     local k = min(1, (P.air and 1.2 or 3) * dt)
     local tvx, tvz = P.vx + (wx * SPEED - P.vx) * k, P.vz + (wz * SPEED - P.vz) * k
     if P.air and tvx * tvx + tvz * tvz < P.vx * P.vx + P.vz * P.vz then
@@ -727,7 +973,6 @@ local function updatePlayer(dt)
       P.vx, P.vz = tvx, tvz
     end
   end
-  -- прыжок
   if keys.space and P.onGround and now >= P.jumpT then
     P.vy = 6.4
     P.onGround = false
@@ -741,7 +986,6 @@ local function updatePlayer(dt)
     sfx(4, 120, 0.1, 0.6, "noise", 60)
     if P.landSpeed > 15 then hurtPlayer(floor((P.landSpeed - 15) * 3)) end
   end
-  -- покачивание при ходьбе
   local hs = sqrt(P.vx * P.vx + P.vz * P.vz)
   if P.onGround and hs > 0.5 then
     local before = floor(P.bob / pi)
@@ -752,8 +996,8 @@ local function updatePlayer(dt)
   local cell = Lv.cellAt(P.x, P.z)
   if cell and P.onGround and P.y <= cell.f + 0.05 then
     if cell.pad then
-      P.vy = Lv.padPush.up
-      P.vx, P.vz = Lv.padPush.x, Lv.padPush.z
+      P.vy = cell.pad[1]
+      P.vx, P.vz = cell.pad[2], cell.pad[3]
       P.onGround = false
       P.air = true
       sfx(3, 140, 0.45, 0.8, "sine", 900)
@@ -763,69 +1007,154 @@ local function updatePlayer(dt)
       hurtPlayer(7)
     end
   end
-  -- стрельба и смена оружия
+  -- пульт рядом: подсказка, E — включить
+  local con = nearConsole()
+  if con and now >= consoleHintT and not (message and now < messageT) then
+    consoleHintT = now + 3
+    say("E — " .. (con.hint or "пульт"), 2)
+  end
+  if keys.e and con and not P.eHeld then useConsole(con) end
+  P.eHeld = keys.e
   if keys.ctrl or keys.f or mouseFire then fire() end
   P.kick = max(0, P.kick - dt * 1.6)
-  -- портал
-  if portalOpen and state == "play" then
-    local pp = Lv.portal
-    if abs(P.x - pp.x) < 0.8 and abs(P.z - pp.z) < 0.8 and abs(P.y - pp.y) < 1.2 then
-      state = "won"
+  -- выход
+  local ex = Lv.exit
+  if portalOpen and state == "play" and ex then
+    if abs(P.x - ex.x) < 0.8 and abs(P.z - ex.z) < 0.8 and abs(P.y - ex.y) < 1.2 then
       stats.time = now - t0
+      run.time = run.time + stats.time
+      run.kills = run.kills + stats.kills
+      run.taken = run.taken + stats.taken
+      state = levelNo < LEVELS and "next" or "won"
       say("", 0)
       arpeggio({ 523, 659, 784, 1047, 1319 }, 120)
     end
   end
 end
 
--- ======================= новая игра =======================
-local function newGame()
+-- ======================= новый уровень =======================
+local function newPlayer()
+  return { x = 0, y = 0, z = 0, vx = 0, vy = 0, vz = 0, r = 0.32, h = 1.75, yaw = 0, pitch = 0,
+           hp = 100, armor = 0, onGround = true, weapon = 1, have = { true, false, false }, ammo = { shells = 0, cells = 0 },
+           nextFire = 0, kick = 0, bob = 0, jumpT = 0, acidT = 0, hurtT = -10, pickT = -10, fireT = -10, acidHurtT = -10 }
+end
+
+function spawnEnemy(kind, x, y, z, th)
+  local d = DEF[kind]
+  local e = { kind = kind, def = d, x = x, y = y, z = z, vy = 0, r = d.r, h = d.h, onGround = true,
+              hp = d.hp, yaw = (th and th[5]) or rnd() * pi * 2, anim = rnd() * 6, lookT = rnd() * 0.5,
+              atkT = now + 1 + rnd(), orbit = rnd() * pi * 2, light = 1, lightT = -1, alert = false,
+              homeX = x, homeZ = z, group = th and th.group }
+  enemies[#enemies + 1] = e
+  return e
+end
+
+--- Начать уровень: игрок переносит здоровье, броню, оружие и патроны (ключи — нет).
+local function startLevelState()
   local st = Lv.start
-  P = { x = st.x, y = 0, z = st.z, vx = 0, vy = 0, vz = 0, r = 0.32, h = 1.75, yaw = st.yaw, pitch = 0,
-        hp = 100, armor = 0, onGround = true, weapon = 1, have = { true, false, false }, ammo = { shells = 0, cells = 0 },
-        nextFire = 0, kick = 0, bob = 0, jumpT = 0, acidT = 0, hurtT = -10, pickT = -10, fireT = -10, acidHurtT = -10 }
-  P.y = Lv.ground(P.x, P.z, P.r, 0)
-  enemies, items, shots, parts, flashes = {}, {}, {}, {}, {}
+  if snapshot then
+    for k, v in pairs(snapshot) do P[k] = type(v) == "table" and { table.unpack(v) } or v end
+    P.ammo = { shells = snapshot.ammo.shells, cells = snapshot.ammo.cells }
+    P.have = { snapshot.have[1], snapshot.have[2], snapshot.have[3] }
+  end
+  P.x, P.z, P.yaw, P.pitch = st.x, st.z, st.yaw or 0, 0
+  P.vx, P.vy, P.vz, P.dead, P.kick = 0, 0, 0, false, 0
+  P.y = Lv.ground(P.x, P.z, P.r, st.y or 0)
+  P.onGround = true
+  P.keys = {}
+  P.hurtT, P.pickT, P.fireT, P.acidHurtT = -10, -10, -10, -10
+  now = uptime()
+  for _, d in pairs(Lv.doors) do d.open, d.opening = 0, false end
+  enemies, items, shots, parts, flashes, consoles = {}, {}, {}, {}, {}, {}
   for _, th in ipairs(Lv.things) do
     local kind, x, y, z = th[1], th[2], th[3], th[4]
     if DEF[kind] then
-      local d = DEF[kind]
-      enemies[#enemies + 1] = { kind = kind, def = d, x = x, y = y, z = z, vy = 0, r = d.r, h = d.h, onGround = true,
-                                hp = d.hp, yaw = th[5] or rnd() * pi * 2, anim = rnd() * 6, lookT = rnd() * 0.5,
-                                atkT = 1 + rnd(), orbit = rnd() * pi * 2, light = 1, lightT = -1, alert = false }
-    else
+      spawnEnemy(kind, x, y, z, th)
+    elseif kind == "console" then
+      consoles[#consoles + 1] = { x = x, y = y, z = z, yaw = th[5] or 0, target = th.target, label = th.label, hint = th.hint,
+                                  readyT = 0, beamT = 0, ex = th.ex, ey = th.ey, ez = th.ez }
+    elseif ITEMS[kind] then
       items[#items + 1] = { kind = kind, x = x, y = y, z = z, phase = rnd() * 6 }
     end
   end
-  stats = { kills = 0, total = #enemies, taken = 0, time = 0 }
-  -- для проверок: at=x,z[,угол] — начать в другом месте; god — без урона; give — всё оружие
-  for _, a in ipairs(args) do
-    local x, z, yaw = a:match("^at=([%-%d%.]+),([%-%d%.]+),?([%-%d%.]*)$")
-    if x then
-      P.x, P.z, P.yaw = tonumber(x), tonumber(z), tonumber(yaw) or P.yaw
-      P.y = Lv.ground(P.x, P.z, P.r, 10)
-    end
-    if a == "god" then P.god = true end
-    if a == "give" then P.have = { true, true, true } P.ammo = { shells = 60, cells = 50 } P.weapon = 3 end
-    if a == "portal" then P.devPortal = true end
-  end
-  portalOpen = P.devPortal or false
+  local total = 0
+  for _, e in ipairs(enemies) do if not e.def.machine then total = total + 1 end end
+  stats = { kills = 0, total = total, taken = 0, time = 0 }
+  portalOpen = (Lv.exit and Lv.exit.need == "open") or P.devPortal or false
   state = "play"
-  t0 = uptime()
-  now = t0
+  t0 = now
   message, messageT = nil, 0
   flowT = -1
-  say("Уничтожьте всех на станции. Ctrl — огонь, ↑/↓ — взгляд", 4)
+  say(Lv.data.intro or Lv.data.name, 5)
+end
+
+local function saveSnapshot()
+  snapshot = {}
+  for _, k in ipairs({ "hp", "armor", "weapon" }) do snapshot[k] = P[k] end
+  snapshot.have = { P.have[1], P.have[2], P.have[3] }
+  snapshot.ammo = { shells = P.ammo.shells, cells = P.ammo.cells }
+  snapshot.hp = max(snapshot.hp, 50)                   -- после трудного уровня — хотя бы половина здоровья
+end
+
+local PROGRESS = fs.isDir("/home") and "/home/.razlom_lvl" or "/.razlom_lvl"
+local function saveProgress(n)
+  if mode ~= "play" then return end
+  local best = 1
+  if fs.exists(PROGRESS) then
+    local f = fs.open(PROGRESS, "r")
+    if f then best = tonumber(f.readAll()) or 1 f.close() end
+  end
+  if n > best then
+    local f = fs.open(PROGRESS, "w")
+    if f then f.write(tostring(n)) f.close() end
+  end
+end
+
+local function newGame()
+  P = newPlayer()
+  -- с середины игры — оружие, которое к этому уровню уже было бы
+  if startLevel >= 2 then P.have[2] = true P.ammo.shells = 24 P.weapon = 2 end
+  if startLevel >= 3 then P.have[3] = true P.ammo.cells = 20 P.armor = 50 end
+  for k in pairs(opt) do
+    if k == "god" then P.god = true end
+    if k == "give" then P.have = { true, true, true } P.ammo = { shells = 60, cells = 50 } P.weapon = 3 end
+    if k == "portal" then P.devPortal = true end
+  end
+  saveSnapshot()
+  startLevelState()
+  -- для проверок: at=x,z[,угол] — начать в другом месте
+  if opt.at then
+    local x, z, yaw = opt.at:match("^([%-%d%.]+),([%-%d%.]+),?([%-%d%.]*)$")
+    if x then
+      P.x, P.z, P.yaw = tonumber(x), tonumber(z), tonumber(yaw) or P.yaw
+      P.y = Lv.ground(P.x, P.z, P.r, 20)
+    end
+  end
+  if opt.pitch then P.pitch = tonumber(opt.pitch) or 0 end
+  if opt.weapon and P.have[tonumber(opt.weapon) or 0] then P.weapon = tonumber(opt.weapon) end
+  if opt.keys then P.keys = { red = true, yellow = true, blue = true } end
+end
+
+local function nextLevel()
+  saveSnapshot()
+  local ok, err = pcall(loadLevel, levelNo + 1)
+  if not ok then error(err, 0) end
+  saveProgress(levelNo)
+  startLevelState()
 end
 
 -- ======================= отрисовка =======================
 local lampList = {}
-for _, li in ipairs(Lv.lights) do
-  if li.lamp then
-    local c = Lv.cellAt(li[1], li[3])
-    if c then lampList[#lampList + 1] = { li[1], c.c, li[3] } end
+local function collectLamps()
+  lampList = {}
+  for _, li in ipairs(Lv.lights) do
+    if li.lamp then
+      local c = Lv.cellAt(li[1], li[3])
+      if c then lampList[#lampList + 1] = { li[1], c.c, li[3] } end
+    end
   end
 end
+collectLamps()
 
 local playerLight, playerLightT = 1, -1
 local function lightNear(x, y, z)
@@ -856,10 +1185,42 @@ local function drawEnemy(e)
     if not e.dead then
       local c, s = cos(e.yaw), sin(e.yaw)
       for i = -1, 1 do
-        local ox, oz = -0.15, i * 0.2
-        cv:mesh(M.tentacle, e.x + ox * c - oz * s, y - 0.32, e.z + ox * s + oz * c, e.yaw, sin(e.anim + i) * 0.5, 1, bright, flash)
+        local ox, oz = (i == 0) and 0.1 or -0.08, i * 0.14
+        cv:mesh(M.tentacle, e.x + ox * c - oz * s, y - 0.3, e.z + ox * s + oz * c, e.yaw, sin(e.anim + i) * 0.5, 1, bright, flash)
       end
     end
+    return
+  end
+  if d.static then                                    -- турель: выключенная — тусклая и опустила стволы
+    if e.dead then
+      if now - e.deadT > 10 then return end
+      cv:mesh(M.turret, e.x, e.y, e.z, e.yaw, -0.5, 1, bright * 0.4, 0)
+      return
+    end
+    local kick = (e.swingT and now - e.swingT < 0.08) and 0.04 or 0
+    cv:mesh(M.turret, e.x, e.y, e.z, e.yaw, e.off and -0.35 or kick, 1, e.off and bright * 0.55 or bright, flash)
+    return
+  end
+  if d.boss then
+    local t = e.dead and (now - e.deadT) or 0
+    if t > 3 then return end
+    local exposed = now < (e.exposedT or 0)
+    local y = e.y + sin(e.anim * 1.3) * 0.15 - t * t * 0.4
+    local glow = exposed and floor(30 + sin(now * 12) * 25) * 256 or 0
+    cv:mesh(M.boss, e.x, y, e.z, e.yaw, 0, 1, max(0.8, bright), flash ~= 0 and flash or glow)
+    return
+  end
+  if d.mesh then                                      -- ползун: одна сетка, извивается
+    local y, pitch = e.y, 0
+    if e.dead then
+      local t = now - e.deadT
+      if t > 5 then return end
+      cv:mesh(M[d.mesh], e.x, y, e.z, e.yaw, 0, 1, bright * 0.6, flash)
+      return
+    end
+    local wig = sin(e.anim * 2.2) * 0.25
+    if e.swingT and now - e.swingT < 0.2 then pitch = 0.3 end
+    cv:mesh(M[d.mesh], e.x, y, e.z, e.yaw + wig, pitch, 1, bright, flash)
     return
   end
   local y, pitch = e.y, 0
@@ -871,7 +1232,6 @@ local function drawEnemy(e)
     cv:mesh(M[d.body], e.x, y + 0.1, e.z, e.yaw, pitch, 1, bright * 0.8, flash)
     return
   end
-  -- наклон вперёд при атаке
   if e.swingT and now - e.swingT < 0.25 then pitch = -0.25 * sin((now - e.swingT) / 0.25 * pi) end
   local bobY = abs(sin(e.anim)) * 0.05
   cv:mesh(M[d.body], e.x, y + bobY, e.z, e.yaw, pitch, 1, bright, flash)
@@ -896,19 +1256,20 @@ local function hud(fps)
   local w = WEAPONS[P.weapon]
   put(w.name .. (w.ammo and (": " .. P.ammo[w.ammo]) or ": ∞"), 0xffc857)
   put(string.format("Враги %d/%d", stats.total - stats.kills, stats.total), 0xd0d4da)
-  local tsec = (state == "won" and stats.time or (now - t0))
+  for _, k in ipairs({ "red", "yellow", "blue" }) do
+    if P.keys[k] then gpu.setForeground(KEYCOL[k]) gpu.set(x, H - 1, "▮") x = x + 2 end
+  end
+  local tsec = ((state == "won" or state == "next") and stats.time or (now - t0))
   put(string.format("%d:%02d", floor(tsec / 60), floor(tsec % 60)), 0x8d87a3)
-  -- вторая строка: оружие в руках и подсказки
   x = 2
   gpu.setForeground(0x5d5775)
   local slots = ""
-  for i, o in ipairs(WEAPONS) do
+  for i, _ in ipairs(WEAPONS) do
     if P.have[i] then slots = slots .. (i == P.weapon and "[" .. i .. "]" or " " .. i .. " ") end
   end
   gpu.set(x, H, slots)
-  local hint = mode == "demo" and "Демо: облёт станции · Q — выход"
-          or "Мышь обзор · WASD · пробел прыжок · ЛКМ/Ctrl огонь · P пауза · Q выход"
-  if unicode.len(hint) > W - 26 then hint = "Мышь · WASD · ЛКМ огонь · Q выход" end
+  local hint = "Ур. " .. levelNo .. " · Мышь обзор · WASD · пробел прыжок · ЛКМ огонь · E пульт · P пауза · Q выход"
+  if unicode.len(hint) > W - 26 then hint = "Ур. " .. levelNo .. " · WASD · ЛКМ огонь · E пульт · Q выход" end
   gpu.set(14, H, hint)
   gpu.setForeground(0x5d5775)
   gpu.set(W - 9, H, string.format("%3d к/с", fps))
@@ -921,14 +1282,8 @@ local function centerText(y, text, fg, bg)
   gpu.set(max(1, floor((W - n) / 2) + 1), y, text)
 end
 
--- путь облёта для демо и замера: x, y, z, yaw, pitch
-local PATH = {
-  { 3, 1.6, 4.5, 0, 0 }, { 9, 1.6, 6.8, 0.1, 0 }, { 14, 2.2, 7, 0.4, 0.1 }, { 18, 4.5, 10, 0.9, -0.35 },
-  { 23, 5.5, 13, 1.6, -0.6 }, { 24, 3.3, 18, 1.2, -0.1 }, { 26, 3.4, 20, -1.2, 0 }, { 22, 3.3, 15, -1.6, 0.1 },
-  { 23, 3.4, 8, -1.7, 0.05 }, { 23, 3.3, 3, -2.7, -0.1 }, { 15, 3.3, 2.5, -3.0, -0.25 }, { 13, 1.6, 12, 1.9, 0.15 },
-  { 11, 1.6, 15.8, 3.0, 0 }, { 6, 1.6, 16.3, 2.4, -0.1 }, { 4, 1.6, 9, -1.3, 0 }, { 3, 1.6, 4.5, 0, 0 },
-}
 local function pathAt(t)
+  local PATH = Lv.data.tour or { { Lv.start.x, 1.6, Lv.start.z, 0, 0 }, { Lv.start.x, 1.6, Lv.start.z, 6.28, 0 } }
   local n = #PATH - 1
   local seg = (t / 3.2) % n
   local i = floor(seg)
@@ -937,6 +1292,17 @@ local function pathAt(t)
   f = f * f * (3 - 2 * f)
   local function lerpAng(x, y) local d = (y - x + pi) % (2 * pi) - pi return x + d * f end
   return a[1] + (b[1] - a[1]) * f, a[2] + (b[2] - a[2]) * f, a[3] + (b[3] - a[3]) * f, lerpAng(a[4], b[4]), a[5] + (b[5] - a[5]) * f
+end
+
+--- Луч света от излучателя к боссу: цепочка светящихся точек.
+local function beam(x1, y1, z1, x2, y2, z2)
+  local d = dist3(x1, y1, z1, x2, y2, z2)
+  local n = max(2, floor(d / 0.4))
+  local wob = sin(now * 30) * 0.03
+  for i = 0, n do
+    local k = i / n
+    cv:billboard(T.plasma, x1 + (x2 - x1) * k, y1 + (y2 - y1) * k + wob, z1 + (z2 - z1) * k, 0.3, 0.3, 0.9, 0, 1)
+  end
 end
 
 local function render(fps, cam)
@@ -950,13 +1316,14 @@ local function render(fps, cam)
     yaw, pitch = P.yaw, P.pitch + P.kick * 0.25
   end
   cv:view(ex, ey, ez, yaw, pitch, 95)
-  cv:fog(FOG, 14, 34)
-  -- лампы этого кадра (до 16): свечение кислоты, портал, вспышки, снаряды
+  cv:fog(Lv.data.fog or FOG, Lv.data.fogNear or 14, Lv.data.fogFar or 34)
   cv:clearLights()
-  local acidPulse = 0.45 + sin(now * 2.3) * 0.12
-  cv:light(24, 0.4, 12, 7.5, 0x50ff70, acidPulse)
-  if portalOpen then cv:light(Lv.portal.x, Lv.portal.y + 1.2, Lv.portal.z, 6, 0xb060ff, 1.1) end
-  local nl = portalOpen and 2 or 1
+  local nl = 0
+  for _, g in ipairs(Lv.glows) do
+    if nl < 12 then cv:light(g[1], g[2], g[3], g[4], g[5], g[6] + sin(now * 2.3 + g[1]) * 0.12) nl = nl + 1 end
+  end
+  local exit = Lv.exit
+  if portalOpen and exit then cv:light(exit.x, exit.y + 1.2, exit.z, 6, 0xb060ff, 1.1) nl = nl + 1 end
   for i = #flashes, 1, -1 do
     local f = flashes[i]
     if nl < 16 then cv:light(f.x, f.y, f.z, f.r, f.c, f.p * f.life / f.max) nl = nl + 1 end
@@ -965,34 +1332,42 @@ local function render(fps, cam)
     local s = shots[i]
     if nl < 16 then cv:light(s.x, s.y, s.z, 3.5, s.light, 0.9) nl = nl + 1 end
   end
-  -- уровень
   for i = 1, #levelMeshes do cv:mesh(levelMeshes[i].id, 0, 0, 0) end
   if acidMesh then
     local g = floor(20 + sin(now * 3) * 18)
     cv:mesh(acidMesh, 0, 0, 0, 0, 0, 1, 1, g * 256 + floor(g / 3))
   end
+  for ch, id in pairs(doorMeshes) do
+    local d = Lv.doors[ch]
+    if d.open < 1 then cv:mesh(id, 0, d.open * (d.c - d.f - 0.05), 0) end
+  end
   for i = 1, #lampList do
     local l = lampList[i]
     cv:mesh(M.lampBox, l[1], l[2], l[3], 0, 0, 1, 1.8)
   end
-  -- предметы: крутятся и покачиваются
+  for _, c in ipairs(consoles) do
+    local ready = c.target == "ring" and now >= c.readyT or (c.target ~= "ring" and not c.used)
+    cv:mesh(M.console, c.x, c.y, c.z, c.yaw, 0, 1, ready and 1.25 or 0.7, ready and 0x002810 or 0x200000)
+    if c.ex and now < c.beamT then
+      for _, e in ipairs(enemies) do
+        if e.def.boss and not e.dead then beam(c.ex, c.ey, c.ez, e.x, e.y + 2.1, e.z) end
+      end
+    end
+  end
   for _, it in ipairs(items) do
     if not it.taken then
       local d = ITEMS[it.kind]
-      cv:mesh(M[d.mesh], it.x, it.y + 0.3 + sin(now * 2 + it.phase) * 0.1, it.z, now * 1.6 + it.phase, 0, d.scale or 1, 1.25)
+      local y = it.y + (d.noBob and 0.02 or (0.3 + sin(now * 2 + it.phase) * 0.1))
+      cv:mesh(M[d.mesh], it.x, y, it.z, now * 1.6 + it.phase, 0, d.scale or 1, 1.25)
     end
   end
-  -- враги
   for _, e in ipairs(enemies) do drawEnemy(e) end
-  -- портал
-  if portalOpen then
-    local pp = Lv.portal
+  if portalOpen and exit then
     local k = 0.85 + sin(now * 4) * 0.15
-    cv:billboard(T.portal, pp.x, pp.y + 1.1, pp.z, 1.3 * k, 2.1 * k, 1.2, 0, 0)
-    cv:billboard(T.glowPurple, pp.x, pp.y + 1.1, pp.z, 2.6, 3.0, 0.8, 0, 1)
-    if rnd() < 0.5 then particle(T.glowPurple, pp.x + (rnd() - 0.5) * 1.2, pp.y + 0.2, pp.z + (rnd() - 0.5) * 1.2, 0, 1.5, 0, 0.8, 0.15, 0, true) end
+    cv:billboard(T.portal, exit.x, exit.y + 1.1, exit.z, 1.3 * k, 2.1 * k, 1.2, 0, 0)
+    cv:billboard(T.glowPurple, exit.x, exit.y + 1.1, exit.z, 2.6, 3.0, 0.8, 0, 1)
+    if rnd() < 0.5 then particle(T.glowPurple, exit.x + (rnd() - 0.5) * 1.2, exit.y + 0.2, exit.z + (rnd() - 0.5) * 1.2, 0, 1.5, 0, 0.8, 0.15, 0, true) end
   end
-  -- снаряды и частицы
   for i = 1, #shots do
     local s = shots[i]
     cv:billboard(s.tex, s.x, s.y, s.z, s.size, s.size, 1, 0, 1)
@@ -1004,7 +1379,6 @@ local function render(fps, cam)
     cv:billboard(p.tex, p.x, p.y, p.z, sz, sz, p.glow and k or 1, 0, p.glow and 1 or 0)
   end
   if not cam and not P.dead then
-    -- вспышка у ствола
     local w = WEAPONS[P.weapon]
     if now - P.fireT < 0.06 then
       local fx, fy, fz = forward(P.yaw, P.pitch)
@@ -1013,7 +1387,6 @@ local function render(fps, cam)
       cv:billboard(w.proj and T.plasma or T.flash, ex + fx * d + rx * w.hold[1], ey + fy * d + w.hold[2] * 0.8, ez + fz * d + rz * w.hold[1],
         0.18, 0.18, 1, 0, 1)
     end
-    -- оружие в руках: поверх всего (глубину сбрасываем)
     cv:clearDepth()
     if now >= playerLightT then
       playerLightT = now + 0.25
@@ -1025,12 +1398,10 @@ local function render(fps, cam)
     local glow = (now - P.fireT < 0.08) and 0.5 or 0
     cv:held(M[w.mesh], h[1] + bx, h[2] + by - P.kick * 0.04, h[3] - P.kick * 0.06, -0.05, P.kick * 0.8, w.scale, playerLight + glow)
   end
-  -- прицел
   if not cam and not P.dead then
     local cx, cy = floor(CW / 2), floor(CH / 2)
     for _, o in ipairs({ { -2, 0 }, { 2, 0 }, { 0, -2 }, { 0, 2 } }) do cv:pixel(cx + o[1], cy + o[2], 0xd8ffd0) end
   end
-  -- цветом по экрану: урон, подбор, кислота, смерть
   if not cam then
     if P.dead then cv:tint(0x600000, min(0.55, (now - P.deadT) * 0.6))
     elseif now - P.hurtT < 0.35 then cv:tint(0xff2010, 0.35 * (1 - (now - P.hurtT) / 0.35))
@@ -1044,22 +1415,39 @@ local function render(fps, cam)
     gpu.setForeground(0xff8a3d)
     gpu.set(2, H - 1, "Р А З Л О М")
     gpu.setForeground(0x8d87a3)
-    gpu.set(16, H - 1, "Демо: облёт станции · Q — выход")
+    gpu.set(16, H - 1, "Демо: облёт · уровень " .. levelNo .. " · Q — выход")
     gpu.setForeground(0x5d5775)
     gpu.set(W - 9, H - 1, string.format("%3d к/с", fps))
   else
     hud(fps)
   end
-  -- сообщения поверх кадра
+  -- полоса здоровья босса
+  for _, e in ipairs(enemies) do
+    if e.def.boss and not e.dead and e.alert then
+      local bw = min(40, W - 10)
+      local bx = floor((W - bw) / 2) + 1
+      local f = max(0, e.hp / e.def.hp)
+      centerText(4, " СЕРДЦЕ РАЗЛОМА ", 0xffffff, now < (e.exposedT or 0) and 0x208040 or 0x6a1830)
+      gpu.setBackground(0x2a2733) gpu.fill(bx, 5, bw, 1, " ")
+      gpu.setBackground(now < (e.exposedT or 0) and 0x60ff80 or 0xd03050) gpu.fill(bx, 5, max(1, floor(bw * f)), 1, " ")
+    end
+  end
   if message and now < messageT and message ~= "" then centerText(2, " " .. message .. " ", 0xffffff, 0x2a2733) end
-  if state == "won" then
-    local tsec = stats.time
+  if state == "next" then
     local y = floor((H - HUD) / 2) - 2
-    centerText(y, "  Станция зачищена!  ", 0x14111d, 0xffc857)
+    local tsec = stats.time
+    centerText(y, "  Уровень " .. levelNo .. " пройден!  ", 0x14111d, 0xffc857)
     centerText(y + 2, string.format("  Время %d:%02d · враги %d/%d · урон получен %d  ", floor(tsec / 60), floor(tsec % 60),
       stats.kills, stats.total, stats.taken), 0xffffff, 0x2a2733)
+    centerText(y + 4, "  Пробел или Enter — дальше · Q — выход  ", 0xb9b3cc, 0x2a2733)
+  elseif state == "won" then
+    local tsec = run.time
+    local y = floor((H - HUD) / 2) - 3
+    centerText(y, "  Станция «Глубина-7» спасена. Разлом закрыт!  ", 0x14111d, 0xffc857)
+    centerText(y + 2, string.format("  Всё время %d:%02d · враги %d · урон получен %d  ", floor(tsec / 60), floor(tsec % 60),
+      run.kills, run.taken), 0xffffff, 0x2a2733)
     if stats.record then centerText(y + 3, "  " .. stats.record .. "  ", 0xffc857, 0x2a2733) end
-    centerText(y + 5, "  R — ещё раз · Q — выход  ", 0xb9b3cc, 0x2a2733)
+    centerText(y + 5, "  R — сыграть с начала · Q — выход  ", 0xb9b3cc, 0x2a2733)
   elseif state == "pause" then
     centerText(floor((H - HUD) / 2), "  Пауза · P — продолжить · Q — выход  ", 0xffffff, 0x2a2733)
   elseif state == "quit?" then
@@ -1070,6 +1458,7 @@ end
 -- ======================= рекорд =======================
 local RECORD = fs.isDir("/home") and "/home/.razlom" or "/.razlom"
 local function saveRecord(sec)
+  if not run.fromStart then return "Рекорд — только за игру с первого уровня" end
   local best
   if fs.exists(RECORD) then
     local f = fs.open(RECORD, "r")
@@ -1092,8 +1481,7 @@ local function finish(text)
   setMouseLock(false)
   if snd then pcall(snd.stop) end
   pcall(function() cv:free() end)
-  for _, l in ipairs(levelMeshes or {}) do pcall(gpu.freeMesh, l.id) end
-  if acidMesh then pcall(gpu.freeMesh, acidMesh) end
+  freeLevel()
   for _, id in pairs(M) do pcall(gpu.freeMesh, id) end
   for _, id in pairs(T) do pcall(gpu.freeTexture, id) end
   gpu.setBackground(oldBg)
@@ -1108,7 +1496,9 @@ local function finish(text)
   if text and print then print(text) end
 end
 
+now = uptime()
 newGame()
+collectLamps()
 
 -- замер: облёт без ожидания
 if mode == "bench" then
@@ -1127,6 +1517,127 @@ if mode == "bench" then
   return
 end
 
+-- самопроверка правил всех уровней (без экрана): game check → строки «CHECK ok/fail …» в out=файл или на экран
+if mode == "check" then
+  local lines, fails = {}, 0
+  local function ok(what, cond)
+    lines[#lines + 1] = (cond and "CHECK ok   " or "CHECK FAIL ") .. what
+    if not cond then fails = fails + 1 end
+  end
+  local function tick(sec)
+    for _ = 1, floor(sec * 30) do
+      now = now + 1 / 30
+      updateDoors(1 / 30) updateShots(1 / 30) updateParts(1 / 30)
+    end
+  end
+  for n = 1, LEVELS do
+    if n ~= levelNo then loadLevel(n) end
+    snapshot = nil
+    P = newPlayer() P.god = true
+    saveSnapshot()
+    startLevelState()
+    local name = "ур." .. n .. ": "
+    local used = gpu.totalMemory and (gpu.totalMemory() - gpu.freeMemory()) or 0
+    ok(name .. "загрузился, врагов " .. stats.total .. ", видеопамять " .. used .. " клеток (кадр " .. CW .. "×" .. CH .. ")",
+      stats.total > 0 and #levelMeshes > 0)
+    -- двери под ключ-карту: без карты закрыта, с картой открывается и пропускает
+    for _, d in pairs(Lv.doors) do
+      if d.key then
+        local c = d.cells[1]
+        P.x, P.z, P.y = c[1] + 0.5, c[2] + 0.5, d.f
+        P.keys = {}
+        tick(0.5)
+        ok(name .. "дверь «" .. d.key .. "» без карты закрыта", d.open == 0 and Lv.cell(c[1], c[2]) == nil)
+        P.keys[d.key] = true
+        tick(1.5)
+        ok(name .. "дверь «" .. d.key .. "» с картой открылась", d.open >= 1 and Lv.cell(c[1], c[2]) ~= nil)
+        local hasKey = false
+        for _, it in ipairs(items) do if ITEMS[it.kind].key == d.key then hasKey = true end end
+        ok(name .. "карта «" .. d.key .. "» лежит на уровне", hasKey)
+      end
+    end
+    -- пульты: турели выключаются, излучатель вскрывает босса
+    for _, c in ipairs(consoles) do
+      local kind, arg = c.target:match("^(%a+):?(.*)$")
+      if kind == "turrets" then
+        useConsole(c)
+        local all, off = 0, 0
+        for _, e in ipairs(enemies) do if e.def.static and e.group == arg then all = all + 1 if e.off then off = off + 1 end end end
+        ok(name .. "пульт выключил турели " .. off .. "/" .. all, all > 0 and off == all)
+      end
+    end
+    local boss
+    for _, e in ipairs(enemies) do if e.def.boss then boss = e end end
+    if boss then
+      local hp = boss.hp
+      hurtEnemy(boss, 100)
+      ok(name .. "без обруча босс почти не ранится", hp - boss.hp < 20)
+      local ring
+      for _, c in ipairs(consoles) do if c.target == "ring" then ring = c end end
+      ok(name .. "на уровне есть излучатели обруча", ring ~= nil)
+      if ring then useConsole(ring) end
+      hp = boss.hp
+      hurtEnemy(boss, 100)
+      ok(name .. "вскрытый босс получает полный урон", hp - boss.hp >= 99)
+      killEnemy(boss)
+      ok(name .. "после босса открыт выход", portalOpen)
+    elseif Lv.exit.need == "kills" then
+      for _, e in ipairs(enemies) do if not e.dead then killEnemy(e) end end
+      ok(name .. "после всех врагов открыт выход", portalOpen)
+    else
+      ok(name .. "выход открыт сразу", portalOpen)
+    end
+    -- выход ведёт дальше
+    P.x, P.y, P.z = Lv.exit.x, Lv.exit.y, Lv.exit.z
+    P.onGround = true
+    state = "play"
+    updatePlayer(1 / 30)
+    ok(name .. "через выход — " .. (n < LEVELS and "на следующий уровень" or "победа"), state == (n < LEVELS and "next" or "won"))
+  end
+  local f = opt.out and fs.open(opt.out, "w")
+  if f then
+    f.write(table.concat(lines, "\n") .. "\n") f.close()
+    local m = fs.open(opt.out .. ".ok", "w") m.write("ok") m.close()
+  end
+  finish()
+  if not f then for _, l in ipairs(lines) do print(l) end end
+  print(fails == 0 and "RAZLOM CHECK: всё в порядке" or ("RAZLOM CHECK: ошибок " .. fails))
+  return fails == 0
+end
+
+-- кадр в файл: мир живёт t секунд (враги ходят, если встревожены — alert), потом снимок
+if mode == "shot" then
+  local live = tonumber(opt.t) or 0
+  if opt.alert then for _, e in ipairs(enemies) do e.alert = true end end
+  if opt.open then for _, d in pairs(Lv.doors) do d.open = 1 d.opening = true end end
+  local steps = floor(live * 30)
+  for _ = 1, steps do
+    now = now + 1 / 30
+    if now >= flowT then flowT = now + 0.6 Lv.flow(P.x, P.z) end
+    for _, e in ipairs(enemies) do updateEnemy(e, 1 / 30) end
+    updateShots(1 / 30) updateParts(1 / 30) updateDoors(1 / 30)
+  end
+  if opt.expose then for _, e in ipairs(enemies) do if e.def.boss then e.exposedT = now + 5 e.alert = true end end end
+  if opt.beam then for _, c in ipairs(consoles) do c.beamT = now + 5 end end
+  local cam
+  if opt.cam then
+    cam = {}
+    for v in opt.cam:gmatch("[^,]+") do cam[#cam + 1] = tonumber(v) end
+  end
+  render(0, cam)
+  local f = fs.open(opt.out or "/razlom_shot.txt", "w")
+  f.write(CW .. " " .. CH .. "\n")
+  for y = 0, CH - 1 do
+    local row = {}
+    for x = 0, CW - 1 do row[#row + 1] = string.format("%06x", cv:get(x, y) or 0) end
+    f.write(table.concat(row) .. "\n")
+  end
+  f.close()
+  local okf = fs.open((opt.out or "/razlom_shot.txt") .. ".ok", "w") okf.write("ok") okf.close()
+  finish()
+  return
+end
+
 local TARGET = 1 / 30
 local last = uptime()
 local timer = os.startTimer(0)
@@ -1134,7 +1645,7 @@ local quit = false
 local endAt = tonumber(args[2])
 local started = uptime()
 local frames, fps, fpsT = 0, 0, uptime()
-local foreign = {}     -- чужие события (сеть, таймеры системы) — вернём в очередь после игры
+local foreign = {}
 local demoT = 0
 
 while not quit do
@@ -1146,11 +1657,24 @@ while not quit do
     if state == "quit?" then
       if k == "q" then quit = true else state = "play" end
     elseif k == "q" then
-      if mode == "demo" or state == "won" or state == "dead" then quit = true else state = "quit?" end
+      if mode == "demo" or state == "won" or state == "dead" or state == "next" then quit = true else state = "quit?" end
     elseif k == "p" and (state == "play" or state == "pause") then
       state = state == "play" and "pause" or "play"
-    elseif k == "r" and (state == "won" or state == "dead") then
+    elseif state == "next" and (k == "space" or k == "enter") then
+      local ok, err = pcall(nextLevel)
+      if not ok then finish("Разлом: не загрузился уровень: " .. tostring(err)) return false, tostring(err) end
+      collectLamps()
+      last = uptime()
+    elseif k == "r" and state == "dead" then
+      startLevelState()
+    elseif k == "r" and state == "won" then
+      run = { time = 0, kills = 0, taken = 0, fromStart = true }
+      startLevel = 1
+      snapshot = nil
+      local ok, err = pcall(loadLevel, 1)
+      if not ok then finish("Разлом: " .. tostring(err)) return false, tostring(err) end
       newGame()
+      collectLamps()
     elseif k == "1" or k == "2" or k == "3" then
       local i = tonumber(k)
       if P.have[i] and P.weapon ~= i then P.weapon = i P.nextFire = max(P.nextFire, now + 0.25) say(WEAPONS[i].name, 1) end
@@ -1179,8 +1703,8 @@ while not quit do
     local t = uptime()
     local dt = min(0.1, t - last)
     last = t
-    if state == "pause" or state == "quit?" then
-      t0 = t0 + dt                              -- время игры не идёт
+    if state == "pause" or state == "quit?" or state == "next" then
+      t0 = t0 + dt
       now = t
       render(fps)
     elseif mode == "demo" then
@@ -1199,13 +1723,13 @@ while not quit do
       if state == "play" or state == "dead" then
         for _, e in ipairs(enemies) do updateEnemy(e, dt) end
       end
+      updateDoors(dt)
       updateShots(dt)
       updateParts(dt)
       updateItems()
-      if state == "won" and not stats.record then stats.record = saveRecord(stats.time) end
+      if state == "won" and not stats.record then stats.record = saveRecord(run.time) saveProgress(LEVELS) end
       render(fps)
     end
-    -- мышь захвачена, пока идёт бой; на паузе, в вопросе «выйти?» и в облёте — свободна
     setMouseLock(mode == "play" and (state == "play" or state == "dead" or state == "won"))
     frames = frames + 1
     if t - fpsT >= 1 then fps = floor(frames / (t - fpsT) + 0.5) frames = 0 fpsT = t end
@@ -1218,6 +1742,6 @@ while not quit do
   end
 end
 
-finish(mode == "play" and string.format("Разлом: врагов уничтожено %d из %d", stats.kills, stats.total) or nil)
+finish(mode == "play" and string.format("Разлом: уровень %d, врагов уничтожено %d", levelNo, run.kills + stats.kills) or nil)
 for _, ev in ipairs(foreign) do pcall(os.queueEvent, table.unpack(ev)) end
 return true
