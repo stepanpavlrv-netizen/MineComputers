@@ -1967,19 +1967,27 @@ local function drawMenu()
   if mm.logo then
     local sv = F.loadSave()
     if sv and menu.sel == 1 then
-      local cw = floor(CW * 0.36)
-      local cx, cy = CW - cw - m, CH - m - 40 * UI
-      box(cx, cy, cw, 36 * UI, 0x101216)
-      box(cx, cy, cw, UI, 0x2a2f38)
       local names = { "Станция над разломом", "Лаборатории", "Реакторный блок", "Шахта", "Сердце разлома" }
-      txt(cx + 4 * UI, cy + 4 * UI, names[tonumber(sv.lvl) or 1] or "", YELLOW, UI, false)
       local hv = sv.have or "100"
       local guns = {}
       if hv:sub(2, 2) == "1" then guns[#guns + 1] = "дробовик" end
       if hv:sub(3, 3) == "1" then guns[#guns + 1] = "плазмомёт" end
-      txt(cx + 4 * UI, cy + 14 * UI, "♥ " .. (sv.hp or "?") .. "  ◈ " .. (sv.armor or 0) .. (#guns > 0 and ("  " .. table.concat(guns, ", ")) or ""), WHITE, UI, false)
       local tsec = tonumber(sv.time) or 0
-      txt(cx + 4 * UI, cy + 24 * UI, string.format("сложность: %s · время %d:%02d", (DIFFS[sv.diff] or DIFFS.normal).name, floor(tsec / 60), floor(tsec % 60)), GREY, UI, false)
+      local lines = {
+        { names[tonumber(sv.lvl) or 1] or "", YELLOW },
+        { "♥ " .. (sv.hp or "?") .. "  ◈ " .. (sv.armor or 0), WHITE },
+        { #guns > 0 and table.concat(guns, ", ") or "бластер", WHITE },
+        { "сложность: " .. (DIFFS[sv.diff] or DIFFS.normal).name, GREY },
+        { string.format("время %d:%02d", floor(tsec / 60), floor(tsec % 60)), GREY },
+      }
+      local cw = 0
+      for _, l in ipairs(lines) do cw = max(cw, tw(l[1])) end
+      cw = cw + 8 * UI
+      local chh = #lines * 10 * UI + 6 * UI
+      local cx, cy = CW - cw - m, CH - m - chh - 12 * UI
+      box(cx, cy, cw, chh, 0x101216)
+      box(cx, cy, cw, UI, 0x2a2f38)
+      for i, l in ipairs(lines) do txt(cx + 4 * UI, cy + 4 * UI + (i - 1) * 10 * UI, l[1], l[2], UI, false) end
     end
     txt(m, CH - m - 9 * UI, "↑↓ выбор · enter выбрать · esc назад", 0x7d8490)
   else
@@ -2289,6 +2297,7 @@ if mode == "shot" then
   if opt.hp then P.hp = tonumber(opt.hp) or P.hp end
   if opt.hurt then P.hurtT, P.hurtDir = now - 0.1, P.yaw + (tonumber(opt.hurt) or 1) end
   if opt.feed then F.feed("+12 патронов") end
+  if opt.fakesave then F.writeKV(SAVE_FILE, { lvl = 3, diff = "normal", hp = 82, armor = 50, weapon = 2, have = "111", shells = 30, cells = 20, time = 872 }) end
   if opt.menu then openMenu(opt.menu) t0 = now - 3 end
   if opt.pause then openMenu("pause", "pause") end
   if opt.map then keys[BIND.map] = true end
