@@ -266,6 +266,7 @@ def ram(vis, tints):
 
 # ================================================================ видеокарта
 RING5 = [".###.", "#...#", "#...#", "#...#", ".###."]
+RING7 = ["..###..", ".#...#.", "#.....#", "#.....#", "#.....#", ".#...#.", "..###.."]
 
 
 def gpu(vis, tints):
@@ -293,9 +294,18 @@ def gpu(vis, tints):
         i.rect(x0 + 1, 5, 9, 5, sh(main, .8)); i.rect(x0 + 1, 8, 9, 8, sh(main, .8))
         i.rect(x0 + 1, 12, 14, 12, acc)
         return i.im
-    n = 2 if ck == 3 else 3
+    n = {3: 2, 4: 3, 5: 1}[ck]
     span = 14 - x0                                        # «АБ-1»: внутренняя ширина кожуха x0+1..14
-    if 5 * n <= span:                                     # кольца цвета подсветки, если влезают
+    if n == 1:                                            # один вентилятор — крупное кольцо 7×7 и уголки
+        lx = round(x0 + 1 + (span - 7) / 2)
+        i.fan(lx + 3.5, 7.5, 2.9, main)
+        for yy, row in enumerate(RING7):
+            for xx, ch in enumerate(row):
+                if ch == "#": i.px(lx + xx, 4 + yy, acc)
+        if span >= 12:
+            for (x, y, dx, dy) in ((x0 + 1, 4, 1, 1), (14, 4, -1, 1), (x0 + 1, 10, 1, -1), (14, 10, -1, -1)):
+                i.px(x + dx, y, acc); i.px(x, y + dy, acc)
+    elif 5 * n <= span:                                   # кольца цвета подсветки, если влезают
         gap = (span - 5 * n) / (n + 1)
         for k in range(n):
             lx = round(x0 + 1 + gap * (k + 1) + 5 * k)

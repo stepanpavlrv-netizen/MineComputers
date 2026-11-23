@@ -287,6 +287,11 @@ VRAM_SPOTS = [(-1.2, -.45), (-1.2, .45), (1.2, -.45), (1.2, .45), (-.45, -1.3), 
               (-.45, 1.3), (.45, 1.3), (-1.2, -1.35), (1.2, -1.35), (-1.2, 1.35), (1.2, 1.35)]
 
 
+# открытые кулеры с вентиляторами (вид «АБ-1»): 3 — «2 вент.», 4 — «3 вент.», 5 — «1 вент.»
+FAN_TEX = {3: "gpu_fans_2", 4: "gpu_fans_3", 5: "gpu_fan_one"}
+RING_TEX = {3: "gpu_rings_2", 4: "gpu_rings_3", 5: "gpu_rings_1"}
+
+
 def gpu(cooler_kind, length, v2):
     m = Model()
     L = [6.5, 9.0, 11.0][length]
@@ -327,11 +332,15 @@ def gpu(cooler_kind, length, v2):
         return m
     plates(m, "z", z0 + .35, 14.6, .24, .07, (4.95, yb + .28), (W - .12, PCB_Y0 - .03))
     m.box((4.95, PCB_Y0 - .18, z0 + .35), (W - .12, PCB_Y0 - .03, 14.6), "copper")
+    uv = [0, 0, 7.5, 16]
+    if cooler_kind == 5:   # один вентилятор в середине: вырезаем середину текстуры, чтобы круг не вытягивался
+        h = min(16.0, 7.5 * L / (W - 4.85))
+        uv = [0, round(8 - h / 2, 3), 7.5, round(8 + h / 2, 3)]
     m.box((4.85, yb, z0), (W, yb + .28, 14.85), "shroud", 1,
-          faces={"down": ("gpu_fans_2" if cooler_kind == 3 else "gpu_fans_3", None, [0, 0, 7.5, 16])})
+          faces={"down": (FAN_TEX[cooler_kind], None, uv)})
     # кольца и косые полосы цвета подсветки — отдельная тонкая плёнка под днищем (у грани один слой цвета)
     m.box((4.85, yb - .012, z0), (W, yb - .006, 14.85), "led", 2,
-          faces={"down": ("gpu_rings_2" if cooler_kind == 3 else "gpu_rings_3", 2, [0, 0, 7.5, 16])},
+          faces={"down": (RING_TEX[cooler_kind], 2, uv)},
           skip=("up", "north", "south", "east", "west"))
     m.box((W - .06, yb + .28, z0), (W, yb + .95, 14.85), "metal", 1, faces={"east": ("shroud_side", 1, "full")})
     m.box((4.85, yb + .28, z0), (W, PCB_Y0, z0 + .32), "metal", 1)

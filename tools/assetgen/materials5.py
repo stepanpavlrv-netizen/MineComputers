@@ -290,6 +290,7 @@ def materials():
     m["gpu_fans_1"] = gpu_bottom_v5(1)
     m["gpu_fans_2"] = gpu_bottom_v5(2)
     m["gpu_fans_3"] = gpu_bottom_v5(3)
+    m["gpu_fan_one"], m["gpu_rings_1"] = gpu_fans_ab1(1)
     m["gpu_rings_2"] = gpu_fans_ab1(2)[1]
     m["gpu_rings_3"] = gpu_fans_ab1(3)[1]
     return m
