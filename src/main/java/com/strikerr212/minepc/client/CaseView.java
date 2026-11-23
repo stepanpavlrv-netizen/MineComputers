@@ -634,7 +634,13 @@ final class CaseView {
             } else {
                 int fans = cool == GpuSpec.COOLER_TRIPLE ? 3 : 2;
                 int step = (end - 26) / fans;
-                for (int i = 0; i < fans; i++) box(26 + i * step + 2, y1 - 2, 26 + (i + 1) * step - 2, y1 - 1, argb(0x141416));
+                int ring = argb(tint(s, 2));   // «АБ-1»: края колец вокруг вентиляторов (как на модели)
+                for (int i = 0; i < fans; i++) {
+                    int fx0 = 26 + i * step + 2, fx1 = 26 + (i + 1) * step - 2;
+                    box(fx0, y1 - 2, fx1, y1 - 1, argb(0x141416));
+                    box(fx0 - 1, y1 - 2, fx0, y1 - 1, ring);
+                    box(fx1, y1 - 2, fx1 + 1, y1 - 1, ring);
+                }
             }
         }
         edge(22, 79, end, y1, cool <= GpuSpec.COOLER_PASSIVE ? 0x9A9EA4 : body);

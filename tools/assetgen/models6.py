@@ -329,6 +329,10 @@ def gpu(cooler_kind, length, v2):
     m.box((4.95, PCB_Y0 - .18, z0 + .35), (W - .12, PCB_Y0 - .03, 14.6), "copper")
     m.box((4.85, yb, z0), (W, yb + .28, 14.85), "shroud", 1,
           faces={"down": ("gpu_fans_2" if cooler_kind == 3 else "gpu_fans_3", None, [0, 0, 7.5, 16])})
+    # кольца и косые полосы цвета подсветки — отдельная тонкая плёнка под днищем (у грани один слой цвета)
+    m.box((4.85, yb - .012, z0), (W, yb - .006, 14.85), "led", 2,
+          faces={"down": ("gpu_rings_2" if cooler_kind == 3 else "gpu_rings_3", 2, [0, 0, 7.5, 16])},
+          skip=("up", "north", "south", "east", "west"))
     m.box((W - .06, yb + .28, z0), (W, yb + .95, 14.85), "metal", 1, faces={"east": ("shroud_side", 1, "full")})
     m.box((4.85, yb + .28, z0), (W, PCB_Y0, z0 + .32), "metal", 1)
     m.box((4.6, PCB_Y1, z0 + .3), (W - .2, 8.57, 14.8), "backplate", faces={"up": ("backplate", None, "full")})

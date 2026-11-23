@@ -265,6 +265,9 @@ def ram(vis, tints):
     return i.im
 
 # ================================================================ видеокарта
+RING5 = [".###.", "#...#", "#...#", "#...#", ".###."]
+
+
 def gpu(vis, tints):
     ck, length, v2 = vis
     main, acc, pcb = mul(METAL, tints[0]), rgb(tints[1]), mul((230, 232, 228), tints[2])
@@ -291,11 +294,21 @@ def gpu(vis, tints):
         i.rect(x0 + 1, 12, 14, 12, acc)
         return i.im
     n = 2 if ck == 3 else 3
-    span = 15 - x0
-    r = min(3.4, span / n / 2 - .1)
-    for k in range(n):
-        i.fan(x0 + .5 + span / n * (k + .5), 7.2, r, main)
-    i.rect(x0 + 1, 3, 14, 3, acc)
+    span = 14 - x0                                        # «АБ-1»: внутренняя ширина кожуха x0+1..14
+    if 5 * n <= span:                                     # кольца цвета подсветки, если влезают
+        gap = (span - 5 * n) / (n + 1)
+        for k in range(n):
+            lx = round(x0 + 1 + gap * (k + 1) + 5 * k)
+            i.fan(lx + 2.5, 7.5, 1.9, main)
+            for yy, row in enumerate(RING5):
+                for xx, ch in enumerate(row):
+                    if ch == "#": i.px(lx + xx, 5 + yy, acc)
+    else:                                                 # три вентилятора: кольца не влезают — косые уголки
+        r = min(3.4, span / n / 2)
+        for k in range(n):
+            i.fan(x0 + 1 + span / n * (k + .5), 7.2, r, main)
+        for (x, y, dx, dy) in ((x0 + 1, 4, 1, 1), (14, 4, -1, 1), (x0 + 1, 10, 1, -1), (14, 10, -1, -1)):
+            i.px(x + dx, y, acc); i.px(x, y + dy, acc)
     return i.im
 
 # ================================================================ блок питания

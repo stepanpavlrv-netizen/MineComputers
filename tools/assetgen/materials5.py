@@ -290,6 +290,8 @@ def materials():
     m["gpu_fans_1"] = gpu_bottom_v5(1)
     m["gpu_fans_2"] = gpu_bottom_v5(2)
     m["gpu_fans_3"] = gpu_bottom_v5(3)
+    m["gpu_rings_2"] = gpu_fans_ab1(2)[1]
+    m["gpu_rings_3"] = gpu_fans_ab1(3)[1]
     return m
 
 
@@ -302,16 +304,34 @@ def gpu_bottom_v5(n):
             c.hline(2, 12, y, "141518")
         fan_disc(c, 7.5, 24.5, 6.4)
         return c
-    step = 32 / n
-    r = min(7.0, step / 2 - 0.4)
+    c2, _ = gpu_fans_ab1(n)
+    return c2
+
+
+def gpu_fans_ab1(n):
+    """Стиль «АБ-1» (как у карты автора): тёмный кожух, вентиляторы с 11 лопастями; второй холст —
+    белые кольца вокруг вентиляторов и косые полосы по углам, их красит слой подсветки (tintindex 2)."""
+    W, L, WH = 15, 32, "f4f4f4"
+    c = Canvas(32, 32)
+    noise(c, 0, 0, 31, 31, "202125", 2, 90 + n)
+    o = Canvas(32, 32)
+    step = L / n
+    r = min(6.4, step / 2 - 0.9) - 1.0
+    for y in (1, L - 2):
+        c.hline(1, 13, y, "17181b")
     for i in range(n):
         cy = step * i + step / 2
-        for x in range(16):                      # тёмное кольцо-рамка
-            for y in range(32):
-                if r - .2 < math.hypot(x + .5 - 7.5, y + .5 - cy) < r + .9:
-                    c.px(x, y, "15161a")
-        fan_disc(c, 7.5, cy, r)
-    return c
+        fan_disc(c, 7.5, cy, r, blades=11)
+        for x in range(W):
+            for y in range(L):
+                if r + .1 <= math.hypot(x + .5 - 7.5, y + .5 - cy) <= r + 1.0:
+                    o.px(x, y, WH)
+    for d in range(4):
+        for w in (0, 1, 3, 4):
+            if d + w < 6:
+                o.px(d + w, 3 - d, WH); o.px(14 - d - w, L - 4 + d, WH)
+                o.px(14 - d - w, 3 - d, WH); o.px(d + w, L - 4 + d, WH)
+    return c, o
 
 
 def mobo_face_v5(style):
