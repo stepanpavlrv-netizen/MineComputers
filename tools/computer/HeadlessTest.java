@@ -533,8 +533,21 @@ public class HeadlessTest {
         expect("SWired: копия на диск сделана", s1.contains("B1 true"));
         expect("SWired: восстановлено из копии", s1.contains("B2 1 1") && s1.contains("B3 # Сайт сервера"));
         expect("SWired: копия под паролем не открывается чужим паролем", s1.contains("B4 nil") && s1.contains("Неверный пароль"));
-        // надзиратель: падучая служба поднимается 5 раз и сдаётся
-        for (int i = 0; i < 1400; i++) { for (Computer c : box) c.tick(); Thread.sleep(3); }
+        // надзиратель: падучая служба поднимается 5 раз и сдаётся. Ждём по делу, а не фиксированное время: первые 8 с
+        // после включения надзиратель только смотрит, потом обход раз в 2 с — на медленной машине CI это 15–25 с
+        Path swState = dirS.resolve("var/run/swired.state");
+        long swEnd = System.currentTimeMillis() + 60_000;
+        for (int i = 0; System.currentTimeMillis() < swEnd; i++) {
+            for (Computer c : box) c.tick();
+            Thread.sleep(3);
+            if (i % 100 == 0 && Files.exists(swState)) {
+                try {
+                    if (Files.readString(swState).matches("(?s).*failed = \\{\\s*[^}\\s].*")) break;
+                } catch (Exception ignored) {
+                    // файл как раз пишется — посмотрим в следующий раз
+                }
+            }
+        }
         command("clear");
         type("srv2");
         pc.queueEvent("key", "enter", false, false);

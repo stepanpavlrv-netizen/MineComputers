@@ -1,6 +1,11 @@
 name: Build
 
-on: [push, pull_request]
+on:
+  # правки только в описаниях (PLAN.md, README и т. п.) — без сборки и тестов: они ничего не меняют в моде
+  push:
+    paths-ignore: ['**.md', 'docs/**', '.claude/**']
+  pull_request:
+    paths-ignore: ['**.md', 'docs/**', '.claude/**']
 
 jobs:
   build:
