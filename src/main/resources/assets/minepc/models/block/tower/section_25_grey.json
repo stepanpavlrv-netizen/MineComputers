@@ -1,0 +1,80 @@
+{
+ "ambientocclusion": false,
+ "textures": {
+  "particle": "minecraft:block/light_gray_concrete",
+  "leg": "minecraft:block/light_gray_concrete",
+  "brace": "minecraft:block/iron_block",
+  "feeder": "minecraft:block/black_concrete",
+  "deck": "minecraft:block/gray_concrete"
+ },
+ "elements": [
+  {
+   "from": [
+    7.4,
+    0,
+    7.4
+   ],
+   "to": [
+    8.6,
+    16,
+    8.6
+   ],
+   "faces": {
+    "north": {
+     "texture": "#feeder",
+     "uv": [
+      0,
+      0,
+      4,
+      4
+     ]
+    },
+    "south": {
+     "texture": "#feeder",
+     "uv": [
+      0,
+      0,
+      4,
+      4
+     ]
+    },
+    "east": {
+     "texture": "#feeder",
+     "uv": [
+      0,
+      0,
+      4,
+      4
+     ]
+    },
+    "west": {
+     "texture": "#feeder",
+     "uv": [
+      0,
+      0,
+      4,
+      4
+     ]
+    },
+    "up": {
+     "texture": "#feeder",
+     "uv": [
+      0,
+      0,
+      4,
+      4
+     ]
+    },
+    "down": {
+     "texture": "#feeder",
+     "uv": [
+      0,
+      0,
+      4,
+      4
+     ]
+    }
+   }
+  }
+ ]
+}

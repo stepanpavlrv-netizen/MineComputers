@@ -1,0 +1,148 @@
+{
+ "ambientocclusion": false,
+ "textures": {
+  "particle": "minecraft:block/red_concrete",
+  "leg": "minecraft:block/red_concrete",
+  "brace": "minecraft:block/iron_block",
+  "feeder": "minecraft:block/black_concrete",
+  "deck": "minecraft:block/gray_concrete"
+ },
+ "elements": [
+  {
+   "from": [
+    0,
+    0,
+    10.0
+   ],
+   "to": [
+    16,
+    1.5,
+    11.2
+   ],
+   "faces": {
+    "north": {
+     "texture": "#leg",
+     "uv": [
+      0,
+      0,
+      4,
+      4
+     ]
+    },
+    "south": {
+     "texture": "#leg",
+     "uv": [
+      0,
+      0,
+      4,
+      4
+     ]
+    },
+    "east": {
+     "texture": "#leg",
+     "uv": [
+      0,
+      0,
+      4,
+      4
+     ]
+    },
+    "west": {
+     "texture": "#leg",
+     "uv": [
+      0,
+      0,
+      4,
+      4
+     ]
+    },
+    "up": {
+     "texture": "#leg",
+     "uv": [
+      0,
+      0,
+      4,
+      4
+     ]
+    },
+    "down": {
+     "texture": "#leg",
+     "uv": [
+      0,
+      0,
+      4,
+      4
+     ]
+    }
+   }
+  },
+  {
+   "from": [
+    0,
+    7.6,
+    10.9
+   ],
+   "to": [
+    16,
+    8.4,
+    11.7
+   ],
+   "faces": {
+    "north": {
+     "texture": "#leg",
+     "uv": [
+      0,
+      0,
+      4,
+      4
+     ]
+    },
+    "south": {
+     "texture": "#leg",
+     "uv": [
+      0,
+      0,
+      4,
+      4
+     ]
+    },
+    "east": {
+     "texture": "#leg",
+     "uv": [
+      0,
+      0,
+      4,
+      4
+     ]
+    },
+    "west": {
+     "texture": "#leg",
+     "uv": [
+      0,
+      0,
+      4,
+      4
+     ]
+    },
+    "up": {
+     "texture": "#leg",
+     "uv": [
+      0,
+      0,
+      4,
+      4
+     ]
+    },
+    "down": {
+     "texture": "#leg",
+     "uv": [
+      0,
+      0,
+      4,
+      4
+     ]
+    }
+   }
+  }
+ ]
+}

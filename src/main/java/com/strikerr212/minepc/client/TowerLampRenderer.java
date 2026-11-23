@@ -61,6 +61,6 @@ public class TowerLampRenderer implements BlockEntityRenderer<TowerSectionBlockE
 
     @Override
     public AABB getRenderBoundingBox(TowerSectionBlockEntity be) {
-        return new AABB(be.getBlockPos()).inflate(1.6);
+        return new AABB(be.getBlockPos()).inflate(2.6);
     }
 }

@@ -1,0 +1,8444 @@
+{
+ "multipart": [
+  {
+   "when": {
+    "above": "17",
+    "cell": "0",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/17_0_red"
+   }
+  },
+  {
+   "when": {
+    "above": "17",
+    "cell": "1",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/17_1_red"
+   }
+  },
+  {
+   "when": {
+    "above": "17",
+    "cell": "2",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/17_2_red"
+   }
+  },
+  {
+   "when": {
+    "above": "17",
+    "cell": "3",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/17_3_red"
+   }
+  },
+  {
+   "when": {
+    "above": "17",
+    "cell": "4",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/17_4_red"
+   }
+  },
+  {
+   "when": {
+    "above": "17",
+    "cell": "5",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/17_5_red"
+   }
+  },
+  {
+   "when": {
+    "above": "17",
+    "cell": "6",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/17_6_red"
+   }
+  },
+  {
+   "when": {
+    "above": "17",
+    "cell": "7",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/17_7_red"
+   }
+  },
+  {
+   "when": {
+    "above": "17",
+    "cell": "8",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/17_8_red"
+   }
+  },
+  {
+   "when": {
+    "above": "17",
+    "cell": "9",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/17_9_red"
+   }
+  },
+  {
+   "when": {
+    "above": "17",
+    "cell": "10",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/17_10_red"
+   }
+  },
+  {
+   "when": {
+    "above": "17",
+    "cell": "11",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/17_11_red"
+   }
+  },
+  {
+   "when": {
+    "above": "17",
+    "cell": "12",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/17_12_red"
+   }
+  },
+  {
+   "when": {
+    "above": "17",
+    "cell": "13",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/17_13_red"
+   }
+  },
+  {
+   "when": {
+    "above": "17",
+    "cell": "14",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/17_14_red"
+   }
+  },
+  {
+   "when": {
+    "above": "17",
+    "cell": "15",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/17_15_red"
+   }
+  },
+  {
+   "when": {
+    "above": "17",
+    "cell": "0",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/17_0_white"
+   }
+  },
+  {
+   "when": {
+    "above": "17",
+    "cell": "1",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/17_1_white"
+   }
+  },
+  {
+   "when": {
+    "above": "17",
+    "cell": "2",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/17_2_white"
+   }
+  },
+  {
+   "when": {
+    "above": "17",
+    "cell": "3",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/17_3_white"
+   }
+  },
+  {
+   "when": {
+    "above": "17",
+    "cell": "4",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/17_4_white"
+   }
+  },
+  {
+   "when": {
+    "above": "17",
+    "cell": "5",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/17_5_white"
+   }
+  },
+  {
+   "when": {
+    "above": "17",
+    "cell": "6",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/17_6_white"
+   }
+  },
+  {
+   "when": {
+    "above": "17",
+    "cell": "7",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/17_7_white"
+   }
+  },
+  {
+   "when": {
+    "above": "17",
+    "cell": "8",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/17_8_white"
+   }
+  },
+  {
+   "when": {
+    "above": "17",
+    "cell": "9",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/17_9_white"
+   }
+  },
+  {
+   "when": {
+    "above": "17",
+    "cell": "10",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/17_10_white"
+   }
+  },
+  {
+   "when": {
+    "above": "17",
+    "cell": "11",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/17_11_white"
+   }
+  },
+  {
+   "when": {
+    "above": "17",
+    "cell": "12",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/17_12_white"
+   }
+  },
+  {
+   "when": {
+    "above": "17",
+    "cell": "13",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/17_13_white"
+   }
+  },
+  {
+   "when": {
+    "above": "17",
+    "cell": "14",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/17_14_white"
+   }
+  },
+  {
+   "when": {
+    "above": "17",
+    "cell": "15",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/17_15_white"
+   }
+  },
+  {
+   "when": {
+    "above": "17",
+    "cell": "0",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/17_0_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "17",
+    "cell": "1",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/17_1_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "17",
+    "cell": "2",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/17_2_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "17",
+    "cell": "3",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/17_3_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "17",
+    "cell": "4",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/17_4_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "17",
+    "cell": "5",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/17_5_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "17",
+    "cell": "6",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/17_6_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "17",
+    "cell": "7",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/17_7_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "17",
+    "cell": "8",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/17_8_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "17",
+    "cell": "9",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/17_9_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "17",
+    "cell": "10",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/17_10_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "17",
+    "cell": "11",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/17_11_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "17",
+    "cell": "12",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/17_12_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "17",
+    "cell": "13",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/17_13_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "17",
+    "cell": "14",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/17_14_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "17",
+    "cell": "15",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/17_15_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "17",
+    "cell": "0",
+    "foot": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/foot_17_0"
+   }
+  },
+  {
+   "when": {
+    "above": "17",
+    "cell": "1",
+    "foot": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/foot_17_1"
+   }
+  },
+  {
+   "when": {
+    "above": "17",
+    "cell": "3",
+    "foot": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/foot_17_3"
+   }
+  },
+  {
+   "when": {
+    "above": "17",
+    "cell": "4",
+    "foot": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/foot_17_4"
+   }
+  },
+  {
+   "when": {
+    "above": "17",
+    "cell": "5",
+    "foot": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/foot_17_5"
+   }
+  },
+  {
+   "when": {
+    "above": "17",
+    "cell": "6",
+    "foot": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/foot_17_6"
+   }
+  },
+  {
+   "when": {
+    "above": "17",
+    "cell": "9",
+    "foot": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/foot_17_9"
+   }
+  },
+  {
+   "when": {
+    "above": "17",
+    "cell": "10",
+    "foot": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/foot_17_10"
+   }
+  },
+  {
+   "when": {
+    "above": "17",
+    "cell": "11",
+    "foot": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/foot_17_11"
+   }
+  },
+  {
+   "when": {
+    "above": "17",
+    "cell": "12",
+    "foot": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/foot_17_12"
+   }
+  },
+  {
+   "when": {
+    "above": "17",
+    "cell": "14",
+    "foot": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/foot_17_14"
+   }
+  },
+  {
+   "when": {
+    "above": "17",
+    "cell": "15",
+    "foot": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/foot_17_15"
+   }
+  },
+  {
+   "when": {
+    "above": "18",
+    "cell": "0",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/18_0_red"
+   }
+  },
+  {
+   "when": {
+    "above": "18",
+    "cell": "1",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/18_1_red"
+   }
+  },
+  {
+   "when": {
+    "above": "18",
+    "cell": "2",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/18_2_red"
+   }
+  },
+  {
+   "when": {
+    "above": "18",
+    "cell": "3",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/18_3_red"
+   }
+  },
+  {
+   "when": {
+    "above": "18",
+    "cell": "4",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/18_4_red"
+   }
+  },
+  {
+   "when": {
+    "above": "18",
+    "cell": "5",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/18_5_red"
+   }
+  },
+  {
+   "when": {
+    "above": "18",
+    "cell": "6",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/18_6_red"
+   }
+  },
+  {
+   "when": {
+    "above": "18",
+    "cell": "7",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/18_7_red"
+   }
+  },
+  {
+   "when": {
+    "above": "18",
+    "cell": "8",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/18_8_red"
+   }
+  },
+  {
+   "when": {
+    "above": "18",
+    "cell": "9",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/18_9_red"
+   }
+  },
+  {
+   "when": {
+    "above": "18",
+    "cell": "10",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/18_10_red"
+   }
+  },
+  {
+   "when": {
+    "above": "18",
+    "cell": "11",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/18_11_red"
+   }
+  },
+  {
+   "when": {
+    "above": "18",
+    "cell": "12",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/18_12_red"
+   }
+  },
+  {
+   "when": {
+    "above": "18",
+    "cell": "13",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/18_13_red"
+   }
+  },
+  {
+   "when": {
+    "above": "18",
+    "cell": "14",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/18_14_red"
+   }
+  },
+  {
+   "when": {
+    "above": "18",
+    "cell": "15",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/18_15_red"
+   }
+  },
+  {
+   "when": {
+    "above": "18",
+    "cell": "0",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/18_0_white"
+   }
+  },
+  {
+   "when": {
+    "above": "18",
+    "cell": "1",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/18_1_white"
+   }
+  },
+  {
+   "when": {
+    "above": "18",
+    "cell": "2",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/18_2_white"
+   }
+  },
+  {
+   "when": {
+    "above": "18",
+    "cell": "3",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/18_3_white"
+   }
+  },
+  {
+   "when": {
+    "above": "18",
+    "cell": "4",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/18_4_white"
+   }
+  },
+  {
+   "when": {
+    "above": "18",
+    "cell": "5",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/18_5_white"
+   }
+  },
+  {
+   "when": {
+    "above": "18",
+    "cell": "6",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/18_6_white"
+   }
+  },
+  {
+   "when": {
+    "above": "18",
+    "cell": "7",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/18_7_white"
+   }
+  },
+  {
+   "when": {
+    "above": "18",
+    "cell": "8",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/18_8_white"
+   }
+  },
+  {
+   "when": {
+    "above": "18",
+    "cell": "9",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/18_9_white"
+   }
+  },
+  {
+   "when": {
+    "above": "18",
+    "cell": "10",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/18_10_white"
+   }
+  },
+  {
+   "when": {
+    "above": "18",
+    "cell": "11",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/18_11_white"
+   }
+  },
+  {
+   "when": {
+    "above": "18",
+    "cell": "12",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/18_12_white"
+   }
+  },
+  {
+   "when": {
+    "above": "18",
+    "cell": "13",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/18_13_white"
+   }
+  },
+  {
+   "when": {
+    "above": "18",
+    "cell": "14",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/18_14_white"
+   }
+  },
+  {
+   "when": {
+    "above": "18",
+    "cell": "15",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/18_15_white"
+   }
+  },
+  {
+   "when": {
+    "above": "18",
+    "cell": "0",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/18_0_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "18",
+    "cell": "1",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/18_1_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "18",
+    "cell": "2",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/18_2_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "18",
+    "cell": "3",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/18_3_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "18",
+    "cell": "4",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/18_4_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "18",
+    "cell": "5",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/18_5_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "18",
+    "cell": "6",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/18_6_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "18",
+    "cell": "7",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/18_7_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "18",
+    "cell": "8",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/18_8_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "18",
+    "cell": "9",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/18_9_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "18",
+    "cell": "10",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/18_10_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "18",
+    "cell": "11",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/18_11_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "18",
+    "cell": "12",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/18_12_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "18",
+    "cell": "13",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/18_13_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "18",
+    "cell": "14",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/18_14_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "18",
+    "cell": "15",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/18_15_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "18",
+    "cell": "0",
+    "foot": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/foot_18_0"
+   }
+  },
+  {
+   "when": {
+    "above": "18",
+    "cell": "1",
+    "foot": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/foot_18_1"
+   }
+  },
+  {
+   "when": {
+    "above": "18",
+    "cell": "3",
+    "foot": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/foot_18_3"
+   }
+  },
+  {
+   "when": {
+    "above": "18",
+    "cell": "4",
+    "foot": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/foot_18_4"
+   }
+  },
+  {
+   "when": {
+    "above": "18",
+    "cell": "5",
+    "foot": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/foot_18_5"
+   }
+  },
+  {
+   "when": {
+    "above": "18",
+    "cell": "6",
+    "foot": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/foot_18_6"
+   }
+  },
+  {
+   "when": {
+    "above": "18",
+    "cell": "9",
+    "foot": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/foot_18_9"
+   }
+  },
+  {
+   "when": {
+    "above": "18",
+    "cell": "10",
+    "foot": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/foot_18_10"
+   }
+  },
+  {
+   "when": {
+    "above": "18",
+    "cell": "11",
+    "foot": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/foot_18_11"
+   }
+  },
+  {
+   "when": {
+    "above": "18",
+    "cell": "12",
+    "foot": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/foot_18_12"
+   }
+  },
+  {
+   "when": {
+    "above": "18",
+    "cell": "14",
+    "foot": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/foot_18_14"
+   }
+  },
+  {
+   "when": {
+    "above": "18",
+    "cell": "15",
+    "foot": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/foot_18_15"
+   }
+  },
+  {
+   "when": {
+    "above": "19",
+    "cell": "0",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/19_0_red"
+   }
+  },
+  {
+   "when": {
+    "above": "19",
+    "cell": "1",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/19_1_red"
+   }
+  },
+  {
+   "when": {
+    "above": "19",
+    "cell": "2",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/19_2_red"
+   }
+  },
+  {
+   "when": {
+    "above": "19",
+    "cell": "3",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/19_3_red"
+   }
+  },
+  {
+   "when": {
+    "above": "19",
+    "cell": "4",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/19_4_red"
+   }
+  },
+  {
+   "when": {
+    "above": "19",
+    "cell": "5",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/19_5_red"
+   }
+  },
+  {
+   "when": {
+    "above": "19",
+    "cell": "6",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/19_6_red"
+   }
+  },
+  {
+   "when": {
+    "above": "19",
+    "cell": "7",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/19_7_red"
+   }
+  },
+  {
+   "when": {
+    "above": "19",
+    "cell": "8",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/19_8_red"
+   }
+  },
+  {
+   "when": {
+    "above": "19",
+    "cell": "9",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/19_9_red"
+   }
+  },
+  {
+   "when": {
+    "above": "19",
+    "cell": "10",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/19_10_red"
+   }
+  },
+  {
+   "when": {
+    "above": "19",
+    "cell": "11",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/19_11_red"
+   }
+  },
+  {
+   "when": {
+    "above": "19",
+    "cell": "12",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/19_12_red"
+   }
+  },
+  {
+   "when": {
+    "above": "19",
+    "cell": "13",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/19_13_red"
+   }
+  },
+  {
+   "when": {
+    "above": "19",
+    "cell": "14",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/19_14_red"
+   }
+  },
+  {
+   "when": {
+    "above": "19",
+    "cell": "15",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/19_15_red"
+   }
+  },
+  {
+   "when": {
+    "above": "19",
+    "cell": "0",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/19_0_white"
+   }
+  },
+  {
+   "when": {
+    "above": "19",
+    "cell": "1",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/19_1_white"
+   }
+  },
+  {
+   "when": {
+    "above": "19",
+    "cell": "2",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/19_2_white"
+   }
+  },
+  {
+   "when": {
+    "above": "19",
+    "cell": "3",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/19_3_white"
+   }
+  },
+  {
+   "when": {
+    "above": "19",
+    "cell": "4",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/19_4_white"
+   }
+  },
+  {
+   "when": {
+    "above": "19",
+    "cell": "5",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/19_5_white"
+   }
+  },
+  {
+   "when": {
+    "above": "19",
+    "cell": "6",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/19_6_white"
+   }
+  },
+  {
+   "when": {
+    "above": "19",
+    "cell": "7",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/19_7_white"
+   }
+  },
+  {
+   "when": {
+    "above": "19",
+    "cell": "8",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/19_8_white"
+   }
+  },
+  {
+   "when": {
+    "above": "19",
+    "cell": "9",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/19_9_white"
+   }
+  },
+  {
+   "when": {
+    "above": "19",
+    "cell": "10",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/19_10_white"
+   }
+  },
+  {
+   "when": {
+    "above": "19",
+    "cell": "11",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/19_11_white"
+   }
+  },
+  {
+   "when": {
+    "above": "19",
+    "cell": "12",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/19_12_white"
+   }
+  },
+  {
+   "when": {
+    "above": "19",
+    "cell": "13",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/19_13_white"
+   }
+  },
+  {
+   "when": {
+    "above": "19",
+    "cell": "14",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/19_14_white"
+   }
+  },
+  {
+   "when": {
+    "above": "19",
+    "cell": "15",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/19_15_white"
+   }
+  },
+  {
+   "when": {
+    "above": "19",
+    "cell": "0",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/19_0_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "19",
+    "cell": "1",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/19_1_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "19",
+    "cell": "2",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/19_2_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "19",
+    "cell": "3",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/19_3_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "19",
+    "cell": "4",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/19_4_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "19",
+    "cell": "5",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/19_5_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "19",
+    "cell": "6",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/19_6_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "19",
+    "cell": "7",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/19_7_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "19",
+    "cell": "8",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/19_8_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "19",
+    "cell": "9",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/19_9_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "19",
+    "cell": "10",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/19_10_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "19",
+    "cell": "11",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/19_11_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "19",
+    "cell": "12",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/19_12_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "19",
+    "cell": "13",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/19_13_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "19",
+    "cell": "14",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/19_14_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "19",
+    "cell": "15",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/19_15_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "19",
+    "cell": "0",
+    "foot": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/foot_19_0"
+   }
+  },
+  {
+   "when": {
+    "above": "19",
+    "cell": "4",
+    "foot": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/foot_19_4"
+   }
+  },
+  {
+   "when": {
+    "above": "19",
+    "cell": "11",
+    "foot": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/foot_19_11"
+   }
+  },
+  {
+   "when": {
+    "above": "19",
+    "cell": "15",
+    "foot": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/foot_19_15"
+   }
+  },
+  {
+   "when": {
+    "above": "20",
+    "cell": "0",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/20_0_red"
+   }
+  },
+  {
+   "when": {
+    "above": "20",
+    "cell": "1",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/20_1_red"
+   }
+  },
+  {
+   "when": {
+    "above": "20",
+    "cell": "2",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/20_2_red"
+   }
+  },
+  {
+   "when": {
+    "above": "20",
+    "cell": "3",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/20_3_red"
+   }
+  },
+  {
+   "when": {
+    "above": "20",
+    "cell": "4",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/20_4_red"
+   }
+  },
+  {
+   "when": {
+    "above": "20",
+    "cell": "5",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/20_5_red"
+   }
+  },
+  {
+   "when": {
+    "above": "20",
+    "cell": "6",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/20_6_red"
+   }
+  },
+  {
+   "when": {
+    "above": "20",
+    "cell": "7",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/20_7_red"
+   }
+  },
+  {
+   "when": {
+    "above": "20",
+    "cell": "8",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/20_8_red"
+   }
+  },
+  {
+   "when": {
+    "above": "20",
+    "cell": "9",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/20_9_red"
+   }
+  },
+  {
+   "when": {
+    "above": "20",
+    "cell": "10",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/20_10_red"
+   }
+  },
+  {
+   "when": {
+    "above": "20",
+    "cell": "11",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/20_11_red"
+   }
+  },
+  {
+   "when": {
+    "above": "20",
+    "cell": "12",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/20_12_red"
+   }
+  },
+  {
+   "when": {
+    "above": "20",
+    "cell": "13",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/20_13_red"
+   }
+  },
+  {
+   "when": {
+    "above": "20",
+    "cell": "14",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/20_14_red"
+   }
+  },
+  {
+   "when": {
+    "above": "20",
+    "cell": "15",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/20_15_red"
+   }
+  },
+  {
+   "when": {
+    "above": "20",
+    "cell": "0",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/20_0_white"
+   }
+  },
+  {
+   "when": {
+    "above": "20",
+    "cell": "1",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/20_1_white"
+   }
+  },
+  {
+   "when": {
+    "above": "20",
+    "cell": "2",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/20_2_white"
+   }
+  },
+  {
+   "when": {
+    "above": "20",
+    "cell": "3",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/20_3_white"
+   }
+  },
+  {
+   "when": {
+    "above": "20",
+    "cell": "4",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/20_4_white"
+   }
+  },
+  {
+   "when": {
+    "above": "20",
+    "cell": "5",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/20_5_white"
+   }
+  },
+  {
+   "when": {
+    "above": "20",
+    "cell": "6",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/20_6_white"
+   }
+  },
+  {
+   "when": {
+    "above": "20",
+    "cell": "7",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/20_7_white"
+   }
+  },
+  {
+   "when": {
+    "above": "20",
+    "cell": "8",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/20_8_white"
+   }
+  },
+  {
+   "when": {
+    "above": "20",
+    "cell": "9",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/20_9_white"
+   }
+  },
+  {
+   "when": {
+    "above": "20",
+    "cell": "10",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/20_10_white"
+   }
+  },
+  {
+   "when": {
+    "above": "20",
+    "cell": "11",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/20_11_white"
+   }
+  },
+  {
+   "when": {
+    "above": "20",
+    "cell": "12",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/20_12_white"
+   }
+  },
+  {
+   "when": {
+    "above": "20",
+    "cell": "13",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/20_13_white"
+   }
+  },
+  {
+   "when": {
+    "above": "20",
+    "cell": "14",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/20_14_white"
+   }
+  },
+  {
+   "when": {
+    "above": "20",
+    "cell": "15",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/20_15_white"
+   }
+  },
+  {
+   "when": {
+    "above": "20",
+    "cell": "0",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/20_0_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "20",
+    "cell": "1",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/20_1_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "20",
+    "cell": "2",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/20_2_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "20",
+    "cell": "3",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/20_3_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "20",
+    "cell": "4",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/20_4_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "20",
+    "cell": "5",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/20_5_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "20",
+    "cell": "6",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/20_6_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "20",
+    "cell": "7",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/20_7_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "20",
+    "cell": "8",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/20_8_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "20",
+    "cell": "9",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/20_9_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "20",
+    "cell": "10",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/20_10_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "20",
+    "cell": "11",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/20_11_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "20",
+    "cell": "12",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/20_12_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "20",
+    "cell": "13",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/20_13_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "20",
+    "cell": "14",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/20_14_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "20",
+    "cell": "15",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/20_15_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "20",
+    "cell": "0",
+    "foot": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/foot_20_0"
+   }
+  },
+  {
+   "when": {
+    "above": "20",
+    "cell": "4",
+    "foot": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/foot_20_4"
+   }
+  },
+  {
+   "when": {
+    "above": "20",
+    "cell": "11",
+    "foot": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/foot_20_11"
+   }
+  },
+  {
+   "when": {
+    "above": "20",
+    "cell": "15",
+    "foot": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/foot_20_15"
+   }
+  },
+  {
+   "when": {
+    "above": "21",
+    "cell": "0",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/21_0_red"
+   }
+  },
+  {
+   "when": {
+    "above": "21",
+    "cell": "1",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/21_1_red"
+   }
+  },
+  {
+   "when": {
+    "above": "21",
+    "cell": "2",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/21_2_red"
+   }
+  },
+  {
+   "when": {
+    "above": "21",
+    "cell": "3",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/21_3_red"
+   }
+  },
+  {
+   "when": {
+    "above": "21",
+    "cell": "4",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/21_4_red"
+   }
+  },
+  {
+   "when": {
+    "above": "21",
+    "cell": "5",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/21_5_red"
+   }
+  },
+  {
+   "when": {
+    "above": "21",
+    "cell": "6",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/21_6_red"
+   }
+  },
+  {
+   "when": {
+    "above": "21",
+    "cell": "7",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/21_7_red"
+   }
+  },
+  {
+   "when": {
+    "above": "21",
+    "cell": "8",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/21_8_red"
+   }
+  },
+  {
+   "when": {
+    "above": "21",
+    "cell": "9",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/21_9_red"
+   }
+  },
+  {
+   "when": {
+    "above": "21",
+    "cell": "10",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/21_10_red"
+   }
+  },
+  {
+   "when": {
+    "above": "21",
+    "cell": "11",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/21_11_red"
+   }
+  },
+  {
+   "when": {
+    "above": "21",
+    "cell": "12",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/21_12_red"
+   }
+  },
+  {
+   "when": {
+    "above": "21",
+    "cell": "13",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/21_13_red"
+   }
+  },
+  {
+   "when": {
+    "above": "21",
+    "cell": "14",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/21_14_red"
+   }
+  },
+  {
+   "when": {
+    "above": "21",
+    "cell": "15",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/21_15_red"
+   }
+  },
+  {
+   "when": {
+    "above": "21",
+    "cell": "0",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/21_0_white"
+   }
+  },
+  {
+   "when": {
+    "above": "21",
+    "cell": "1",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/21_1_white"
+   }
+  },
+  {
+   "when": {
+    "above": "21",
+    "cell": "2",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/21_2_white"
+   }
+  },
+  {
+   "when": {
+    "above": "21",
+    "cell": "3",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/21_3_white"
+   }
+  },
+  {
+   "when": {
+    "above": "21",
+    "cell": "4",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/21_4_white"
+   }
+  },
+  {
+   "when": {
+    "above": "21",
+    "cell": "5",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/21_5_white"
+   }
+  },
+  {
+   "when": {
+    "above": "21",
+    "cell": "6",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/21_6_white"
+   }
+  },
+  {
+   "when": {
+    "above": "21",
+    "cell": "7",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/21_7_white"
+   }
+  },
+  {
+   "when": {
+    "above": "21",
+    "cell": "8",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/21_8_white"
+   }
+  },
+  {
+   "when": {
+    "above": "21",
+    "cell": "9",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/21_9_white"
+   }
+  },
+  {
+   "when": {
+    "above": "21",
+    "cell": "10",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/21_10_white"
+   }
+  },
+  {
+   "when": {
+    "above": "21",
+    "cell": "11",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/21_11_white"
+   }
+  },
+  {
+   "when": {
+    "above": "21",
+    "cell": "12",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/21_12_white"
+   }
+  },
+  {
+   "when": {
+    "above": "21",
+    "cell": "13",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/21_13_white"
+   }
+  },
+  {
+   "when": {
+    "above": "21",
+    "cell": "14",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/21_14_white"
+   }
+  },
+  {
+   "when": {
+    "above": "21",
+    "cell": "15",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/21_15_white"
+   }
+  },
+  {
+   "when": {
+    "above": "21",
+    "cell": "0",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/21_0_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "21",
+    "cell": "1",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/21_1_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "21",
+    "cell": "2",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/21_2_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "21",
+    "cell": "3",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/21_3_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "21",
+    "cell": "4",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/21_4_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "21",
+    "cell": "5",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/21_5_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "21",
+    "cell": "6",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/21_6_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "21",
+    "cell": "7",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/21_7_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "21",
+    "cell": "8",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/21_8_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "21",
+    "cell": "9",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/21_9_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "21",
+    "cell": "10",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/21_10_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "21",
+    "cell": "11",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/21_11_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "21",
+    "cell": "12",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/21_12_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "21",
+    "cell": "13",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/21_13_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "21",
+    "cell": "14",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/21_14_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "21",
+    "cell": "15",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/21_15_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "21",
+    "cell": "0",
+    "foot": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/foot_21_0"
+   }
+  },
+  {
+   "when": {
+    "above": "21",
+    "cell": "4",
+    "foot": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/foot_21_4"
+   }
+  },
+  {
+   "when": {
+    "above": "21",
+    "cell": "11",
+    "foot": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/foot_21_11"
+   }
+  },
+  {
+   "when": {
+    "above": "21",
+    "cell": "15",
+    "foot": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/foot_21_15"
+   }
+  },
+  {
+   "when": {
+    "above": "22",
+    "cell": "0",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/22_0_red"
+   }
+  },
+  {
+   "when": {
+    "above": "22",
+    "cell": "1",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/22_1_red"
+   }
+  },
+  {
+   "when": {
+    "above": "22",
+    "cell": "2",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/22_2_red"
+   }
+  },
+  {
+   "when": {
+    "above": "22",
+    "cell": "3",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/22_3_red"
+   }
+  },
+  {
+   "when": {
+    "above": "22",
+    "cell": "4",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/22_4_red"
+   }
+  },
+  {
+   "when": {
+    "above": "22",
+    "cell": "5",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/22_5_red"
+   }
+  },
+  {
+   "when": {
+    "above": "22",
+    "cell": "6",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/22_6_red"
+   }
+  },
+  {
+   "when": {
+    "above": "22",
+    "cell": "7",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/22_7_red"
+   }
+  },
+  {
+   "when": {
+    "above": "22",
+    "cell": "8",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/22_8_red"
+   }
+  },
+  {
+   "when": {
+    "above": "22",
+    "cell": "9",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/22_9_red"
+   }
+  },
+  {
+   "when": {
+    "above": "22",
+    "cell": "10",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/22_10_red"
+   }
+  },
+  {
+   "when": {
+    "above": "22",
+    "cell": "11",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/22_11_red"
+   }
+  },
+  {
+   "when": {
+    "above": "22",
+    "cell": "12",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/22_12_red"
+   }
+  },
+  {
+   "when": {
+    "above": "22",
+    "cell": "13",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/22_13_red"
+   }
+  },
+  {
+   "when": {
+    "above": "22",
+    "cell": "14",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/22_14_red"
+   }
+  },
+  {
+   "when": {
+    "above": "22",
+    "cell": "15",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/22_15_red"
+   }
+  },
+  {
+   "when": {
+    "above": "22",
+    "cell": "0",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/22_0_white"
+   }
+  },
+  {
+   "when": {
+    "above": "22",
+    "cell": "1",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/22_1_white"
+   }
+  },
+  {
+   "when": {
+    "above": "22",
+    "cell": "2",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/22_2_white"
+   }
+  },
+  {
+   "when": {
+    "above": "22",
+    "cell": "3",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/22_3_white"
+   }
+  },
+  {
+   "when": {
+    "above": "22",
+    "cell": "4",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/22_4_white"
+   }
+  },
+  {
+   "when": {
+    "above": "22",
+    "cell": "5",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/22_5_white"
+   }
+  },
+  {
+   "when": {
+    "above": "22",
+    "cell": "6",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/22_6_white"
+   }
+  },
+  {
+   "when": {
+    "above": "22",
+    "cell": "7",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/22_7_white"
+   }
+  },
+  {
+   "when": {
+    "above": "22",
+    "cell": "8",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/22_8_white"
+   }
+  },
+  {
+   "when": {
+    "above": "22",
+    "cell": "9",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/22_9_white"
+   }
+  },
+  {
+   "when": {
+    "above": "22",
+    "cell": "10",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/22_10_white"
+   }
+  },
+  {
+   "when": {
+    "above": "22",
+    "cell": "11",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/22_11_white"
+   }
+  },
+  {
+   "when": {
+    "above": "22",
+    "cell": "12",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/22_12_white"
+   }
+  },
+  {
+   "when": {
+    "above": "22",
+    "cell": "13",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/22_13_white"
+   }
+  },
+  {
+   "when": {
+    "above": "22",
+    "cell": "14",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/22_14_white"
+   }
+  },
+  {
+   "when": {
+    "above": "22",
+    "cell": "15",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/22_15_white"
+   }
+  },
+  {
+   "when": {
+    "above": "22",
+    "cell": "0",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/22_0_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "22",
+    "cell": "1",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/22_1_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "22",
+    "cell": "2",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/22_2_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "22",
+    "cell": "3",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/22_3_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "22",
+    "cell": "4",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/22_4_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "22",
+    "cell": "5",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/22_5_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "22",
+    "cell": "6",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/22_6_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "22",
+    "cell": "7",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/22_7_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "22",
+    "cell": "8",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/22_8_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "22",
+    "cell": "9",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/22_9_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "22",
+    "cell": "10",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/22_10_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "22",
+    "cell": "11",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/22_11_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "22",
+    "cell": "12",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/22_12_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "22",
+    "cell": "13",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/22_13_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "22",
+    "cell": "14",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/22_14_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "22",
+    "cell": "15",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/22_15_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "22",
+    "cell": "0",
+    "foot": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/foot_22_0"
+   }
+  },
+  {
+   "when": {
+    "above": "22",
+    "cell": "4",
+    "foot": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/foot_22_4"
+   }
+  },
+  {
+   "when": {
+    "above": "22",
+    "cell": "11",
+    "foot": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/foot_22_11"
+   }
+  },
+  {
+   "when": {
+    "above": "22",
+    "cell": "15",
+    "foot": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/foot_22_15"
+   }
+  },
+  {
+   "when": {
+    "above": "23",
+    "cell": "0",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/23_0_red"
+   }
+  },
+  {
+   "when": {
+    "above": "23",
+    "cell": "1",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/23_1_red"
+   }
+  },
+  {
+   "when": {
+    "above": "23",
+    "cell": "2",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/23_2_red"
+   }
+  },
+  {
+   "when": {
+    "above": "23",
+    "cell": "3",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/23_3_red"
+   }
+  },
+  {
+   "when": {
+    "above": "23",
+    "cell": "4",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/23_4_red"
+   }
+  },
+  {
+   "when": {
+    "above": "23",
+    "cell": "5",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/23_5_red"
+   }
+  },
+  {
+   "when": {
+    "above": "23",
+    "cell": "6",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/23_6_red"
+   }
+  },
+  {
+   "when": {
+    "above": "23",
+    "cell": "7",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/23_7_red"
+   }
+  },
+  {
+   "when": {
+    "above": "23",
+    "cell": "8",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/23_8_red"
+   }
+  },
+  {
+   "when": {
+    "above": "23",
+    "cell": "9",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/23_9_red"
+   }
+  },
+  {
+   "when": {
+    "above": "23",
+    "cell": "10",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/23_10_red"
+   }
+  },
+  {
+   "when": {
+    "above": "23",
+    "cell": "11",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/23_11_red"
+   }
+  },
+  {
+   "when": {
+    "above": "23",
+    "cell": "12",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/23_12_red"
+   }
+  },
+  {
+   "when": {
+    "above": "23",
+    "cell": "13",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/23_13_red"
+   }
+  },
+  {
+   "when": {
+    "above": "23",
+    "cell": "14",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/23_14_red"
+   }
+  },
+  {
+   "when": {
+    "above": "23",
+    "cell": "15",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/23_15_red"
+   }
+  },
+  {
+   "when": {
+    "above": "23",
+    "cell": "0",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/23_0_white"
+   }
+  },
+  {
+   "when": {
+    "above": "23",
+    "cell": "1",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/23_1_white"
+   }
+  },
+  {
+   "when": {
+    "above": "23",
+    "cell": "2",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/23_2_white"
+   }
+  },
+  {
+   "when": {
+    "above": "23",
+    "cell": "3",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/23_3_white"
+   }
+  },
+  {
+   "when": {
+    "above": "23",
+    "cell": "4",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/23_4_white"
+   }
+  },
+  {
+   "when": {
+    "above": "23",
+    "cell": "5",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/23_5_white"
+   }
+  },
+  {
+   "when": {
+    "above": "23",
+    "cell": "6",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/23_6_white"
+   }
+  },
+  {
+   "when": {
+    "above": "23",
+    "cell": "7",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/23_7_white"
+   }
+  },
+  {
+   "when": {
+    "above": "23",
+    "cell": "8",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/23_8_white"
+   }
+  },
+  {
+   "when": {
+    "above": "23",
+    "cell": "9",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/23_9_white"
+   }
+  },
+  {
+   "when": {
+    "above": "23",
+    "cell": "10",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/23_10_white"
+   }
+  },
+  {
+   "when": {
+    "above": "23",
+    "cell": "11",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/23_11_white"
+   }
+  },
+  {
+   "when": {
+    "above": "23",
+    "cell": "12",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/23_12_white"
+   }
+  },
+  {
+   "when": {
+    "above": "23",
+    "cell": "13",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/23_13_white"
+   }
+  },
+  {
+   "when": {
+    "above": "23",
+    "cell": "14",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/23_14_white"
+   }
+  },
+  {
+   "when": {
+    "above": "23",
+    "cell": "15",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/23_15_white"
+   }
+  },
+  {
+   "when": {
+    "above": "23",
+    "cell": "0",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/23_0_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "23",
+    "cell": "1",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/23_1_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "23",
+    "cell": "2",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/23_2_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "23",
+    "cell": "3",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/23_3_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "23",
+    "cell": "4",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/23_4_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "23",
+    "cell": "5",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/23_5_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "23",
+    "cell": "6",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/23_6_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "23",
+    "cell": "7",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/23_7_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "23",
+    "cell": "8",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/23_8_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "23",
+    "cell": "9",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/23_9_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "23",
+    "cell": "10",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/23_10_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "23",
+    "cell": "11",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/23_11_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "23",
+    "cell": "12",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/23_12_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "23",
+    "cell": "13",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/23_13_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "23",
+    "cell": "14",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/23_14_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "23",
+    "cell": "15",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/23_15_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "23",
+    "cell": "0",
+    "foot": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/foot_23_0"
+   }
+  },
+  {
+   "when": {
+    "above": "23",
+    "cell": "4",
+    "foot": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/foot_23_4"
+   }
+  },
+  {
+   "when": {
+    "above": "23",
+    "cell": "11",
+    "foot": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/foot_23_11"
+   }
+  },
+  {
+   "when": {
+    "above": "23",
+    "cell": "15",
+    "foot": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/foot_23_15"
+   }
+  },
+  {
+   "when": {
+    "above": "24",
+    "cell": "0",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/24_0_red"
+   }
+  },
+  {
+   "when": {
+    "above": "24",
+    "cell": "1",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/24_1_red"
+   }
+  },
+  {
+   "when": {
+    "above": "24",
+    "cell": "2",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/24_2_red"
+   }
+  },
+  {
+   "when": {
+    "above": "24",
+    "cell": "3",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/24_3_red"
+   }
+  },
+  {
+   "when": {
+    "above": "24",
+    "cell": "4",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/24_4_red"
+   }
+  },
+  {
+   "when": {
+    "above": "24",
+    "cell": "5",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/24_5_red"
+   }
+  },
+  {
+   "when": {
+    "above": "24",
+    "cell": "6",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/24_6_red"
+   }
+  },
+  {
+   "when": {
+    "above": "24",
+    "cell": "7",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/24_7_red"
+   }
+  },
+  {
+   "when": {
+    "above": "24",
+    "cell": "8",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/24_8_red"
+   }
+  },
+  {
+   "when": {
+    "above": "24",
+    "cell": "9",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/24_9_red"
+   }
+  },
+  {
+   "when": {
+    "above": "24",
+    "cell": "10",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/24_10_red"
+   }
+  },
+  {
+   "when": {
+    "above": "24",
+    "cell": "11",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/24_11_red"
+   }
+  },
+  {
+   "when": {
+    "above": "24",
+    "cell": "12",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/24_12_red"
+   }
+  },
+  {
+   "when": {
+    "above": "24",
+    "cell": "13",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/24_13_red"
+   }
+  },
+  {
+   "when": {
+    "above": "24",
+    "cell": "14",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/24_14_red"
+   }
+  },
+  {
+   "when": {
+    "above": "24",
+    "cell": "15",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/24_15_red"
+   }
+  },
+  {
+   "when": {
+    "above": "24",
+    "cell": "0",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/24_0_white"
+   }
+  },
+  {
+   "when": {
+    "above": "24",
+    "cell": "1",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/24_1_white"
+   }
+  },
+  {
+   "when": {
+    "above": "24",
+    "cell": "2",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/24_2_white"
+   }
+  },
+  {
+   "when": {
+    "above": "24",
+    "cell": "3",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/24_3_white"
+   }
+  },
+  {
+   "when": {
+    "above": "24",
+    "cell": "4",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/24_4_white"
+   }
+  },
+  {
+   "when": {
+    "above": "24",
+    "cell": "5",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/24_5_white"
+   }
+  },
+  {
+   "when": {
+    "above": "24",
+    "cell": "6",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/24_6_white"
+   }
+  },
+  {
+   "when": {
+    "above": "24",
+    "cell": "7",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/24_7_white"
+   }
+  },
+  {
+   "when": {
+    "above": "24",
+    "cell": "8",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/24_8_white"
+   }
+  },
+  {
+   "when": {
+    "above": "24",
+    "cell": "9",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/24_9_white"
+   }
+  },
+  {
+   "when": {
+    "above": "24",
+    "cell": "10",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/24_10_white"
+   }
+  },
+  {
+   "when": {
+    "above": "24",
+    "cell": "11",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/24_11_white"
+   }
+  },
+  {
+   "when": {
+    "above": "24",
+    "cell": "12",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/24_12_white"
+   }
+  },
+  {
+   "when": {
+    "above": "24",
+    "cell": "13",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/24_13_white"
+   }
+  },
+  {
+   "when": {
+    "above": "24",
+    "cell": "14",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/24_14_white"
+   }
+  },
+  {
+   "when": {
+    "above": "24",
+    "cell": "15",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/24_15_white"
+   }
+  },
+  {
+   "when": {
+    "above": "24",
+    "cell": "0",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/24_0_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "24",
+    "cell": "1",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/24_1_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "24",
+    "cell": "2",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/24_2_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "24",
+    "cell": "3",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/24_3_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "24",
+    "cell": "4",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/24_4_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "24",
+    "cell": "5",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/24_5_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "24",
+    "cell": "6",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/24_6_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "24",
+    "cell": "7",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/24_7_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "24",
+    "cell": "8",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/24_8_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "24",
+    "cell": "9",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/24_9_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "24",
+    "cell": "10",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/24_10_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "24",
+    "cell": "11",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/24_11_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "24",
+    "cell": "12",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/24_12_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "24",
+    "cell": "13",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/24_13_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "24",
+    "cell": "14",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/24_14_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "24",
+    "cell": "15",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/24_15_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "24",
+    "cell": "0",
+    "foot": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/foot_24_0"
+   }
+  },
+  {
+   "when": {
+    "above": "24",
+    "cell": "4",
+    "foot": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/foot_24_4"
+   }
+  },
+  {
+   "when": {
+    "above": "24",
+    "cell": "11",
+    "foot": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/foot_24_11"
+   }
+  },
+  {
+   "when": {
+    "above": "24",
+    "cell": "15",
+    "foot": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/foot_24_15"
+   }
+  },
+  {
+   "when": {
+    "above": "25",
+    "cell": "0",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/25_0_red"
+   }
+  },
+  {
+   "when": {
+    "above": "25",
+    "cell": "1",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/25_1_red"
+   }
+  },
+  {
+   "when": {
+    "above": "25",
+    "cell": "2",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/25_2_red"
+   }
+  },
+  {
+   "when": {
+    "above": "25",
+    "cell": "3",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/25_3_red"
+   }
+  },
+  {
+   "when": {
+    "above": "25",
+    "cell": "4",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/25_4_red"
+   }
+  },
+  {
+   "when": {
+    "above": "25",
+    "cell": "5",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/25_5_red"
+   }
+  },
+  {
+   "when": {
+    "above": "25",
+    "cell": "6",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/25_6_red"
+   }
+  },
+  {
+   "when": {
+    "above": "25",
+    "cell": "7",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/25_7_red"
+   }
+  },
+  {
+   "when": {
+    "above": "25",
+    "cell": "8",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/25_8_red"
+   }
+  },
+  {
+   "when": {
+    "above": "25",
+    "cell": "9",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/25_9_red"
+   }
+  },
+  {
+   "when": {
+    "above": "25",
+    "cell": "10",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/25_10_red"
+   }
+  },
+  {
+   "when": {
+    "above": "25",
+    "cell": "11",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/25_11_red"
+   }
+  },
+  {
+   "when": {
+    "above": "25",
+    "cell": "12",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/25_12_red"
+   }
+  },
+  {
+   "when": {
+    "above": "25",
+    "cell": "13",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/25_13_red"
+   }
+  },
+  {
+   "when": {
+    "above": "25",
+    "cell": "14",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/25_14_red"
+   }
+  },
+  {
+   "when": {
+    "above": "25",
+    "cell": "15",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/25_15_red"
+   }
+  },
+  {
+   "when": {
+    "above": "25",
+    "cell": "0",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/25_0_white"
+   }
+  },
+  {
+   "when": {
+    "above": "25",
+    "cell": "1",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/25_1_white"
+   }
+  },
+  {
+   "when": {
+    "above": "25",
+    "cell": "2",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/25_2_white"
+   }
+  },
+  {
+   "when": {
+    "above": "25",
+    "cell": "3",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/25_3_white"
+   }
+  },
+  {
+   "when": {
+    "above": "25",
+    "cell": "4",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/25_4_white"
+   }
+  },
+  {
+   "when": {
+    "above": "25",
+    "cell": "5",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/25_5_white"
+   }
+  },
+  {
+   "when": {
+    "above": "25",
+    "cell": "6",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/25_6_white"
+   }
+  },
+  {
+   "when": {
+    "above": "25",
+    "cell": "7",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/25_7_white"
+   }
+  },
+  {
+   "when": {
+    "above": "25",
+    "cell": "8",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/25_8_white"
+   }
+  },
+  {
+   "when": {
+    "above": "25",
+    "cell": "9",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/25_9_white"
+   }
+  },
+  {
+   "when": {
+    "above": "25",
+    "cell": "10",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/25_10_white"
+   }
+  },
+  {
+   "when": {
+    "above": "25",
+    "cell": "11",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/25_11_white"
+   }
+  },
+  {
+   "when": {
+    "above": "25",
+    "cell": "12",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/25_12_white"
+   }
+  },
+  {
+   "when": {
+    "above": "25",
+    "cell": "13",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/25_13_white"
+   }
+  },
+  {
+   "when": {
+    "above": "25",
+    "cell": "14",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/25_14_white"
+   }
+  },
+  {
+   "when": {
+    "above": "25",
+    "cell": "15",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/25_15_white"
+   }
+  },
+  {
+   "when": {
+    "above": "25",
+    "cell": "0",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/25_0_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "25",
+    "cell": "1",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/25_1_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "25",
+    "cell": "2",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/25_2_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "25",
+    "cell": "3",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/25_3_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "25",
+    "cell": "4",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/25_4_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "25",
+    "cell": "5",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/25_5_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "25",
+    "cell": "6",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/25_6_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "25",
+    "cell": "7",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/25_7_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "25",
+    "cell": "8",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/25_8_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "25",
+    "cell": "9",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/25_9_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "25",
+    "cell": "10",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/25_10_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "25",
+    "cell": "11",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/25_11_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "25",
+    "cell": "12",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/25_12_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "25",
+    "cell": "13",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/25_13_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "25",
+    "cell": "14",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/25_14_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "25",
+    "cell": "15",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/25_15_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "25",
+    "cell": "0",
+    "foot": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/foot_25_0"
+   }
+  },
+  {
+   "when": {
+    "above": "25",
+    "cell": "4",
+    "foot": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/foot_25_4"
+   }
+  },
+  {
+   "when": {
+    "above": "25",
+    "cell": "11",
+    "foot": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/foot_25_11"
+   }
+  },
+  {
+   "when": {
+    "above": "25",
+    "cell": "15",
+    "foot": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/foot_25_15"
+   }
+  },
+  {
+   "when": {
+    "above": "26",
+    "cell": "0",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/26_0_red"
+   }
+  },
+  {
+   "when": {
+    "above": "26",
+    "cell": "1",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/26_1_red"
+   }
+  },
+  {
+   "when": {
+    "above": "26",
+    "cell": "2",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/26_2_red"
+   }
+  },
+  {
+   "when": {
+    "above": "26",
+    "cell": "3",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/26_3_red"
+   }
+  },
+  {
+   "when": {
+    "above": "26",
+    "cell": "4",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/26_4_red"
+   }
+  },
+  {
+   "when": {
+    "above": "26",
+    "cell": "5",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/26_5_red"
+   }
+  },
+  {
+   "when": {
+    "above": "26",
+    "cell": "6",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/26_6_red"
+   }
+  },
+  {
+   "when": {
+    "above": "26",
+    "cell": "7",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/26_7_red"
+   }
+  },
+  {
+   "when": {
+    "above": "26",
+    "cell": "8",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/26_8_red"
+   }
+  },
+  {
+   "when": {
+    "above": "26",
+    "cell": "9",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/26_9_red"
+   }
+  },
+  {
+   "when": {
+    "above": "26",
+    "cell": "10",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/26_10_red"
+   }
+  },
+  {
+   "when": {
+    "above": "26",
+    "cell": "11",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/26_11_red"
+   }
+  },
+  {
+   "when": {
+    "above": "26",
+    "cell": "12",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/26_12_red"
+   }
+  },
+  {
+   "when": {
+    "above": "26",
+    "cell": "13",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/26_13_red"
+   }
+  },
+  {
+   "when": {
+    "above": "26",
+    "cell": "14",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/26_14_red"
+   }
+  },
+  {
+   "when": {
+    "above": "26",
+    "cell": "15",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/26_15_red"
+   }
+  },
+  {
+   "when": {
+    "above": "26",
+    "cell": "0",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/26_0_white"
+   }
+  },
+  {
+   "when": {
+    "above": "26",
+    "cell": "1",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/26_1_white"
+   }
+  },
+  {
+   "when": {
+    "above": "26",
+    "cell": "2",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/26_2_white"
+   }
+  },
+  {
+   "when": {
+    "above": "26",
+    "cell": "3",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/26_3_white"
+   }
+  },
+  {
+   "when": {
+    "above": "26",
+    "cell": "4",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/26_4_white"
+   }
+  },
+  {
+   "when": {
+    "above": "26",
+    "cell": "5",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/26_5_white"
+   }
+  },
+  {
+   "when": {
+    "above": "26",
+    "cell": "6",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/26_6_white"
+   }
+  },
+  {
+   "when": {
+    "above": "26",
+    "cell": "7",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/26_7_white"
+   }
+  },
+  {
+   "when": {
+    "above": "26",
+    "cell": "8",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/26_8_white"
+   }
+  },
+  {
+   "when": {
+    "above": "26",
+    "cell": "9",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/26_9_white"
+   }
+  },
+  {
+   "when": {
+    "above": "26",
+    "cell": "10",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/26_10_white"
+   }
+  },
+  {
+   "when": {
+    "above": "26",
+    "cell": "11",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/26_11_white"
+   }
+  },
+  {
+   "when": {
+    "above": "26",
+    "cell": "12",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/26_12_white"
+   }
+  },
+  {
+   "when": {
+    "above": "26",
+    "cell": "13",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/26_13_white"
+   }
+  },
+  {
+   "when": {
+    "above": "26",
+    "cell": "14",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/26_14_white"
+   }
+  },
+  {
+   "when": {
+    "above": "26",
+    "cell": "15",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/26_15_white"
+   }
+  },
+  {
+   "when": {
+    "above": "26",
+    "cell": "0",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/26_0_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "26",
+    "cell": "1",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/26_1_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "26",
+    "cell": "2",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/26_2_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "26",
+    "cell": "3",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/26_3_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "26",
+    "cell": "4",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/26_4_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "26",
+    "cell": "5",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/26_5_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "26",
+    "cell": "6",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/26_6_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "26",
+    "cell": "7",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/26_7_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "26",
+    "cell": "8",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/26_8_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "26",
+    "cell": "9",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/26_9_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "26",
+    "cell": "10",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/26_10_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "26",
+    "cell": "11",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/26_11_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "26",
+    "cell": "12",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/26_12_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "26",
+    "cell": "13",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/26_13_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "26",
+    "cell": "14",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/26_14_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "26",
+    "cell": "15",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/26_15_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "26",
+    "cell": "0",
+    "foot": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/foot_26_0"
+   }
+  },
+  {
+   "when": {
+    "above": "26",
+    "cell": "4",
+    "foot": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/foot_26_4"
+   }
+  },
+  {
+   "when": {
+    "above": "26",
+    "cell": "11",
+    "foot": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/foot_26_11"
+   }
+  },
+  {
+   "when": {
+    "above": "26",
+    "cell": "15",
+    "foot": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/foot_26_15"
+   }
+  },
+  {
+   "when": {
+    "above": "27",
+    "cell": "0",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/27_0_red"
+   }
+  },
+  {
+   "when": {
+    "above": "27",
+    "cell": "1",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/27_1_red"
+   }
+  },
+  {
+   "when": {
+    "above": "27",
+    "cell": "2",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/27_2_red"
+   }
+  },
+  {
+   "when": {
+    "above": "27",
+    "cell": "3",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/27_3_red"
+   }
+  },
+  {
+   "when": {
+    "above": "27",
+    "cell": "4",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/27_4_red"
+   }
+  },
+  {
+   "when": {
+    "above": "27",
+    "cell": "5",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/27_5_red"
+   }
+  },
+  {
+   "when": {
+    "above": "27",
+    "cell": "6",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/27_6_red"
+   }
+  },
+  {
+   "when": {
+    "above": "27",
+    "cell": "7",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/27_7_red"
+   }
+  },
+  {
+   "when": {
+    "above": "27",
+    "cell": "8",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/27_8_red"
+   }
+  },
+  {
+   "when": {
+    "above": "27",
+    "cell": "9",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/27_9_red"
+   }
+  },
+  {
+   "when": {
+    "above": "27",
+    "cell": "10",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/27_10_red"
+   }
+  },
+  {
+   "when": {
+    "above": "27",
+    "cell": "11",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/27_11_red"
+   }
+  },
+  {
+   "when": {
+    "above": "27",
+    "cell": "12",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/27_12_red"
+   }
+  },
+  {
+   "when": {
+    "above": "27",
+    "cell": "13",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/27_13_red"
+   }
+  },
+  {
+   "when": {
+    "above": "27",
+    "cell": "14",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/27_14_red"
+   }
+  },
+  {
+   "when": {
+    "above": "27",
+    "cell": "15",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/27_15_red"
+   }
+  },
+  {
+   "when": {
+    "above": "27",
+    "cell": "0",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/27_0_white"
+   }
+  },
+  {
+   "when": {
+    "above": "27",
+    "cell": "1",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/27_1_white"
+   }
+  },
+  {
+   "when": {
+    "above": "27",
+    "cell": "2",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/27_2_white"
+   }
+  },
+  {
+   "when": {
+    "above": "27",
+    "cell": "3",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/27_3_white"
+   }
+  },
+  {
+   "when": {
+    "above": "27",
+    "cell": "4",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/27_4_white"
+   }
+  },
+  {
+   "when": {
+    "above": "27",
+    "cell": "5",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/27_5_white"
+   }
+  },
+  {
+   "when": {
+    "above": "27",
+    "cell": "6",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/27_6_white"
+   }
+  },
+  {
+   "when": {
+    "above": "27",
+    "cell": "7",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/27_7_white"
+   }
+  },
+  {
+   "when": {
+    "above": "27",
+    "cell": "8",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/27_8_white"
+   }
+  },
+  {
+   "when": {
+    "above": "27",
+    "cell": "9",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/27_9_white"
+   }
+  },
+  {
+   "when": {
+    "above": "27",
+    "cell": "10",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/27_10_white"
+   }
+  },
+  {
+   "when": {
+    "above": "27",
+    "cell": "11",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/27_11_white"
+   }
+  },
+  {
+   "when": {
+    "above": "27",
+    "cell": "12",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/27_12_white"
+   }
+  },
+  {
+   "when": {
+    "above": "27",
+    "cell": "13",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/27_13_white"
+   }
+  },
+  {
+   "when": {
+    "above": "27",
+    "cell": "14",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/27_14_white"
+   }
+  },
+  {
+   "when": {
+    "above": "27",
+    "cell": "15",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/27_15_white"
+   }
+  },
+  {
+   "when": {
+    "above": "27",
+    "cell": "0",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/27_0_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "27",
+    "cell": "1",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/27_1_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "27",
+    "cell": "2",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/27_2_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "27",
+    "cell": "3",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/27_3_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "27",
+    "cell": "4",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/27_4_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "27",
+    "cell": "5",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/27_5_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "27",
+    "cell": "6",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/27_6_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "27",
+    "cell": "7",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/27_7_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "27",
+    "cell": "8",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/27_8_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "27",
+    "cell": "9",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/27_9_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "27",
+    "cell": "10",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/27_10_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "27",
+    "cell": "11",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/27_11_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "27",
+    "cell": "12",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/27_12_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "27",
+    "cell": "13",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/27_13_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "27",
+    "cell": "14",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/27_14_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "27",
+    "cell": "15",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/27_15_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "27",
+    "cell": "0",
+    "foot": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/foot_27_0"
+   }
+  },
+  {
+   "when": {
+    "above": "27",
+    "cell": "4",
+    "foot": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/foot_27_4"
+   }
+  },
+  {
+   "when": {
+    "above": "27",
+    "cell": "11",
+    "foot": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/foot_27_11"
+   }
+  },
+  {
+   "when": {
+    "above": "27",
+    "cell": "15",
+    "foot": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/foot_27_15"
+   }
+  },
+  {
+   "when": {
+    "above": "28",
+    "cell": "0",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/28_0_red"
+   }
+  },
+  {
+   "when": {
+    "above": "28",
+    "cell": "1",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/28_1_red"
+   }
+  },
+  {
+   "when": {
+    "above": "28",
+    "cell": "2",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/28_2_red"
+   }
+  },
+  {
+   "when": {
+    "above": "28",
+    "cell": "3",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/28_3_red"
+   }
+  },
+  {
+   "when": {
+    "above": "28",
+    "cell": "4",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/28_4_red"
+   }
+  },
+  {
+   "when": {
+    "above": "28",
+    "cell": "5",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/28_5_red"
+   }
+  },
+  {
+   "when": {
+    "above": "28",
+    "cell": "6",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/28_6_red"
+   }
+  },
+  {
+   "when": {
+    "above": "28",
+    "cell": "7",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/28_7_red"
+   }
+  },
+  {
+   "when": {
+    "above": "28",
+    "cell": "8",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/28_8_red"
+   }
+  },
+  {
+   "when": {
+    "above": "28",
+    "cell": "9",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/28_9_red"
+   }
+  },
+  {
+   "when": {
+    "above": "28",
+    "cell": "10",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/28_10_red"
+   }
+  },
+  {
+   "when": {
+    "above": "28",
+    "cell": "11",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/28_11_red"
+   }
+  },
+  {
+   "when": {
+    "above": "28",
+    "cell": "12",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/28_12_red"
+   }
+  },
+  {
+   "when": {
+    "above": "28",
+    "cell": "13",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/28_13_red"
+   }
+  },
+  {
+   "when": {
+    "above": "28",
+    "cell": "14",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/28_14_red"
+   }
+  },
+  {
+   "when": {
+    "above": "28",
+    "cell": "15",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/28_15_red"
+   }
+  },
+  {
+   "when": {
+    "above": "28",
+    "cell": "0",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/28_0_white"
+   }
+  },
+  {
+   "when": {
+    "above": "28",
+    "cell": "1",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/28_1_white"
+   }
+  },
+  {
+   "when": {
+    "above": "28",
+    "cell": "2",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/28_2_white"
+   }
+  },
+  {
+   "when": {
+    "above": "28",
+    "cell": "3",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/28_3_white"
+   }
+  },
+  {
+   "when": {
+    "above": "28",
+    "cell": "4",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/28_4_white"
+   }
+  },
+  {
+   "when": {
+    "above": "28",
+    "cell": "5",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/28_5_white"
+   }
+  },
+  {
+   "when": {
+    "above": "28",
+    "cell": "6",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/28_6_white"
+   }
+  },
+  {
+   "when": {
+    "above": "28",
+    "cell": "7",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/28_7_white"
+   }
+  },
+  {
+   "when": {
+    "above": "28",
+    "cell": "8",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/28_8_white"
+   }
+  },
+  {
+   "when": {
+    "above": "28",
+    "cell": "9",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/28_9_white"
+   }
+  },
+  {
+   "when": {
+    "above": "28",
+    "cell": "10",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/28_10_white"
+   }
+  },
+  {
+   "when": {
+    "above": "28",
+    "cell": "11",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/28_11_white"
+   }
+  },
+  {
+   "when": {
+    "above": "28",
+    "cell": "12",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/28_12_white"
+   }
+  },
+  {
+   "when": {
+    "above": "28",
+    "cell": "13",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/28_13_white"
+   }
+  },
+  {
+   "when": {
+    "above": "28",
+    "cell": "14",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/28_14_white"
+   }
+  },
+  {
+   "when": {
+    "above": "28",
+    "cell": "15",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/28_15_white"
+   }
+  },
+  {
+   "when": {
+    "above": "28",
+    "cell": "0",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/28_0_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "28",
+    "cell": "1",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/28_1_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "28",
+    "cell": "2",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/28_2_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "28",
+    "cell": "3",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/28_3_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "28",
+    "cell": "4",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/28_4_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "28",
+    "cell": "5",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/28_5_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "28",
+    "cell": "6",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/28_6_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "28",
+    "cell": "7",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/28_7_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "28",
+    "cell": "8",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/28_8_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "28",
+    "cell": "9",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/28_9_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "28",
+    "cell": "10",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/28_10_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "28",
+    "cell": "11",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/28_11_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "28",
+    "cell": "12",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/28_12_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "28",
+    "cell": "13",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/28_13_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "28",
+    "cell": "14",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/28_14_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "28",
+    "cell": "15",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/28_15_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "28",
+    "cell": "0",
+    "foot": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/foot_28_0"
+   }
+  },
+  {
+   "when": {
+    "above": "28",
+    "cell": "4",
+    "foot": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/foot_28_4"
+   }
+  },
+  {
+   "when": {
+    "above": "28",
+    "cell": "11",
+    "foot": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/foot_28_11"
+   }
+  },
+  {
+   "when": {
+    "above": "28",
+    "cell": "15",
+    "foot": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/foot_28_15"
+   }
+  },
+  {
+   "when": {
+    "above": "29",
+    "cell": "0",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/29_0_red"
+   }
+  },
+  {
+   "when": {
+    "above": "29",
+    "cell": "1",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/29_1_red"
+   }
+  },
+  {
+   "when": {
+    "above": "29",
+    "cell": "2",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/29_2_red"
+   }
+  },
+  {
+   "when": {
+    "above": "29",
+    "cell": "3",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/29_3_red"
+   }
+  },
+  {
+   "when": {
+    "above": "29",
+    "cell": "4",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/29_4_red"
+   }
+  },
+  {
+   "when": {
+    "above": "29",
+    "cell": "5",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/29_5_red"
+   }
+  },
+  {
+   "when": {
+    "above": "29",
+    "cell": "6",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/29_6_red"
+   }
+  },
+  {
+   "when": {
+    "above": "29",
+    "cell": "7",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/29_7_red"
+   }
+  },
+  {
+   "when": {
+    "above": "29",
+    "cell": "8",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/29_8_red"
+   }
+  },
+  {
+   "when": {
+    "above": "29",
+    "cell": "9",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/29_9_red"
+   }
+  },
+  {
+   "when": {
+    "above": "29",
+    "cell": "10",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/29_10_red"
+   }
+  },
+  {
+   "when": {
+    "above": "29",
+    "cell": "11",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/29_11_red"
+   }
+  },
+  {
+   "when": {
+    "above": "29",
+    "cell": "12",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/29_12_red"
+   }
+  },
+  {
+   "when": {
+    "above": "29",
+    "cell": "13",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/29_13_red"
+   }
+  },
+  {
+   "when": {
+    "above": "29",
+    "cell": "14",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/29_14_red"
+   }
+  },
+  {
+   "when": {
+    "above": "29",
+    "cell": "15",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/29_15_red"
+   }
+  },
+  {
+   "when": {
+    "above": "29",
+    "cell": "0",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/29_0_white"
+   }
+  },
+  {
+   "when": {
+    "above": "29",
+    "cell": "1",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/29_1_white"
+   }
+  },
+  {
+   "when": {
+    "above": "29",
+    "cell": "2",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/29_2_white"
+   }
+  },
+  {
+   "when": {
+    "above": "29",
+    "cell": "3",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/29_3_white"
+   }
+  },
+  {
+   "when": {
+    "above": "29",
+    "cell": "4",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/29_4_white"
+   }
+  },
+  {
+   "when": {
+    "above": "29",
+    "cell": "5",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/29_5_white"
+   }
+  },
+  {
+   "when": {
+    "above": "29",
+    "cell": "6",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/29_6_white"
+   }
+  },
+  {
+   "when": {
+    "above": "29",
+    "cell": "7",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/29_7_white"
+   }
+  },
+  {
+   "when": {
+    "above": "29",
+    "cell": "8",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/29_8_white"
+   }
+  },
+  {
+   "when": {
+    "above": "29",
+    "cell": "9",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/29_9_white"
+   }
+  },
+  {
+   "when": {
+    "above": "29",
+    "cell": "10",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/29_10_white"
+   }
+  },
+  {
+   "when": {
+    "above": "29",
+    "cell": "11",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/29_11_white"
+   }
+  },
+  {
+   "when": {
+    "above": "29",
+    "cell": "12",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/29_12_white"
+   }
+  },
+  {
+   "when": {
+    "above": "29",
+    "cell": "13",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/29_13_white"
+   }
+  },
+  {
+   "when": {
+    "above": "29",
+    "cell": "14",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/29_14_white"
+   }
+  },
+  {
+   "when": {
+    "above": "29",
+    "cell": "15",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/29_15_white"
+   }
+  },
+  {
+   "when": {
+    "above": "29",
+    "cell": "0",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/29_0_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "29",
+    "cell": "1",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/29_1_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "29",
+    "cell": "2",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/29_2_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "29",
+    "cell": "3",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/29_3_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "29",
+    "cell": "4",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/29_4_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "29",
+    "cell": "5",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/29_5_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "29",
+    "cell": "6",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/29_6_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "29",
+    "cell": "7",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/29_7_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "29",
+    "cell": "8",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/29_8_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "29",
+    "cell": "9",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/29_9_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "29",
+    "cell": "10",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/29_10_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "29",
+    "cell": "11",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/29_11_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "29",
+    "cell": "12",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/29_12_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "29",
+    "cell": "13",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/29_13_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "29",
+    "cell": "14",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/29_14_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "29",
+    "cell": "15",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/29_15_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "29",
+    "cell": "0",
+    "foot": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/foot_29_0"
+   }
+  },
+  {
+   "when": {
+    "above": "29",
+    "cell": "4",
+    "foot": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/foot_29_4"
+   }
+  },
+  {
+   "when": {
+    "above": "29",
+    "cell": "11",
+    "foot": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/foot_29_11"
+   }
+  },
+  {
+   "when": {
+    "above": "29",
+    "cell": "15",
+    "foot": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/foot_29_15"
+   }
+  },
+  {
+   "when": {
+    "above": "30",
+    "cell": "0",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/30_0_red"
+   }
+  },
+  {
+   "when": {
+    "above": "30",
+    "cell": "1",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/30_1_red"
+   }
+  },
+  {
+   "when": {
+    "above": "30",
+    "cell": "2",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/30_2_red"
+   }
+  },
+  {
+   "when": {
+    "above": "30",
+    "cell": "3",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/30_3_red"
+   }
+  },
+  {
+   "when": {
+    "above": "30",
+    "cell": "4",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/30_4_red"
+   }
+  },
+  {
+   "when": {
+    "above": "30",
+    "cell": "5",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/30_5_red"
+   }
+  },
+  {
+   "when": {
+    "above": "30",
+    "cell": "6",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/30_6_red"
+   }
+  },
+  {
+   "when": {
+    "above": "30",
+    "cell": "7",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/30_7_red"
+   }
+  },
+  {
+   "when": {
+    "above": "30",
+    "cell": "8",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/30_8_red"
+   }
+  },
+  {
+   "when": {
+    "above": "30",
+    "cell": "9",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/30_9_red"
+   }
+  },
+  {
+   "when": {
+    "above": "30",
+    "cell": "10",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/30_10_red"
+   }
+  },
+  {
+   "when": {
+    "above": "30",
+    "cell": "11",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/30_11_red"
+   }
+  },
+  {
+   "when": {
+    "above": "30",
+    "cell": "12",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/30_12_red"
+   }
+  },
+  {
+   "when": {
+    "above": "30",
+    "cell": "13",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/30_13_red"
+   }
+  },
+  {
+   "when": {
+    "above": "30",
+    "cell": "14",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/30_14_red"
+   }
+  },
+  {
+   "when": {
+    "above": "30",
+    "cell": "15",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/30_15_red"
+   }
+  },
+  {
+   "when": {
+    "above": "30",
+    "cell": "0",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/30_0_white"
+   }
+  },
+  {
+   "when": {
+    "above": "30",
+    "cell": "1",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/30_1_white"
+   }
+  },
+  {
+   "when": {
+    "above": "30",
+    "cell": "2",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/30_2_white"
+   }
+  },
+  {
+   "when": {
+    "above": "30",
+    "cell": "3",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/30_3_white"
+   }
+  },
+  {
+   "when": {
+    "above": "30",
+    "cell": "4",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/30_4_white"
+   }
+  },
+  {
+   "when": {
+    "above": "30",
+    "cell": "5",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/30_5_white"
+   }
+  },
+  {
+   "when": {
+    "above": "30",
+    "cell": "6",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/30_6_white"
+   }
+  },
+  {
+   "when": {
+    "above": "30",
+    "cell": "7",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/30_7_white"
+   }
+  },
+  {
+   "when": {
+    "above": "30",
+    "cell": "8",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/30_8_white"
+   }
+  },
+  {
+   "when": {
+    "above": "30",
+    "cell": "9",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/30_9_white"
+   }
+  },
+  {
+   "when": {
+    "above": "30",
+    "cell": "10",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/30_10_white"
+   }
+  },
+  {
+   "when": {
+    "above": "30",
+    "cell": "11",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/30_11_white"
+   }
+  },
+  {
+   "when": {
+    "above": "30",
+    "cell": "12",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/30_12_white"
+   }
+  },
+  {
+   "when": {
+    "above": "30",
+    "cell": "13",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/30_13_white"
+   }
+  },
+  {
+   "when": {
+    "above": "30",
+    "cell": "14",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/30_14_white"
+   }
+  },
+  {
+   "when": {
+    "above": "30",
+    "cell": "15",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/30_15_white"
+   }
+  },
+  {
+   "when": {
+    "above": "30",
+    "cell": "0",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/30_0_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "30",
+    "cell": "1",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/30_1_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "30",
+    "cell": "2",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/30_2_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "30",
+    "cell": "3",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/30_3_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "30",
+    "cell": "4",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/30_4_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "30",
+    "cell": "5",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/30_5_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "30",
+    "cell": "6",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/30_6_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "30",
+    "cell": "7",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/30_7_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "30",
+    "cell": "8",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/30_8_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "30",
+    "cell": "9",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/30_9_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "30",
+    "cell": "10",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/30_10_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "30",
+    "cell": "11",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/30_11_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "30",
+    "cell": "12",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/30_12_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "30",
+    "cell": "13",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/30_13_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "30",
+    "cell": "14",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/30_14_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "30",
+    "cell": "15",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/30_15_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "30",
+    "cell": "0",
+    "foot": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/foot_30_0"
+   }
+  },
+  {
+   "when": {
+    "above": "30",
+    "cell": "4",
+    "foot": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/foot_30_4"
+   }
+  },
+  {
+   "when": {
+    "above": "30",
+    "cell": "11",
+    "foot": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/foot_30_11"
+   }
+  },
+  {
+   "when": {
+    "above": "30",
+    "cell": "15",
+    "foot": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/foot_30_15"
+   }
+  },
+  {
+   "when": {
+    "above": "31",
+    "cell": "0",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/31_0_red"
+   }
+  },
+  {
+   "when": {
+    "above": "31",
+    "cell": "1",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/31_1_red"
+   }
+  },
+  {
+   "when": {
+    "above": "31",
+    "cell": "2",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/31_2_red"
+   }
+  },
+  {
+   "when": {
+    "above": "31",
+    "cell": "3",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/31_3_red"
+   }
+  },
+  {
+   "when": {
+    "above": "31",
+    "cell": "4",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/31_4_red"
+   }
+  },
+  {
+   "when": {
+    "above": "31",
+    "cell": "5",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/31_5_red"
+   }
+  },
+  {
+   "when": {
+    "above": "31",
+    "cell": "6",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/31_6_red"
+   }
+  },
+  {
+   "when": {
+    "above": "31",
+    "cell": "7",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/31_7_red"
+   }
+  },
+  {
+   "when": {
+    "above": "31",
+    "cell": "8",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/31_8_red"
+   }
+  },
+  {
+   "when": {
+    "above": "31",
+    "cell": "9",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/31_9_red"
+   }
+  },
+  {
+   "when": {
+    "above": "31",
+    "cell": "10",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/31_10_red"
+   }
+  },
+  {
+   "when": {
+    "above": "31",
+    "cell": "11",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/31_11_red"
+   }
+  },
+  {
+   "when": {
+    "above": "31",
+    "cell": "12",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/31_12_red"
+   }
+  },
+  {
+   "when": {
+    "above": "31",
+    "cell": "13",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/31_13_red"
+   }
+  },
+  {
+   "when": {
+    "above": "31",
+    "cell": "14",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/31_14_red"
+   }
+  },
+  {
+   "when": {
+    "above": "31",
+    "cell": "15",
+    "galvanized": "false",
+    "band": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/31_15_red"
+   }
+  },
+  {
+   "when": {
+    "above": "31",
+    "cell": "0",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/31_0_white"
+   }
+  },
+  {
+   "when": {
+    "above": "31",
+    "cell": "1",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/31_1_white"
+   }
+  },
+  {
+   "when": {
+    "above": "31",
+    "cell": "2",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/31_2_white"
+   }
+  },
+  {
+   "when": {
+    "above": "31",
+    "cell": "3",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/31_3_white"
+   }
+  },
+  {
+   "when": {
+    "above": "31",
+    "cell": "4",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/31_4_white"
+   }
+  },
+  {
+   "when": {
+    "above": "31",
+    "cell": "5",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/31_5_white"
+   }
+  },
+  {
+   "when": {
+    "above": "31",
+    "cell": "6",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/31_6_white"
+   }
+  },
+  {
+   "when": {
+    "above": "31",
+    "cell": "7",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/31_7_white"
+   }
+  },
+  {
+   "when": {
+    "above": "31",
+    "cell": "8",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/31_8_white"
+   }
+  },
+  {
+   "when": {
+    "above": "31",
+    "cell": "9",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/31_9_white"
+   }
+  },
+  {
+   "when": {
+    "above": "31",
+    "cell": "10",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/31_10_white"
+   }
+  },
+  {
+   "when": {
+    "above": "31",
+    "cell": "11",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/31_11_white"
+   }
+  },
+  {
+   "when": {
+    "above": "31",
+    "cell": "12",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/31_12_white"
+   }
+  },
+  {
+   "when": {
+    "above": "31",
+    "cell": "13",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/31_13_white"
+   }
+  },
+  {
+   "when": {
+    "above": "31",
+    "cell": "14",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/31_14_white"
+   }
+  },
+  {
+   "when": {
+    "above": "31",
+    "cell": "15",
+    "galvanized": "false",
+    "band": "false"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/31_15_white"
+   }
+  },
+  {
+   "when": {
+    "above": "31",
+    "cell": "0",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/31_0_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "31",
+    "cell": "1",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/31_1_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "31",
+    "cell": "2",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/31_2_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "31",
+    "cell": "3",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/31_3_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "31",
+    "cell": "4",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/31_4_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "31",
+    "cell": "5",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/31_5_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "31",
+    "cell": "6",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/31_6_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "31",
+    "cell": "7",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/31_7_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "31",
+    "cell": "8",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/31_8_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "31",
+    "cell": "9",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/31_9_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "31",
+    "cell": "10",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/31_10_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "31",
+    "cell": "11",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/31_11_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "31",
+    "cell": "12",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/31_12_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "31",
+    "cell": "13",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/31_13_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "31",
+    "cell": "14",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/31_14_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "31",
+    "cell": "15",
+    "galvanized": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/31_15_grey"
+   }
+  },
+  {
+   "when": {
+    "above": "31",
+    "cell": "0",
+    "foot": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/foot_31_0"
+   }
+  },
+  {
+   "when": {
+    "above": "31",
+    "cell": "4",
+    "foot": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/foot_31_4"
+   }
+  },
+  {
+   "when": {
+    "above": "31",
+    "cell": "11",
+    "foot": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/foot_31_11"
+   }
+  },
+  {
+   "when": {
+    "above": "31",
+    "cell": "15",
+    "foot": "true"
+   },
+   "apply": {
+    "model": "minepc:block/tower/leg/foot_31_15"
+   }
+  }
+ ]
+}

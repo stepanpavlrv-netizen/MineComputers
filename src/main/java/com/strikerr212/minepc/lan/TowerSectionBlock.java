@@ -34,7 +34,8 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 
 /**
  * Секция решётчатой радиовышки (1 блок высоты). Ставится на землю или на другую секцию; вышка сама сужается
- * кверху: ширина секции зависит от того, сколько секций над ней ({@link #ABOVE}: внизу 3×3, наверху 1×1).
+ * кверху: ширина секции зависит от того, сколько секций над ней ({@link #ABOVE}: наверху 1×1, через 16 секций — 3×3, у вышки в 32 секции внизу почти 5×5;
+ * шире 3×3 — с опорами {@link TowerLegBlock} вокруг).
  * Окраска — красно-белыми полосами по 2 блока ({@link #BAND} по номеру секции снизу), серый краситель — вся вышка
  * оцинкованная, красный — обратно. Ноги и пояса не мешают ходить, а внутри вышки можно лезть вверх, как по лестнице.
  * На макушке и каждые 6 секций — красные огни, ночью мигают. Радиомодем ставится вплотную к нижней секции.
@@ -42,14 +43,16 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 public class TowerSectionBlock extends BaseEntityBlock {
 
     public static final MapCodec<TowerSectionBlock> CODEC = simpleCodec(TowerSectionBlock::new);
-    /** Сколько секций выше (до 16 — дальше ширина уже наибольшая). */
-    public static final IntegerProperty ABOVE = IntegerProperty.create("above", 0, 16);
+    /** Сколько секций выше (до 31). */
+    public static final IntegerProperty ABOVE = IntegerProperty.create("above", 0, 31);
     /** Номер секции снизу (0 — нижняя, на ней бетонные опоры). */
     public static final IntegerProperty HEIGHT = IntegerProperty.create("height", 0, 31);
     public static final BooleanProperty BAND = BooleanProperty.create("band");
     public static final BooleanProperty GALVANIZED = BooleanProperty.create("galvanized");
     /** Самая высокая вышка, секций. */
     public static final int MAX_SECTIONS = 32;
+    /** С этого числа секций сверху вышка шире 3×3 и вокруг секции стоят опоры ({@link TowerLegBlock}). */
+    public static final int WIDE_FROM = 17;
     private static final VoxelShape OUTLINE = Block.box(3, 0, 3, 13, 16, 13);
 
     public TowerSectionBlock(Properties properties) {
@@ -79,7 +82,7 @@ public class TowerSectionBlock extends BaseEntityBlock {
 
     /** Ширина вышки (в пикселях) у секции, над которой ещё k секций. */
     public static int width(int k) {
-        return Math.min(48, 16 + 2 * k);
+        return Math.min(80, 16 + 2 * k);
     }
 
     @Override
@@ -103,7 +106,7 @@ public class TowerSectionBlock extends BaseEntityBlock {
     /** Состояние секции в pos по соседям: сколько секций сверху, какая по счёту снизу, полоса, окраска. */
     public BlockState shaped(BlockState state, BlockGetter level, BlockPos pos) {
         BlockState up = level.getBlockState(pos.above()), down = level.getBlockState(pos.below());
-        int above = up.getBlock() instanceof TowerSectionBlock ? Math.min(16, up.getValue(ABOVE) + 1) : 0;
+        int above = up.getBlock() instanceof TowerSectionBlock ? Math.min(MAX_SECTIONS - 1, up.getValue(ABOVE) + 1) : 0;
         int height = down.getBlock() instanceof TowerSectionBlock ? Math.min(31, down.getValue(HEIGHT) + 1) : 0;
         boolean galv = down.getBlock() instanceof TowerSectionBlock ? down.getValue(GALVANIZED) : state.getValue(GALVANIZED);
         return state.setValue(ABOVE, above).setValue(HEIGHT, height).setValue(BAND, (height / 2) % 2 == 1).setValue(GALVANIZED, galv);
@@ -112,7 +115,76 @@ public class TowerSectionBlock extends BaseEntityBlock {
     @Override
     public BlockState getStateForPlacement(BlockPlaceContext context) {
         BlockState s = shaped(defaultBlockState(), context.getLevel(), context.getClickedPos());
-        return s.canSurvive(context.getLevel(), context.getClickedPos()) ? s : null;
+        if (!s.canSurvive(context.getLevel(), context.getClickedPos())) return null;
+        BlockPos blocked = blockedFor(context.getLevel(), context.getClickedPos());
+        if (blocked != null) {
+            if (!context.getLevel().isClientSide && context.getPlayer() != null) blockedMessage(context.getPlayer(), blocked);
+            return null;
+        }
+        return s;
+    }
+
+    // ======================= Опоры широкой вышки =======================
+
+    /** Место опоры свободно: воздух, трава и прочее заменяемое (но не вода) или уже опора. */
+    private static boolean legFits(BlockState st) {
+        return st.getBlock() instanceof TowerLegBlock || (st.canBeReplaced() && st.getFluidState().isEmpty());
+    }
+
+    /**
+     * Что помешает опорам, если в newPos появится секция (вышка станет на одну выше): первый занятый блок или null.
+     * Широкими (с опорами) станут нижние секции, над которыми окажется {@link #WIDE_FROM} и больше секций.
+     */
+    public static BlockPos blockedFor(BlockGetter level, BlockPos newPos) {
+        BlockPos bottom = newPos;
+        while (level.getBlockState(bottom.below()).getBlock() instanceof TowerSectionBlock) bottom = bottom.below();
+        BlockPos top = newPos;
+        while (level.getBlockState(top.above()).getBlock() instanceof TowerSectionBlock) top = top.above();
+        int n = top.getY() - bottom.getY() + 1;
+        for (int i = 0; i < n && n - 1 - i >= WIDE_FROM; i++) {
+            BlockPos c = bottom.above(i);
+            for (int[] d : TowerLegBlock.CELLS) {
+                BlockPos p = c.offset(d[0], 0, d[1]);
+                BlockState st = level.getBlockState(p);
+                if (!legFits(st)) return p;
+                if (st.getBlock() instanceof TowerLegBlock && !TowerLegBlock.owner(st, p).equals(c)) return p;
+            }
+        }
+        return null;
+    }
+
+    private static void blockedMessage(Player player, BlockPos p) {
+        player.displayClientMessage(net.minecraft.network.chat.Component.translatable("message.minepc.tower.blocked",
+                p.getX(), p.getY(), p.getZ()), true);
+    }
+
+    /** Поставить, обновить или убрать опоры секции по её состоянию. Занятые места пропускаются (у старых вышек). */
+    public static void syncLegs(Level level, BlockPos pos, BlockState state) {
+        boolean wide = state.getBlock() instanceof TowerSectionBlock && state.getValue(ABOVE) >= WIDE_FROM;
+        for (int i = 0; i < TowerLegBlock.CELLS.length; i++) {
+            int[] d = TowerLegBlock.CELLS[i];
+            BlockPos p = pos.offset(d[0], 0, d[1]);
+            BlockState st = level.getBlockState(p);
+            boolean mine = st.getBlock() instanceof TowerLegBlock && TowerLegBlock.owner(st, p).equals(pos);
+            if (!wide) {
+                if (mine) level.setBlock(p, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);
+                continue;
+            }
+            BlockState want = com.strikerr212.minepc.registry.ModBlocks.TOWER_LEG.get().defaultBlockState()
+                    .setValue(TowerLegBlock.ABOVE, state.getValue(ABOVE)).setValue(TowerLegBlock.CELL, i)
+                    .setValue(BAND, state.getValue(BAND)).setValue(GALVANIZED, state.getValue(GALVANIZED))
+                    .setValue(TowerLegBlock.FOOT, state.getValue(HEIGHT) == 0);
+            if (mine) {
+                if (st != want) level.setBlock(p, want, Block.UPDATE_CLIENTS);
+            } else if (!(st.getBlock() instanceof TowerLegBlock) && legFits(st)) {
+                level.setBlock(p, want, Block.UPDATE_ALL);
+            }
+        }
+    }
+
+    private static boolean legsMatter(BlockState a, BlockState b) {
+        return a.getBlock() instanceof TowerSectionBlock && a.getValue(ABOVE) >= WIDE_FROM
+                || b.getBlock() instanceof TowerSectionBlock && b.getValue(ABOVE) >= WIDE_FROM;
     }
 
     /** На земле (крепкий верх блока под ней) или на другой секции; не выше {@link #MAX_SECTIONS}. */
@@ -137,6 +209,7 @@ public class TowerSectionBlock extends BaseEntityBlock {
     @Override
     protected void tick(BlockState state, ServerLevel level, BlockPos pos, RandomSource random) {
         if (!state.canSurvive(level, pos)) level.destroyBlock(pos, true);
+        else syncLegs(level, pos, state);
     }
 
     // ======================= Игрок =======================
@@ -159,6 +232,11 @@ public class TowerSectionBlock extends BaseEntityBlock {
                         "message.minepc.tower.too_high", MAX_SECTIONS), true);
                 return ItemInteractionResult.FAIL;
             }
+            BlockPos blocked = blockedFor(level, target);
+            if (blocked != null) {
+                if (!level.isClientSide) blockedMessage(player, blocked);
+                return ItemInteractionResult.FAIL;
+            }
             if (!level.isClientSide) {
                 level.setBlockAndUpdate(target, s);
                 level.playSound(null, target, SoundEvents.METAL_PLACE, SoundSource.BLOCKS, 1f, 0.9f);
@@ -175,6 +253,7 @@ public class TowerSectionBlock extends BaseEntityBlock {
                 while (level.getBlockState(p.below()).getBlock() instanceof TowerSectionBlock) p = p.below();
                 for (int i = 0; i < MAX_SECTIONS && level.getBlockState(p).getBlock() instanceof TowerSectionBlock; i++, p = p.above()) {
                     level.setBlock(p, level.getBlockState(p).setValue(GALVANIZED, galv), Block.UPDATE_CLIENTS);
+                    syncLegs(level, p, level.getBlockState(p));
                 }
                 level.playSound(null, pos, SoundEvents.DYE_USE, SoundSource.BLOCKS, 1f, 1f);
                 if (!player.getAbilities().instabuild) stack.shrink(1);
@@ -188,12 +267,17 @@ public class TowerSectionBlock extends BaseEntityBlock {
     protected void onPlace(BlockState state, Level level, BlockPos pos, BlockState old, boolean moved) {
         super.onPlace(state, level, pos, old, moved);
         if (!level.isClientSide && !old.is(this)) Tower.notifyModems(level, pos);
+        // Опоры — тиком позже: секции под ней в этот момент ещё пересчитывают свою ширину
+        if (!level.isClientSide && legsMatter(state, old)) level.scheduleTick(pos, this, 1);
     }
 
     @Override
     protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean moved) {
         super.onRemove(state, level, pos, newState, moved);
-        if (!level.isClientSide && !newState.is(this)) Tower.notifyModems(level, pos);
+        if (!level.isClientSide && !newState.is(this)) {
+            Tower.notifyModems(level, pos);
+            syncLegs(level, pos, newState);   // секции нет — её опоры убираются
+        }
     }
 
     @Override

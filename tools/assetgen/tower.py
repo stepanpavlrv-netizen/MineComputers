@@ -1,8 +1,13 @@
 """Радиовышка (0.30): модели секций (сужение кверху, красно-белые полосы, оцинкованная), опоры нижней секции,
 штырь, секторная панель, тарелка; blockstates, иконки, добыча и рецепты.
 
-Ширина секции, над которой ещё k секций: min(48, 16 + 2k) пикселей — внизу 3×3, наверху 1×1 (как в
-TowerSectionBlock.width). Ноги — по углам, пояс внизу, раскосы крестом на каждой грани, по центру — чёрный фидер.
+Ширина секции, над которой ещё k секций: min(80, 16 + 2k) пикселей — наверху 1×1, на 16-й секции сверху 3×3,
+у вышки в 32 секции внизу почти 5×5 (как в TowerSectionBlock.width). Ноги — по углам, пояс внизу, раскосы крестом на
+каждой грани (на широких гранях — два креста и средний пояс), по центру — чёрный фидер.
+
+Модель блока не может выходить за -16..32, поэтому вышка шире 3×3 — многоблочная: всё, что не влезает в квадрат
+3×3 вокруг секции, рисуют опоры (`tower_leg`) в кольце 5×5 вокруг неё (16 мест, порядок — LEG_CELLS, как в
+TowerLegBlock.CELLS). Секция рисует свою часть, каждая опора — свою.
 
 Запуск из корня проекта: python3 tools/assetgen/tower.py
 """
@@ -19,7 +24,12 @@ COLORS = {"red": "minecraft:block/red_concrete", "white": "minecraft:block/white
 
 
 def width(k):
-    return min(48, 16 + 2 * k)
+    return min(80, 16 + 2 * k)
+
+
+MAX_K = 31          # над секцией не больше 31 секции (вышка — до 32)
+WIDE_K = 17         # с этого k вышка шире 3×3 и нужны опоры
+LEG_CELLS = [(dx, dz) for dz in range(-2, 3) for dx in range(-2, 3) if max(abs(dx), abs(dz)) == 2]
 
 
 def faces(tex, uv=UV):
@@ -27,8 +37,7 @@ def faces(tex, uv=UV):
 
 
 def box(a, b, tex, rot=None):
-    # Игра не принимает элементы модели за пределами -16..32
-    assert all(-16 <= v <= 32 for v in (*a, *b)), (a, b)
+    # Игра не принимает элементы модели за пределами -16..32 — проверяет check() перед записью модели
     e = {"from": [round(v, 3) for v in a], "to": [round(v, 3) for v in b], "faces": faces(tex)}
     if rot:
         e["rotation"] = rot
@@ -56,19 +65,27 @@ def section(k, color):
     # Раскосы крестом на каждой грани
     wm = (wb + wt) / 2
     hm = wm / 2
+    panels = 1 if wm <= 48 else 2                      # широкая грань — два креста рядом
     if wm < 36:
         ang, length = 45, 16 * math.sqrt(2)
     else:
         ang = 22.5
-        length = min(16 / math.sin(math.radians(22.5)), (wm - 2) / math.cos(math.radians(22.5)))
-    for zf in (8 - hm + 0.9, 8 + hm - 0.9):           # северная и южная грани — поворот вокруг Z
-        for a in (ang, -ang):
-            els.append(box((8 - length / 2, 7.5, zf - 0.4), (8 + length / 2, 8.5, zf + 0.4), "#brace",
-                           {"angle": a, "axis": "z", "origin": [8, 8, round(zf, 3)]}))
-    for xf in (8 - hm + 0.9, 8 + hm - 0.9):           # западная и восточная — вокруг X
-        for a in (ang, -ang):
-            els.append(box((xf - 0.4, 7.5, 8 - length / 2), (xf + 0.4, 8.5, 8 + length / 2), "#brace",
-                           {"angle": a, "axis": "x", "origin": [round(xf, 3), 8, 8]}))
+        length = min(16 / math.sin(math.radians(22.5)), (wm - 2) / panels / math.cos(math.radians(22.5)))
+    for p in range(panels):
+        c = 8 if panels == 1 else 8 - hm + 1 + (wm - 2) * (p + .5) / panels
+        for zf in (8 - hm + 0.9, 8 + hm - 0.9):           # северная и южная грани — поворот вокруг Z
+            for a in (ang, -ang):
+                els.append(box((c - length / 2, 7.5, zf - 0.4), (c + length / 2, 8.5, zf + 0.4), "#brace",
+                               {"angle": a, "axis": "z", "origin": [round(c, 3), 8, round(zf, 3)]}))
+        for xf in (8 - hm + 0.9, 8 + hm - 0.9):           # западная и восточная — вокруг X
+            for a in (ang, -ang):
+                els.append(box((xf - 0.4, 7.5, c - length / 2), (xf + 0.4, 8.5, c + length / 2), "#brace",
+                               {"angle": a, "axis": "x", "origin": [round(xf, 3), 8, round(c, 3)]}))
+    if panels > 1:                                     # средний пояс между крестами
+        for zf in (8 - hm + 0.4, 8 + hm - 1.2):
+            els.append(box((8 - hm, 7.6, zf), (8 + hm, 8.4, zf + 0.8), "#leg"))
+        for xf in (8 - hm + 0.4, 8 + hm - 1.2):
+            els.append(box((xf, 7.6, 8 - hm), (xf + 0.8, 8.4, 8 + hm), "#leg"))
     # Фидер по центру
     els.append(box((7.4, 0, 7.4), (8.6, 16, 8.6), "#feeder"))
     if k == 0:
@@ -88,11 +105,67 @@ def footing(k):
         for sz in (-1, 1):
             cx = 8 + sx * (h - 1)
             cz = 8 + sz * (h - 1)
-            lo = lambda v: max(-16, v - 2)
-            hi = lambda v: min(32, v + 2)
+            if k < WIDE_K:   # 3×3: опоры обрезаны по краю модели (так было всегда)
+                lo = lambda v: max(-16, v - 2)
+                hi = lambda v: min(32, v + 2)
+            else:            # шире — края уходят опорам
+                lo = lambda v: v - 2
+                hi = lambda v: v + 2
             els.append(box((lo(cx), 0, lo(cz)), (hi(cx), 2, hi(cz)), "#pad"))
     return {"ambientocclusion": False, "textures": {"particle": "minecraft:block/smooth_stone", "pad": "minecraft:block/smooth_stone"},
             "elements": els}
+
+
+def check(model):
+    for e in model["elements"]:
+        assert all(-16 <= v <= 32 for v in (*e["from"], *e["to"])), (e["from"], e["to"])
+    return model
+
+
+def _clip(e, x0, x1, z0, z1, dx, dz):
+    """Часть прямого (без поворота) элемента в прямоугольнике x0..x1 × z0..z1, сдвинутая на (-16dx, -16dz)."""
+    f, t = e["from"], e["to"]
+    a, b = max(f[0], x0), min(t[0], x1)
+    c, d = max(f[2], z0), min(t[2], z1)
+    if b - a < 0.01 or d - c < 0.01:
+        return None
+    n = {"from": [round(a - 16 * dx, 3), f[1], round(c - 16 * dz, 3)],
+         "to": [round(b - 16 * dx, 3), t[1], round(d - 16 * dz, 3)], "faces": e["faces"]}
+    return n
+
+
+def split(els):
+    """Элементы вышки по блокам: (0, 0) — сама секция (квадрат 3×3 вокруг неё), остальное — опоры кольца 5×5."""
+    out = {(0, 0): []}
+    for cell in LEG_CELLS:
+        out[cell] = []
+    for e in els:
+        f, t = e["from"], e["to"]
+        if all(-16 <= v <= 32 for v in (f[0], t[0], f[2], t[2])):
+            out[(0, 0)].append(e)
+            continue
+        if "rotation" not in e:
+            p = _clip(e, -16, 32, -16, 32, 0, 0)
+            if p: out[(0, 0)].append(p)
+            for (dx, dz) in LEG_CELLS:
+                p = _clip(e, 16 * dx, 16 * dx + 16, 16 * dz, 16 * dz + 16, dx, dz)
+                if p: out[(dx, dz)].append(p)
+            continue
+        # Повёрнутый раскос резать нельзя — целиком в ближайшую опору, где он помещается
+        cx, cz = (f[0] + t[0]) / 2, (f[2] + t[2]) / 2
+        for (dx, dz) in sorted(LEG_CELLS, key=lambda c: (16 * c[0] + 8 - cx) ** 2 + (16 * c[1] + 8 - cz) ** 2):
+            if all(16 * dx - 16 <= v <= 16 * dx + 32 for v in (f[0], t[0])) and \
+                    all(16 * dz - 16 <= v <= 16 * dz + 32 for v in (f[2], t[2])):
+                n = {"from": [round(f[0] - 16 * dx, 3), f[1], round(f[2] - 16 * dz, 3)],
+                     "to": [round(t[0] - 16 * dx, 3), t[1], round(t[2] - 16 * dz, 3)], "faces": e["faces"],
+                     "rotation": dict(e["rotation"], origin=[round(e["rotation"]["origin"][0] - 16 * dx, 3),
+                                                             e["rotation"]["origin"][1],
+                                                             round(e["rotation"]["origin"][2] - 16 * dz, 3)])}
+                out[(dx, dz)].append(n)
+                break
+        else:
+            raise AssertionError(("раскос не помещается ни в одну опору", f, t))
+    return out
 
 
 def pin():
@@ -187,16 +260,29 @@ def loot(name):
 
 
 def main():
-    parts = []
-    for k in range(17):
-        for color in ("red", "white", "grey"):
-            write(os.path.join(ASSETS, f"models/block/tower/section_{k}_{color}.json"), section(k, color))
-        write(os.path.join(ASSETS, f"models/block/tower/footing_{k}.json"), footing(k))
-        parts.append({"when": {"above": str(k), "galvanized": "false", "band": "true"}, "apply": {"model": f"minepc:block/tower/section_{k}_red"}})
-        parts.append({"when": {"above": str(k), "galvanized": "false", "band": "false"}, "apply": {"model": f"minepc:block/tower/section_{k}_white"}})
-        parts.append({"when": {"above": str(k), "galvanized": "true"}, "apply": {"model": f"minepc:block/tower/section_{k}_grey"}})
+    parts, legs = [], []
+    color_when = (("red", {"galvanized": "false", "band": "true"}), ("white", {"galvanized": "false", "band": "false"}),
+                  ("grey", {"galvanized": "true"}))
+    for k in range(MAX_K + 1):
+        for color, when in color_when:
+            model = section(k, color)
+            pieces = split(model["elements"]) if k >= WIDE_K else {(0, 0): model["elements"]}
+            write(os.path.join(ASSETS, f"models/block/tower/section_{k}_{color}.json"), check(dict(model, elements=pieces[(0, 0)])))
+            parts.append({"when": {"above": str(k), **when}, "apply": {"model": f"minepc:block/tower/section_{k}_{color}"}})
+            for i, cell in enumerate(LEG_CELLS if k >= WIDE_K else []):
+                if pieces[cell]:
+                    write(os.path.join(ASSETS, f"models/block/tower/leg/{k}_{i}_{color}.json"), check(dict(model, elements=pieces[cell])))
+                    legs.append({"when": {"above": str(k), "cell": str(i), **when}, "apply": {"model": f"minepc:block/tower/leg/{k}_{i}_{color}"}})
+        foot = footing(k)
+        pieces = split(foot["elements"]) if k >= WIDE_K else {(0, 0): foot["elements"]}
+        write(os.path.join(ASSETS, f"models/block/tower/footing_{k}.json"), check(dict(foot, elements=pieces[(0, 0)])))
         parts.append({"when": {"above": str(k), "height": "0"}, "apply": {"model": f"minepc:block/tower/footing_{k}"}})
+        for i, cell in enumerate(LEG_CELLS if k >= WIDE_K else []):
+            if pieces[cell]:
+                write(os.path.join(ASSETS, f"models/block/tower/leg/foot_{k}_{i}.json"), check(dict(foot, elements=pieces[cell])))
+                legs.append({"when": {"above": str(k), "cell": str(i), "foot": "true"}, "apply": {"model": f"minepc:block/tower/leg/foot_{k}_{i}"}})
     write(os.path.join(ASSETS, "blockstates/tower_section.json"), {"multipart": parts})
+    write(os.path.join(ASSETS, "blockstates/tower_leg.json"), {"multipart": legs})
     write(os.path.join(ASSETS, "models/block/tower/pin.json"), pin())
     write(os.path.join(ASSETS, "models/block/tower/sector.json"), sector())
     write(os.path.join(ASSETS, "models/block/tower/dish.json"), dish())
@@ -227,7 +313,7 @@ def main():
         "type": "minecraft:crafting_shaped", "category": "redstone", "pattern": ["III", "IQI", " R "],
         "key": {"I": {"item": "minecraft:iron_ingot"}, "Q": {"item": "minecraft:quartz"}, "R": {"item": "minecraft:redstone"}},
         "result": {"id": "minepc:tower_dish", "count": 1}})
-    print("вышка: 17 ширин × 3 окраски, опоры, штырь, сектор, тарелка")
+    print(f"вышка: {MAX_K + 1} ширин × 3 окраски, опоры (кольцо 5×5: {len(legs)} частей), штырь, сектор, тарелка")
 
 
 if __name__ == "__main__":

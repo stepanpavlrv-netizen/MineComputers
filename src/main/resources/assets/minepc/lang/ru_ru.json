@@ -946,5 +946,7 @@
   "gui.minepc.camera.log_empty": "Пока никто",
   "gui.minepc.camera.yesterday": "вчера",
   "gui.minepc.camera.near": "Рядом с камерой пароль не нужен.",
-  "gui.minepc.camera.access_hint": "Пароль спрашивают компьютеры по сети. ✗ — неверный пароль."
+  "gui.minepc.camera.access_hint": "Пароль спрашивают компьютеры по сети. ✗ — неверный пароль.",
+  "block.minepc.tower_leg": "Опора вышки",
+  "message.minepc.tower.blocked": "Вышке мешает блок: %s %s %s — внизу она станет шире"
 }

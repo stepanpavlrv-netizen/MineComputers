@@ -42,9 +42,9 @@ public record Tower(BlockPos bottom, int sections, BlockPos top, boolean pin, in
         return top.getY() - modem.getY() + (pin ? 2 : 1);
     }
 
-    /** Нижняя секция вышки рядом с модемом (до 2 блоков — шкаф стоит снаружи широкой вышки) или null. */
+    /** Нижняя секция вышки рядом с модемом (до 3 блоков — шкаф стоит снаружи широкой вышки, вплоть до 5×5) или null. */
     public static BlockPos bottomNear(BlockGetter level, BlockPos modem) {
-        for (int r = 1; r <= 2; r++) {
+        for (int r = 1; r <= 3; r++) {
             for (int dx = -r; dx <= r; dx++) {
                 for (int dz = -r; dz <= r; dz++) {
                     if (Math.max(Math.abs(dx), Math.abs(dz)) != r) continue;
@@ -100,8 +100,8 @@ public record Tower(BlockPos bottom, int sections, BlockPos top, boolean pin, in
             p = p.below();
         }
         for (BlockPos q : new BlockPos[]{p, anyPart}) {
-            for (int dx = -2; dx <= 2; dx++) {
-                for (int dz = -2; dz <= 2; dz++) {
+            for (int dx = -3; dx <= 3; dx++) {
+                for (int dz = -3; dz <= 3; dz++) {
                     BlockPos m = q.offset(dx, 0, dz);
                     if (level.getBlockState(m).getBlock() instanceof RadioBlock) LanManager.updateDevice(level, m);
                 }

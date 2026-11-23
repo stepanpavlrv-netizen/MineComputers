@@ -946,5 +946,7 @@
   "gui.minepc.camera.log_empty": "Nobody yet",
   "gui.minepc.camera.yesterday": "yday",
   "gui.minepc.camera.near": "No password needed next to the camera.",
-  "gui.minepc.camera.access_hint": "Computers on the network ask for it. ✗ — wrong password."
+  "gui.minepc.camera.access_hint": "Computers on the network ask for it. ✗ — wrong password.",
+  "block.minepc.tower_leg": "Tower leg",
+  "message.minepc.tower.blocked": "A block is in the way of the tower: %s %s %s — its base will get wider"
 }

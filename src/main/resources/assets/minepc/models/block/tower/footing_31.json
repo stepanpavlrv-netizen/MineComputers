@@ -1,0 +1,8 @@
+{
+ "ambientocclusion": false,
+ "textures": {
+  "particle": "minecraft:block/smooth_stone",
+  "pad": "minecraft:block/smooth_stone"
+ },
+ "elements": []
+}

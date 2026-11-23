@@ -54,7 +54,9 @@ import java.util.Locale;
  *   screen x y z [slot]         текст экрана компьютера
  *   info x y z                  что за блок; у компьютера и стойки — состояние, детали, охлаждение
  *   wait тиков                  подождать
- *   hold тип уровень            заводская деталь в руку: board/cpu/cooler/ram/gpu/psu/hdd/ssd, уровень 1..5
+ *   creative                    творческий режим (не падать при tp в воздух)
+ *   respawn                     возродиться после смерти
+ *   hold тип уровень           заводская деталь в руку: board/cpu/cooler/ram/gpu/psu/hdd/ssd, уровень 1..5
  *   time день|ночь|число        время суток
  *   quit                        закрыть игру
  * </pre>
@@ -313,6 +315,17 @@ public final class LiveControl {
                 waitUntil = ticks + 2;
             }
             case "wait" -> waitUntil = ticks + i(a[1]);
+            case "creative" -> server.execute(() -> {
+                var p = server.getPlayerList().getPlayers().get(0);
+                p.setGameMode(net.minecraft.world.level.GameType.CREATIVE);
+                p.getAbilities().flying = true;   // висеть там, куда перенёс tp
+                p.onUpdateAbilities();
+            });
+            case "respawn" -> {
+                if (mc.player != null) mc.player.respawn();
+                mc.setScreen(null);
+                waitUntil = ticks + 20;
+            }
             case "hold" -> {
                 int tier = i(a[2]);
                 ItemStack stack = switch (a[1]) {

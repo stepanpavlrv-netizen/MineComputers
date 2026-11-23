@@ -158,6 +158,10 @@ public class ModBlocks {
     public static final DeferredBlock<com.strikerr212.minepc.lan.TowerSectionBlock> TOWER_SECTION = BLOCKS.register("tower_section",
             () -> new com.strikerr212.minepc.lan.TowerSectionBlock(BlockBehaviour.Properties.of()
                     .mapColor(MapColor.COLOR_RED).strength(2.0f, 6.0f).sound(SoundType.METAL).noOcclusion().noCollission()));
+    public static final DeferredBlock<com.strikerr212.minepc.lan.TowerLegBlock> TOWER_LEG = BLOCKS.register("tower_leg",
+            () -> new com.strikerr212.minepc.lan.TowerLegBlock(BlockBehaviour.Properties.of()
+                    .mapColor(MapColor.COLOR_RED).strength(2.0f, 6.0f).sound(SoundType.METAL).noOcclusion().noCollission().noLootTable()
+                    .pushReaction(net.minecraft.world.level.material.PushReaction.BLOCK)));
     public static final DeferredBlock<com.strikerr212.minepc.lan.TowerPinBlock> TOWER_PIN = BLOCKS.register("tower_pin",
             () -> new com.strikerr212.minepc.lan.TowerPinBlock(BlockBehaviour.Properties.of()
                     .mapColor(MapColor.COLOR_BLACK).strength(1.0f, 6.0f).sound(SoundType.METAL).noOcclusion().lightLevel(s -> 3)));
