@@ -57,8 +57,16 @@ end
 
 function S.saveConfig(c) return saveTable(CFG, c) end
 
+--- Когда включился компьютер (секунды по настоящим часам): по нему надзиратель отличает «включили заново» от
+--- «перезапустили надзирателя».
+function S.bootStamp()
+  return math.floor(((os.epoch and os.epoch("utc") or 0) - os.clock() * 1000) / 1000)
+end
 function S.state() return loadTable(STATE) end
-function S.saveState(st) return saveTable(STATE, st) end
+function S.saveState(st)
+  st.boot = S.bootStamp()
+  return saveTable(STATE, st)
+end
 
 -- ======================= журнал =======================
 
