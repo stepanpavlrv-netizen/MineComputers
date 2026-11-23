@@ -54,6 +54,7 @@ import java.util.Locale;
  *   screen x y z [slot]         текст экрана компьютера
  *   info x y z                  что за блок; у компьютера и стойки — состояние, детали, охлаждение
  *   wait тиков                  подождать
+ *   hold тип уровень            заводская деталь в руку: board/cpu/cooler/ram/gpu/psu/hdd/ssd, уровень 1..5
  *   time день|ночь|число        время суток
  *   quit                        закрыть игру
  * </pre>
@@ -312,6 +313,24 @@ public final class LiveControl {
                 waitUntil = ticks + 2;
             }
             case "wait" -> waitUntil = ticks + i(a[1]);
+            case "hold" -> {
+                int tier = i(a[2]);
+                ItemStack stack = switch (a[1]) {
+                    case "board" -> com.strikerr212.minepc.hardware.HardwarePresets.motherboard(tier);
+                    case "cpu" -> com.strikerr212.minepc.hardware.HardwarePresets.cpu(tier);
+                    case "cooler" -> com.strikerr212.minepc.hardware.HardwarePresets.cooler(tier);
+                    case "ram" -> com.strikerr212.minepc.hardware.HardwarePresets.ram(tier);
+                    case "gpu" -> com.strikerr212.minepc.hardware.HardwarePresets.gpu(tier);
+                    case "psu" -> com.strikerr212.minepc.hardware.HardwarePresets.psu(tier);
+                    case "hdd" -> com.strikerr212.minepc.hardware.HardwarePresets.hdd(tier);
+                    case "ssd" -> com.strikerr212.minepc.hardware.HardwarePresets.ssd(tier);
+                    default -> ItemStack.EMPTY;
+                };
+                server.execute(() -> server.getPlayerList().getPlayers().get(0)
+                        .setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, stack));
+                say("  в руке: " + stack.getHoverName().getString());
+                waitUntil = ticks + 4;
+            }
             case "time" -> {
                 long t = a[1].equals("день") || a[1].equals("day") ? 6000 : a[1].equals("ночь") || a[1].equals("night") ? 18000 : Long.parseLong(a[1]);
                 server.execute(() -> server.overworld().setDayTime(t));

@@ -318,6 +318,8 @@ def gpu_fans_ab1(n):
     o = Canvas(32, 32)
     step = L / n
     r = min(6.4, step / 2 - 0.9) - 1.0
+    if n == 1:   # однушка: вентилятор почти во всю ширину кожуха, без косых полос (по углам они обрезаны)
+        r = 6.3
     for y in (1, L - 2):
         c.hline(1, 13, y, "17181b")
     for i in range(n):
@@ -327,7 +329,7 @@ def gpu_fans_ab1(n):
             for y in range(L):
                 if r + .1 <= math.hypot(x + .5 - 7.5, y + .5 - cy) <= r + 1.0:
                     o.px(x, y, WH)
-    for d in range(4):
+    for d in range(4 if n > 1 else 0):
         for w in (0, 1, 3, 4):
             if d + w < 6:
                 o.px(d + w, 3 - d, WH); o.px(14 - d - w, L - 4 + d, WH)

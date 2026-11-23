@@ -296,15 +296,12 @@ def gpu(vis, tints):
         return i.im
     n = {3: 2, 4: 3, 5: 1}[ck]
     span = 14 - x0                                        # «АБ-1»: внутренняя ширина кожуха x0+1..14
-    if n == 1:                                            # один вентилятор — крупное кольцо 7×7 и уголки
+    if n == 1:                                            # один вентилятор — крупное кольцо 7×7
         lx = round(x0 + 1 + (span - 7) / 2)
         i.fan(lx + 3.5, 7.5, 2.9, main)
         for yy, row in enumerate(RING7):
             for xx, ch in enumerate(row):
                 if ch == "#": i.px(lx + xx, 4 + yy, acc)
-        if span >= 12:
-            for (x, y, dx, dy) in ((x0 + 1, 4, 1, 1), (14, 4, -1, 1), (x0 + 1, 10, 1, -1), (14, 10, -1, -1)):
-                i.px(x + dx, y, acc); i.px(x, y + dy, acc)
     elif 5 * n <= span:                                   # кольца цвета подсветки, если влезают
         gap = (span - 5 * n) / (n + 1)
         for k in range(n):

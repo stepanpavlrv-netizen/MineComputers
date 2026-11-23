@@ -292,6 +292,13 @@ FAN_TEX = {3: "gpu_fans_2", 4: "gpu_fans_3", 5: "gpu_fan_one"}
 RING_TEX = {3: "gpu_rings_2", 4: "gpu_rings_3", 5: "gpu_rings_1"}
 
 
+def gpu_bracket(m, y0, W):
+    """Планка с портами: длинная, во всю ширину платы (как у настоящей карты), порты — в ряд вдоль неё."""
+    m.box((4.45, y0, 14.85), (W, 8.95, 14.95), "bracket",
+          faces={"south": ("bracket", None, "full"), "north": ("bracket", None, [0, 0, 8, 2])})
+    m.elements[-1]["faces"]["south"]["rotation"] = 90
+
+
 def gpu(cooler_kind, length, v2):
     m = Model()
     L = [6.5, 9.0, 11.0][length]
@@ -305,7 +312,7 @@ def gpu(cooler_kind, length, v2):
         m.box((pcb_x1 - .4, PCB_Y1, z0 + 1.7), (pcb_x1 - .05, 8.74, z0 + 2.25), "plastic")
     if cooler_kind == 0:   # голая плата: чип, видеопамять, питание
         yb = PCB_Y0 - 1.0
-        m.box((4.45, yb, 14.85), (5.45, 8.95, 14.95), "bracket", faces={"south": ("bracket", None, "full")})
+        gpu_bracket(m, yb, W)
         cx, cz = (4.5 + pcb_x1) / 2, 14.85 - min(4.2, L * .45)
         m.box((cx - .7, PCB_Y0 - .04, cz - .7), (cx + .7, PCB_Y0, cz + .7), "pcb_green")
         m.box((cx - .38, PCB_Y0 - .08, cz - .38), (cx + .38, PCB_Y0 - .04, cz + .38), "die")
@@ -317,14 +324,14 @@ def gpu(cooler_kind, length, v2):
             m.box((x + .08, PCB_Y0 - .16, z0 + 1.3), (x + .3, PCB_Y0, z0 + 1.52), "cap")
         return m
     if cooler_kind == 1:   # пассивный радиатор
-        m.box((4.45, 7.7, 14.85), (5.45, 8.95, 14.95), "bracket", faces={"south": ("bracket", None, "full")})
+        gpu_bracket(m, 7.7, W)
         za, zb = max(z0 + .4, 14.85 - L * .8), 14.4
         plates(m, "z", za, zb, .25, .07, (5.0, 7.8), (pcb_x1 - .3, PCB_Y0 - .05), tint=1)
         m.box((5.0, PCB_Y0 - .12, za), (pcb_x1 - .3, PCB_Y0 - .05, zb), "metal", 1)
         return m
     T = 1.2 if cooler_kind == 2 else [1.2, 1.6, 2.0][v2]
     yb = PCB_Y0 - T
-    m.box((4.45, yb - .1, 14.85), (5.45, 8.95, 14.95), "bracket", faces={"south": ("bracket", None, "full")})
+    gpu_bracket(m, yb - .1, W)
     if cooler_kind == 2:   # турбина: закрытый кожух
         m.box((4.85, yb, z0), (W, PCB_Y0, 14.85), "metal", 1,
               faces={"down": ("gpu_fans_1", None, [0, 0, 7.5, 16]), "east": ("shroud_side", 1, "full")})
